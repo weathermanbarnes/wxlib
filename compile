@@ -3,22 +3,52 @@
 
 # Obs: The order of the files in $files has to reflect the interdepencies!
 files='dynlib_config.f95 dynlib_diag.f95' 
+filec='dynlib_const.f95'
 filek='dynlib_kind.f95'
 pysig='dynlib.pyf'
 
+# Precompiler directory
+mkdir -p precc
+rm -r precc/*
+
+
 # 1. Creating new python signature file
 echo "Stage 1: Creating python signature file"
-rm $pysig
-f2py -m dynlib -h $pysig $files > /dev/null
-sed "s/\<nr\>/8/g" dynlib.pyf | sed "s/\<ni\>/4/g" > ${pysig}_tmp
-mv ${pysig}_tmp $pysig
+f2py -m dynlib -h precc/$pysig $files > /dev/null
+sed "s/\<nr\>/8/g" precc/$pysig | sed "s/\<ni\>/4/g" > precc/${pysig}_tmp
+mv precc/${pysig}_tmp precc/$pysig
 
-# 2. Compiling the fortran modules 
-echo "Stage 2: Creating Fortran *.mod files"
-gfortran -c $filek $files
 
-# 3. Compiling the shared object usable from within python
-echo "Stage 3: Compiling the python module (as a shared object)"
-f2py -c --fcompiler=gnu95 dynlib.pyf $files $filek > /dev/null
+# 2. Simple sed precompiler
+echo "Stage 2: Precompiling the Fortran code"
+
+# Marker one of the source files have been changes since last commit
+[[ `git diff $files $filec $filek |  wc -l` > 0 ]] && { change=+; } || { change=; };
+VERSION=`git describe --tags --abbrev=0`
+VERREVI=`git describe --tags`$change
+VERDATE=`git log --format="%ai" --no-walk $VERSION`
+
+sed -e "s/####VERREVI####/$VERREVI/g" $filec |
+sed -e "s/####VERDATE####/$VERDATE/g" | 
+sed -e "s/####FCOMPIL####/f2py version `f2py -v`/g" | 
+sed -e "s/####FCOMTIM####/`date +'%Y-%m-%d %H:%M:%S %z'`/g" |
+sed -e "s/####FCOMHOS####/`hostname -f`/g" > precc/$filec
+cp $filek $files precc/
+
+
+# 3. Compiling the fortran modules 
+echo "Stage 3: Creating Fortran *.mod files"
+cd precc/
+gfortran -c $filek $filec $files
+
+
+# 4. Compiling the shared object usable from within python
+echo "Stage 4: Compiling the python module (as a shared object)"
+f2py -c --fcompiler=gnu95 dynlib.pyf $files $filec $filek > /dev/null
+mv dynlib.so ../
+cd ../
+
+
+echo "Done compiling dynlib version $VERREVI"
 
 #

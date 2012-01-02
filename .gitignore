@@ -7,8 +7,8 @@
 *.o
 *.so
 *.x
-*.mod
-*.pyf
+# Precompile folder
+precc/
 # Swap, temp and backup files
 *.swp
 *.swo
