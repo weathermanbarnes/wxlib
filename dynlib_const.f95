@@ -3,7 +3,7 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
 ! Module maintained by Clemens Spensberger (csp001@uib.no)
-module config
+module consts
   use kind
   !
   character(len=48), parameter :: version  = 'dynlib ####VERREVI####'

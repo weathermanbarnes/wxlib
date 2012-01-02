@@ -7,20 +7,14 @@ filec='dynlib_const.f95'
 filek='dynlib_kind.f95'
 pysig='dynlib.pyf'
 
+
 # Precompiler directory
 mkdir -p precc
 rm -r precc/*
 
 
-# 1. Creating new python signature file
-echo "Stage 1: Creating python signature file"
-f2py -m dynlib -h precc/$pysig $files > /dev/null
-sed "s/\<nr\>/8/g" precc/$pysig | sed "s/\<ni\>/4/g" > precc/${pysig}_tmp
-mv precc/${pysig}_tmp precc/$pysig
-
-
-# 2. Simple sed precompiler
-echo "Stage 2: Precompiling the Fortran code"
+# 1. Simple sed precompiler
+echo "Stage 1: Precompiling the Fortran code"
 
 # Marker one of the source files have been changes since last commit
 [[ `git diff $files $filec $filek |  wc -l` > 0 ]] && { change=+; } || { change=; };
@@ -36,9 +30,16 @@ sed -e "s/####FCOMHOS####/`hostname -f`/g" > precc/$filec
 cp $filek $files precc/
 
 
+# 2. Creating new python signature file
+echo "Stage 2: Creating python signature file"
+cd precc/
+f2py -m dynlib -h $pysig $filec $files > /dev/null
+sed "s/\<nr\>/8/g" $pysig | sed "s/\<ni\>/4/g" > ${pysig}_tmp
+mv ${pysig}_tmp $pysig
+
+
 # 3. Compiling the fortran modules 
 echo "Stage 3: Creating Fortran *.mod files"
-cd precc/
 gfortran -c $filek $filec $files
 
 
