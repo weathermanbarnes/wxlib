@@ -1,0 +1,17 @@
+# Bedymo log files
+*.log
+# Bedymo output
+*.nc
+# Compiled stuff
+*.pyc
+*.o
+*.so
+*.x
+*.mod
+*.pyf
+# Swap, temp and backup files
+*.swp
+*.swo
+*~
+*.old
+*.orig
