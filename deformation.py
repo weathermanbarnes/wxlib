@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import numpy as np
 import scipy.io.netcdf as nc
 import gridlib
 import dynlib
@@ -23,19 +24,20 @@ v = f.variables['vwnd'].data
 
 # Calculate deformation
 if not grid.nz or grid.nz == 1:
-	print '3d-mode', u.shape, v.shape, grid.dx.min(), grid.dx.max(), grid.dy.min(), grid.dy.max()
+	print '3D mode'
 	if len(u.shape) == 4:
 		u = u[:,0,:,:]
 		v = v[:,0,:,:]
-	defabs = dynlib.diag.def(u, v, grid.dx, grid.dy)
+	deff = dynlib.diag.def_angle(u, v, grid.dx, grid.dy)
 else:
-	print '4d-mode', u.shape, v.shape
+	print '4D mode'
+	raise NotImplementedError
 	#for t in len(u.shape[0]):
 	#	dylib.diag.def(u[t,:,:,:], v[t,:,:,:], grid.dx, grid.dy)
 
 f.close()
 
 print 'Saving'
-np.savez('%s/defabs.npz' % opath, defabs)
+np.savez('%s/defang.npz' % opath, defang=deff)
 
 #

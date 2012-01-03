@@ -2,7 +2,7 @@
 
 import scipy.io.netcdf as nc
 
-f  = nc.netcdf_file('/scratch/model/out/110208_exp_spectral_100d.nc')
+f  = nc.netcdf_file('/Data/gfi/share/Reanalyses/ERA_INTERIM/DAILY/ERA_INT_DAILY_wind_700_1979.nc')
 
 for var in f.variables:
 	v = f.variables[var]
