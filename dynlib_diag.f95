@@ -18,7 +18,7 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    do k=2_ni,nz-1_ni
+    do k=1_ni,nz
        do j=2_ni,ny-1_ni
           do i=2_ni,nx-1_ni
              res(k,j,i) = (v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i) &
@@ -43,7 +43,7 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    do k=2_ni,nz-1_ni
+    do k=1_ni,nz
        do j=2_ni,ny-1_ni
           do i=2_ni,nx-1_ni
              res(k,j,i) = (u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
@@ -68,7 +68,7 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    do k=2_ni,nz-1_ni
+    do k=1_ni,nz
        do j=2_ni,ny-1_ni
           do i=2_ni,nx-1_ni
              res(k,j,i) = (u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i) &
@@ -93,7 +93,7 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    do k=2_ni,nz-1_ni
+    do k=1_ni,nz
        do j=2_ni,ny-1_ni
           do i=2_ni,nx-1_ni
              res(k,j,i) = (u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
@@ -110,7 +110,7 @@ contains
   end subroutine
   !
   ! Calculates total [and rotation invariant] deformation b = def(a)
-  subroutine def(res,nx,ny,nz,u,v,dx,dy)
+  subroutine def_total(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     integer(kind=ni) :: i,j,k, nx,ny,nz
@@ -118,7 +118,7 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    do k=2_ni,nz-1_ni
+    do k=1_ni,nz
        do j=2_ni,ny-1_ni
           do i=2_ni,nx-1_ni
              res(k,j,i) = ((u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i)         &
@@ -153,7 +153,7 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    do k=2_ni,nz-1_ni
+    do k=1_ni,nz
        do j=2_ni,ny-1_ni
           do i=2_ni,nx-1_ni
              def_shear   = (u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i) &
