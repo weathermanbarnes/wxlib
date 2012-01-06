@@ -93,7 +93,7 @@ class grid(object):
 		if self.gridtype == 'latlon':
 			self.dx = np.ones((self.ny, self.nx))*111111.111111
 			self.dy = np.ones((self.ny, self.nx))*111111.111111
-			lat = self.f.variables[self.y].data
+			lat = self.f.variables[self.y][::]
 			for yidx in range(self.ny):
 				self.dx[yidx,:] *= math.cos(math.pi/180.0*lat[yidx])
 		else:

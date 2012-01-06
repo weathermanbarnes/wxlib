@@ -18,9 +18,9 @@ contains
     !f2py depend(nx,ny,nz) res
     ! -----------------------------------------------------------------
     !
-    do k=1_ni,nz
+    do i=1_ni,nx
        do j=1_ni,ny
-          do i=1_ni,nx
+          do k=1_ni,nz
              res(k,j,i) = dat(k,j,i)*scale + offset
           end do
        end do
