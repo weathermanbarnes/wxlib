@@ -7,15 +7,16 @@ import scipy.io.netcdf as nc
 import gridlib
 import dynlib
 import utils
+import static
 
-years = range(1979,1988)
-plevs = [1000,950,900,850,800,750,700,650,600,550,500,400,300,200,100]
+#years = range(1979,1988)
+#plevs = [1000,950,900,850,800,750,700,650,600,550,500,400,300,200,100]
 
 dt = utils.datetime.datetime
 
 
-for year in years:
-	for plev in plevs:
+for year in static.years:
+	for plev in static.plevs:
 		print 'Processing year %d, plev %d' % (year, plev)
 
 		ipath  = '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'
@@ -45,7 +46,7 @@ for year in years:
 		fu.close()
 		fv.close()
 		
-		ofile = '%s/defang.%d.%d.npz' % (opath, year, plev)
+		ofile = '%s/ei.ans.%d.%d.defang.npz' % (opath, year, plev)
 		begin = dt.now()
 		np.savez(ofile, defang=deff.astype('f4'))
 		print 'Saving', dt.now()-begin

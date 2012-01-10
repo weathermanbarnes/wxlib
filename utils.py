@@ -18,6 +18,10 @@ def scale(var, cut, bench=False):
 	return var_dat
 
 #
+# Python implementation of the basic statistical functions: average and standard deviation
+#def basicstats(
+
+#
 # Generic calculation preparations and the actual call of the Fortran function
 def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=False):
 	if not grid.nz or grid.nz == 1:
