@@ -40,7 +40,7 @@ for year in static.years:
 			raise TypeError, 'Field shape for u wind does not match field shape for v.'
 
 		# Cut out    all times    lat > 15°N       all longitudes
-		spacetime = (slice(None), slice(210,None), slice(None))
+		spacetime = (slice(None), slice(None,151), slice(None))
 		deff = utils.call(dynlib.diag.def_angle, [u,v], grid, cut=spacetime, bench=True)
 
 		fu.close()

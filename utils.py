@@ -2,6 +2,7 @@
 
 import math
 import datetime
+import numpy as np
 
 #
 # Automatic scaling according to netcdf attributes "scale_factor" and "add_offset"
@@ -18,8 +19,17 @@ def scale(var, cut, bench=False):
 	return var_dat
 
 #
-# Python implementation of the basic statistical functions: average and standard deviation
-#def basicstats(
+# Concatenate one latitude band in x-direction, taking over the values of 
+# the first latitude band to emulate a cyclic field in Basemap plots
+def concat1(data):
+	if len(data.shape) == 2:
+		data = np.concatenate((data, np.reshape(data[:,0], (data.shape[0],1)) ), axis=1)
+	elif len(data.shape) == 3:
+		data = np.concatenate((data, np.reshape(data[:,:,0], (data.shape[0], data.shape[1],1)) ), axis=2)
+	else:
+		raise NotImplementedError, 'Concatenation not implemented for %d dimensions' % len(data.shape)
+	
+	return data
 
 #
 # Generic calculation preparations and the actual call of the Fortran function

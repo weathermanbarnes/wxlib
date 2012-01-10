@@ -7,5 +7,8 @@ q = {'defabs': 'da', 'defang': 'da', 'deform': 'd', 'defnor': 'dn',
 	'u': 'u', 'v': 'v', 'Z': 'Z' }
 
 datapath = ['/scratch/reanalysis', '/media/work/reanalysis/highres']
+file_std   = 'ei.ans.%d.%d.%s.npz'
+file_stat  = 'ei.ans.%d.%d.%s.stat.npz'
+file_mstat = 'ei.ans.stat.%d.%s.npz'
 
 #  the end
