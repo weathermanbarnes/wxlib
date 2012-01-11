@@ -6,7 +6,7 @@ import numpy as np
 
 #
 # Automatic scaling according to netcdf attributes "scale_factor" and "add_offset"
-def scale(var, cut, bench=False):
+def scale(var, cut=(slice(None),slice(None),slice(None)), bench=False):
 	if hasattr(var, 'scale_factor') or hasattr(var, 'add_offset'):
 		if bench:
 			begin = datetime.datetime.now()

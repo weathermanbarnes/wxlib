@@ -7,7 +7,7 @@ import scipy.io.netcdf as nc
 import gridlib
 import dynlib
 import utils
-import static
+import static as c
 
 #years = range(1979,1988)
 #plevs = [1000,950,900,850,800,750,700,650,600,550,500,400,300,200,100]
@@ -15,8 +15,8 @@ import static
 dt = utils.datetime.datetime
 
 
-for year in static.years:
-	for plev in static.plevs:
+for year in c.years:
+	for plev in c.plevs:
 		print 'Processing year %d, plev %d' % (year, plev)
 
 		ipath  = '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'
@@ -39,9 +39,7 @@ for year in static.years:
 		if not u.shape == v.shape:
 			raise TypeError, 'Field shape for u wind does not match field shape for v.'
 
-		# Cut out    all times    lat > 15°N       all longitudes
-		spacetime = (slice(None), slice(None,151), slice(None))
-		deff = utils.call(dynlib.diag.def_angle, [u,v], grid, cut=spacetime, bench=True)
+		deff = utils.call(dynlib.diag.def_angle, [u,v], grid, cut=c.std_slice, bench=True)
 
 		fu.close()
 		fv.close()

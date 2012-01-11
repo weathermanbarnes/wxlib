@@ -7,7 +7,7 @@ from metopen import metopen
 import static as c
 import dynlib
 
-q = 'defang'
+q = 'Z'
 bench = True
 
 opath = '/scratch/reanalysis'
@@ -21,8 +21,7 @@ for plev in c.plevs:
 	for year in c.years:
 		print 'Processing year %d, plev %d' % (year, plev)
 
-		f   = metopen(c.file_std % (year, plev, q))
-		dat = f[q].astype('f8')
+		f, dat   = metopen(c.file_std % (year, plev, q), c.q[q])
 		nt  = dat.shape[0]
 		if bench:
 			begin = datetime.datetime.now()
@@ -37,6 +36,8 @@ for plev in c.plevs:
 		
 		ofile = opath+'/'+c.file_stat % (year, plev, q)
 		np.savez(ofile, mean=avg.astype('f4'), stddev=std.astype('f4'))
+
+		f.close()
 	
 	print 'Saving multi-year stats'
 	sum  [:,:]/= nttot
