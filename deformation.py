@@ -46,7 +46,7 @@ for year in c.years:
 		
 		ofile = '%s/ei.ans.%d.%d.defang.npy' % (opath, year, plev)
 		begin = dt.now()
-		np.save(ofile, deff.astype('f4'))
+		np.save(ofile, np.ascontiguousarray(deff.astype('f4')))
 		print 'Saving', dt.now()-begin
 
 		#begin = dt.now()
