@@ -44,15 +44,15 @@ for year in c.years:
 		fu.close()
 		fv.close()
 		
-		ofile = '%s/ei.ans.%d.%d.defang.npz' % (opath, year, plev)
+		ofile = '%s/ei.ans.%d.%d.defang.npy' % (opath, year, plev)
 		begin = dt.now()
-		np.savez(ofile, defang=deff.astype('f4'))
+		np.save(ofile, deff.astype('f4'))
 		print 'Saving', dt.now()-begin
 
-		begin = dt.now()
-		os.spawnl(os.P_WAIT, '/usr/bin/scp', 'scp', ofile, 'gfi063203.klientdrift.uib.no:/media/work/reanalysis/highres')
-		os.spawnl(os.P_WAIT, '/bin/rm', 'rm', ofile)
-		print 'Moving', dt.now()-begin
+		#begin = dt.now()
+		#os.spawnl(os.P_WAIT, '/usr/bin/scp', 'scp', ofile, 'gfi063203.klientdrift.uib.no:/media/work/reanalysis/highres')
+		#os.spawnl(os.P_WAIT, '/bin/rm', 'rm', ofile)
+		#print 'Moving', dt.now()-begin
 
 
 #

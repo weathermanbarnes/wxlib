@@ -3,13 +3,22 @@
 import os.path
 import numpy as np
 import scipy.io.netcdf as nc
+import scipy.io.matlab as mat
 import static as c
 import utils 
 
-def metopen(filename, q):
+def metopen(filename, q, cut=c.std_slice):
 	for path in c.datapath:
-		if os.path.exists(path+'/'+filename+'.npz'):
+		if os.path.exists(path+'/'+filename+'.npy'):
+			dat = np.load(path+'/'+filename+'.npy', mmap_mode='r')
+			dat = dat[cut].astype('f8')
+			return None, dat
+		elif os.path.exists(path+'/'+filename+'.npz'):
 			f   = np.load(path+'/'+filename+'.npz')
+			dat = f[q].astype('f8')
+			return f, dat
+		elif os.path.exists(path+'/'+filename+'.mat'):
+			f   = mat.loadmat(path+'/'+filename+'.mat')
 			dat = f[q].astype('f8')
 			return f, dat
 		elif os.path.exists(path+'/'+filename+'.nc'):

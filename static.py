@@ -1,7 +1,9 @@
 #! /usr/bin/python
 #  -*- encoding: utf-8
 
-plevs  = [100,200,300,400,500,550,600,650,700,750,800,850,900,950,1000]
+import numpy as np
+
+plevs  = np.array([100,200,300,400,500,550,600,650,700,750,800,850,900,950,1000])
 years = range(1979,1989)
 
 q = {'defabs': 'defabs', 'defang': 'defang',
