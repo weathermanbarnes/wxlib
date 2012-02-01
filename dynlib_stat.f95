@@ -9,7 +9,7 @@ module stat
   !
   implicit none
 contains
-  ! Scaling and offsetting data
+  ! Calculation of average fields and fields of standard deviation
   subroutine basic(mean,stddev, nx,ny,nt,dat)
     real(kind=nr), intent(in) :: dat(nt,ny,nx)
     real(kind=nr), intent(out) :: mean(ny,nx), stddev(ny,nx)
@@ -31,13 +31,13 @@ contains
     end do
   end subroutine
   !
-  ! Scaling and offsetting data
-  subroutine basic_weighted(mean,stddev, nx,ny,nt, dat,weight)
+  ! Calculation of average fields and fields of standard deviation, respecting a
+  ! weighting of the individual data points
+  subroutine basic_weighted(mean,stddev,wsum, nx,ny,nt, dat,weight)
     real(kind=nr), intent(in)  :: dat(nt,ny,nx), weight(nt,ny,nx)
-    real(kind=nr), intent(out) :: mean(ny,nx), stddev(ny,nx)
-    real(kind=nr) :: wsum(ny,nx)
+    real(kind=nr), intent(out) :: mean(ny,nx), stddev(ny,nx), wsum(ny,nx)
     integer(kind=ni) :: i,j,n, nx,ny,nt
-    !f2py depend(nx,ny) mean, stddev
+    !f2py depend(nx,ny) mean, stddev, wsum
     !f2py depend(nx,ny,nt) weight
     ! -----------------------------------------------------------------
     !

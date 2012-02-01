@@ -20,7 +20,7 @@ for year in c.years:
 		print 'Processing year %d, plev %d' % (year, plev)
 
 		ipath  = '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'
-		opath  = '/scratch/csp001/reanalysis'
+		opath  = '../deformation'
 		ufile  = 'ei.ans.%d.%d.u.nc' % (year, plev)
 		vfile  = 'ei.ans.%d.%d.v.nc' % (year, plev)
 

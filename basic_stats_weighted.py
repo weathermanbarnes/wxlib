@@ -7,7 +7,8 @@ from metopen import metopen
 import static as c
 import dynlib
 
-q = 'defabs'
+q  = 'defang'
+qw = 'defabs'
 bench = True
 
 opath = '../deformation/'
@@ -17,19 +18,23 @@ for plev in c.plevs:
 	nttot = 0
 	sum   = np.zeros((151,720))
 	sqsum = np.zeros((151,720))
+	wsum  = np.zeros((151,720))
 
 	for year in c.years:
 		print 'Processing year %d, plev %d' % (year, plev)
 
 		f, dat   = metopen(c.file_std % (year, plev, q), c.q[q])
+		if f: f.close()
+		f, wgt   = metopen(c.file_std % (year, plev, qw), c.q[qw])
+		if f: f.close()
+
 		nt  = dat.shape[0]
 		if bench:
 			begin = datetime.datetime.now()
-		#avg = dat.mean(axis=0)
-		#std = dat.std(axis=0)
-		avg, std = dynlib.stat.basic(dat)
-		sum  [:,:] += nt*avg[:,:]
-		sqsum[:,:] += (nt-1)*std[:,:]**2+(2*nt-1)*avg[:,:]**2
+		avg, std, wsum = dynlib.stat.basic_weighted(dat, wgt)
+		sum  [:,:] += wsum[:,:]*avg[:,:]
+		sqsum[:,:] += (nt-1)/nt*wsum[:,:]*std[:,:]**2+(2*nt-1)*avg[:,:]**2
+		wsum [:,:] += wsum[:,:]
 		nttot      += nt
 		if bench:
 			print 'Fortran basic stats:', datetime.datetime.now()-begin
@@ -38,12 +43,10 @@ for plev in c.plevs:
 		np.savez(ofile, mean=np.ascontiguousarray(avg.astype('f4')), 
 				stddev=np.ascontiguousarray(std.astype('f4')) )
 		
-		if f:
-			f.close()
 	
 	print 'Saving multi-year stats'
 	sum  [:,:]/= nttot
-	sqsum[:,:] = np.sqrt((sqsum[:,:]-(2*nttot-1)*sum[:,:]**2)/(nttot-1))
+	sqsum[:,:] = np.sqrt((sqsum[:,:]*nttot/wsum[:,:]-(2*nttot-1)*sum[:,:]**2)/(nttot-1))
 
 	ofile = opath+'/'+c.file_mstat % (plev, q)
 	np.savez(ofile, mean=np.ascontiguousarray(sum.astype('f4')), 
