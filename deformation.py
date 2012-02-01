@@ -1,43 +1,58 @@
 #!/usr/bin/python
+#  -*- encoding: utf-8
 
+import os
 import numpy as np
 import scipy.io.netcdf as nc
 import gridlib
 import dynlib
+import utils
+import static as c
 
-ipath  = '/Data/gfi/share/Reanalyses/ERA_INTERIM/DAILY'
-opath  = '/scratch/reanalysis'
-ncfile = 'ERA_INT_DAILY_wind_700_1979.nc'
+#years = range(1979,1988)
+#plevs = [1000,950,900,850,800,750,700,650,600,550,500,400,300,200,100]
 
-# Open nc file, check if wind data is present
-f  = nc.netcdf_file('%s/%s' % (ipath, ncfile))
-if not 'uwnd' in f.variables or not 'vwnd' in f.variables:
-	raise TypeError, 'Expected wind data in netcdf file.'
+dt = utils.datetime.datetime
 
-# Extract grid information 
-grid = gridlib.grid(f)
-dynlib.config.grid_cyclic_ew = grid.cyclic_ew
 
-# TODO: Check if uwnd and vwnd are on the same grid [see: ['uwnd'].dimensions]
-u = f.variables['uwnd'].data
-v = f.variables['vwnd'].data
+for year in c.years:
+	for plev in c.plevs:
+		print 'Processing year %d, plev %d' % (year, plev)
 
-# Calculate deformation
-if not grid.nz or grid.nz == 1:
-	print '3D mode'
-	if len(u.shape) == 4:
-		u = u[:,0,:,:]
-		v = v[:,0,:,:]
-	deff = dynlib.diag.def_angle(u, v, grid.dx, grid.dy)
-else:
-	print '4D mode'
-	raise NotImplementedError
-	#for t in len(u.shape[0]):
-	#	dylib.diag.def(u[t,:,:,:], v[t,:,:,:], grid.dx, grid.dy)
+		ipath  = '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'
+		opath  = '/scratch/csp001/reanalysis'
+		ufile  = 'ei.ans.%d.%d.u.nc' % (year, plev)
+		vfile  = 'ei.ans.%d.%d.v.nc' % (year, plev)
 
-f.close()
+		# Open nc file, check if wind data is present
+		fu  = nc.netcdf_file('%s/%s' % (ipath, ufile), 'r')
+		fv  = nc.netcdf_file('%s/%s' % (ipath, vfile), 'r')
+		if not 'u' in fu.variables or not 'v' in fv.variables:
+			raise TypeError, 'Expected wind data in netcdf file.'
 
-print 'Saving'
-np.savez('%s/defang.npz' % opath, defang=deff)
+		# Extract grid information 
+		grid = gridlib.grid(fu)
+		dynlib.config.grid_cyclic_ew = grid.cyclic_ew
+
+		u = fu.variables['u']
+		v = fv.variables['v']
+		if not u.shape == v.shape:
+			raise TypeError, 'Field shape for u wind does not match field shape for v.'
+
+		deff = utils.call(dynlib.diag.def_angle, [u,v], grid, cut=c.std_slice, bench=True)
+
+		fu.close()
+		fv.close()
+		
+		ofile = '%s/ei.ans.%d.%d.defang.npy' % (opath, year, plev)
+		begin = dt.now()
+		np.save(ofile, np.ascontiguousarray(deff.astype('f4')))
+		print 'Saving', dt.now()-begin
+
+		#begin = dt.now()
+		#os.spawnl(os.P_WAIT, '/usr/bin/scp', 'scp', ofile, 'gfi063203.klientdrift.uib.no:/media/work/reanalysis/highres')
+		#os.spawnl(os.P_WAIT, '/bin/rm', 'rm', ofile)
+		#print 'Moving', dt.now()-begin
+
 
 #

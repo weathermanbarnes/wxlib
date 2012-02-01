@@ -18,20 +18,24 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    do k=1_ni,nz
+    do i=2_ni,nx-1_ni
        do j=2_ni,ny-1_ni
-          do i=2_ni,nx-1_ni
+          do k=1_ni,nz
              res(k,j,i) = (v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i) &
                   &     - (u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i)
           end do
-          if (grid_cyclic_ew) then
+       end do
+    end do
+    if (grid_cyclic_ew) then
+       do j=2_ni,ny-1_ni
+          do k=1_ni,nz
              res(k,j,1_ni) = (v(k,j,  2_ni)-u(k,j     ,nx))/dx(j,1_ni) &
                      &     - (u(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,1_ni)
              res(k,j,nx  ) = (v(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,nx) &
                      &     - (u(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,nx)
-          end if
+          end do
        end do
-    end do
+    end if
   end subroutine
   !
   ! Calculates divergence b = div(a)
@@ -43,20 +47,24 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    do k=1_ni,nz
+    do i=2_ni,nx-1_ni
        do j=2_ni,ny-1_ni
-          do i=2_ni,nx-1_ni
+          do k=1_ni,nz
              res(k,j,i) = (u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
                   &     + (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i)
           end do
-          if (grid_cyclic_ew) then
+       end do
+    end do
+    if (grid_cyclic_ew) then
+       do j=2_ni,ny-1_ni
+          do k=1_ni,nz
              res(k,j,1_ni) = (u(k,j,  2_ni)-u(k,j     ,nx))/dx(j,1_ni) &
                      &     + (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,1_ni)
              res(k,j,nx  ) = (u(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,nx) &
                      &     + (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,nx)
-          end if
+          end do
        end do
-    end do
+    end if
   end subroutine
   !
   ! Calculates shear deformation b = def_shear(a)
@@ -68,20 +76,24 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    do k=1_ni,nz
-       do j=2_ni,ny-1_ni
-          do i=2_ni,nx-1_ni
+    do i=2_ni,nx-1_ni
+        do j=2_ni,ny-1_ni
+          do k=1_ni,nz
              res(k,j,i) = (u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i) &
                   &     + (v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i)
           end do
-          if (grid_cyclic_ew) then
+       end do
+    end do
+    if (grid_cyclic_ew) then
+       do j=2_ni,ny-1_ni
+          do k=1_ni,nz
              res(k,j,1_ni) = (u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,1_ni) &
                      &     + (v(k,j,  2_ni)-v(k,j     ,nx))/dx(j,1_ni)
              res(k,j,nx  ) = (u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,nx) &
                      &     + (v(k,j  ,1_ni)-v(k,j,nx-1_ni))/dx(j,nx)
-          end if
+          end do
        end do
-    end do
+    end if
   end subroutine
   !
   ! Calculates shear deformation b = def_stretch(a)
@@ -93,20 +105,24 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    do k=1_ni,nz
+    do i=2_ni,nx-1_ni
        do j=2_ni,ny-1_ni
-          do i=2_ni,nx-1_ni
+          do k=1_ni,nz
              res(k,j,i) = (u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
                   &     - (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i)
           end do
-          if (grid_cyclic_ew) then
+       end do
+    end do
+    if (grid_cyclic_ew) then
+       do j=2_ni,ny-1_ni
+          do k=1_ni,nz
              res(k,j,1_ni) = (u(k,j,  2_ni)-u(k,j     ,nx))/dx(j,1_ni) &
                      &     - (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,1_ni)
              res(k,j,nx  ) = (u(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,nx) &
                      &     - (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,nx)
-          end if
+          end do
        end do
-    end do
+    end if
   end subroutine
   !
   ! Calculates total [and rotation invariant] deformation b = def(a)
@@ -118,16 +134,20 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    do k=1_ni,nz
+    do i=2_ni,nx-1_ni
        do j=2_ni,ny-1_ni
-          do i=2_ni,nx-1_ni
+          do k=1_ni,nz
              res(k,j,i) = ((u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i)         &
                   &     +  (v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i))**2._nr &
                   &     + ((u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i)         &
                   &     -  (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i))**2._nr
              res(k,j,i) = sqrt(res(k,j,i))
           end do
-          if (grid_cyclic_ew) then
+       end do
+    end do
+    if (grid_cyclic_ew) then
+       do j=2_ni,ny-1_ni
+          do k=1_ni,nz
              res(k,j,1_ni) = ((u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,1_ni)         &
                      &     +  (v(k,j,  2_ni)-v(k,j     ,nx))/dx(j,1_ni))**2._nr &
                      &     + ((u(k,j,  2_ni)-u(k,j     ,nx))/dx(j,1_ni)         &
@@ -138,9 +158,9 @@ contains
                      &     -  (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,nx))**2._nr
              res(k,j,1_ni) = sqrt(res(k,j,1_ni))
              res(k,j,  nx) = sqrt(res(k,j,  nx))
-          end if
+          end do
        end do
-    end do
+    end if
   end subroutine
   !
   ! Calculates rotation angle  b = def_angle(a)  to achieve pure shear rotation
@@ -153,16 +173,20 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    do k=1_ni,nz
+    do i=2_ni,nx-1_ni
        do j=2_ni,ny-1_ni
-          do i=2_ni,nx-1_ni
+          do k=1_ni,nz
              def_shear   = (u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i) &
                   &      + (v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i)
              def_stretch = (u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
                   &      - (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i)
              res(k,j,i)  = 0.5_nr*atan2(def_shear, def_stretch)
           end do
-          if (grid_cyclic_ew) then
+       end do
+    end do
+    if (grid_cyclic_ew) then
+       do j=2_ni,ny-1_ni
+          do k=1_ni,nz
              def_shear   = (u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,1_ni) &
                      &   + (v(k,j,  2_ni)-v(k,j     ,nx))/dx(j,1_ni)
              def_stretch = (u(k,j,  2_ni)-u(k,j     ,nx))/dx(j,1_ni) &
@@ -173,8 +197,8 @@ contains
              def_stretch = (u(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,nx) &
                      &   - (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,nx)
              res(k,j,nx) = 0.5_nr*atan2(def_shear, def_stretch)
-          end if
+          end do
        end do
-    end do
+    end if
   end subroutine
 end module

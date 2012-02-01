@@ -2,7 +2,7 @@
 # Compile script for dynlib
 
 # Obs: The order of the files in $files has to reflect the interdepencies!
-files='dynlib_config.f95 dynlib_diag.f95' 
+files='dynlib_config.f95 dynlib_conv.f95 dynlib_diag.f95 dynlib_stat.f95' 
 filec='dynlib_const.f95'
 filek='dynlib_kind.f95'
 pysig='dynlib.pyf'

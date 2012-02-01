@@ -26,11 +26,11 @@ class grid(object):
 		self.t = None
 		if not self.v:
 			for d in self.f.dimensions:
-				if d in ['lon',]:
+				if d in ['lon','longitude']:
 					if self.x:
 						raise ValueError, 'Found several possible x-axes and no variable was given.'
 					self.x = d
-				if d in ['lat',]:
+				if d in ['lat','latitude']:
 					if self.y:
 						raise ValueError, 'Found several possible y-axes and no variable was given.'
 					self.y = d
@@ -69,6 +69,9 @@ class grid(object):
 		if self.x_unit == 'degrees_E' and self.y_unit == 'degrees_N':
 			self.gridtype = 'latlon'
 			self.cyclic_ew = True
+		elif self.x_unit == 'degrees_east' and self.y_unit == 'degrees_north':
+			self.gridtype = 'latlon'
+			self.cyclic_ew = True
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type with units (%s/%s)' % (self.x_unit, self.y_unit)
 
@@ -90,7 +93,7 @@ class grid(object):
 		if self.gridtype == 'latlon':
 			self.dx = np.ones((self.ny, self.nx))*111111.111111
 			self.dy = np.ones((self.ny, self.nx))*111111.111111
-			lat = self.f.variables[self.y].data
+			lat = self.f.variables[self.y][::]
 			for yidx in range(self.ny):
 				self.dx[yidx,:] *= math.cos(math.pi/180.0*lat[yidx])
 		else:
