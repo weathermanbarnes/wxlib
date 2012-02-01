@@ -64,7 +64,7 @@ class grid(object):
 		if self.t:
 			self.t_unit = self.f.variables[self.t].units
 		else:
-			self.z_unit = None
+			self.t_unit = None
 
 		if self.x_unit == 'degrees_E' and self.y_unit == 'degrees_N':
 			self.gridtype = 'latlon'
