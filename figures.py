@@ -11,31 +11,33 @@ import static as c
 
 
 # globally useful
-f = metopen('static.npz')
-oro = f['oro']
+f, oro = metopen('static', 'oro')
 oro = concat1(oro)
 s   = oro.shape
 lat = np.tile(f['lat'], (s[1],1)).T
 lon = np.tile(f['lon'], (s[0],1))
 lon = concat1(lon)
+lon[:,-1] += 360
 f.close()
 
 orolevs = range(-19000,51000,2000)
 
 # 32 years of data at a glance
-def ypline_mean(q='defabs', yidx=57, plev=700, summarize=False, std=False, quiet=False):
+def ypline_mean_Q(q='defabs', yidx=57, plev=700, summarize=False, std=False, quiet=False):
 	if not quiet:
 		print 'Lat %f' % lat[yidx,0]
 	means = {}
 	for y in c.years:
 		if not quiet:
 			print y
-		f = metopen(c.file_stat % (y, plev, q))
 		if std:
-			means[y] = f['stddev'][yidx,:]
+			f, dat = metopen(c.file_stat % (y, plev, q), 'stddev')
+			means[y] = dat[yidx,:]
 		else:
-			means[y] = f['mean'][yidx,:]
+			f, dat = metopen(c.file_stat % (y, plev, q), 'mean')
+			means[y] = dat[yidx,:]
 		f.close()
+	del dat
 	
 	if summarize:
 		num = 5
@@ -73,7 +75,7 @@ def map_oro():
 
 # contour map of 32 year mean deformation
 def map_mean_Q(q='defabs', year=None, plev=700, std=False, quiet=False):
-	meanZ = np.ones(s)*9999999
+	meanZ = np.zeros(s)
 	mean  = np.zeros(s)
 
 	if year: 
@@ -90,17 +92,19 @@ def map_mean_Q(q='defabs', year=None, plev=700, std=False, quiet=False):
 		if not quiet:
 			print y
 
-		f   = metopen(c.file_stat % (y, plev, q))
-		#fZ  = metopen(c.file_stat % (y, plev, 'Z'))
 		if std:	
 			# TODO: Correct calculation of mean stddev!
-			mean += concat1(f['stddev'])
+			f, dat = metopen(c.file_stat % (y, plev, q), 'stddev')
 		else:
-			mean += concat1(f['mean'])
-		#meanZ += concat1(fZ['mean'])
+			f, dat = metopen(c.file_stat % (y, plev, q), 'mean')
+		mean = concat1(dat)
 
+		fZ, daZ = metopen(c.file_stat % (y, plev, 'Z'), 'mean')
+		meanZ += concat1(daZ)
+		
+		del dat, daZ
 		f.close()
-		#fZ.close()
+		fZ.close()
 	
 	mean  /= len(years)
 	meanZ /= len(years)
@@ -125,55 +129,33 @@ def map_mean_Q(q='defabs', year=None, plev=700, std=False, quiet=False):
 # Contour map of averaged wind on top of a oro map.
 def map_mean_barb(year=None, plev=700, quiver=False):
 	if not year:
-		fileu = 'mean_u.npz'
-		filev = 'mean_v.npz'
-		fileZ = 'mean_Z.npz'
+		fu, meanu = metopen(c.file_mstat % (plev, 'u'), 'mean')
+		fv, meanv = metopen(c.file_mstat % (plev, 'v'), 'mean')
+		fZ, meanZ = metopen(c.file_mstat % (plev, 'Z'), 'mean')
 	else: 
-		fileu = '%04d_umean.npz' % year
-		filev = '%04d_vmean.npz' % year
-		fileZ = '%04d_Zmean.npz' % year
+		fu, meanu = metopen(c.file_stat % (year, plev, 'u'), 'mean')
+		fv, meanv = metopen(c.file_stat % (year, plev, 'v'), 'mean')
+		fZ, meanZ = metopen(c.file_stat % (year, plev, 'Z'), 'mean')
 
-	f = metopen(fileu)
-	meanu = f['u%d' % plev]
-	f.close()
-
-	f = metopen(filev)
-	meanv = f['v%d' % plev]
-	f.close()
+	meanu = concat1(meanu[::-1,:]*5)
+	meanv = concat1(meanv[::-1,:]*5)
+	meanZ = concat1(meanZ[::-1,:])
 	
-	f = metopen(fileZ)
-	meanZ = f['Z%d' % plev]
-	f.close()
-
-	f = pygrib.open('static.grib')
-	oro = f[3]
-	lats,lons = oro.latlons()
-	f.close()
-
-	lats = np.concatenate((lats, np.reshape(lats[:,0], (41,1)) ), axis=1)
-	lons = np.concatenate((lons, np.ones((41,1))*179.999 ), axis=1)
-	oro = np.concatenate((oro.values, np.reshape(oro.values[:,0], (41,1)) ), axis=1)
-	meanu= np.concatenate((meanu, np.reshape(meanu[:,0], (41,1)) ), axis=1)
-	meanv= np.concatenate((meanv, np.reshape(meanv[:,0], (41,1)) ), axis=1)
-	meanZ= np.concatenate((meanZ, np.reshape(meanZ[:,0], (41,1)) ), axis=1)
-	
-	meanu = 3*meanu
-	meanv = 3*meanv
 	print meanu.min(), meanu.max(), meanu.mean()
 	print meanv.min(), meanv.max(), meanv.mean()
 	meanu[meanZ < oro] = np.ma.masked
 	meanv[meanZ < oro] = np.ma.masked
 
-	m = Basemap(projection='npstere',boundinglat=30,lon_0=-50,resolution='l')
-	x,y = m(lons,lats)
-	ut,vt,xt,yt = m.transform_vector(meanu,meanv,lons[0,:],lats[:,0],120,120,returnxy=True)
+	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+	x,y = m(lon,lat)
+	ut,vt,xt,yt = m.transform_vector(meanu,meanv,lon[0,:],lat[::-1,0],80,80,returnxy=True)
 	m.drawcoastlines()
 	m.contourf(x, y, oro, orolevs, cmap=plt.cm.gist_earth)
 	if not quiver:
 		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5)
 	else:
 		m.quiver(xt, yt, ut, vt)
-	m.drawparallels(range(30,80,5))
+	m.drawparallels(range(15,80,5))
 	m.drawmeridians(range(0,360,30))
 	plt.colorbar()
 	plt.show()
@@ -181,75 +163,41 @@ def map_mean_barb(year=None, plev=700, quiver=False):
 	return
 
 
-# Contour map of averaged wind on top of a oro map.
-def map_mean_deformv(year=None, plev=700, quiver=True):
+# Contour map of averaged deformation vector on top of a oro map.
+def map_mean_deform(year=None, plev=700):
 	if not year:
-		fileFF = 'mean_rotdef.npz'
-		fileDD = 'mean_defang.npz'
-		fileZ = 'mean_Z.npz'
-		nameext = 'm'
+		fabs, meanabs = metopen(c.file_mstat % (plev, 'defabs'), 'mean')
+		fang, meanang = metopen(c.file_mstat % (plev, 'defang'), 'mean')
+		fZ, meanZ     = metopen(c.file_mstat % (plev, 'Z'), 'mean')
 	else: 
-		fileFF = '%04d_rotdef.npz' % year
-		fileDD = '%04d_defang.npz' % year
-		fileZ = '%04d_Zmean.npz' % year
-		nameext = '%02d' % (year % 100)
-
-	f = metopen(fileFF)
-	meanFF = f['d%s_%d' % (nameext, plev)]
-	f.close()
-
-	f = metopen(fileDD)
-	meanDD = f['da%s_%04d' % (nameext, plev)]
-	f.close()
+		fabs, meanabs = metopen(c.file_stat % (year, plev, 'defabs'), 'mean')
+		fang, meanang = metopen(c.file_stat % (year, plev, 'defang'), 'mean')
+		fZ, meanZ     = metopen(c.file_stat % (year, plev, 'Z'), 'mean')
 	
-	#if year:
-	#	meanDD = meanDD.mean(axis=0)
-	#	meanFF = meanFF.mean(axis=0)
+	meandex = np.cos(meanang[:,:]) *meanabs
+	meandey = np.sin(meanang[:,:]) *meanabs
 	
-	meanu = np.cos(meanDD[:,:]) *meanFF
-	meanv = np.sin(meanDD[:,:]) *meanFF
+	meandex = concat1(meandex[::-1,:])
+	meandey = concat1(meandey[::-1,:]) 
+	meanabs = concat1(meanabs)
+	meanZ   = concat1(meanZ)
 	
-	f = metopen(fileZ)
-	meanZ = f['Z%d' % plev]
-	f.close()
+	print meandex.min(), meandex.max(), meandex.mean()
+	print meandey.min(), meandey.max(), meandey.mean()
+	meanabs[meanZ < oro] = np.ma.masked
+	meanZ = meanZ[::-1,:]
+	meandex[meanZ < oro] = np.ma.masked
+	meandey[meanZ < oro] = np.ma.masked
 
-	f = pygrib.open('static.grib')
-	oro = f[3]
-	lats,lons = oro.latlons()
-	f.close()
-
-	if year:
-		meanu = meanu.mean(axis=0)
-		meanv = meanv.mean(axis=0)
-		meanFF= meanFF.mean(axis=0)
-	#print meanZ.shape
-
-	lats  = np.concatenate((lats, np.reshape(lats[:,0], (41,1)) ), axis=1)
-	lons  = np.concatenate((lons, np.ones((41,1))*179.999 ), axis=1)
-	oro  = np.concatenate((oro.values, np.reshape(oro.values[:,0], (41,1)) ), axis=1)
-	meanu = np.concatenate((meanu, np.reshape(meanu[:,0], (41,1)) ), axis=1)
-	meanv = np.concatenate((meanv, np.reshape(meanv[:,0], (41,1)) ), axis=1)
-	meanFF= np.concatenate((meanFF, np.reshape(meanFF[:,0], (41,1)) ), axis=1) 
-	meanZ = np.concatenate((meanZ, np.reshape(meanZ[:,0], (41,1)) ), axis=1)
-	
-	print meanu.min(), meanu.max(), meanu.mean()
-	print meanv.min(), meanv.max(), meanv.mean()
-	meanu [meanZ < oro] = np.ma.masked
-	meanv [meanZ < oro] = np.ma.masked
-	meanFF[meanZ < oro] = np.ma.masked
-
-	m = Basemap(projection='npstere',boundinglat=30,lon_0=-50,resolution='l')
-	x,y = m(lons,lats)
-	ut,vt,xt,yt = m.transform_vector(meanu,meanv,lons[0,:],lats[:,0],60,60,returnxy=True)
+	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+	x,y = m(lon,lat)
+	ut,vt,xt,yt = m.transform_vector(meandex,meandey,lon[0,:],lat[::-1,0],60,60,returnxy=True)
 	m.drawcoastlines()
 	m.contourf(x, y, oro, orolevs, cmap=plt.cm.gist_earth, zorder=1)
-	m.contour(x[1:-2], y[1:-2], meanFF[1:-2], 25, zorder=2)
-	if not quiver:
-		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5, zorder=3)
-	else:
-		m.quiver(xt, yt, ut, vt, zorder=3)
-		m.quiver(xt, yt,-ut,-vt, zorder=3)
-	m.drawparallels(range(30,80,5))
+	m.contour(x, y, meanabs, 25, zorder=2)
+	m.quiver(xt, yt, ut, vt, zorder=3)
+	m.quiver(xt, yt,-ut,-vt, zorder=3)
+	m.drawparallels(range(15,80,5))
 	m.drawmeridians(range(0,360,30))
 	plt.colorbar()
 	plt.show()
@@ -258,43 +206,28 @@ def map_mean_deformv(year=None, plev=700, quiver=True):
 
 
 # same as ysect_mean_deform but without any averaging; deformation sections for one point in time
-def map_date_deform(date, plev=700, norm=False, std=False):
+def map_date_Q(date, q='defabs', plev=700):
 	tidx = (date.timetuple().tm_yday-1)*4 + int(date.hour/6)
 	
-	if norm:
-		f = metopen('%04d_deforn.npz' % date.year)
-	else:
-		f = metopen('%04d_deform.npz' % date.year)
-	
-	d = f['d%02d_%d' % (date.year % 100, plev)][tidx,:,:]
+	f, dat = metopen(c.file_std % (date.year, plev, q), c.q[q])
+	dat = dat[tidx,:,:]
 	f.close()
 
-	f = pygrib.open('%04d_Z.grib' % date.year)
-	Z = f[13*tidx+list(levels).index(plev)+1]
-	print Z.year, Z.month, Z.day, Z.hour, Z.level
-	Z = Z.values
-	f.close()
-	
-	f = pygrib.open('static.grib')
-	oro = f[3]
-	lats,lons = oro.latlons()
+	f, daZ = metopen(c.file_std % (date.year, plev, 'Z'), c.q['Z'])
+	daZ = daZ[tidx,:,:]
 	f.close()
 
-	lats = np.concatenate((lats, np.reshape(lats[:,0], (41,1)) ), axis=1)
-	lons = np.concatenate((lons, np.ones((41,1))*179.999 ), axis=1)
-	oro = np.concatenate((oro.values, np.reshape(oro.values[:,0], (41,1)) ), axis=1)
-	d    = np.concatenate((d, np.reshape(d[:,0], (39,1)) ), axis=1)
-	Z    = np.concatenate((Z, np.reshape(Z[:,0], (41,1)) ), axis=1)
+	dat = concat1(dat)
+	daZ = concat1(daZ)
 
-	print oro.shape, levels.shape
-	d[Z < oro] = np.ma.masked
+	dat[daZ < oro] = np.ma.masked
 
-	m = Basemap(projection='npstere',boundinglat=30,lon_0=-50,resolution='l')
-	x,y = m(lons,lats)
+	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+	x,y = m(lon,lat)
 	m.drawcoastlines()
 	m.contourf(x, y, oro, orolevs, cmap=plt.cm.gist_earth)
-	m.contour(x[1:-1,:], y[1:-1,:], d, 20)
-	m.drawparallels(range(30,80,5))
+	m.contour(x, y, dat, 25)
+	m.drawparallels(range(15,80,5))
 	m.drawmeridians(range(0,360,30))
 	plt.colorbar()
 	plt.show()
@@ -303,81 +236,26 @@ def map_date_deform(date, plev=700, norm=False, std=False):
 
 
 # vertical profiles of 32years mean deformation
-def ysect_mean_deform(year=None, yidx=57, rot=False, norm=False, filename=None, std=False, quiet=False):
-	dyidx = 0
-	if not year:
-		if filename:
-			f = metopen(filename+'.npz')
-		if norm:
-			f = metopen('mean_deforn.npz')
-		elif rot:
-			f = metopen('mean_rotdef.npz')
-			dyidx = 1
-		else:
-			f = metopen('mean_deform.npz')
-		ln = 3
-	else:
-		if filename:
-			f = metopen(filename+'.npz')
-		elif norm:
-			f = metopen('%04d_deforn.npz' % year)
-		elif rot:
-			f = metopen('%04d_rotdef.npz' % year)
-			dyidx = 1
-		else:
-			f = metopen('%04d_defor2.npz' % year)
-		ln = 4
-
-	dm = np.zeros((13,240))
+def ysect_mean_Q(q='defabs', yidx=57, std=False, quiet=False):
+	if not quiet:
+		print 'Lat %f' % lat[yidx,0]
 	i = 0
-	for field in sorted(map(lambda x: int(x[ln:]), f.files)):
-		if not year:
-			dm[i] = f['dm_%d' % field][yidx+dyidx,:]
-		else :
-			dm[i] = f['d%02d_%d' % (year % 100, field)][:,yidx+dyidx,:].mean(axis=0)
+	qm = np.zeros((len(c.plevs),s[1]))
+	for plev in c.plevs:
+		if std:
+			f, dat = metopen(c.file_mstat % (plev, q), 'stddev')
+		else:
+			f, dat = metopen(c.file_mstat % (plev, q), 'mean')
+
+		qm[i] = concat1(dat[yidx,:])
 		i += 1
 	
-	fs = pygrib.open('static.grib')
-	oro = fs[3]
-	fs.close()
-	#oro = 1000.0-oro.values[yidx,:]/80.0	
-	oro = 1000.0*np.exp(oro.values[yidx,:]/(-270.0*287.0))	# tentative conversion from Phi [m^2/s^2] to p [hPa] p0 = 1000, <T> = 270K
+	oro = 1000.0*np.exp(globals()['oro'][yidx,:]/(-270.0*287.0))	# tentative conversion from Phi [m^2/s^2] to p [hPa] p0 = 1000, <T> = 270K
 	oro[oro > 1000.0] = 1000.0
-
-	print oro.shape, levels.shape
-	dm[oro[np.newaxis,:]-10 < levels[:,np.newaxis]] = np.ma.masked
-
-	plt.contour(lon[0,:], levels, dm, 20)
-	#plt.fill_between(lon[0,:], 1000.0-oro.values[yidx,:]/80.0, np.ones((240,))*1000.0, 'k')
-	plt.fill(lon[0,:], oro, 'k')
-	plt.ylim(plt.ylim()[::-1])		# reverse y-axis
-	plt.colorbar()
-	plt.show()
-
-	return
-
-
-# vertical profiles of 32years mean deformation
-def ysect_meanQ(quantity, yidx=57, norm=False, std=False, quiet=False):
-	f = metopen('mean_%s.npz' % quantity)
-
-	Qm = np.zeros((13,240))
-	i = 0
-	for field in sorted(map(lambda x: int(x[len(quantity):]), f.files)):
-		Qm[i] = f['%s%d' % (quantity, field)][yidx,:]
-		i += 1
 	
-	fs = pygrib.open('static.grib')
-	oro = fs[3]
-	fs.close()
-	#oro = 1000.0-oro.values[yidx,:]/80.0	
-	oro = 1000.0*np.exp(oro.values[yidx,:]/(-270.0*287.0))	# tentative conversion from Phi [m^2/s^2] to p [hPa] p0 = 1000, <T> = 270K
-	oro[oro > 1000.0] = 1000.0
+	qm[(oro-10) < c.plevs[:,np.newaxis]] = np.ma.masked
 
-	print oro.shape, levels.shape
-	Qm[oro[np.newaxis,:]-10 < levels[:,np.newaxis]] = np.ma.masked
-
-	plt.contour(lon[0,:], levels, Qm, 15)
+	plt.contour(lon[0,:], c.plevs, qm, 15)
 	#plt.fill_between(lon[0,:], 1000.0-oro.values[yidx,:]/80.0, np.ones((240,))*1000.0, 'k')
 	plt.fill(lon[0,:], oro, 'k')
 	plt.ylim(plt.ylim()[::-1])		# reverse y-axis
@@ -388,7 +266,9 @@ def ysect_meanQ(quantity, yidx=57, norm=False, std=False, quiet=False):
 
 
 # same as ysect_mean_deform but without any averaging; deformation sections for one point in time
-def ysect_date_deform(date, yidx=57, norm=False, std=False):
+def ysect_date_Q(date, yidx=57, norm=False, std=False):
+	raise NotImplementedError, "This would be _very_ slow. Make it fast and remove this error!"
+	
 	tidx = (date.timetuple().tm_yday-1)*4 + int(date.hour/6)
 	
 	if norm:
@@ -419,51 +299,26 @@ def ysect_date_deform(date, yidx=57, norm=False, std=False):
 	return
 
 
-# same as ysect_mean_deform but without any averaging; deformation sections for one point in time
-def ysect_dateQ(quantity, date, yidx=57, norm=False, std=False):
-	tidx = (date.timetuple().tm_yday-1)*4 + int(date.hour/6)
-	
-	f = pygrib.open('%04d_%s.grib' % (date.year, quantity))
-
-	Q = np.zeros((13,240))
-	for i in range(13):
-		print levels[i], f[13*tidx+i+1].level
-		Q[i] = f[13*tidx+i+1].values[yidx,:]
-	
-	fs = pygrib.open('static.grib')
-	oro = fs[3]
-	fs.close()
-	oro = 1000.0*np.exp(oro.values[yidx,:]/(-270.0*287.0))	# tentative conversion from Phi [m^2/s^2] to p [hPa] p0 = 1000, <T> = 270K
-	oro[oro > 1000.0] = 1000.0
-
-	print oro.shape, levels.shape
-	Q[oro[np.newaxis,:]-10 < levels[:,np.newaxis]] = np.ma.masked
-
-	plt.contour(lon[0,:], levels, Q, 15)
-	plt.fill(lon[0,:], oro, 'k')
-	plt.ylim(plt.ylim()[::-1])		# reverse y-axis
-	plt.colorbar()
-	plt.show()
-
-	return
-
-
 # Hovmöller diagram
-def ypline_hov(year, plev=700, yidx=57, norm=False):
-	if norm:
-		f = metopen('%04d_deforn.npz' % year)
-	else:
-		f = metopen('%04d_deform.npz' % year)
+def ypline_hov_Q(year, q='defabs', plev=700, yidx=57, norm=False, quiet=False):
+	if not quiet:
+		print 'Lat %f' % lat[yidx,0]
+	f, dat = metopen(c.file_std % (year, plev, q), c.q[q])
+	dat = dat[:,yidx,:]
+	f.close()
 
-	dat = f['d%02d_%d' % (year % 100, plev)]
-
-	dat = np.concatenate((dat[:,:,-30:], dat, dat[:,:,:30]), axis=2)
-	exlon = map(lambda x: x*1.5 - 225.0, range(dat.shape[2]))
+	dat = np.concatenate((dat[:,-60:], dat, dat[:,:60]), axis=1)
+	exlon = map(lambda x: x*0.5 - 210.0, range(dat.shape[1]))
 	tidxs = map(lambda x: x*0.25,range(dat.shape[0]))
 
-	plt.contourf(exlon, tidxs, dat[:,yidx,:], 20)
+	plt.contourf(exlon, tidxs, dat[:,:], 20)
 	plt.plot([-180, -180], [tidxs[0], tidxs[-1]], 'k--')
 	plt.plot([ 180,  180], [tidxs[0], tidxs[-1]], 'k--')
+	plt.xticks(np.arange(-210,211,30))
+	plt.yticks(np.array([0,31,59,90,120,151,181,212,243,273,304,334]), 
+		('Jan', 'Feb', 'Mar', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'))
+	plt.xlabel('Longitude')
+	plt.ylabel(str(year))
 	plt.ylim(plt.ylim()[::-1])		# reverse y-axis
 	plt.colorbar()
 	plt.show()
@@ -471,24 +326,7 @@ def ypline_hov(year, plev=700, yidx=57, norm=False):
 	return
 
 
-def correl_mean_deform_v():
-	fv = metopen('mean_v.npz')
-	fd = metopen('mean_deform.npz')
-	
-	v = []
-	for f in fv.files:
-		v.append(fv[f][1:-1,:])
-	d = []
-	for f in fd.files:
-		d.append(fd[f])
-
-	plt.scatter(d, v, s=1, marker='+')
-	plt.show()
-
-	return
-
-
-def xsect_mean_deform(year=None, norm=False):
+def xsect_mean_Q(q='defabs', year=None, norm=False):
 	if not year:
 		if norm:
 			f = metopen('mean_deforn.npz')

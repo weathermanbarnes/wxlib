@@ -22,7 +22,9 @@ def scale(var, cut=(slice(None),slice(None),slice(None)), bench=False):
 # Concatenate one latitude band in x-direction, taking over the values of 
 # the first latitude band to emulate a cyclic field in Basemap plots
 def concat1(data):
-	if len(data.shape) == 2:
+	if len(data.shape) == 1:
+		data = np.concatenate((data, np.reshape(data[0], (1,)) ), axis=0)
+	elif len(data.shape) == 2:
 		data = np.concatenate((data, np.reshape(data[:,0], (data.shape[0],1)) ), axis=1)
 	elif len(data.shape) == 3:
 		data = np.concatenate((data, np.reshape(data[:,:,0], (data.shape[0], data.shape[1],1)) ), axis=2)

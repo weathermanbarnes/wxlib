@@ -20,7 +20,7 @@ for year in c.years:
 		print 'Processing year %d, plev %d' % (year, plev)
 
 		ipath  = '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'
-		opath  = '/scratch/csp001/reanalysis'
+		opath  = '../deformation'
 		ufile  = 'ei.ans.%d.%d.u.nc' % (year, plev)
 		vfile  = 'ei.ans.%d.%d.v.nc' % (year, plev)
 
@@ -44,15 +44,15 @@ for year in c.years:
 		fu.close()
 		fv.close()
 		
-		ofile = '%s/ei.ans.%d.%d.defang.npz' % (opath, year, plev)
+		ofile = '%s/ei.ans.%d.%d.defang.npy' % (opath, year, plev)
 		begin = dt.now()
-		np.savez(ofile, defang=deff.astype('f4'))
+		np.save(ofile, np.ascontiguousarray(deff.astype('f4')))
 		print 'Saving', dt.now()-begin
 
-		begin = dt.now()
-		os.spawnl(os.P_WAIT, '/usr/bin/scp', 'scp', ofile, 'gfi063203.klientdrift.uib.no:/media/work/reanalysis/highres')
-		os.spawnl(os.P_WAIT, '/bin/rm', 'rm', ofile)
-		print 'Moving', dt.now()-begin
+		#begin = dt.now()
+		#os.spawnl(os.P_WAIT, '/usr/bin/scp', 'scp', ofile, 'gfi063203.klientdrift.uib.no:/media/work/reanalysis/highres')
+		#os.spawnl(os.P_WAIT, '/bin/rm', 'rm', ofile)
+		#print 'Moving', dt.now()-begin
 
 
 #

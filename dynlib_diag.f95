@@ -21,18 +21,18 @@ contains
     do i=2_ni,nx-1_ni
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             res(k,j,i) = 0.5_nr*((v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i) &
-                  &     -         (u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i))
+             res(k,j,i) = ((v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i) &
+                  &     -  (u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i))
           end do
        end do
     end do
     if (grid_cyclic_ew) then
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             res(k,j,1_ni) = 0.5_nr*((v(k,j,     2_ni)-u(k,j        ,nx))/dx(j,i) &
-                     &     -         (u(k,j+1_ni,1_ni)-v(k,j-1_ni, 1_ni))/dy(j,i))
-             res(k,j,nx  ) = 0.5_nr*((v(k,j,     1_ni)-u(k,j,   nx-1_ni))/dx(j,i) &
-                     &     -         (u(k,j+1_ni,  nx)-v(k,j-1_ni,   nx))/dy(j,i))
+             res(k,j,1_ni) = (v(k,j,  2_ni)-u(k,j     ,nx))/dx(j,1_ni) &
+                     &     - (u(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,1_ni)
+             res(k,j,nx  ) = (v(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,nx) &
+                     &     - (u(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,nx)
           end do
        end do
     end if
@@ -50,18 +50,18 @@ contains
     do i=2_ni,nx-1_ni
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             res(k,j,i) = 0.5_nr*((u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
-                  &        +      (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i))
+             res(k,j,i) = ((u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
+                  &  +     (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i))
           end do
        end do
     end do
     if (grid_cyclic_ew) then
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             res(k,j,1_ni) = 0.5_nr*((u(k,j,  2_ni)-u(k,j     ,nx))/dx(j,i) &
-                     &             + (v(k,j+1_ni,1_ni)-v(k,j-1_ni, 1_ni))/dy(j,i))
-             res(k,j,nx  ) = 0.5_nr*((u(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,i) &
-                     &             + (v(k,j+1_ni,nx)-v(k,j-1_ni, nx))/dy(j,i))
+             res(k,j,1_ni) = (u(k,j,  2_ni)-u(k,j     ,nx))/dx(j,1_ni) &
+                     &     + (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,1_ni)
+             res(k,j,nx  ) = (u(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,nx) &
+                     &     + (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,nx)
           end do
        end do
     end if
@@ -79,18 +79,18 @@ contains
     do i=2_ni,nx-1_ni
         do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             res(k,j,i) = 0.5_nr*((u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i) &
-                  &             + (v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i))
+             res(k,j,i) = ((u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i) &
+                  &      + (v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i))
           end do
        end do
     end do
     if (grid_cyclic_ew) then
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             res(k,j,1_ni) = 0.5_nr*((u(k,j+1_ni,1_ni)-u(k,j-1_ni,1_ni))/dy(j,i) &
-                     &            + (v(k,j,  2_ni)-v(k,j     ,nx))/dx(j,i))
-             res(k,j,nx  ) = 0.5_nr*((u(k,j+1_ni,nx)-u(k,j-1_ni, nx))/dy(j,i) &
-                     &            + (v(k,j,  1_ni)-v(k,j,nx-1_ni))/dx(j,i))
+             res(k,j,1_ni) = (u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,1_ni) &
+                     &     + (v(k,j,  2_ni)-v(k,j     ,nx))/dx(j,1_ni)
+             res(k,j,nx  ) = (u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,nx) &
+                     &     + (v(k,j  ,1_ni)-v(k,j,nx-1_ni))/dx(j,nx)
           end do
        end do
     end if
@@ -108,18 +108,18 @@ contains
     do i=2_ni,nx-1_ni
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             res(k,j,i) = 0.5_nr*((u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
-                  &             - (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i))
+             res(k,j,i) = (u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
+                  &     - (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i))
           end do
        end do
     end do
     if (grid_cyclic_ew) then
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             res(k,j,1_ni) = 0.5_nr*((u(k,j,  2_ni)-u(k,j     ,nx))/dx(j,i) &
-                     &             - (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,i))
-             res(k,j,nx  ) = 0.5_nr*((u(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,i) &
-                     &             - (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,i))
+             res(k,j,1_ni) = (u(k,j,  2_ni)-u(k,j     ,nx))/dx(j,1_ni) &
+                     &     - (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,1_ni)
+             res(k,j,nx  ) = (u(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,nx) &
+                     &     - (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,nx)
           end do
        end do
     end if
@@ -141,23 +141,23 @@ contains
                   &     +  (v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i))**2._nr &
                   &     + ((u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i)         &
                   &     -  (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i))**2._nr
-             res(k,j,i) = 0.5_nr*sqrt(res(k,j,i))
+             res(k,j,i) = sqrt(res(k,j,i))
           end do
        end do
     end do
     if (grid_cyclic_ew) then
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             res(k,j,1_ni) = ((u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,i)         &
-                     &     +  (v(k,j,  2_ni)-v(k,j     ,nx))/dx(j,i))**2._nr &
-                     &     + ((u(k,j,  2_ni)-u(k,j     ,nx))/dx(j,i)         &
-                     &     -  (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,i))**2._nr
-             res(k,j,nx  ) = ((u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,i)         &
-                     &     +  (v(k,j  ,1_ni)-v(k,j,nx-1_ni))/dx(j,i))**2._nr &
-                     &     + ((u(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,i)         &
-                     &     -  (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,i))**2._nr
-             res(k,j,1_ni) = 0.5_nr*sqrt(res(k,j,1_ni))
-             res(k,j,  nx) = 0.5_nr*sqrt(res(k,j,  nx))
+             res(k,j,1_ni) = ((u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,1_ni)         &
+                     &     +  (v(k,j,  2_ni)-v(k,j     ,nx))/dx(j,1_ni))**2._nr &
+                     &     + ((u(k,j,  2_ni)-u(k,j     ,nx))/dx(j,1_ni)         &
+                     &     -  (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,1_ni))**2._nr
+             res(k,j,nx  ) = ((u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,nx)         &
+                     &     +  (v(k,j  ,1_ni)-v(k,j,nx-1_ni))/dx(j,nx))**2._nr &
+                     &     + ((u(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,nx)         &
+                     &     -  (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,nx))**2._nr
+             res(k,j,1_ni) = sqrt(res(k,j,1_ni))
+             res(k,j,  nx) = sqrt(res(k,j,  nx))
           end do
        end do
     end if
@@ -177,10 +177,10 @@ contains
     do i=2_ni,nx-1_ni
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             def_shear   = 0.5_nr*((u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i) &
-                  &              + (v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i))
-             def_stretch = 0.5_nr*((u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
-                  &              - (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i))
+             def_shear   = ((u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i) &
+                  &       + (v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i))
+             def_stretch = ((u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
+                  &       - (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i))
              res(k,j,i)  = 0.5_nr*atan2(def_shear, def_stretch)
           end do
        end do
@@ -188,15 +188,15 @@ contains
     if (grid_cyclic_ew) then
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             def_shear   = 0.5_nr*((u(k,j+1_ni,1)-u(k,j-1_ni,1))/dy(j,i) &
-                     &          +  (v(k,j,  2_ni)-v(k,j    ,nx))/dx(j,i))
-             def_stretch = 0.5_nr*((u(k,j,  2_ni)-u(k,j     ,nx))/dx(j,i) &
-                     &           - (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,i))
+             def_shear   = (u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,1_ni) &
+                     &   + (v(k,j,  2_ni)-v(k,j     ,nx))/dx(j,1_ni)
+             def_stretch = (u(k,j,  2_ni)-u(k,j     ,nx))/dx(j,1_ni) &
+                     &   - (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,1_ni)
              res(k,j,1_ni) = 0.5_nr*atan2(def_shear, def_stretch)
-             def_shear   = 0.5_nr*((u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,i) &
-                     &           + (v(k,j  ,1_ni)-v(k,j,nx-1_ni))/dx(j,i))
-             def_stretch = 0.5_nr*((u(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,i) &
-                     &           - (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,i))
+             def_shear   = (u(k,j+1_ni,i)-u(k,j-1_ni, i))/dy(j,nx) &
+                     &   + (v(k,j  ,1_ni)-v(k,j,nx-1_ni))/dx(j,nx)
+             def_stretch = (u(k,j  ,1_ni)-u(k,j,nx-1_ni))/dx(j,nx) &
+                     &   - (v(k,j+1_ni,i)-v(k,j-1_ni, i))/dy(j,nx)
              res(k,j,nx) = 0.5_nr*atan2(def_shear, def_stretch)
           end do
        end do
@@ -216,12 +216,12 @@ contains
     do i=2_ni,nx-1_ni
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             def_shear   = 0.5_nr*((u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i) &
-                  &              + (v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i))
-             def_stretch = 0.5_nr*((u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
-                  &              - (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i))
-             gradx = 0.5_nr*(pv(k,j,i+1_ni)-pv(k,j,i-1_ni))/dx(j,i)
-             grady = 0.5_nr*(pv(k,j+1_ni,i)-pv(k,j-1_ni,i))/dy(j,i)
+             def_shear   = ((u(k,j+1_ni,i)-u(k,j-1_ni,i))/dy(j,i) &
+                  &       + (v(k,j,i+1_ni)-v(k,j,i-1_ni))/dx(j,i))
+             def_stretch = ((u(k,j,i+1_ni)-u(k,j,i-1_ni))/dx(j,i) &
+                  &       - (v(k,j+1_ni,i)-v(k,j-1_ni,i))/dy(j,i))
+             gradx = (pv(k,j,i+1_ni)-pv(k,j,i-1_ni))/dx(j,i)
+             grady = (pv(k,j+1_ni,i)-pv(k,j-1_ni,i))/dy(j,i)
              alpha = 0.5_nr*atan2(def_shear, def_stretch)
              beta  = alpha-atan2(-grady,gradx)
              res(k,j,i) = cos(2.*beta)
@@ -231,22 +231,22 @@ contains
     if (grid_cyclic_ew) then
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             def_shear   = 0.5_nr*(u(k,j+1_ni,1_ni)-u(k,j-1_ni,1_ni))/dy(j,i) &
-                  &      + 0.5_nr*(v(k,j,  2_ni)-v(k,j,   nx))/dx(j,i)
-             def_stretch = 0.5_nr*(u(k,j,  2_ni)-u(k,j,   nx))/dx(j,i) &
-                  &      - 0.5_nr*(v(k,j+1_ni,1_ni)-v(k,j-1_ni,1_ni))/dy(j,i)
-             gradx = 0.5_nr*(pv(k,j,2_ni)-pv(k,j,nx))/dx(j,i)
-             grady = 0.5_nr*(pv(k,j+1_ni,1_ni)-pv(k,j-1_ni,1_ni))/dy(j,i)
+             def_shear   = (u(k,j+1_ni,1_ni)-u(k,j-1_ni,1_ni))/dy(j,i) &
+                  &      + (v(k,j,  2_ni)-v(k,j,   nx))/dx(j,i)
+             def_stretch = (u(k,j,  2_ni)-u(k,j,   nx))/dx(j,i) &
+                  &      - (v(k,j+1_ni,1_ni)-v(k,j-1_ni,1_ni))/dy(j,i)
+             gradx = (pv(k,j,2_ni)-pv(k,j,nx))/dx(j,i)
+             grady = (pv(k,j+1_ni,1_ni)-pv(k,j-1_ni,1_ni))/dy(j,i)
              alpha = 0.5_nr*atan2(def_shear, def_stretch)
              beta  = alpha-atan2(-grady,gradx)
              res(k,j,1_ni) = cos(2.*beta)
 
-             def_shear   = 0.5_nr*(u(k,j+1_ni,nx)-u(k,j-1_ni,nx))/dy(j,i) &
-                  &      + 0.5_nr*(v(k,j,  1_ni)-v(k,j,nx-1_ni))/dx(j,i)
-             def_stretch = 0.5_nr*(u(k,j,  1_ni)-u(k,j,nx-1_ni))/dx(j,i) &
-                  &      - 0.5_nr*(v(k,j+1_ni,nx)-v(k,j-1_ni,nx))/dy(j,i)
-             gradx = 0.5_nr*(pv(k,j,1_ni)-pv(k,j,nx-1_ni))/dx(j,i)
-             grady = 0.5_nr*(pv(k,j+1_ni,nx)-pv(k,j-1_ni,nx))/dy(j,i)
+             def_shear   = (u(k,j+1_ni,nx)-u(k,j-1_ni,nx))/dy(j,i) &
+                  &      + (v(k,j,  1_ni)-v(k,j,nx-1_ni))/dx(j,i)
+             def_stretch = (u(k,j,  1_ni)-u(k,j,nx-1_ni))/dx(j,i) &
+                  &      - (v(k,j+1_ni,nx)-v(k,j-1_ni,nx))/dy(j,i)
+             gradx = (pv(k,j,1_ni)-pv(k,j,nx-1_ni))/dx(j,i)
+             grady = (pv(k,j+1_ni,nx)-pv(k,j-1_ni,nx))/dy(j,i)
              alpha = 0.5_nr*atan2(def_shear, def_stretch)
              beta  = alpha-atan2(-grady,gradx)
              res(k,j,nx) = cos(2.*beta)
@@ -267,18 +267,18 @@ contains
     do i=2_ni,nx-1_ni
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             resx(k,j,i) = 0.5_nr*((pv(k,j,i+1_ni)-pv(k,j,i-1_ni))/dx(j,i))
-             resy(k,j,i) = 0.5_nr*((pv(k,j+1_ni,i)-pv(k,j-1_ni,i))/dy(j,i))
+             resx(k,j,i) = ((pv(k,j,i+1_ni)-pv(k,j,i-1_ni))/dx(j,i))
+             resy(k,j,i) = ((pv(k,j+1_ni,i)-pv(k,j-1_ni,i))/dy(j,i))
           end do
        end do
     end do
     if (grid_cyclic_ew) then
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             resx(k,j,1_ni) = 0.5_nr*((pv(k,j,  2_ni)-pv(k,j     ,nx))/dx(j,i)) 
-             resy(k,j,1_ni) = 0.5_nr*((pv(k,j+1_ni,i)-pv(k,j-1_ni, i))/dy(j,i))
-             resx(k,j,nx  ) = 0.5_nr*((pv(k,j  ,1_ni)-pv(k,j,nx-1_ni))/dx(j,i))
-             resy(k,j,nx  ) = 0.5_nr*((pv(k,j+1_ni,i)-pv(k,j-1_ni, i))/dy(j,i))
+             resx(k,j,1_ni) = ((pv(k,j,  2_ni)-pv(k,j     ,nx))/dx(j,i)) 
+             resy(k,j,1_ni) = ((pv(k,j+1_ni,i)-pv(k,j-1_ni, i))/dy(j,i))
+             resx(k,j,nx  ) = ((pv(k,j  ,1_ni)-pv(k,j,nx-1_ni))/dx(j,i))
+             resy(k,j,nx  ) = ((pv(k,j+1_ni,i)-pv(k,j-1_ni, i))/dy(j,i))
           end do
        end do
     end if
@@ -316,11 +316,11 @@ contains
     do i=1_ni,nx
        do j=2_ni,ny-1_ni
           do k=1_ni,nz
-             gra = 0.5_nr*((pv(k,j+1_ni,i)-pv(k,j-1_ni,i))/dy(j,i)) 
+             gra = ((pv(k,j+1_ni,i)-pv(k,j-1_ni,i))/dy(j,i)) 
              if (gra < thres) then
-                res(k,j,i)=1.
+                res(k,j,i)=1.0_nr
              else 
-                res(k,j,i)=0.
+                res(k,j,i)=0.0_nr
              end if     
           end do
        end do
