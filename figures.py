@@ -22,55 +22,12 @@ f.close()
 
 orolevs = range(-19000,51000,2000)
 
-# 32 years of data at a glance
-def ypline_mean_Q(q='defabs', yidx=57, plev=700, summarize=False, std=False, quiet=False):
-	if not quiet:
-		print 'Lat %f' % lat[yidx,0]
-	means = {}
-	for y in c.years:
-		if not quiet:
-			print y
-		if std:
-			f, dat = metopen(c.file_stat % (y, plev, q), 'stddev')
-			means[y] = dat[yidx,:]
-		else:
-			f, dat = metopen(c.file_stat % (y, plev, q), 'mean')
-			means[y] = dat[yidx,:]
-		f.close()
-	del dat
-	
-	if summarize:
-		num = 5
-		means2 = {}
-		for y, dat in means.items():
-			if (y-c.years[0]) % num == 0:
-				key = '%d-%d' % (y,y+num-1)
-				means2[key] = dat/num
-			else:
-				means2[key] += dat/num
-		means = means2
-
-	for y, dat in means.items():
-		plt.plot(lon[0,:-1], dat, hold=True)
-	
-	plt.legend(means.keys())
-	plt.show()
-
-	return
+# TODO: Generalisation in data fetcher <-> plotter to avoid code duplication
 
 
-# era interim orographical map 30N-90N
-def map_oro():
-	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
-	m.drawcoastlines()
-	x,y = m(lon,lat)
-	m.contourf(x,y, oro, orolevs, cmap=plt.cm.gist_earth)
-	m.drawparallels(range(15,80,5))
-	m.drawmeridians(range(0,360,30))
-	plt.colorbar()
-	plt.show()
-
-	return
+# #############################################################################
+# 1. Plots of (multi-)yearly means for constant plev, yidx or xidx
+#
 
 
 # contour map of 32 year mean deformation
@@ -89,9 +46,6 @@ def map_mean_Q(q='defabs', year=None, plev=700, std=False, quiet=False):
 		years = globals()['c'].years
 	
 	for y in years:
-		if not quiet:
-			print y
-
 		if std:	
 			# TODO: Correct calculation of mean stddev!
 			f, dat = metopen(c.file_stat % (y, plev, q), 'stddev')
@@ -188,6 +142,9 @@ def map_mean_deform(year=None, plev=700):
 	meanZ = meanZ[::-1,:]
 	meandex[meanZ < oro] = np.ma.masked
 	meandey[meanZ < oro] = np.ma.masked
+	meandex[0:5,:] = np.ma.masked
+	meandey[0:5,:] = np.ma.masked
+	meanabs[0:5,:] = np.ma.masked
 
 	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
 	x,y = m(lon,lat)
@@ -205,20 +162,87 @@ def map_mean_deform(year=None, plev=700):
 	return
 
 
+# vertical profiles of 32years mean deformation
+def ysect_mean_Q(q='defabs', year=None, yidx=57, std=False, quiet=False):
+	if not quiet:
+		print 'Lat %f' % lat[yidx,0]
+	
+	i = 0
+	qm = np.zeros((len(c.plevs),s[1]))
+	for plev in c.plevs:
+		if std:
+			if year:
+				f, dat = metopen(c.file_stat % (year, plev, q), 'stddev')
+			else:
+				f, dat = metopen(c.file_mstat % (plev, q), 'stddev')
+		else:
+			if year:
+				f, dat = metopen(c.file_stat % (year, plev, q), 'mean')
+			else:
+				f, dat = metopen(c.file_mstat % (plev, q), 'mean')
+
+		qm[i] = concat1(dat[yidx,:])
+		i += 1
+	
+	orop = 1000.0*np.exp(globals()['oro'][yidx,:]/(-270.0*287.0))	# tentative conversion from Phi [m^2/s^2] to p [hPa] p0 = 1000, <T> = 270K
+	orop[orop > 1000.0] = 1000.0
+	
+	qm[(orop-10) < c.plevs[:,np.newaxis]] = np.ma.masked
+
+	plt.contour(lon[0,:], c.plevs, qm, 15)
+	#plt.fill_between(lon[0,:], 1000.0-oro.values[yidx,:]/80.0, np.ones((240,))*1000.0, 'k')
+	plt.fill(lon[0,:], orop, 'k')
+	plt.ylim(plt.ylim()[::-1])		# reverse y-axis
+	plt.colorbar()
+	plt.show()
+
+	return
+
+
+def xsect_mean_Q(q='defabs', year=None, xidx=264, std=False):
+	if not quiet:
+		print 'Lon %f' % lon[0,xidx]
+	
+	i = 0
+	qm = np.zeros((len(c.plevs),s[0]))
+	for plev in c.plevs:
+		if std:
+			if year:
+				f, dat = metopen(c.file_stat % (year, plev, q), 'stddev')
+			else:
+				f, dat = metopen(c.file_mstat % (plev, q), 'stddev')
+		else:
+			if year:
+				f, dat = metopen(c.file_stat % (year, plev, q), 'mean')
+			else:
+				f, dat = metopen(c.file_mstat % (plev, q), 'mean')
+
+		qm[i] = dat[:,xidx]
+		i += 1
+	
+	orop = 1000.0*np.exp(globals()['oro'][:,xidx]/(-270.0*287.0))	# tentative conversion from Phi [m^2/s^2] to p [hPa] p0 = 1000, <T> = 270K
+	orop[orop > 1000.0] = 1000.0
+	
+	qm[(orop-10) < c.plevs[:,np.newaxis]] = np.ma.masked
+	
+	plt.contour(lat[1:-1,0], levels, qm, 15)
+	plt.ylim(plt.ylim()[::-1])		# reverse y-axis
+	plt.colorbar()
+	plt.show()
+
+	return
+
+
+
+# #############################################################################
+# 2. Plots instantaneous fields or short-term averages for plev, yidx, xidx
+#
+
+
 # same as ysect_mean_deform but without any averaging; deformation sections for one point in time
 def map_date_Q(date, q='defabs', plev=700):
-	tidx = (date.timetuple().tm_yday-1)*4 + int(date.hour/6)
-	
-	f, dat = metopen(c.file_std % (date.year, plev, q), c.q[q])
-	dat = dat[tidx,:,:]
-	f.close()
-
-	f, daZ = metopen(c.file_std % (date.year, plev, 'Z'), c.q['Z'])
-	daZ = daZ[tidx,:,:]
-	f.close()
-
-	dat = concat1(dat)
-	daZ = concat1(daZ)
+	dat = _get_instantaneous(q, date, plevs=plev)
+	daZ = _get_instantaneous('Z', date, plevs=plev)
 
 	dat[daZ < oro] = np.ma.masked
 
@@ -235,29 +259,20 @@ def map_date_Q(date, q='defabs', plev=700):
 	return
 
 
-# vertical profiles of 32years mean deformation
-def ysect_mean_Q(q='defabs', yidx=57, std=False, quiet=False):
+# same as ysect_mean_deform but without any averaging; deformation sections for one point in time
+def ysect_date_Q(date, q='defabs', yidx=57, quiet=False):
 	if not quiet:
 		print 'Lat %f' % lat[yidx,0]
-	i = 0
-	qm = np.zeros((len(c.plevs),s[1]))
-	for plev in c.plevs:
-		if std:
-			f, dat = metopen(c.file_mstat % (plev, q), 'stddev')
-		else:
-			f, dat = metopen(c.file_mstat % (plev, q), 'mean')
+	
+	qm = _get_instantaneous(q, date, yidx=yidx, quiet=quiet)
+	
+	orop = 1000.0*np.exp(oro[yidx,:]/(-270.0*287.0))	# tentative conversion from Phi [m^2/s^2] to p [hPa] p0 = 1000, <T> = 270K
+	orop[orop > 1000.0] = 1000.0
 
-		qm[i] = concat1(dat[yidx,:])
-		i += 1
-	
-	oro = 1000.0*np.exp(globals()['oro'][yidx,:]/(-270.0*287.0))	# tentative conversion from Phi [m^2/s^2] to p [hPa] p0 = 1000, <T> = 270K
-	oro[oro > 1000.0] = 1000.0
-	
-	qm[(oro-10) < c.plevs[:,np.newaxis]] = np.ma.masked
+	qm[orop[np.newaxis,:]-10 < c.plevs[:,np.newaxis]] = np.ma.masked
 
 	plt.contour(lon[0,:], c.plevs, qm, 15)
-	#plt.fill_between(lon[0,:], 1000.0-oro.values[yidx,:]/80.0, np.ones((240,))*1000.0, 'k')
-	plt.fill(lon[0,:], oro, 'k')
+	plt.fill(lon[0,:], orop, 'k')
 	plt.ylim(plt.ylim()[::-1])		# reverse y-axis
 	plt.colorbar()
 	plt.show()
@@ -265,34 +280,56 @@ def ysect_mean_Q(q='defabs', yidx=57, std=False, quiet=False):
 	return
 
 
-# same as ysect_mean_deform but without any averaging; deformation sections for one point in time
-def ysect_date_Q(date, yidx=57, norm=False, std=False):
-	raise NotImplementedError, "This would be _very_ slow. Make it fast and remove this error!"
-	
-	tidx = (date.timetuple().tm_yday-1)*4 + int(date.hour/6)
-	
-	if norm:
-		f = metopen('%04d_deforn.npz' % date.year)
-	else:
-		f = metopen('%04d_deform.npz' % date.year)
-	d = np.zeros((13,240))
-	i = 0
-	for field in sorted(map(lambda x: int(x[4:]), f.files)):
-		d[i] = f['d%02d_%d' % (date.year % 100, field)][tidx,yidx,:]
-		i += 1
-	
-	fs = pygrib.open('static.grib')
-	oro = fs[3]
-	fs.close()
-	oro = 1000.0*np.exp(oro.values[yidx,:]/(-270.0*287.0))	# tentative conversion from Phi [m^2/s^2] to p [hPa] p0 = 1000, <T> = 270K
-	oro[oro > 1000.0] = 1000.0
 
-	print oro.shape, levels.shape
-	d[oro[np.newaxis,:]-10 < levels[:,np.newaxis]] = np.ma.masked
+# #############################################################################
+# 3. Other functions
+# 
 
-	plt.contour(lon[0,:], levels, d, 15)
-	plt.fill(lon[0,:], oro, 'k')
-	plt.ylim(plt.ylim()[::-1])		# reverse y-axis
+# Constant yidx and plev; plotting (multi-)year means
+def ypline_mean_Q(q='defabs', yidx=57, plev=700, summarize=False, std=False, quiet=False):
+	if not quiet:
+		print 'Lat %f' % lat[yidx,0]
+	means = {}
+	for y in c.years:
+		if not quiet:
+			print y
+		if std:
+			f, dat = metopen(c.file_stat % (y, plev, q), 'stddev')
+			means[y] = dat[yidx,:]
+		else:
+			f, dat = metopen(c.file_stat % (y, plev, q), 'mean')
+			means[y] = dat[yidx,:]
+		f.close()
+	del dat
+	
+	if summarize:
+		num = 5
+		means2 = {}
+		for y, dat in means.items():
+			if (y-c.years[0]) % num == 0:
+				key = '%d-%d' % (y,y+num-1)
+				means2[key] = dat/num
+			else:
+				means2[key] += dat/num
+		means = means2
+
+	for y, dat in means.items():
+		plt.plot(lon[0,:-1], dat, hold=True)
+	
+	plt.legend(means.keys())
+	plt.show()
+
+	return
+
+
+# era interim orographical map 30N-90N
+def map_oro():
+	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+	m.drawcoastlines()
+	x,y = m(lon,lat)
+	m.contourf(x,y, oro, orolevs, cmap=plt.cm.gist_earth)
+	m.drawparallels(range(15,80,5))
+	m.drawmeridians(range(0,360,30))
 	plt.colorbar()
 	plt.show()
 
@@ -300,7 +337,7 @@ def ysect_date_Q(date, yidx=57, norm=False, std=False):
 
 
 # Hovmöller diagram
-def ypline_hov_Q(year, q='defabs', plev=700, yidx=57, norm=False, quiet=False):
+def ypline_hov_Q(year, q='defabs', plev=700, yidx=57, quiet=False):
 	if not quiet:
 		print 'Lat %f' % lat[yidx,0]
 	f, dat = metopen(c.file_std % (year, plev, q), c.q[q])
@@ -326,35 +363,94 @@ def ypline_hov_Q(year, q='defabs', plev=700, yidx=57, norm=False, quiet=False):
 	return
 
 
-def xsect_mean_Q(q='defabs', year=None, norm=False):
-	if not year:
-		if norm:
-			f = metopen('mean_deforn.npz')
-		else:
-			f = metopen('mean_deform.npz')
-		ln = 3
-	else:
-		if norm:
-			f = metopen('%04d_deforn.npz' % year)
-		else:
-			f = metopen('%04d_deform.npz' % year)
-		ln = 4
-
-	dm = np.zeros((13,39))
-	i = 0
-	for field in sorted(map(lambda x: int(x[ln:]), f.files)):
-		if not year:
-			dm[i] = f['dm_%d' % field].mean(axis=1)
-		else:
-			dm[i] = f['d%02d_%d' % (year % 100, field)].mean(axis=0).mean(axis=1)
-		i += 1
+def hist(year, q='defang', plev=700, yidx=57, xidx=264, quiet=False):
+	if not quiet:
+		print 'Lat: %f, Lon: %f' % (lat[yidx,0],lon[0,xidx])
+	f, dat = metopen(c.file_std % (year, plev, q), c.q[q])
+	dat = dat[:,yidx,xidx]
+	if f: f.close()
 	
-	plt.contour(lat[1:-1,0], levels, dm, 15)
-	plt.ylim(plt.ylim()[::-1])		# reverse y-axis
-	plt.colorbar()
+	if q == 'defang':
+		plt.hist(dat, bins=32, range=(-np.pi/2, np.pi/2) )
+		plt.xlim((-np.pi/2, np.pi/2))
+	else:
+		plt.hist(dat, bins=32)
+
 	plt.show()
 
 	return
 
 
 
+# #############################################################################
+# 4. Generalisations
+# 
+
+
+# Generalised data fetcher for instantaneous or short-term averaged fields
+def _get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=True, quiet=False):
+	# None means "take everything there is"
+	if not plevs:
+		plevs = c.plevs
+	else:
+		plevs = [plevs,]
+	
+	if yidx == None:
+		yidxs = slice(None)
+		ylen  = s[0]
+	else:
+		yidxs = yidx
+		ylen  = 1
+	
+	if xidx == None:
+		xidxs = slice(None)
+		xlen  = s[1]
+	else:
+		xidxs = xidx
+		xlen  = 1
+
+	# Convert dates to time indexes
+	if type(dates) not in ([np.ndarray, list, tuple, set]):
+		dates = [dates, ]
+	tidxs = map(lambda x: (x.timetuple().tm_yday-1)*4 + int(x.hour/6), dates)
+
+	# Construct the slice
+	cut = (slice(min(tidxs),max(tidxs)+1), yidxs, xidxs)
+	
+	# One ore more vertical levels?
+	if len(plevs) > 1:
+		i = 0
+		dat = np.zeros((1+max(tidxs)-min(tidxs), len(c.plevs), ylen, xlen))
+		dat = dat.squeeze()
+		for plev in plevs:
+			if not quiet:
+				print "Reading from "+c.file_std % (dates[0].year, plev, q)
+			f, d = metopen(c.file_std % (dates[0].year, plev, q), c.q[q], cut=cut)
+			if xidx == None:
+				dat[:,i,::] = concat1(d)
+			else:
+				dat[:,i,::] = d
+			i += 1
+	else:
+		if not quiet:
+			print "Reading from "+c.file_std % (dates[0].year, plevs[0], q)
+		f, dat = metopen(c.file_std % (dates[0].year, plevs[0], q), c.q[q], cut=cut)
+		if xidx == None:
+			dat = concat1(dat)
+	
+	# Time-averaging if specified
+	if tavg and len(dates) > 1:
+		dat = dat.mean(axis=0)
+	
+	return dat
+
+
+# Get aggregated (average, standard deviation, etc.) fields
+def _get_aggregate(q, year=None, plev=None, yidx=None, xidx=None):
+
+
+	return dat
+
+
+
+# that's it

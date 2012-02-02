@@ -45,7 +45,7 @@ for plev in c.plevs:
 		
 	
 	print 'Saving multi-year stats'
-	sum  [:,:]/= nttot
+	sum  [:,:]/= wsum[:,:]
 	sqsum[:,:] = np.sqrt((sqsum[:,:]*nttot/wsum[:,:]-(2*nttot-1)*sum[:,:]**2)/(nttot-1))
 
 	ofile = opath+'/'+c.file_mstat % (plev, q)

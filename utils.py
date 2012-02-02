@@ -44,6 +44,8 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 		args = []
 		for var in vars:
 			args.append(scale(var, cut, bench=bench))
+			v = args[-1]
+			print v.min(), v.max(), v.mean()
 		
 		args.extend([grid.dx[cut[1:]], grid.dy[cut[1:]]])
 		if bench:

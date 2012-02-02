@@ -95,10 +95,15 @@ class grid(object):
 			self.dy = np.ones((self.ny, self.nx))*-111111.111111
 			lat = self.f.variables[self.y][::]
 			lon = self.f.variables[self.x][::]
-			for xidx in range(1,self.nx-1):
-				for yidx in range(self.ny):
-					self.dx[yidx,xidx] *= (lon[xidx+1]-lon[xidx-1])*math.cos(math.pi/180.0*lat[yidx])
-			for yidx in range(self.ny):
+			for xidx in range(self.nx):
+				for yidx in range(1,self.ny-1):
+					dlon = lon[(xidx+1)%self.nx]-lon[(xidx-1)%self.nx]
+					if dlon > 180:
+						dlon -= 360
+					elif dlon < -180:
+						dlon += 360
+					self.dx[yidx,xidx] *= dlon*math.cos(math.pi/180.0*lat[yidx])
+			for yidx in range(1,self.ny-1):
 				self.dy[yidx,:] *= lat[yidx+1]-lat[yidx-1]
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type "%s"' % self.gridtype
