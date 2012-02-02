@@ -92,7 +92,7 @@ class grid(object):
 		
 		if self.gridtype == 'latlon':
 			self.dx = np.ones((self.ny, self.nx))*111111.111111
-			self.dy = np.ones((self.ny, self.nx))*-111111.111111
+			self.dy = np.ones((self.ny, self.nx))*111111.111111
 			lat = self.f.variables[self.y][::]
 			lon = self.f.variables[self.x][::]
 			for xidx in range(self.nx):

@@ -40,10 +40,7 @@ for year in c.years:
 			raise TypeError, 'Field shape for u wind does not match field shape for v.'
 
 		deff = utils.call(dynlib.diag.def_angle, [u,v], grid, cut=c.std_slice, bench=True)
-		import matplotlib.pyplot as plt
-		plt.hist(deff.flatten())
-		plt.show()
-		raise NotImplementedError, 'stop here2'
+
 		fu.close()
 		fv.close()
 		
