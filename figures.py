@@ -11,7 +11,7 @@ import static as c
 
 
 # globally useful
-f, oro = metopen('static', 'oro')
+f, oro = metopen('static', 'oro', cut=c.std_slice[1:])
 oro = concat1(oro)
 s   = oro.shape
 lat = np.tile(f['lat'], (s[1],1)).T
@@ -244,6 +244,8 @@ def map_date_Q(date, q='defabs', plev=700):
 	dat = _get_instantaneous(q, date, plevs=plev)
 	daZ = _get_instantaneous('Z', date, plevs=plev)
 
+	print dat.shape, daZ.shape, oro.shape
+
 	dat[daZ < oro] = np.ma.masked
 
 	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
@@ -257,6 +259,51 @@ def map_date_Q(date, q='defabs', plev=700):
 	plt.show()
 
 	return
+
+
+# Contour map of averaged deformation vector on top of a oro map.
+def map_date_deform(date, plev=700):
+	defabs = _get_instantaneous('defabs', date, plevs=plev)
+	defang = _get_instantaneous('defang', date, plevs=plev)
+	daZ    = _get_instantaneous('Z', date, plevs=plev)
+
+	#defabs = defabs[::-1,:]
+	#defang = defang[::-1,:]
+	daZ = daZ[::-1,:]
+	
+	defdex = np.cos(defang[:,:]) *defabs
+	defdey = np.sin(defang[:,:]) *defabs
+	
+	#defdex = concat1(defdex[::-1,:])
+	#defdey = concat1(defdey[::-1,:]) 
+	#defabs = concat1(defabs)
+	#daZ   = concat1(daZ)
+	
+	print defdex.min(), defdex.max()
+	print defdey.min(), defdey.max()
+	defabs[daZ < oro] = np.ma.masked
+	defdex[daZ < oro] = np.ma.masked
+	defdey[daZ < oro] = np.ma.masked
+	defdex[0:5,:] = np.ma.masked
+	defdey[0:5,:] = np.ma.masked
+	defabs[0:5,:] = np.ma.masked
+
+	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+	x,y = m(lon,lat)
+	ut,vt,xt,yt = m.transform_vector(defdex,defdey,lon[0,:],lat[::-1,0],60,60,returnxy=True)
+	m.drawcoastlines()
+	m.contourf(x, y, oro, orolevs, cmap=plt.cm.gist_earth, zorder=1)
+	m.contour(x, y, defabs, 25, zorder=2)
+	m.quiver(xt, yt, ut, vt, zorder=3)
+	m.quiver(xt, yt,-ut,-vt, zorder=3)
+	m.drawparallels(range(15,80,5))
+	m.drawmeridians(range(0,360,30))
+	plt.colorbar()
+	plt.show()
+
+	return
+
+
 
 
 # same as ysect_mean_deform but without any averaging; deformation sections for one point in time
@@ -441,6 +488,8 @@ def _get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=True, qu
 	# Time-averaging if specified
 	if tavg and len(dates) > 1:
 		dat = dat.mean(axis=0)
+	
+	dat = dat.squeeze()
 	
 	return dat
 

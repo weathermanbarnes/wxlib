@@ -16,18 +16,18 @@ def metopen(filename, q, cut=c.std_slice):
 			return None, dat
 		elif os.path.exists(path+'/'+filename+'.npz'):
 			f   = np.load(path+'/'+filename+'.npz')
-			dat = f[q].astype('f8')
+			dat = f[q][cut].astype('f8')
 			print 'Found '+path+'/'+filename+'.npz'
 			return f, dat
 		elif os.path.exists(path+'/'+filename+'.mat'):
 			f   = mat.loadmat(path+'/'+filename+'.mat')
-			dat = f[q].astype('f8')
+			dat = f[q][cut].astype('f8')
 			print 'Found '+path+'/'+filename+'.mat'
 			return f, dat
 		elif os.path.exists(path+'/'+filename+'.nc'):
 			f   = nc.netcdf_file(path+'/'+filename+'.nc', 'r')
 			var = f.variables[q]
-			dat = utils.scale(var, cut=c.std_slice)
+			dat = utils.scale(var, cut)
 			print 'Found '+path+'/'+filename+'.nc'
 			return f, dat
 	
