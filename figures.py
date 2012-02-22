@@ -167,9 +167,10 @@ def map_mean_barb(year=None, plev=700, quiver=False):
 	plt.colorbar()
 	plt.show()
 
-	return# Contour map of averaged wind on top of a oro map.
+	return
 
 
+# Contour map of averaged wind on top of a oro map.
 def wmap_mean_barb(year=None, plev=700, quiver=False):
 	if not year:
 		fu, meanu = metopen(c.file_mstat % (plev, 'u'), 'mean', cut=c.std_slice[1:])
@@ -286,7 +287,7 @@ def map_mean_deform(year=None, plev=700):
 
 
 # vertical profiles of 32years mean deformation
-def ysect_mean_Q(q='defabs', year=None, yidx=57, agg=False, quiet=False):
+def ysect_mean_Q(q='defabs', year=None, yidx=57, agg=False, quiet=False, cmap=None):
 	if not quiet:
 		print 'Lat %f' % lat[yidx,0]
 	
@@ -312,7 +313,7 @@ def ysect_mean_Q(q='defabs', year=None, yidx=57, agg=False, quiet=False):
 	
 	qm[(orop-10) < c.plevs[:,np.newaxis]] = np.nan
 
-	plt.contour(lon[0,:], c.plevs, qm, 15)
+	plt.contour(lon[0,:], c.plevs, qm, 15, cmap=cmap)
 	#plt.fill_between(lon[0,:], 1000.0-oro.values[yidx,:]/80.0, np.ones((240,))*1000.0, 'k')
 	plt.fill(lon[0,:], orop, 'k')
 	plt.ylim(plt.ylim()[::-1])		# reverse y-axis
@@ -323,7 +324,7 @@ def ysect_mean_Q(q='defabs', year=None, yidx=57, agg=False, quiet=False):
 
 
 # 
-def xsect_mean_Q(q='defabs', year=None, xidx=264, agg=False):
+def xsect_mean_Q(q='defabs', year=None, xidx=264, agg=False, cmap=None):
 	if not quiet:
 		print 'Lon %f' % lon[0,xidx]
 	
@@ -349,7 +350,7 @@ def xsect_mean_Q(q='defabs', year=None, xidx=264, agg=False):
 	
 	qm[(orop-10) < c.plevs[:,np.newaxis]] = np.nan
 	
-	plt.contour(lat[1:-1,0], levels, qm, 15)
+	plt.contour(lat[1:-1,0], levels, qm, 15, cmap=cmap)
 	plt.ylim(plt.ylim()[::-1])		# reverse y-axis
 	plt.colorbar()
 	plt.show()
@@ -364,7 +365,7 @@ def xsect_mean_Q(q='defabs', year=None, xidx=264, agg=False):
 
 
 # same as ysect_mean_deform but without any averaging; deformation sections for one point in time
-def map_date_Q(date, q='defabs', plev=700):
+def map_date_Q(date, q='defabs', plev=700, cmap=None):
 	dat = _get_instantaneous(q, date, plevs=plev)
 	daZ = _get_instantaneous('Z', date, plevs=plev)
 
@@ -374,7 +375,7 @@ def map_date_Q(date, q='defabs', plev=700):
 	x,y = m(lon,lat)
 	m.drawcoastlines()
 	m.contourf(x, y, oro, orolevs, cmap=plt.cm.gist_earth)
-	m.contour(x, y, dat, 25)
+	m.contour(x, y, dat, 25, cmap=cmap)
 	m.drawparallels(range(15,80,5))
 	m.drawmeridians(range(0,360,30))
 	plt.colorbar()
@@ -396,13 +397,6 @@ def map_date_deform(date, plev=700):
 	defdex = np.cos(defang[:,:]) *defabs
 	defdey = np.sin(defang[:,:]) *defabs
 	
-	#defdex = concat1(defdex[::-1,:])
-	#defdey = concat1(defdey[::-1,:]) 
-	#defabs = concat1(defabs)
-	#daZ   = concat1(daZ)
-	
-	print defdex.min(), defdex.max()
-	print defdey.min(), defdey.max()
 	defabs[daZ < oro] = np.ma.masked
 	defdex[daZ < oro] = np.ma.masked
 	defdey[daZ < oro] = np.ma.masked
@@ -412,7 +406,7 @@ def map_date_deform(date, plev=700):
 
 	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
 	x,y = m(lon,lat)
-	ut,vt,xt,yt = m.transform_vector(defdex,defdey,lon[0,:],lat[::-1,0],60,60,returnxy=True)
+	ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0],60,60,returnxy=True)
 	m.drawcoastlines()
 	m.contourf(x, y, oro, orolevs, cmap=plt.cm.gist_earth, zorder=1)
 	m.contour(x, y, defabs, 25, zorder=2)
@@ -426,10 +420,35 @@ def map_date_deform(date, plev=700):
 	return
 
 
+# Contour map of averaged wind on top of a oro map.
+def map_date_barb(date, plev=700, quiver=False):
+	dau = _get_instantaneous('u', date, plevs=plev)
+	dav = _get_instantaneous('v', date, plevs=plev)
+	daZ = _get_instantaneous('Z', date, plevs=plev)
+
+	dau[daZ < oro] = np.nan
+	dav[daZ < oro] = np.nan
+
+	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+	x,y = m(lon,lat)
+	ut,vt,xt,yt = m.transform_vector(dau[::-1,:],dav[::-1,:],lon[0,:],lat[::-1,0],80,80,returnxy=True)
+	m.drawcoastlines()
+	m.contourf(x, y, oro, orolevs, cmap=plt.cm.gist_earth)
+	if not quiver:
+		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5)
+	else:
+		m.quiver(xt, yt, ut, vt)
+	m.drawparallels(range(15,80,5))
+	m.drawmeridians(range(0,360,30))
+	plt.colorbar()
+	plt.show()
+
+	return
+
 
 
 # same as ysect_mean_deform but without any averaging; deformation sections for one point in time
-def ysect_date_Q(date, q='defabs', yidx=57, quiet=False):
+def ysect_date_Q(date, q='defabs', yidx=57, quiet=False, cmap=None):
 	if not quiet:
 		print 'Lat %f' % lat[yidx,0]
 	
@@ -440,7 +459,7 @@ def ysect_date_Q(date, q='defabs', yidx=57, quiet=False):
 
 	qm[orop[np.newaxis,:]-10 < c.plevs[:,np.newaxis]] = np.nan
 
-	plt.contour(lon[0,:], c.plevs, qm, 15)
+	plt.contour(lon[0,:], c.plevs, qm, 15, cmap=cmap)
 	plt.fill(lon[0,:], orop, 'k')
 	plt.ylim(plt.ylim()[::-1])		# reverse y-axis
 	plt.colorbar()
@@ -506,18 +525,18 @@ def map_oro():
 
 
 # Hovmöller diagram
-def ypline_hov_Q(year, q='defabs', plev=700, yidx=57, quiet=False):
+def ypline_hov_Q(year, q='defabs', plev=700, yidx=57, quiet=False, cmap=None):
 	if not quiet:
 		print 'Lat %f' % lat[yidx,0]
 	f, dat = metopen(c.file_std % (year, plev, q), c.q[q])
 	dat = dat[:,yidx,:]
-	f.close()
+	if f: f.close()
 
 	dat = np.concatenate((dat[:,-60:], dat, dat[:,:60]), axis=1)
 	exlon = map(lambda x: x*0.5 - 210.0, range(dat.shape[1]))
 	tidxs = map(lambda x: x*0.25,range(dat.shape[0]))
 
-	plt.contourf(exlon, tidxs, dat[:,:], 20)
+	plt.contourf(exlon, tidxs, dat[:,:], 20, cmap=cmap)
 	plt.plot([-180, -180], [tidxs[0], tidxs[-1]], 'k--')
 	plt.plot([ 180,  180], [tidxs[0], tidxs[-1]], 'k--')
 	plt.xticks(np.arange(-210,211,30))
@@ -590,7 +609,7 @@ def _get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=True, qu
 	if len(plevs) > 1:
 		i = 0
 		dat = np.zeros((1+max(tidxs)-min(tidxs), len(c.plevs), ylen, xlen))
-		dat = dat.squeeze()
+		#dat = dat.squeeze()
 		for plev in plevs:
 			if not quiet:
 				print "Reading from "+c.file_std % (dates[0].year, plev, q)
