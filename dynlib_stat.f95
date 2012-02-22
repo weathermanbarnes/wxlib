@@ -90,10 +90,20 @@ contains
              lbinned = .false.
              ! Try to fit into the defined bin intervals
              do b=1_ni,nbin-1
-                if (dat(n,j,i) >= bins(b) .and. dat(n,j,i) < bins(b+1_ni)) then
-                   hist(b,j,i) = hist(b,j,i) + 1_ni
-                   lbinned = .true.
-                   exit
+                ! "lower" boundary < "upper" boundary: normal interval
+                if (bins(b+1_ni) >= bins(b) then
+                   if (dat(n,j,i) >= bins(b) .and. dat(n,j,i) < bins(b+1_ni)) then
+                      hist(b,j,i) = hist(b,j,i) + 1_ni
+                      lbinned = .true.
+                      exit
+                   end if
+                ! "lower" boundary" > "upper" boundary: everything except the interval
+                else
+                   if (dat(n,j,i) >= bins(b) .or. dat(n,j,i) < bins(b+1_ni)) then
+                      hist(b,j,i) = hist(b,j,i) + 1_n
+                      lbinned = .true.
+                      exit
+                   end if
                 end if
              end do
              ! If none of the intervals in bins matched.

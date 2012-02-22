@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- encoding: utf-8
 
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -83,8 +84,8 @@ def map_mean_Q(q='defabs', year=None, plev=700, agg=False, quiet=False, cmap=Non
 
 # contour map of 32 year mean deformation
 def wmap_mean_Q(q='defabs', year=None, plev=700, agg=False, quiet=False, cmap=None):
-	meanZ = np.zeros(s)
-	mean  = np.zeros(s)
+	meanZ = np.zeros((s[0],s[1]-1))
+	mean  = np.zeros((s[0],s[1]-1))
 
 	if year: 
 		if type(year) == list:
@@ -103,10 +104,10 @@ def wmap_mean_Q(q='defabs', year=None, plev=700, agg=False, quiet=False, cmap=No
 		else:
 			f, dat = metopen(c.file_stat % (y, plev, q), 'mean', cut=c.std_slice[1:])
 		#mean = concat1(dat)
-		mean = dat[::]
+		mean += dat[::]
 
 		fZ, daZ = metopen(c.file_stat % (y, plev, 'Z'), 'mean', cut=c.std_slice[1:])
-		meanZ = daZ[::]
+		meanZ += daZ[::]
 		
 		del dat, daZ
 		f.close()
@@ -136,22 +137,18 @@ def wmap_mean_Q(q='defabs', year=None, plev=700, agg=False, quiet=False, cmap=No
 # Contour map of averaged wind on top of a oro map.
 def map_mean_barb(year=None, plev=700, quiver=False):
 	if not year:
-		fu, meanu = metopen(c.file_mstat % (plev, 'u'), 'mean')
-		fv, meanv = metopen(c.file_mstat % (plev, 'v'), 'mean')
-		fZ, meanZ = metopen(c.file_mstat % (plev, 'Z'), 'mean')
+		fu, meanu = metopen(c.file_mstat % (plev, 'u'), 'mean', cut=c.std_slice[1:])
+		fv, meanv = metopen(c.file_mstat % (plev, 'v'), 'mean', cut=c.std_slice[1:])
+		fZ, meanZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
 	else: 
-		fu, meanu = metopen(c.file_stat % (year, plev, 'u'), 'mean')
-		fv, meanv = metopen(c.file_stat % (year, plev, 'v'), 'mean')
-		fZ, meanZ = metopen(c.file_stat % (year, plev, 'Z'), 'mean')
+		fu, meanu = metopen(c.file_stat % (year, plev, 'u'), 'mean', cut=c.std_slice[1:])
+		fv, meanv = metopen(c.file_stat % (year, plev, 'v'), 'mean', cut=c.std_slice[1:])
+		fZ, meanZ = metopen(c.file_stat % (year, plev, 'Z'), 'mean', cut=c.std_slice[1:])
 
-	meanu = concat1(meanu[::-1,:]*5)
-	meanv = concat1(meanv[::-1,:]*5)
-	meanZ = concat1(meanZ[::-1,:])
-	
-	print meanu.min(), meanu.max(), meanu.mean()
-	print meanv.min(), meanv.max(), meanv.mean()
-	meanu[meanZ < oro] = np.nan
-	meanv[meanZ < oro] = np.nan
+	meanu[meanZ < oro[:,:-1]] = np.nan
+	meanv[meanZ < oro[:,:-1]] = np.nan
+	meanu = concat1(meanu[::-1,:])
+	meanv = concat1(meanv[::-1,:])
 
 	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
 	x,y = m(lon,lat)
@@ -254,24 +251,20 @@ def map_mean_deform(year=None, plev=700):
 	meandex = np.cos(meanang[:,:]) *meanabs
 	meandey = np.sin(meanang[:,:]) *meanabs
 	
-	meandex = concat1(meandex[::-1,:])
-	meandey = concat1(meandey[::-1,:]) 
-	meanabs = concat1(meanabs)
-	meanZ   = concat1(meanZ)
-	
-	print meandex.min(), meandex.max(), meandex.mean()
-	print meandey.min(), meandey.max(), meandey.mean()
-	meanabs[meanZ < oro] = np.nan
-	meanZ = meanZ[::-1,:]
-	meandex[meanZ < oro] = np.nan
-	meandey[meanZ < oro] = np.nan
+	meanabs[meanZ < oro[:,:-1]] = np.nan
+	meandex[meanZ < oro[:,:-1]] = np.nan
+	meandey[meanZ < oro[:,:-1]] = np.nan
 	meandex[0:5,:] = np.nan
 	meandey[0:5,:] = np.nan
 	meanabs[0:5,:] = np.nan
 
+	meandex = concat1(meandex)
+	meandey = concat1(meandey) 
+	meanabs = concat1(meanabs)
+
 	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
 	x,y = m(lon,lat)
-	ut,vt,xt,yt = m.transform_vector(meandex,meandey,lon[0,:],lat[::-1,0],60,60,returnxy=True)
+	ut,vt,xt,yt = m.transform_vector(meandex[::-1,:],meandey[::-1,:],lon[0,:],lat[::-1,0],60,60,returnxy=True)
 	m.drawcoastlines()
 	m.contourf(x, y, oro, orolevs, cmap=plt.cm.gist_earth, zorder=1)
 	m.contour(x, y, meanabs, 25, zorder=2)
@@ -459,6 +452,25 @@ def map_oro():
 
 	return
 
+def map_oro_dat(dat, plev=None):
+	if plev:
+		raise NotImplementedError
+		meanabs[daZ < oro[:,:-1]] = np.nan
+	
+	dat = concat1(dat)
+	
+	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+	m.drawcoastlines()
+	x,y = m(lon,lat)
+	m.contourf(x,y, oro, orolevs, cmap=plt.cm.gist_earth)
+	m.contour(x, y, dat, 25)
+	m.drawparallels(range(0,80,5))
+	m.drawmeridians(range(0,360,30))
+	plt.colorbar()
+	plt.show()
+
+	return
+
 
 # Hovmöller diagram
 def ypline_hov_Q(year, q='defabs', plev=700, yidx=57, quiet=False):
@@ -490,15 +502,24 @@ def ypline_hov_Q(year, q='defabs', plev=700, yidx=57, quiet=False):
 def hist(year, q='defang', plev=700, yidx=57, xidx=264, quiet=False):
 	if not quiet:
 		print 'Lat: %f, Lon: %f' % (lat[yidx,0],lon[0,xidx])
-	f, dat = metopen(c.file_std % (year, plev, q), c.q[q])
+	f, dat = metopen(c.file_stat % (year, plev, q), 'hist')
 	dat = dat[:,yidx,xidx]
 	if f: f.close()
-	
-	if q == 'defang':
-		plt.hist(dat, bins=32, range=(-np.pi/2, np.pi/2) )
-		plt.xlim((-np.pi/2, np.pi/2))
+
+	if q in c.bins:
+		bins = copy.copy(c.bins[q])
+
+		# periodic binning for defang
+		if q == 'defang':
+			bins[0] -= np.pi
+			# TODO: Remove temporary workaround for bug fixed in dynlib.stat.binned
+			dat[0], dat[-1] = dat[-1], dat[0]
+
+		plt.bar(bins[:-1], dat[:-1], bins[1:]-bins[:-1])
+		print '%d values out of binning range (%f,%f)' % (dat[-1], bins[0], bins[-1])
+		plt.xlim(bins[0], bins[-1])
 	else:
-		plt.hist(dat, bins=32)
+		raise NotImplementedError
 
 	plt.show()
 
