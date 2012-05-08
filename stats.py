@@ -10,6 +10,17 @@ def running_mean(ts, rlen=8):
 	return rmean
 
 
+def running_mean_periodic(ts, rlen=3):
+	rmean = np.zeros(len(ts))
+	for i in range(len(ts)):
+		for j in np.arange(rlen)-rlen/2:
+			rmean[i] += ts[(i+j)%len(ts)]
+	
+	rmean /= rlen
+
+	return rmean
+
+
 def filter7p(ts):
 	rmean = np.zeros((len(ts)-6))
 	for i in range(len(ts)-6):

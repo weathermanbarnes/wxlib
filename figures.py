@@ -525,7 +525,9 @@ def map_oro_dat(dat, plev=None, mark=None, cmap=None):
 		daZ = concat1(daZ)
 		dat[daZ < oro[:,:]] = np.nan
 	
-	m = Basemap(projection='stere',lat_0=65,lat_ts=65,lon_0=-50,resolution='l', width=8100000, height=5400000)
+	dat[:5,:] = np.nan
+	
+	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
 	m.drawcoastlines()
 	x,y = m(lon,lat)
 	m.contour(x,y, oro, range(5000,80000,5000), colors='k', alpha=0.5)
@@ -578,6 +580,8 @@ def map_oro_barb(u, v, dat=None, plev=None, mark=None, quiver=False):
 
 
 def map_oro_deform(defabs, defang, plev=None, mark=None, cmap=None):
+	defabs[:5,:] = np.nan
+	defang[:5,:] = np.nan
 	defabs = concat1(defabs)
 	defang = concat1(defang)
 	defdex = np.cos(defang[:,:]) *defabs
@@ -618,7 +622,7 @@ def map_oro_deform(defabs, defang, plev=None, mark=None, cmap=None):
 
 
 def wmap_oro_dat(dat, plev=None, mark=None, cmap=None):
-	dat = concat1(dat*86400.0)
+	dat = concat1(dat)
 	if plev:
 		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
 		if f: f.close()
@@ -627,7 +631,7 @@ def wmap_oro_dat(dat, plev=None, mark=None, cmap=None):
 	
 	dat[:5,:] = np.nan
 	dat[-5:,:] = np.nan
-	
+
 	m = Basemap(projection='robin',lon_0=0,resolution='c')
 	m.drawcoastlines()
 	x,y = m(lon,lat)
@@ -764,7 +768,6 @@ def hist(year, q='defang', plev=700, yidx=57, xidx=264, quiet=False):
 # #############################################################################
 # 4. Generalisations
 # 
-
 
 # Generalised data fetcher for instantaneous or short-term averaged fields
 def _get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=True, quiet=False):
