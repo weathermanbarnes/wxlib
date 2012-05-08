@@ -517,7 +517,7 @@ def map_oro():
 
 	return
 
-def map_oro_dat(dat, plev=None, mark=None):
+def map_oro_dat(dat, plev=None, mark=None, cmap=None):
 	dat = concat1(dat)
 	if plev:
 		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
@@ -525,17 +525,19 @@ def map_oro_dat(dat, plev=None, mark=None):
 		daZ = concat1(daZ)
 		dat[daZ < oro[:,:]] = np.nan
 	
-	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+	m = Basemap(projection='stere',lat_0=65,lat_ts=65,lon_0=-50,resolution='l', width=8100000, height=5400000)
 	m.drawcoastlines()
 	x,y = m(lon,lat)
-	m.contourf(x,y, oro, orolevs, cmap=plt.cm.gist_earth)
-	m.contour(x, y, dat, 25)
+	m.contour(x,y, oro, range(5000,80000,5000), colors='k', alpha=0.5)
+	if plev:
+		m.contourf(x, y, daZ < oro[:,:], cmap=_get_grey_cm())
+	m.contourf(x, y, dat, 25, cmap=cmap)
 	m.drawparallels(range(0,81,5))
 	m.drawmeridians(range(0,360,30))
-	plt.colorbar()
+	plt.colorbar(orientation='horizontal') #orientation='horizontal'
 	if mark:
 		yidx, xidx = mark
-		m.scatter(x[yidx,xidx], y[yidx,xidx], 49, marker='+', color='r', zorder=3)
+		m.scatter(x[yidx,xidx], y[yidx,xidx], 576, marker='o', facecolors='none', color='#dc9b00', zorder=3, linewidths=3)
 	plt.show()
 
 	return
@@ -553,10 +555,11 @@ def map_oro_barb(u, v, dat=None, plev=None, mark=None, quiver=False):
 		v[daZ < oro[:,:]] = np.nan
 		if not dat == None: dat[daZ < oro[:,:]] = np.nan
 	
-	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+	#m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+	m = Basemap(projection='stere',lat_0=65,lat_ts=65,lon_0=-50,resolution='l', width=8100000, height=5400000)
 	m.drawcoastlines()
 	x,y = m(lon,lat)
-	ut,vt,xt,yt = m.transform_vector(u,v,lon[0,:],lat[::-1,0],100,100,returnxy=True)
+	ut,vt,xt,yt = m.transform_vector(u,v,lon[0,:],lat[::-1,0],45,30,returnxy=True)
 	m.contourf(x,y, oro, orolevs, cmap=plt.cm.gist_earth)
 	if not dat == None: m.contour(x, y, dat, 25)
 	if not quiver:
@@ -568,17 +571,21 @@ def map_oro_barb(u, v, dat=None, plev=None, mark=None, quiver=False):
 	plt.colorbar()
 	if mark:
 		yidx, xidx = mark
-		m.scatter(x[yidx,xidx], y[yidx,xidx], 25, marker='+', color='r')
+		m.scatter(x[yidx,xidx], y[yidx,xidx], 121, marker='+', color='y', linewidths=2)
 	plt.show()
 
 	return
 
 
-def map_oro_deform(defabs, defang, plev=None, mark=None):
+def map_oro_deform(defabs, defang, plev=None, mark=None, cmap=None):
 	defabs = concat1(defabs)
 	defang = concat1(defang)
 	defdex = np.cos(defang[:,:]) *defabs
 	defdey = np.sin(defang[:,:]) *defabs
+
+	# Convert to a more useful unit
+	defabs[:,:] = 86400.0*defabs[:,:]
+	
 	if plev:
 		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
 		if f: f.close()
@@ -587,40 +594,47 @@ def map_oro_deform(defabs, defang, plev=None, mark=None):
 		defdey[daZ < oro[:,:]] = np.nan
 		defabs[daZ < oro[:,:]] = np.nan
 	
-	# Convert to a more useful unit
-	defabs[:,:] = 86400.0*defabs[:,:]
-	
-	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+	m = Basemap(projection='stere',lat_0=65,lat_ts=65,lon_0=-50,resolution='l', width=8100000, height=5400000)
+	#m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
 	m.drawcoastlines()
 	x,y = m(lon,lat)
-	ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0],87,87,returnxy=True)
-	m.contourf(x,y, oro, orolevs, cmap=plt.cm.gist_earth, zorder=1)
-	m.contour(x, y, defabs, 25, zorder=2)
+	ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0],36,24,returnxy=True)
+	m.contour(x,y, oro, range(5000,80000,5000), colors='k', alpha=0.3, zorder=2)
+	if plev:
+		m.contourf(x, y, daZ < oro[:,:], cmap=_get_grey_cm())
+	m.contourf(x, y, defabs, np.arange(31), zorder=1, cmap=cmap)
 	m.quiver(xt, yt, ut, vt, zorder=3)
 	m.quiver(xt, yt, -ut, -vt, zorder=3)
 	m.drawparallels(range(0,81,5))
 	m.drawmeridians(range(0,360,30))
-	cb = plt.colorbar()
+	cb = plt.colorbar(orientation='horizontal') #orientation='horizontal'
 	if mark:
 		yidx, xidx = mark
-		m.scatter(x[yidx,xidx], y[yidx,xidx], 25, marker='+', color='r')
+		m.scatter(x[yidx,xidx], y[yidx,xidx], 576, marker='o', facecolors='none', color='#ffc438', zorder=4, linewidths=3)
+		#m.scatter(x[yidx,xidx], y[yidx,xidx], 49, marker='x', facecolors='none', color='#ffc438', zorder=4, linewidths=1)
 	plt.show()
 
 	return
 
 
-def wmap_oro_dat(dat, plev=None, mark=None):
+def wmap_oro_dat(dat, plev=None, mark=None, cmap=None):
+	dat = concat1(dat*86400.0)
 	if plev:
-		raise NotImplementedError
-		meanabs[daZ < oro[:,:-1]] = np.nan
+		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
+		if f: f.close()
+		daZ = concat1(daZ)
+		dat[daZ < oro[:,:]] = np.nan
 	
-	dat = concat1(dat)
+	dat[:5,:] = np.nan
+	dat[-5:,:] = np.nan
 	
 	m = Basemap(projection='robin',lon_0=0,resolution='c')
 	m.drawcoastlines()
 	x,y = m(lon,lat)
-	m.contourf(x,y, oro, orolevs, cmap=plt.cm.gist_earth, zorder=1)
-	m.contour(x, y, dat, 25, zorder=2)
+	m.contour(x,y, oro, range(10000,80001,10000), colors='k', alpha=0.4, zorder=2)
+	if plev:
+		m.contourf(x, y, daZ < oro[:,:], cmap=_get_grey_cm())
+	m.contourf(x, y, dat, np.arange(0,10,0.5), zorder=1, cmap=cmap)
 	m.drawparallels(range(-80,81,5))
 	m.drawmeridians(range(0,360,30))
 	plt.colorbar()
@@ -662,7 +676,7 @@ def wmap_oro_barb(u, v, dat=None, plev=None, mark=None, quiver=False):
 	return
 
 
-def wmap_oro_deform(defabs, defang, plev=None, mark=None):
+def wmap_oro_deform(defabs, defang, plev=None, mark=None, cmap=None):
 	if plev:
 		raise NotImplementedError
 		meanabs[daZ < oro[:,:-1]] = np.nan
@@ -676,8 +690,8 @@ def wmap_oro_deform(defabs, defang, plev=None, mark=None):
 	m.drawcoastlines()
 	x,y = m(lon,lat)
 	ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0],150,100,returnxy=True)
-	m.contourf(x,y, oro, orolevs, cmap=plt.cm.gist_earth, zorder=1)
-	m.contour(x, y, defabs, 25, zorder=2)
+	m.contour(x,y, oro, orolevs, cmap=plt.cm.gist_earth, zorder=2)
+	m.contourf(x, y, defabs, 25, zorder=1, cmap=cmap)
 	m.quiver(xt, yt, ut, vt, zorder=3)
 	m.quiver(xt, yt, -ut, -vt, zorder=3)
 	m.drawparallels(range(-80,81,5))
@@ -819,6 +833,22 @@ def _get_aggregate(q, year=None, plev=None, yidx=None, xidx=None):
 	return dat
 
 
+def _get_grey_cm():
+	cdict = {'red':   ((0.0, 0.4, 0.4), (1.0, 0.4, 0.4)),
+		 'green': ((0.0, 0.4, 0.4), (1.0, 0.4, 0.4)),
+		 'blue':  ((0.0, 0.4, 0.4), (1.0, 0.4, 0.4))  }
+
+	return mpl.colors.LinearSegmentedColormap('my_grey',cdict,256)
+
+
+def _get_defabs_cm():
+	cdict = {'red':   ((0.0, 1.0, 1.0), (0.33, 0.4, 0.4), (0.867, 1.0, 1.0), (1.0, 0.5, 0.5)),
+		 'green': ((0.0, 1.0, 1.0), (0.33, 0.5, 0.5), (0.867, 0.0, 0.0), (1.0, 0.2, 0.2)),
+		 'blue':  ((0.0, 1.0, 1.0), (0.33, 1.0, 1.0), (0.867, 0.0, 0.0), (1.0, 0.2, 0.2))  }
+
+	return mpl.colors.LinearSegmentedColormap('my_defabs',cdict,256)
+
+
 def _get_periodic_cm():
 	cdict = {'red':   ((0.0, 0.0, 0.0), (0.25, 0.8, 0.8), (0.5, 1.0, 1.0), (0.75, 0.0, 0.0), (1.0, 0.0, 0.0)),
 		 'green': ((0.0, 0.0, 0.0), (0.25, 0.0, 0.0), (0.5, 1.0, 1.0), (0.75, 0.9, 0.9), (1.0, 0.0, 0.0)),
@@ -832,7 +862,7 @@ def _get_periodic_cm2():
 		 'green': ((0.0, 0.2, 0.2), (0.25, 0.8, 0.8), (0.5, 0.6, 0.6), (0.75, 0.4, 0.4), (1.0, 0.2, 0.2)),
 		 'blue':  ((0.0, 0.5, 0.5), (0.25, 0.0, 0.0), (0.5, 1.0, 1.0), (0.75, 0.0, 0.0), (1.0, 0.5, 0.5))  }
 
-	return mpl.colors.LinearSegmentedColormap('my_periodic',cdict,256)
+	return mpl.colors.LinearSegmentedColormap('my_periodic2',cdict,256)
 
 
 # that's it
