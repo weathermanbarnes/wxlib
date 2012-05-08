@@ -525,6 +525,8 @@ def map_oro_dat(dat, plev=None, mark=None):
 		daZ = concat1(daZ)
 		dat[daZ < oro[:,:]] = np.nan
 	
+	dat[:5,:] = np.nan
+	
 	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
 	m.drawcoastlines()
 	x,y = m(lon,lat)
@@ -575,6 +577,8 @@ def map_oro_barb(u, v, dat=None, plev=None, mark=None, quiver=False):
 
 
 def map_oro_deform(defabs, defang, plev=None, mark=None):
+	defabs[:5,:] = np.nan
+	defang[:5,:] = np.nan
 	defabs = concat1(defabs)
 	defang = concat1(defang)
 	defdex = np.cos(defang[:,:]) *defabs
@@ -593,7 +597,7 @@ def map_oro_deform(defabs, defang, plev=None, mark=None):
 	m = Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
 	m.drawcoastlines()
 	x,y = m(lon,lat)
-	ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0],87,87,returnxy=True)
+	ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0],35,35,returnxy=True)
 	m.contourf(x,y, oro, orolevs, cmap=plt.cm.gist_earth, zorder=1)
 	m.contour(x, y, defabs, 25, zorder=2)
 	m.quiver(xt, yt, ut, vt, zorder=3)
@@ -609,18 +613,21 @@ def map_oro_deform(defabs, defang, plev=None, mark=None):
 	return
 
 
-def wmap_oro_dat(dat, plev=None, mark=None):
-	if plev:
-		raise NotImplementedError
-		meanabs[daZ < oro[:,:-1]] = np.nan
-	
+def wmap_oro_dat(dat, plev=None, mark=None, cmap=None):
 	dat = concat1(dat)
+	if plev:
+		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
+		if f: f.close()
+		daZ = concat1(daZ)
+		dat[daZ < oro[:,:]] = np.nan
 	
+	dat[:5,:] = np.nan
+	dat[-6:,:] = np.nan
 	m = Basemap(projection='robin',lon_0=0,resolution='c')
 	m.drawcoastlines()
 	x,y = m(lon,lat)
 	m.contourf(x,y, oro, orolevs, cmap=plt.cm.gist_earth, zorder=1)
-	m.contour(x, y, dat, 25, zorder=2)
+	m.contour(x, y, dat, 25, zorder=2, cmap=cmap)
 	m.drawparallels(range(-80,81,5))
 	m.drawmeridians(range(0,360,30))
 	plt.colorbar()
@@ -675,7 +682,7 @@ def wmap_oro_deform(defabs, defang, plev=None, mark=None):
 	m = Basemap(projection='robin',lon_0=0,resolution='c')
 	m.drawcoastlines()
 	x,y = m(lon,lat)
-	ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0],150,100,returnxy=True)
+	ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0],39,26,returnxy=True)
 	m.contourf(x,y, oro, orolevs, cmap=plt.cm.gist_earth, zorder=1)
 	m.contour(x, y, defabs, 25, zorder=2)
 	m.quiver(xt, yt, ut, vt, zorder=3)
