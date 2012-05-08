@@ -16,6 +16,9 @@ def scale(var, cut=(slice(None),slice(None),slice(None)), bench=False):
 		if bench:
 			print 'Python scaleoff', datetime.datetime.now()-begin
 	
+	else:
+		var_dat = var[cut]
+	
 	return var_dat
 
 #
