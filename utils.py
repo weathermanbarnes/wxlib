@@ -46,7 +46,8 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 		
 		args = []
 		for var in vars:
-			args.append(scale(var, cut, bench=bench))
+			if type(var) == np.ndarray:
+				args.append(scale(var, cut, bench=bench))
 		
 		args.extend([grid.dx[cut[1:]], grid.dy[cut[1:]]])
 		if bench:
