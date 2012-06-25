@@ -49,7 +49,7 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 			if type(var) == np.ndarray:
 				args.append(scale(var, cut, bench=bench))
 			else:
-				args.append(var)
+				args.append(var[cut])
 		
 		args.extend([grid.dx[cut[1:]], grid.dy[cut[1:]]])
 		if bench:
@@ -59,7 +59,7 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 			print 'Calculation', datetime.datetime.now()-begin
 	
 	elif not grid.nt or grid.nt == 1:
-		print '3D mode'
+		print '2D mode'
 		raise NotImplementedError
 	
 	else:

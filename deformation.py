@@ -15,12 +15,12 @@ import static as c
 dt = utils.datetime.datetime
 
 
-for year in c.years:
+for year in [1979, ]: #c.years:
 	for plev in c.plevs:
 		print 'Processing year %d, plev %d' % (year, plev)
 
 		ipath  = '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'
-		opath  = '/Data/gfi/work/csp001/deformation'
+		opath  = '/Data/gfi/scratch/csp001/deformation'
 		ufile  = 'ei.ans.%d.%d.u.nc' % (year, plev)
 		vfile  = 'ei.ans.%d.%d.v.nc' % (year, plev)
 
@@ -34,8 +34,8 @@ for year in c.years:
 		grid = gridlib.grid(fu)
 		dynlib.config.grid_cyclic_ew = grid.cyclic_ew
 
-		u = fu.variables['u']
-		v = fv.variables['v']
+		u = fu.variables['u'].data[::]
+		v = fv.variables['v'].data[::]
 		if not u.shape == v.shape:
 			raise TypeError, 'Field shape for u wind does not match field shape for v.'
 
