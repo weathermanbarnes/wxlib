@@ -33,6 +33,26 @@ wmap_scale_meandefabs = np.arange(0.0,10.1,0.5)
 
 
 # #############################################################################
+# 0. Some typically used projections
+# 
+
+
+def wmap():
+	return Basemap(projection='robin',lon_0=0,resolution='c')
+
+def npmap():
+	return Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+
+def spmap():
+	return Basemap(projection='spstere',boundinglat=-15,lon_0=0,resolution='l')
+
+def Greenmap():
+	return Basemap(projection='stere', lat_0=65, lat_ts=65, lon_0=-50, resolution='l', 
+			width=8100000, height=5400000)
+
+
+
+# #############################################################################
 # 1. Plots of (multi-)yearly means for constant plev, yidx or xidx
 #
 
@@ -332,8 +352,8 @@ def ypline_mean_Q(q='defabs', yidx=57, plev=700, summarize=False, agg=False, qui
 
 
 # era interim orographical map 15N-90N
-def map_oro():
-	map_oro_dat(npmap(), oro[:,:-1], cmap=plt.cm.gist_earth, scale=orolevs)
+def map_oro(m=npmap()):
+	map_oro_dat(m, oro[:,:-1], cmap=plt.cm.gist_earth, scale=orolevs)
 
 	return
 
@@ -496,30 +516,13 @@ def _get_periodic_cm2():
 	return mpl.colors.LinearSegmentedColormap('my_periodic2',cdict,256)
 
 
+
 # #############################################################################
-# 6. Some typically used projections
+# 6. Generalised data plotters
 # 
 
 
-def wmap():
-	return Basemap(projection='robin',lon_0=0,resolution='c')
-
-def npmap():
-	return Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
-
-def spmap():
-	return Basemap(projection='spstere',boundinglat=-15,lon_0=0,resolution='l')
-
-def Greenmap():
-	return Basemap(projection='stere', lat_0=65, lat_ts=65, lon_0=-50, resolution='l', 
-			width=8100000, height=5400000)
-
-# #############################################################################
-# 7. Generalised data plotters
-# 
-
-
-def map_oro_dat(m, dat, plev=None, mark=None, cmap=None, scale=25):
+def map_oro_dat(m, dat, plev=None, mark=None, cmap=None, scale=25, show=True, save='', title=''):
 	dat = concat1(dat)
 	if plev:
 		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
@@ -542,12 +545,19 @@ def map_oro_dat(m, dat, plev=None, mark=None, cmap=None, scale=25):
 	if mark:
 		yidx, xidx = mark
 		m.scatter(x[yidx,xidx], y[yidx,xidx], 49, marker='+', color='r', zorder=3)
-	plt.show()
+	
+	if title:
+		plt.title(title)
+	if save:
+		plt.savefig(save, format='png')
+	if show:
+		plt.show()
 
 	return
 
 
-def map_oro_deform(m, defabs, defang, plev=None, mark=None, cmap=_get_defabs_cm(), scale=wmap_scale_defabs):
+def map_oro_deform(m, defabs, defang, plev=None, mark=None, cmap=_get_defabs_cm(), scale=wmap_scale_defabs, 
+		show=True, save='', title=''):
 	defabs = concat1(defabs)
 	defang = concat1(defang)
 	defdex = np.cos(defang[:,:]) *defabs
@@ -576,12 +586,19 @@ def map_oro_deform(m, defabs, defang, plev=None, mark=None, cmap=_get_defabs_cm(
 	if mark:
 		yidx, xidx = mark
 		m.scatter(x[yidx,xidx], y[yidx,xidx], 25, marker='+', color='r')
-	plt.show()
+	
+	if title:
+		plt.title(title)
+	if save:
+		plt.savefig(save, format='png')
+	if show:
+		plt.show()
 
 	return
 
 
-def map_oro_barb(m, u, v, dat=None, plev=None, mark=None, quiver=False, cmap=None, scale=25):
+def map_oro_barb(m, u, v, dat=None, plev=None, mark=None, quiver=False, cmap=None, scale=25, 
+		show=True, save='', title=''):
 	u   = concat1(u)
 	v   = concat1(v)
 	if not dat == None: dat = concat1(dat)
@@ -610,7 +627,13 @@ def map_oro_barb(m, u, v, dat=None, plev=None, mark=None, quiver=False, cmap=Non
 	if mark:
 		yidx, xidx = mark
 		m.scatter(x[yidx,xidx], y[yidx,xidx], 25, marker='+', color='r')
-	plt.show()
+	
+	if title:
+		plt.title(title)
+	if save:
+		plt.savefig(save, format='png')
+	if show:
+		plt.show()
 
 	return
 

@@ -12,7 +12,9 @@ from datetime import datetime as dt, timedelta as td
 
 years = c.years
 plevs = c.plevs
-qs    = ['defabs', 'defang', 'Z']
+qs    = ['defabs', 'defang', 'Z', 'u', 'v']
+
+opath = '/work/csp001/composites/'
 
 # ---------------------------------------------------------------------
 # Defining possible testers
@@ -118,6 +120,10 @@ djf = dec | jan | feb
 mam = mar | apr | mai
 jja = jun | jul | aug
 son = sep | oct | nov
+djf.name ='DJF'
+mam.name = 'MAM'
+jja.name = 'JJA'
+son.name = 'SON'
 
 ao   = np.load('ts_ao.npz')
 ao_p = lowerbound_ts('AO+', ao,  1.0)
@@ -139,11 +145,57 @@ enso   = np.load('ts_enso.npz')
 enso_p = lowerbound_ts('ENSO+', enso,  1.0)
 enso_n = upperbound_ts('ENSO-', enso, -1.0)
 
-#tests = [jan, feb, mar, apr, mai, jun, jul, aug, sep, oct, nov, dec, djf, mam, jja, son ]
-tests = [ao_p, ao_n, nao_p, nao_n, aao_p, aao_n, pna_p, pna_n, enso_p, enso_n]
+alps     = lowerbound_pos('Alps_TB',      (88, 371), 12.0/86400.0)
+bagheran = lowerbound_pos('Bagheran_TB', (114, 480), 12.0/86400.0)
+greenlnd = lowerbound_pos('Greenland_TB', (51, 278), 12.0/86400.0)
+rockies  = lowerbound_pos('Rockies_TB',  (114, 480), 12.0/86400.0)
+
+pacsec30 = lowerbound_pos('PacSec_30N',  (120,   0), 12.0/86400.0)
+pacsec35 = lowerbound_pos('PacSec_35N',  (110,   0), 12.0/86400.0)
+pacsec40 = lowerbound_pos('PacSec_40N',  (100,   0), 12.0/86400.0)
+pacsec45 = lowerbound_pos('PacSec_45N',   (90,   0), 12.0/86400.0)
+pacsec50 = lowerbound_pos('PacSec_50N',   (80,   0), 12.0/86400.0)
+pacsec55 = lowerbound_pos('PacSec_55N',   (70,   0), 12.0/86400.0)
+
+atlsec35 = lowerbound_pos('AtlSec_35N',  (110, 300), 12.0/86400.0)
+atlsec40 = lowerbound_pos('AtlSec_40N',  (100, 300), 12.0/86400.0)
+atlsec45 = lowerbound_pos('AtlSec_45N',   (90, 300), 12.0/86400.0)
+atlsec50 = lowerbound_pos('AtlSec_50N',   (80, 300), 12.0/86400.0)
+atlsec55 = lowerbound_pos('AtlSec_55N',   (70, 300), 12.0/86400.0)
+atlsec60 = lowerbound_pos('AtlSec_60N',   (60, 300), 12.0/86400.0)
+
+sibsec45 = lowerbound_pos('SibSec_45N',   (90, 510), 12.0/86400.0)
+sibsec50 = lowerbound_pos('SibSec_50N',   (80, 510), 12.0/86400.0)
+sibsec55 = lowerbound_pos('SibSec_55N',   (70, 510), 12.0/86400.0)
+sibsec60 = lowerbound_pos('SibSec_60N',   (60, 510), 12.0/86400.0)
+sibsec65 = lowerbound_pos('SibSec_65N',   (50, 510), 12.0/86400.0)
+sibsec70 = lowerbound_pos('SibSec_70N',   (40, 510), 12.0/86400.0)
+
+aussec35 = lowerbound_pos('AusSec_35N',  (250, 600), 12.0/86400.0)
+aussec40 = lowerbound_pos('AusSec_40N',  (260, 600), 12.0/86400.0)
+aussec45 = lowerbound_pos('AusSec_45N',  (270, 600), 12.0/86400.0)
+aussec50 = lowerbound_pos('AusSec_50N',  (280, 600), 12.0/86400.0)
+aussec55 = lowerbound_pos('AusSec_55N',  (290, 600), 12.0/86400.0)
+aussec60 = lowerbound_pos('AusSec_60N',  (300, 600), 12.0/86400.0)
+aussec65 = lowerbound_pos('AusSec_65N',  (310, 600), 12.0/86400.0)
+
+#tests = [jan, feb, mar, apr, mai, jun, jul, aug, sep, oct, nov, dec, ]
+#tests = [djf, mam, jja, son, ]
+#tests = [ao_p & djf, ao_n & djf, nao_p & djf, nao_n & djf, aao_p & djf, aao_n & djf, 
+#	 pna_p & djf, pna_n & djf, enso_p & djf, enso_n & djf, ]
+#tests = [ao_p & jja, ao_n & jja, nao_p & jja, nao_n & jja, aao_p & jja, aao_n & jja, 
+#	 pna_p & jja, pna_n & jja, enso_p & jja, enso_n & jja, ]
+#tests = [pacsec30 & djf, pacsec35 & djf, pacsec40 & djf, pacsec45 & djf, pacsec50 & djf, pacsec55 & djf,
+#	 pacsec30 & jja, pacsec35 & jja, pacsec40 & jja, pacsec45 & jja, pacsec50 & jja, pacsec55 & jja, ]
+#tests = [atlsec35 & djf, atlsec40 & djf, atlsec45 & djf, atlsec50 & djf, atlsec55 & djf, atlsec60 & djf, 
+#	 atlsec35 & jja, atlsec40 & jja, atlsec45 & jja, atlsec50 & jja, atlsec55 & jja, atlsec60 & jja, ]
+#tests = [sibsec45 & djf, sibsec50 & djf, sibsec55 & djf, sibsec60 & djf, sibsec65 & djf, sibsec70 & djf,
+#	 sibsec45 & jja, sibsec50 & jja, sibsec55 & jja, sibsec60 & jja, sibsec65 & jja, sibsec70 & jja, ]
+#tests = [aussec35 & djf, aussec40 & djf, aussec45 & djf, aussec50 & djf, aussec55 & djf, aussec60 & djf, aussec65 & djf,
+#	 aussec35 & jja, aussec40 & jja, aussec45 & jja, aussec50 & jja, aussec55 & jja, aussec60 & jja, aussec65 & jja ]
 
 test_q    = 'defabs'
-test_plev = 700
+test_plev = 800
 
 # ---------------------------------------------------------------------
 # Building the composites
@@ -231,6 +283,6 @@ for plev in plevs:
 			else:
 				tosave['%s_mean' % q] = mean[q][ti]
 		
-		np.savez('%s_composite.%d.npz' % (tests[ti].name, plev), **tosave)
+		np.savez(opath+'%s_composite.%d.npz' % (tests[ti].name, plev), **tosave)
 
 # the end

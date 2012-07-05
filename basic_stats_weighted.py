@@ -11,14 +11,14 @@ q  = 'defang'
 qw = 'defabs'
 bench = True
 
-opath = '../deformation/'
+opath = '/work/csp001/deformation'
 
 
 for plev in c.plevs:
 	nttot = 0
-	sum   = np.zeros((151,720))
-	sqsum = np.zeros((151,720))
-	wsum  = np.zeros((151,720))
+	sum   = np.zeros((361,720))
+	sqsum = np.zeros((361,720))
+	wsum  = np.zeros((361,720))
 
 	for year in c.years:
 		print 'Processing year %d, plev %d' % (year, plev)

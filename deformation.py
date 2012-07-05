@@ -14,15 +14,18 @@ import static as c
 
 dt = utils.datetime.datetime
 
+years = [2011, ] # c.years
+plevs = c.plevs
+#plevs = ['pt300', 'pt315', 'pt330', 'pt350']
 
-for year in [1979, ]: #c.years:
-	for plev in c.plevs:
-		print 'Processing year %d, plev %d' % (year, plev)
+for year in years:
+	for plev in plevs:
+		print 'Processing year %d, plev %s' % (year, plev)
 
 		ipath  = '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'
 		opath  = '/Data/gfi/scratch/csp001/deformation'
-		ufile  = 'ei.ans.%d.%d.u.nc' % (year, plev)
-		vfile  = 'ei.ans.%d.%d.v.nc' % (year, plev)
+		ufile  = c.file_std % (year, plev, 'u') + '.nc'
+		vfile  = c.file_std % (year, plev, 'v') + '.nc'
 
 		# Open nc file, check if wind data is present
 		fu  = nc.netcdf_file('%s/%s' % (ipath, ufile), 'r')
@@ -44,7 +47,7 @@ for year in [1979, ]: #c.years:
 		fu.close()
 		fv.close()
 		
-		ofile = '%s/ei.ans.%d.%d.defang.npy' % (opath, year, plev)
+		ofile = '%s/ei.ans.%d.%s.defang.npy' % (opath, year, plev)
 		begin = dt.now()
 		np.save(ofile, np.ascontiguousarray(deff.astype('f4')))
 		print 'Saving', dt.now()-begin

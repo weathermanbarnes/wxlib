@@ -10,7 +10,7 @@ import dynlib
 q = 'Z'
 bench = True
 
-opath = '/Data/gfi/work/csp001/deformation'
+opath = '/work/csp001/deformation'
 
 
 for plev in c.plevs:
