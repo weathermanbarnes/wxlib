@@ -25,9 +25,9 @@ f.close()
 
 orolevs = range(-19000,51000,2000)
 
-wmap_scale_oro = range(10000,80001,10000)
-wmap_scale_defabs = np.arange(3.0,30.1)
-wmap_scale_meandefabs = np.arange(0.0,10.1,0.5)
+scale_oro = range(10000,80001,10000)
+scale_defabs = np.arange(3.0,30.1)
+scale_meandefabs = np.arange(0.0,10.1,0.5)
 
 # TODO: Generalisation in data fetcher <-> plotter to avoid code duplication
 
@@ -161,7 +161,7 @@ def wmap_mean_deform(year=None, plev=700):
 		fabs, meanabs = metopen(c.file_stat % (year, plev, 'defabs'), 'mean', cut=c.std_slice[1:])
 		fang, meanang = metopen(c.file_stat % (year, plev, 'defang'), 'mfv', cut=c.std_slice[1:])
 	
-	map_oro_deform(wmap(), meanabs, meanang, plev=plev, scale=wmap_scale_meandefabs)
+	map_oro_deform(wmap(), meanabs, meanang, plev=plev, scale=scale_meandefabs)
 
 	return
 
@@ -174,7 +174,7 @@ def map_mean_deform(year=None, plev=700):
 		fabs, meanabs = metopen(c.file_stat % (year, plev, 'defabs'), 'mean', cut=c.std_slice[1:])
 		fang, meanang = metopen(c.file_stat % (year, plev, 'defang'), 'mfv', cut=c.std_slice[1:])
 	
-	map_oro_deform(npmap(), meanabs, meanang, plev=plev, scale=wmap_scale_meandefabs)
+	map_oro_deform(npmap(), meanabs, meanang, plev=plev, scale=scale_meandefabs)
 
 	return
 
@@ -535,7 +535,7 @@ def map_oro_dat(m, dat, plev=None, mark=None, cmap=None, scale=25, show=True, sa
 
 	m.drawcoastlines()
 	x,y = m(lon,lat)
-	m.contour(x,y, oro, wmap_scale_oro, colors='k', alpha=0.4, zorder=2)
+	m.contour(x,y, oro, scale_oro, colors='k', alpha=0.4, zorder=2)
 	if plev:
 		m.contourf(x, y, daZ < oro[:,:], cmap=_get_grey_cm())
 	m.contourf(x, y, dat, scale, zorder=1, cmap=cmap, extend='both')
@@ -556,7 +556,7 @@ def map_oro_dat(m, dat, plev=None, mark=None, cmap=None, scale=25, show=True, sa
 	return
 
 
-def map_oro_deform(m, defabs, defang, plev=None, mark=None, cmap=_get_defabs_cm(), scale=wmap_scale_defabs, 
+def map_oro_deform(m, defabs, defang, plev=None, mark=None, cmap=_get_defabs_cm(), scale=scale_defabs, 
 		show=True, save='', title=''):
 	defabs = concat1(defabs)
 	defang = concat1(defang)
@@ -574,7 +574,7 @@ def map_oro_deform(m, defabs, defang, plev=None, mark=None, cmap=_get_defabs_cm(
 	m.drawcoastlines()
 	x,y = m(lon,lat)
 	ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0],50,50,returnxy=True)
-	m.contour(x,y, oro, wmap_scale_oro, colors='k', alpha=0.4, zorder=2)
+	m.contour(x,y, oro, scale_oro, colors='k', alpha=0.4, zorder=2)
 	if plev:
 		m.contourf(x, y, daZ < oro[:,:], cmap=_get_grey_cm())
 	m.contourf(x, y, defabs*86400, scale, zorder=1, cmap=cmap, extend='both')
@@ -613,7 +613,7 @@ def map_oro_barb(m, u, v, dat=None, plev=None, mark=None, quiver=False, cmap=Non
 	m.drawcoastlines()
 	x,y = m(lon,lat)
 	ut,vt,xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0],60,60,returnxy=True)
-	m.contour(x,y, oro, wmap_scale_oro, colors='k', alpha=0.4, zorder=2)
+	m.contour(x,y, oro, scale_oro, colors='k', alpha=0.4, zorder=2)
 	if plev:
 		m.contourf(x, y, daZ < oro[:,:], cmap=_get_grey_cm())
 	if not dat == None: m.contourf(x, y, dat, scale, cmap=cmap, zorder=1, extend='both')

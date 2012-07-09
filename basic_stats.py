@@ -7,7 +7,7 @@ from metopen import metopen
 import static as c
 import dynlib
 
-q = 'Z'
+q = 'defang'
 bench = True
 
 opath = '/work/csp001/deformation'
@@ -19,7 +19,7 @@ for plev in c.plevs:
 	sqsum = np.zeros((361,720))
 
 	for year in c.years:
-		print 'Processing year %d, plev %d' % (year, plev)
+		print 'Processing year %d, plev %s' % (year, plev)
 
 		f, dat   = metopen(c.file_std % (year, plev, q), c.q[q])
 		nt  = dat.shape[0]

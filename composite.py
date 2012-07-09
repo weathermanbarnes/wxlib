@@ -29,19 +29,19 @@ class decider(object):
 	# Construct new deciders by logically connecting two existing decider instances
 	def __or__(self, b):
 		ret = decider(self.name+b.name)
-		ret.match = lambda date, field: self.match(date, field) | b.match(date, field)
+		ret.match = lambda date, tidx, field: self.match(date, tidx, field) | b.match(date, tidx, field)
 
 		return ret
 
 	def __and__(self, b):
 		ret = decider(self.name+'@'+b.name)
-		ret.match = lambda date, field: self.match(date, field) & b.match(date, field)
+		ret.match = lambda date, tidx, field: self.match(date, tidx, field) & b.match(date, tidx, field)
 
 		return ret
 	
 	# The deciding function, returns True/False
 	# to be overriden by derived classes.
-	def match(self, date, field):
+	def match(self, date, tidx, field):
 		return False
 
 class lowerbound_pos(decider):
@@ -54,13 +54,13 @@ class lowerbound_pos(decider):
 		return
 	
 	# Decider
-	def match(self, date, field):
-		return field[::,self.yidx,self.xidx] >= self.thres
+	def match(self, date, tidx, field):
+		return field[tidx,self.yidx,self.xidx] >= self.thres
 
 class upperbound_pos(lowerbound_pos):
 	# Decider
-	def match(self, date, field):
-		return field[::,self.yidx,self.xidx] < self.thres
+	def match(self, date, tidx, field):
+		return field[tidx,self.yidx,self.xidx] < self.thres
 
 class lowerbound_ts(decider):
 	# Initialisation
@@ -74,7 +74,7 @@ class lowerbound_ts(decider):
 		return
 	
 	# Decider
-	def match(self, date, field):
+	def match(self, date, tidx, field):
 		while self.dates[self.tidx] < date:
 			self.tidx += 1
 		
@@ -82,7 +82,7 @@ class lowerbound_ts(decider):
 
 class upperbound_ts(lowerbound_ts):
 	# Decider
-	def match(self, date, field):
+	def match(self, date, tidx, field):
 		while self.dates[self.tidx] < date:
 			self.tidx += 1
 		
@@ -97,7 +97,7 @@ class month(decider):
 		return
 	
 	# Decider
-	def match(self, date, field):
+	def match(self, date, tidx, field):
 		return date.month == self.month
 
 # ---------------------------------------------------------------------
@@ -145,39 +145,39 @@ enso   = np.load('ts_enso.npz')
 enso_p = lowerbound_ts('ENSO+', enso,  1.0)
 enso_n = upperbound_ts('ENSO-', enso, -1.0)
 
-alps     = lowerbound_pos('Alps_TB',      (88, 371), 12.0/86400.0)
-bagheran = lowerbound_pos('Bagheran_TB', (114, 480), 12.0/86400.0)
-greenlnd = lowerbound_pos('Greenland_TB', (51, 278), 12.0/86400.0)
-rockies  = lowerbound_pos('Rockies_TB',  (114, 480), 12.0/86400.0)
+alps     = lowerbound_pos('Alps_TB',      (88, 371), 0.000237193031353)
+bagheran = lowerbound_pos('Bagheran_TB', (114, 480), 0.000134757516207)
+greenlnd = lowerbound_pos('Greenland_TB', (51, 278), 0.000224143630476)
+rockies  = lowerbound_pos('Rockies_TB',  (114, 480), 0.000134757516207)
 
-pacsec30 = lowerbound_pos('PacSec_30N',  (120,   0), 12.0/86400.0)
-pacsec35 = lowerbound_pos('PacSec_35N',  (110,   0), 12.0/86400.0)
-pacsec40 = lowerbound_pos('PacSec_40N',  (100,   0), 12.0/86400.0)
-pacsec45 = lowerbound_pos('PacSec_45N',   (90,   0), 12.0/86400.0)
-pacsec50 = lowerbound_pos('PacSec_50N',   (80,   0), 12.0/86400.0)
-pacsec55 = lowerbound_pos('PacSec_55N',   (70,   0), 12.0/86400.0)
+pacsec30 = lowerbound_pos('PacSec_30N',  (120,   0), 0.00014751413255)
+pacsec35 = lowerbound_pos('PacSec_35N',  (110,   0), 0.000172332831426)
+pacsec40 = lowerbound_pos('PacSec_40N',  (100,   0), 0.000191705010366)
+pacsec45 = lowerbound_pos('PacSec_45N',   (90,   0), 0.000210880651139)
+pacsec50 = lowerbound_pos('PacSec_50N',   (80,   0), 0.000217700013309)
+pacsec55 = lowerbound_pos('PacSec_55N',   (70,   0), 0.000212105835089)
 
-atlsec35 = lowerbound_pos('AtlSec_35N',  (110, 300), 12.0/86400.0)
-atlsec40 = lowerbound_pos('AtlSec_40N',  (100, 300), 12.0/86400.0)
-atlsec45 = lowerbound_pos('AtlSec_45N',   (90, 300), 12.0/86400.0)
-atlsec50 = lowerbound_pos('AtlSec_50N',   (80, 300), 12.0/86400.0)
-atlsec55 = lowerbound_pos('AtlSec_55N',   (70, 300), 12.0/86400.0)
-atlsec60 = lowerbound_pos('AtlSec_60N',   (60, 300), 12.0/86400.0)
+atlsec35 = lowerbound_pos('AtlSec_35N',  (110, 300), 0.000181586903636)
+atlsec40 = lowerbound_pos('AtlSec_40N',  (100, 300), 0.00020357221365)
+atlsec45 = lowerbound_pos('AtlSec_45N',   (90, 300), 0.000218390370719)
+atlsec50 = lowerbound_pos('AtlSec_50N',   (80, 300), 0.000240608642343)
+atlsec55 = lowerbound_pos('AtlSec_55N',   (70, 300), 0.000243240370764)
+atlsec60 = lowerbound_pos('AtlSec_60N',   (60, 300), 0.000235398852965)
 
-sibsec45 = lowerbound_pos('SibSec_45N',   (90, 510), 12.0/86400.0)
-sibsec50 = lowerbound_pos('SibSec_50N',   (80, 510), 12.0/86400.0)
-sibsec55 = lowerbound_pos('SibSec_55N',   (70, 510), 12.0/86400.0)
-sibsec60 = lowerbound_pos('SibSec_60N',   (60, 510), 12.0/86400.0)
-sibsec65 = lowerbound_pos('SibSec_65N',   (50, 510), 12.0/86400.0)
-sibsec70 = lowerbound_pos('SibSec_70N',   (40, 510), 12.0/86400.0)
+sibsec45 = lowerbound_pos('SibSec_45N',   (90, 510), 0.00019151752349)
+sibsec50 = lowerbound_pos('SibSec_50N',   (80, 510), 0.000185327575309)
+sibsec55 = lowerbound_pos('SibSec_55N',   (70, 510), 0.000183245167136)
+sibsec60 = lowerbound_pos('SibSec_60N',   (60, 510), 0.000193859974388)
+sibsec65 = lowerbound_pos('SibSec_65N',   (50, 510), 0.000188957434148)
+sibsec70 = lowerbound_pos('SibSec_70N',   (40, 510), 0.000188765014173)
 
-aussec35 = lowerbound_pos('AusSec_35N',  (250, 600), 12.0/86400.0)
-aussec40 = lowerbound_pos('AusSec_40N',  (260, 600), 12.0/86400.0)
-aussec45 = lowerbound_pos('AusSec_45N',  (270, 600), 12.0/86400.0)
-aussec50 = lowerbound_pos('AusSec_50N',  (280, 600), 12.0/86400.0)
-aussec55 = lowerbound_pos('AusSec_55N',  (290, 600), 12.0/86400.0)
-aussec60 = lowerbound_pos('AusSec_60N',  (300, 600), 12.0/86400.0)
-aussec65 = lowerbound_pos('AusSec_65N',  (310, 600), 12.0/86400.0)
+aussec35 = lowerbound_pos('AusSec_35S',  (250, 600), 0.000177936613909)
+aussec40 = lowerbound_pos('AusSec_40S',  (260, 600), 0.000183534648386)
+aussec45 = lowerbound_pos('AusSec_45S',  (270, 600), 0.000195973771042)
+aussec50 = lowerbound_pos('AusSec_50S',  (280, 600), 0.000204542753636)
+aussec55 = lowerbound_pos('AusSec_55S',  (290, 600), 0.000203898554901)
+aussec60 = lowerbound_pos('AusSec_60S',  (300, 600), 0.000202376424568)
+aussec65 = lowerbound_pos('AusSec_65S',  (310, 600), 0.000192796826013)
 
 #tests = [jan, feb, mar, apr, mai, jun, jul, aug, sep, oct, nov, dec, ]
 #tests = [djf, mam, jja, son, ]
@@ -185,6 +185,8 @@ aussec65 = lowerbound_pos('AusSec_65N',  (310, 600), 12.0/86400.0)
 #	 pna_p & djf, pna_n & djf, enso_p & djf, enso_n & djf, ]
 #tests = [ao_p & jja, ao_n & jja, nao_p & jja, nao_n & jja, aao_p & jja, aao_n & jja, 
 #	 pna_p & jja, pna_n & jja, enso_p & jja, enso_n & jja, ]
+#tests = [alps & djf, bagheran & djf, greenlnd & djf, rockies & djf,
+#	 alps & jja, bagheran & jja, greenlnd & jja, rockies & jja, ]
 #tests = [pacsec30 & djf, pacsec35 & djf, pacsec40 & djf, pacsec45 & djf, pacsec50 & djf, pacsec55 & djf,
 #	 pacsec30 & jja, pacsec35 & jja, pacsec40 & jja, pacsec45 & jja, pacsec50 & jja, pacsec55 & jja, ]
 #tests = [atlsec35 & djf, atlsec40 & djf, atlsec45 & djf, atlsec50 & djf, atlsec55 & djf, atlsec60 & djf, 
@@ -195,7 +197,7 @@ aussec65 = lowerbound_pos('AusSec_65N',  (310, 600), 12.0/86400.0)
 #	 aussec35 & jja, aussec40 & jja, aussec45 & jja, aussec50 & jja, aussec55 & jja, aussec60 & jja, aussec65 & jja ]
 
 test_q    = 'defabs'
-test_plev = 800
+test_plev = 300
 
 # ---------------------------------------------------------------------
 # Building the composites
@@ -206,17 +208,6 @@ f, oro = metopen('static', 'oro', cut=c.std_slice[1:])
 s = oro.shape
 f.close()
 del oro
-
-mean = {}
-hist = {}
-mfv  = {}
-cnt  = np.zeros((len(tests),))
-for q in qs:
-	if q in c.bins:
-		hist[q] = np.zeros((len(tests), len(c.bins[q]), s[0], s[1]))
-		mfv [q] = np.zeros((len(tests), s[0], s[1]), dtype='i4')
-	else:
-		mean[q] = np.zeros((len(tests), s[0], s[1]))
 
 def add(ti, q, dat):
 	if q in c.bins:
@@ -243,6 +234,16 @@ def cal_mfv(hist, bins):
 
 for plev in plevs:
 	dat = {}
+	mean = {}
+	hist = {}
+	mfv  = {}
+	cnt  = np.zeros((len(tests),))
+	for q in qs:
+		if q in c.bins:
+			hist[q] = np.zeros((len(tests), len(c.bins[q]), s[0], s[1]))
+			mfv [q] = np.zeros((len(tests), s[0], s[1]), dtype='i4')
+		else:
+			mean[q] = np.zeros((len(tests), s[0], s[1]))
 
 	for yr in years:
 		f, testdat = metopen(c.file_std % (yr, test_plev, test_q), c.q[test_q])
@@ -256,12 +257,12 @@ for plev in plevs:
 		for tidx in range(testdat.shape[0]):
 			t = t0 + tidx*td(0.25,0)
 			for ti in range(len(tests)):
-				if tests[ti].match(t, testdat):
+				if tests[ti].match(t, tidx, testdat):
 					for q in qs:
 						add(ti, q, dat[q][tidx])
 					cnt[ti] += 1
 
-	print plev, 'Postprocessing'
+	print plev, 'Postprocessing', cnt
 
 	for ti in range(len(tests)):
 		for q in qs:
@@ -282,7 +283,9 @@ for plev in plevs:
 				tosave['%s_mfv' % q]  =  mfv[q][ti]
 			else:
 				tosave['%s_mean' % q] = mean[q][ti]
+
+		tosave['cnt'] = cnt[ti]
 		
-		np.savez(opath+'%s_composite.%d.npz' % (tests[ti].name, plev), **tosave)
+		np.savez(opath+'%s_composite.%s.npz' % (tests[ti].name, plev), **tosave)
 
 # the end

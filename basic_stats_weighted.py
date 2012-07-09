@@ -21,7 +21,7 @@ for plev in c.plevs:
 	wsum  = np.zeros((361,720))
 
 	for year in c.years:
-		print 'Processing year %d, plev %d' % (year, plev)
+		print 'Processing year %d, plev %s' % (year, plev)
 
 		f, dat   = metopen(c.file_std % (year, plev, q), c.q[q])
 		if f: f.close()
@@ -31,7 +31,7 @@ for plev in c.plevs:
 		nt  = dat.shape[0]
 		if bench:
 			begin = datetime.datetime.now()
-		avg, std, wsum = dynlib.stat.basic_weighted(dat, wgt)
+		avg, std, wsum, minv, maxv = dynlib.stat.basic_weighted(dat, wgt)
 		sum  [:,:] += wsum[:,:]*avg[:,:]
 		sqsum[:,:] += (nt-1)/nt*wsum[:,:]*std[:,:]**2+(2*nt-1)*avg[:,:]**2
 		wsum [:,:] += wsum[:,:]

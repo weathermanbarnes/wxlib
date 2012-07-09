@@ -105,6 +105,9 @@ class grid(object):
 					self.dx[yidx,xidx] *= dlon*math.cos(math.pi/180.0*lat[yidx])
 			for yidx in range(1,self.ny-1):
 				self.dy[yidx,:] *= lat[yidx+1]-lat[yidx-1]
+			self.dy[ 0,:] *= 2.0*(lat[ 1]-lat[ 0])
+			self.dy[-1,:] *= 2.0*(lat[-1]-lat[-2])
+
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type "%s"' % self.gridtype
 
