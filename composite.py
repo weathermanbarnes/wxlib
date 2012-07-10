@@ -43,6 +43,10 @@ class decider(object):
 	# to be overriden by derived classes.
 	def match(self, date, tidx, field):
 		return False
+	
+	# Reset the decider for new vertical level (that is a new pass through the time interval)
+	def reset(self):
+		return
 
 class lowerbound_pos(decider):
 	# Initialisation
@@ -56,6 +60,7 @@ class lowerbound_pos(decider):
 	# Decider
 	def match(self, date, tidx, field):
 		return field[tidx,self.yidx,self.xidx] >= self.thres
+	
 
 class upperbound_pos(lowerbound_pos):
 	# Decider
@@ -79,6 +84,12 @@ class lowerbound_ts(decider):
 			self.tidx += 1
 		
 		return self.values[self.tidx] >= self.thres
+
+	# Reset
+	def reset(self):
+		self.tidx = 0
+
+		return
 
 class upperbound_ts(lowerbound_ts):
 	# Decider
@@ -145,39 +156,39 @@ enso   = np.load('ts_enso.npz')
 enso_p = lowerbound_ts('ENSO+', enso,  1.0)
 enso_n = upperbound_ts('ENSO-', enso, -1.0)
 
-alps     = lowerbound_pos('Alps_TB',      (88, 371), 0.000237193031353)
-bagheran = lowerbound_pos('Bagheran_TB', (114, 480), 0.000134757516207)
-greenlnd = lowerbound_pos('Greenland_TB', (51, 278), 0.000224143630476)
-rockies  = lowerbound_pos('Rockies_TB',  (114, 480), 0.000134757516207)
+alps     = lowerbound_pos('Alps_TB',      (88, 371), 0.000170674946276)
+bagheran = lowerbound_pos('Bagheran_TB', (114, 480), 0.00015324819833)
+greenlnd = lowerbound_pos('Greenland_TB', (51, 278), 0.000288789335173)
+rockies  = lowerbound_pos('Rockies_TB',  (114, 480), 0.00015324819833)
 
-pacsec30 = lowerbound_pos('PacSec_30N',  (120,   0), 0.00014751413255)
-pacsec35 = lowerbound_pos('PacSec_35N',  (110,   0), 0.000172332831426)
-pacsec40 = lowerbound_pos('PacSec_40N',  (100,   0), 0.000191705010366)
-pacsec45 = lowerbound_pos('PacSec_45N',   (90,   0), 0.000210880651139)
-pacsec50 = lowerbound_pos('PacSec_50N',   (80,   0), 0.000217700013309)
-pacsec55 = lowerbound_pos('PacSec_55N',   (70,   0), 0.000212105835089)
+pacsec30 = lowerbound_pos('PacSec_30N',  (120,   0), 6.93198380759e-05)
+pacsec35 = lowerbound_pos('PacSec_35N',  (110,   0), 9.17297729757e-05)
+pacsec40 = lowerbound_pos('PacSec_40N',  (100,   0), 0.000115896262287)
+pacsec45 = lowerbound_pos('PacSec_45N',   (90,   0), 0.000125246006064)
+pacsec50 = lowerbound_pos('PacSec_50N',   (80,   0), 0.00011372656445)
+pacsec55 = lowerbound_pos('PacSec_55N',   (70,   0), 0.000101412973891)
 
-atlsec35 = lowerbound_pos('AtlSec_35N',  (110, 300), 0.000181586903636)
-atlsec40 = lowerbound_pos('AtlSec_40N',  (100, 300), 0.00020357221365)
-atlsec45 = lowerbound_pos('AtlSec_45N',   (90, 300), 0.000218390370719)
-atlsec50 = lowerbound_pos('AtlSec_50N',   (80, 300), 0.000240608642343)
-atlsec55 = lowerbound_pos('AtlSec_55N',   (70, 300), 0.000243240370764)
-atlsec60 = lowerbound_pos('AtlSec_60N',   (60, 300), 0.000235398852965)
+atlsec35 = lowerbound_pos('AtlSec_35N',  (110, 300), 6.10344868619e-05)
+atlsec40 = lowerbound_pos('AtlSec_40N',  (100, 300), 7.67481615185e-05)
+atlsec45 = lowerbound_pos('AtlSec_45N',   (90, 300), 9.48488523136e-05)
+atlsec50 = lowerbound_pos('AtlSec_50N',   (80, 300), 0.000107748317532)
+atlsec55 = lowerbound_pos('AtlSec_55N',   (70, 300), 0.000113818488899)
+atlsec60 = lowerbound_pos('AtlSec_60N',   (60, 300), 0.000117585885164)
 
-sibsec45 = lowerbound_pos('SibSec_45N',   (90, 510), 0.00019151752349)
-sibsec50 = lowerbound_pos('SibSec_50N',   (80, 510), 0.000185327575309)
-sibsec55 = lowerbound_pos('SibSec_55N',   (70, 510), 0.000183245167136)
-sibsec60 = lowerbound_pos('SibSec_60N',   (60, 510), 0.000193859974388)
-sibsec65 = lowerbound_pos('SibSec_65N',   (50, 510), 0.000188957434148)
-sibsec70 = lowerbound_pos('SibSec_70N',   (40, 510), 0.000188765014173)
+sibsec45 = lowerbound_pos('SibSec_45N',   (90, 510), 8.55642501847e-05)
+sibsec50 = lowerbound_pos('SibSec_50N',   (80, 510), 7.25894715288e-05)
+sibsec55 = lowerbound_pos('SibSec_55N',   (70, 510), 7.44649732951e-05)
+sibsec60 = lowerbound_pos('SibSec_60N',   (60, 510), 7.97849424998e-05)
+sibsec65 = lowerbound_pos('SibSec_65N',   (50, 510), 8.39664571686e-05)
+sibsec70 = lowerbound_pos('SibSec_70N',   (40, 510), 8.65095862537e-05)
 
-aussec35 = lowerbound_pos('AusSec_35S',  (250, 600), 0.000177936613909)
-aussec40 = lowerbound_pos('AusSec_40S',  (260, 600), 0.000183534648386)
-aussec45 = lowerbound_pos('AusSec_45S',  (270, 600), 0.000195973771042)
-aussec50 = lowerbound_pos('AusSec_50S',  (280, 600), 0.000204542753636)
-aussec55 = lowerbound_pos('AusSec_55S',  (290, 600), 0.000203898554901)
-aussec60 = lowerbound_pos('AusSec_60S',  (300, 600), 0.000202376424568)
-aussec65 = lowerbound_pos('AusSec_65S',  (310, 600), 0.000192796826013)
+aussec35 = lowerbound_pos('AusSec_35S',  (250, 600), 6.95449416526e-05)
+aussec40 = lowerbound_pos('AusSec_40S',  (260, 600), 7.2962444392e-05)
+aussec45 = lowerbound_pos('AusSec_45S',  (270, 600), 8.42591325636e-05)
+aussec50 = lowerbound_pos('AusSec_50S',  (280, 600), 9.96056478471e-05)
+aussec55 = lowerbound_pos('AusSec_55S',  (290, 600), 0.0001040858333)
+aussec60 = lowerbound_pos('AusSec_60S',  (300, 600), 0.000106336927274)
+aussec65 = lowerbound_pos('AusSec_65S',  (310, 600), 0.000121975237562)
 
 #tests = [jan, feb, mar, apr, mai, jun, jul, aug, sep, oct, nov, dec, ]
 #tests = [djf, mam, jja, son, ]
@@ -197,7 +208,7 @@ aussec65 = lowerbound_pos('AusSec_65S',  (310, 600), 0.000192796826013)
 #	 aussec35 & jja, aussec40 & jja, aussec45 & jja, aussec50 & jja, aussec55 & jja, aussec60 & jja, aussec65 & jja ]
 
 test_q    = 'defabs'
-test_plev = 300
+test_plev = 800
 
 # ---------------------------------------------------------------------
 # Building the composites
@@ -287,5 +298,7 @@ for plev in plevs:
 		tosave['cnt'] = cnt[ti]
 		
 		np.savez(opath+'%s_composite.%s.npz' % (tests[ti].name, plev), **tosave)
+
+		tests[ti].reset()
 
 # the end

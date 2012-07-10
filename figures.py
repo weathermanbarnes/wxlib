@@ -28,6 +28,7 @@ orolevs = range(-19000,51000,2000)
 scale_oro = range(10000,80001,10000)
 scale_defabs = np.arange(3.0,30.1)
 scale_meandefabs = np.arange(0.0,10.1,0.5)
+scale_Zdiff = np.arange(-5000,5001,250)
 
 # TODO: Generalisation in data fetcher <-> plotter to avoid code duplication
 
@@ -522,7 +523,7 @@ def _get_periodic_cm2():
 # 
 
 
-def map_oro_dat(m, dat, plev=None, mark=None, cmap=None, scale=25, show=True, save='', title=''):
+def map_oro_dat(m, dat, plev=None, mark=None, cmap=None, scale=25, overlays=[], show=True, save='', title=''):
 	dat = concat1(dat)
 	if plev:
 		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
@@ -542,6 +543,8 @@ def map_oro_dat(m, dat, plev=None, mark=None, cmap=None, scale=25, show=True, sa
 	m.drawparallels(range(-80,81,5))
 	m.drawmeridians(range(0,360,30))
 	plt.colorbar()
+	for overlay in overlays:
+		overlay(m,x,y, zorder=2, mask=daZ < oro[:,:])
 	if mark:
 		yidx, xidx = mark
 		m.scatter(x[yidx,xidx], y[yidx,xidx], 49, marker='+', color='r', zorder=3)
@@ -636,6 +639,20 @@ def map_oro_barb(m, u, v, dat=None, plev=None, mark=None, quiver=False, cmap=Non
 		plt.show()
 
 	return
+
+
+def map_overlay_dat(dat, cmap=None, scale=25, colors=None):  
+	dat = concat1(dat)
+
+	def overlay(m, x, y, zorder, mask=None):
+		if type(mask) == np.ndarray:
+			dat[mask] = np.nan
+		cs =  m.contour(x, y, dat, scale, cmap=cmap, colors=colors, zorder=zorder, extend='both')
+		plt.clabel(cs, fontsize=12, inline=True, inline_spacing=2)
+
+		return
+
+	return overlay
 
 
 # that's it
