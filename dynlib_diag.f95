@@ -201,4 +201,26 @@ contains
        end do
     end if
   end subroutine
+  !
+  ! Calculates the geopotential (res) from montgomery potential (m), potential
+  ! temperature (theta) and pressure (p)
+  subroutine geop_from_montgp(res,nx,ny,nz,m,theta,p,dx,dy)
+    use consts, only: cp, Rl, p0
+    !
+    real(kind=nr), intent(in)  :: m(nz,ny,nx), theta(nz,ny,nx), p(nz,ny,nx), &
+                                & dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni) :: i,j,k, nx,ny,nz
+    !f2py depend(nx,ny,nz) res, theta, p
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    do i=1_ni,nx
+       do j=1_ni,ny
+          do k=1_ni,nz
+             res(k,j,i) = m(k,j,i) - cp*theta(k,j,i)*(p(k,j,i)/p0)**(Rl/cp)
+          end do
+       end do
+    end do
+  end subroutine
 end module
