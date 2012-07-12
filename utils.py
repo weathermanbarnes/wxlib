@@ -54,7 +54,7 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 		args.extend([grid.dx[cut[1:]], grid.dy[cut[1:]]])
 		if bench:
 			begin = datetime.datetime.now()
-		deff = func(*args) 
+		res = func(*args) 
 		if bench:
 			print 'Calculation', datetime.datetime.now()-begin
 	
@@ -68,7 +68,7 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 		#for t in len(u.shape[0]):
 		#	dylib.diag.def(u[t,:,:,:], v[t,:,:,:], grid.dx, grid.dy)
 	
-	return deff
+	return res
 
 #
 # Reimplementation of the recpective function in dynlib.diag for benchmarking.
