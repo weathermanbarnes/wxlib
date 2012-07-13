@@ -22,6 +22,19 @@ def scale(var, cut=(slice(None),slice(None),slice(None)), bench=False):
 	return var_dat
 
 #
+# Reduce to i2 values with add_offset and scale_factor
+def unscale(var):
+	maxv  = var.max()
+	minv  = var.min()
+	# divide in 2^16-2 intervals, values from -32766 -> 32767 ; reserve -32767 as missing value
+	scale = (maxv-minv)/65534.0
+	off   = +32766.5*scale + minv
+
+	res = np.round((var[::] - off)/scale)
+
+	return res.astype('>i2'), scale, off
+
+#
 # Concatenate one latitude band in x-direction, taking over the values of 
 # the first latitude band to emulate a cyclic field in Basemap plots
 def concat1(data):

@@ -24,8 +24,10 @@ for year in years:
 		opath  = '/Data/gfi/work/csp001/geop_from_montgp'
 
 		# Open nc file, check if wind data is present
+		begin = dt.now()
 		fm, m  = metopen(c.file_std % (year, plev, 'm'), c.q['m'])
 		fp, p  = metopen(c.file_std % (year, plev, 'p'), c.q['p'])
+		print 'Loading', dt.now()-begin
 
 		# Extract grid information 
 		grid = gridlib.grid(fm)
@@ -35,9 +37,9 @@ for year in years:
 			raise TypeError, 'Field shape for m does not match field shape for p.'
 
 		theta = np.ones(m.shape) * int(plev[2:])
-		print theta.min(), theta.max()
 
 		res = utils.call(dynlib.diag.geop_from_montgp, [m,theta,p], grid, cut=c.std_slice, bench=True)
+		res, scale, off = utils.unscale(res)
 
 		#ofile = '%s/ei.ans.%d.%s.defabs.npy' % (opath, year, plev)
 		#begin = dt.now()
@@ -55,8 +57,8 @@ for year in years:
 		for vn, vd in fm.variables.items():
 			if not vn == c.q['m']:
 				fo.variables[vn] = vd
-		fo.variables['z'] = ncv(res.astype('>f4'), 'f', res.shape, fm.variables[c.q['m']].dimensions,
-				{'units': 'm**2 s**-2', 'long_name': 'Geopotential'})
+		fo.variables['z'] = ncv(res, 'h', res.shape, fm.variables[c.q['m']].dimensions,
+			{'units': 'm**2 s**-2', 'long_name': 'Geopotential', 'add_offset': off, 'scale_factor': scale})
 		fo.close()
 		print 'Saving', dt.now()-begin
 
