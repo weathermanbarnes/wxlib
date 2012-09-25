@@ -28,9 +28,11 @@ def concat1(data):
 	if len(data.shape) == 1:
 		data = np.concatenate((data, np.reshape(data[0], (1,)) ), axis=0)
 	elif len(data.shape) == 2:
-		data = np.concatenate((data, np.reshape(data[:,0], (data.shape[0],1)) ), axis=1)
+		data = np.concatenate((data, np.reshape(data[:,0], (data.shape[0], 1)) ), axis=1)
 	elif len(data.shape) == 3:
-		data = np.concatenate((data, np.reshape(data[:,:,0], (data.shape[0], data.shape[1],1)) ), axis=2)
+		data = np.concatenate((data, np.reshape(data[:,:,0], (data.shape[0], data.shape[1], 1)) ), axis=2)
+	elif len(data.shape) == 4:
+		data = np.concatenate((data, np.reshape(data[:,:,:,0], (data.shape[0], data.shape[1], data.shape[2], 1)) ), axis=3)
 	else:
 		raise NotImplementedError, 'Concatenation not implemented for %d dimensions' % len(data.shape)
 	

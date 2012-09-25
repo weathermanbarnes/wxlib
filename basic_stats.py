@@ -7,7 +7,7 @@ from metopen import metopen
 import static as c
 import dynlib
 
-q = 'defang'
+q = 'defabs'
 bench = True
 
 opath = '/work/csp001/deformation'
@@ -17,6 +17,7 @@ for plev in c.plevs:
 	nttot = 0
 	sum   = np.zeros((361,720))
 	sqsum = np.zeros((361,720))
+	tprod = np.zeros((361,720))
 
 	for year in c.years:
 		print 'Processing year %d, plev %s' % (year, plev)
@@ -25,9 +26,8 @@ for plev in c.plevs:
 		nt  = dat.shape[0]
 		if bench:
 			begin = datetime.datetime.now()
-		#avg = dat.mean(axis=0)
-		#std = dat.std(axis=0)
-		min,max,avg,std = dynlib.stat.basic(dat)
+		min,max,avg,std,tprod_out = dynlib.stat.basic(dat, nttot)
+		tprod += tprod_out
 		if q in c.bins:
 			mfv,his,med     = dynlib.stat.binned(dat, c.bins[q])
 		sum  [:,:] += nt*avg[:,:]
@@ -38,7 +38,7 @@ for plev in c.plevs:
 		else:
 			minv [:,:]  = np.minimum(min, minv)
 			maxv [:,:]  = np.maximum(max, maxv)
-		nttot      += nt
+		nttot += nt
 		if bench:
 			print 'Fortran basic stats:', datetime.datetime.now()-begin
 		
@@ -63,6 +63,12 @@ for plev in c.plevs:
 			f.close()
 	
 	print 'Saving multi-year stats'
+	tsum   =  np.arange(nttot).sum()
+	tsqsum = (np.arange(nttot)**2).sum()
+
+	trend = (tprod[:,:] - 1.0/nttot*(tsum*sum[:,:])) / (tsqsum - 1.0/nttot*tsum**2)
+	icept = (sum[:,:] - trend[:,:]*tsum)/nttot
+
 	sum  [:,:]/= nttot
 	sqsum[:,:] = np.sqrt((sqsum[:,:]-(2*nttot-1)*sum[:,:]**2)/(nttot-1))
 
@@ -71,7 +77,9 @@ for plev in c.plevs:
 		mean   = np.ascontiguousarray(sum.astype('f4')), 
 		stddev = np.ascontiguousarray(sqsum.astype('f4')),
 		minv   = np.ascontiguousarray(minv.astype('f4')),
-		maxv   = np.ascontiguousarray(maxv.astype('f4'))  ) 
+		maxv   = np.ascontiguousarray(maxv.astype('f4')),
+		trend  = np.ascontiguousarray(trend.astype('f4')), 
+		icept  = np.ascontiguousarray(icept.astype('f4'))  ) 
 
 
 # the end

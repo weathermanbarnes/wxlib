@@ -11,10 +11,10 @@ from datetime import datetime as dt, timedelta as td
 # Data base
 
 years = c.years
-plevs = c.plevs
+plevs = [300, 500, 800] #c.plevs
 qs    = ['defabs', 'defang', 'Z', 'u', 'v']
 
-opath = '/work/csp001/composites/'
+opath = '/work/csp001/composites/minZat300hPa/'
 
 # ---------------------------------------------------------------------
 # Defining possible testers
@@ -158,39 +158,39 @@ enso   = np.load('ts_enso.npz')
 enso_p = lowerbound_ts('ENSO+', enso,  1.0)
 enso_n = upperbound_ts('ENSO-', enso, -1.0)
 
-alps     = lowerbound_pos('Alps_TB',      (88, 371), 0.000134096597321)
-bagheran = lowerbound_pos('Bagheran_TB', (114, 480), 8.18171029096e-05)
-greenlnd = lowerbound_pos('Greenland_TB', (51, 278), 0.000143700148328)
-rockies  = lowerbound_pos('Rockies_TB',  (114, 480), 8.18171029096e-05)
+alps     = upperbound_pos('Alps_TB',      (88, 371), 89385.6010909)
+bagheran = upperbound_pos('Bagheran_TB', (114, 480), 93406.560068)
+greenlnd = upperbound_pos('Greenland_TB', (51, 278), 86043.961205)
+rockies  = upperbound_pos('Rockies_TB',  (114, 480), 93406.560068)
 
-pacsec30 = lowerbound_pos('PacSec_30N',  (120,   0), 9.01186285773e-05)
-pacsec35 = lowerbound_pos('PacSec_35N',  (110,   0), 0.000110236149339)
-pacsec40 = lowerbound_pos('PacSec_40N',  (100,   0), 0.000127223334857)
-pacsec45 = lowerbound_pos('PacSec_45N',   (90,   0), 0.00013783799659)
-pacsec50 = lowerbound_pos('PacSec_50N',   (80,   0), 0.000136467599077)
-pacsec55 = lowerbound_pos('PacSec_55N',   (70,   0), 0.000125405858853)
+pacsec30 = upperbound_pos('PacSec_30N',  (120,   0), 93321.2289874)
+pacsec35 = upperbound_pos('PacSec_35N',  (110,   0), 92138.791619)
+pacsec40 = upperbound_pos('PacSec_40N',  (100,   0), 89810.2522804)
+pacsec45 = upperbound_pos('PacSec_45N',   (90,   0), 87825.1021409)
+pacsec50 = upperbound_pos('PacSec_50N',   (80,   0), 86791.546998)
+pacsec55 = upperbound_pos('PacSec_55N',   (70,   0), 86541.7791012)
 
-atlsec35 = lowerbound_pos('AtlSec_35N',  (110, 300), 9.33964911383e-05)
-atlsec40 = lowerbound_pos('AtlSec_40N',  (100, 300), 0.000105974475446)
-atlsec45 = lowerbound_pos('AtlSec_45N',   (90, 300), 0.000124048441648)
-atlsec50 = lowerbound_pos('AtlSec_50N',   (80, 300), 0.000141986471135)
-atlsec55 = lowerbound_pos('AtlSec_55N',   (70, 300), 0.000152625521878)
-atlsec60 = lowerbound_pos('AtlSec_60N',   (60, 300), 0.000148965264088)
+atlsec35 = upperbound_pos('AtlSec_35N',  (110, 300), 92042.3654283)
+atlsec40 = upperbound_pos('AtlSec_40N',  (100, 300), 90781.3529516)
+atlsec45 = upperbound_pos('AtlSec_45N',   (90, 300), 89316.0434635)
+atlsec50 = upperbound_pos('AtlSec_50N',   (80, 300), 87986.0890262)
+atlsec55 = upperbound_pos('AtlSec_55N',   (70, 300), 87042.1297982)
+atlsec60 = upperbound_pos('AtlSec_60N',   (60, 300), 86423.7978621)
 
-sibsec45 = lowerbound_pos('SibSec_45N',   (90, 510), 0.000107802567072)
-sibsec50 = lowerbound_pos('SibSec_50N',   (80, 510), 0.000109218119178)
-sibsec55 = lowerbound_pos('SibSec_55N',   (70, 510), 0.000112245113996)
-sibsec60 = lowerbound_pos('SibSec_60N',   (60, 510), 0.00011732456187)
-sibsec65 = lowerbound_pos('SibSec_65N',   (50, 510), 0.00011560665007)
-sibsec70 = lowerbound_pos('SibSec_70N',   (40, 510), 0.000116924435133)
+sibsec45 = upperbound_pos('SibSec_45N',   (90, 510), 90659.7261204)
+sibsec50 = upperbound_pos('SibSec_50N',   (80, 510), 89170.244846)
+sibsec55 = upperbound_pos('SibSec_55N',   (70, 510), 87829.8385007)
+sibsec60 = upperbound_pos('SibSec_60N',   (60, 510), 86805.0279739)
+sibsec65 = upperbound_pos('SibSec_65N',   (50, 510), 85983.7165583)
+sibsec70 = upperbound_pos('SibSec_70N',   (40, 510), 85582.3673396)
 
-aussec35 = lowerbound_pos('AusSec_35S',  (250, 600), 0.000114185357234)
-aussec40 = lowerbound_pos('AusSec_40S',  (260, 600), 0.00012188211258)
-aussec45 = lowerbound_pos('AusSec_45S',  (270, 600), 0.000132639863295)
-aussec50 = lowerbound_pos('AusSec_50S',  (280, 600), 0.000137859053211)
-aussec55 = lowerbound_pos('AusSec_55S',  (290, 600), 0.000136056856718)
-aussec60 = lowerbound_pos('AusSec_60S',  (300, 600), 0.000131938708364)
-aussec65 = lowerbound_pos('AusSec_65S',  (310, 600), 0.000124673882965)
+aussec35 = upperbound_pos('AusSec_35S',  (250, 600), 90282.5965711)
+aussec40 = upperbound_pos('AusSec_40S',  (260, 600), 87925.7773702)
+aussec45 = upperbound_pos('AusSec_45S',  (270, 600), 85857.7848112)
+aussec50 = upperbound_pos('AusSec_50S',  (280, 600), 84169.2246727)
+aussec55 = upperbound_pos('AusSec_55S',  (290, 600), 83053.8476946)
+aussec60 = upperbound_pos('AusSec_60S',  (300, 600), 82323.6388425)
+aussec65 = upperbound_pos('AusSec_65S',  (310, 600), 81855.9116357)
 
 #tests = [jan, feb, mar, apr, mai, jun, jul, aug, sep, oct, nov, dec, ]
 #tests = [djf, mam, jja, son, ]
@@ -199,18 +199,19 @@ aussec65 = lowerbound_pos('AusSec_65S',  (310, 600), 0.000124673882965)
 #tests = [ao_p & jja, ao_n & jja, nao_p & jja, nao_n & jja, aao_p & jja, aao_n & jja, 
 #	 pna_p & jja, pna_n & jja, enso_p & jja, enso_n & jja, ]
 #tests = [alps & djf, bagheran & djf, greenlnd & djf, rockies & djf,
-#	 alps & jja, bagheran & jja, greenlnd & jja, rockies & jja, ]
-#tests = [pacsec30 & djf, pacsec35 & djf, pacsec40 & djf, pacsec45 & djf, pacsec50 & djf, pacsec55 & djf,
-#	 pacsec30 & jja, pacsec35 & jja, pacsec40 & jja, pacsec45 & jja, pacsec50 & jja, pacsec55 & jja, ]
-#tests = [atlsec35 & djf, atlsec40 & djf, atlsec45 & djf, atlsec50 & djf, atlsec55 & djf, atlsec60 & djf, 
-#	 atlsec35 & jja, atlsec40 & jja, atlsec45 & jja, atlsec50 & jja, atlsec55 & jja, atlsec60 & jja, ]
-#tests = [sibsec45 & djf, sibsec50 & djf, sibsec55 & djf, sibsec60 & djf, sibsec65 & djf, sibsec70 & djf,
-#	 sibsec45 & jja, sibsec50 & jja, sibsec55 & jja, sibsec60 & jja, sibsec65 & jja, sibsec70 & jja, ]
-#tests = [aussec35 & djf, aussec40 & djf, aussec45 & djf, aussec50 & djf, aussec55 & djf, aussec60 & djf, aussec65 & djf,
-#	 aussec35 & jja, aussec40 & jja, aussec45 & jja, aussec50 & jja, aussec55 & jja, aussec60 & jja, aussec65 & jja ]
+#	 atlsec35 & djf, atlsec40 & djf, atlsec45 & djf, atlsec50 & djf, atlsec55 & djf, atlsec60 & djf, 
+#	 sibsec45 & djf, sibsec50 & djf, sibsec55 & djf, sibsec60 & djf, sibsec65 & djf, sibsec70 & djf,
+#	 aussec35 & jja, aussec40 & jja, aussec45 & jja, aussec50 & jja, aussec55 & jja, aussec60 & jja, aussec65 & jja,
+#	 pacsec30 & djf, pacsec35 & djf, pacsec40 & djf, pacsec45 & djf, pacsec50 & djf, pacsec55 & djf,  ]
+tests = [alps & jja, bagheran & jja, greenlnd & jja, rockies & jja, 
+	 atlsec35 & jja, atlsec40 & jja, atlsec45 & jja, atlsec50 & jja, atlsec55 & jja, atlsec60 & jja,
+ 	 sibsec45 & jja, sibsec50 & jja, sibsec55 & jja, sibsec60 & jja, sibsec65 & jja, sibsec70 & jja,
+	 aussec35 & djf, aussec40 & djf, aussec45 & djf, aussec50 & djf, aussec55 & djf, aussec60 & djf, aussec65 & djf,
+	 pacsec30 & jja, pacsec35 & jja, pacsec40 & jja, pacsec45 & jja, pacsec50 & jja, pacsec55 & jja,  ]
 
-test_q    = 'defabs'
-test_plev = 500
+
+test_q    = 'Z'
+test_plev = 300
 
 # ---------------------------------------------------------------------
 # Building the composites
@@ -241,7 +242,7 @@ def cal_mfv(hist, bins):
 	for j in range(s[0]):
 		for i in range(s[1]):
 			bi = hist[:,j,i].argmax()
-			mfv = (bins[bi+1]+bins[bi])/2.0
+			mfv[j,i] = (bins[bi+1]+bins[bi])/2.0
 
 	return mfv
 
@@ -254,7 +255,7 @@ for plev in plevs:
 	for q in qs:
 		if q in c.bins:
 			hist[q] = np.zeros((len(tests), len(c.bins[q]), s[0], s[1]))
-			mfv [q] = np.zeros((len(tests), s[0], s[1]), dtype='i4')
+			mfv [q] = np.zeros((len(tests), s[0], s[1]))
 		else:
 			mean[q] = np.zeros((len(tests), s[0], s[1]))
 
