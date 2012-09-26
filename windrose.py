@@ -59,9 +59,7 @@ class WindroseAxes(PolarAxes):
 		self.theta_labels = ['E', 'N-E', 'N', 'N-W', 'W', 'S-W', 'S', 'S-E']
 		self.set_thetagrids(angles=self.theta_angles, labels=self.theta_labels)
 
-		self._info = {'dir' : list(),
-					  'bins' : list(),
-					  'table' : list()}
+		self._info = {'dir' : list(), 'bins' : list(), 'table' : list()}
 
 		self.patches_list = list()
 
@@ -87,8 +85,7 @@ class WindroseAxes(PolarAxes):
 		radii = np.linspace(0.1, self.get_rmax(), 6)
 		radii_labels = [ "%.1f" %r for r in radii ]
 		radii_labels[0] = "" #Removing label 0
-		null = self.set_rgrids(radii=radii, labels=radii_labels,
-							   angle=self.radii_angle, **kwargs)
+		null = self.set_rgrids(radii=radii, labels=radii_labels, angle=self.radii_angle, **kwargs)
 
 
 	def _update(self):

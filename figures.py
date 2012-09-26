@@ -9,6 +9,7 @@ from mpl_toolkits.basemap import Basemap, cm as bmcm
 from metopen import metopen
 from utils import concat1
 import windrose as wr
+import streamplot as sp
 
 import static as c
 import stats
@@ -308,6 +309,19 @@ def map_date_barb(date, plev=800, quiver=False):
 	return
 
 
+# Streamlines on a oro map.
+def map_date_stream(date, plev=800, cmap=None):
+	u = concat1(_get_instantaneous('u', date, plevs=plev))
+	v = concat1(_get_instantaneous('v', date, plevs=plev))
+
+	ff = np.sqrt(u*u + v*v)
+	
+	m = npmap()
+	sp.streamplot(lon[0,:], lat[:,0], u, v, m=m, cmap=cmap)
+	map_oro_dat(m, oro[:,:-1], plev=plev, cmap=plt.cm.gist_earth, scale=orolevs)
+
+	return
+
 
 # same as ysect_mean_deform but without any averaging; deformation sections for one point in time
 def ysect_date_Q(date, q='defabs', yidx=51, quiet=False, cmap=None):
@@ -463,9 +477,9 @@ def phist(year, q='defang', plev=800, yidx=51, xidx=278, quiet=False):
 	return
 
 
-def phist_ts(qd='defang', qv='defabs', plev=800, pos='Greenland_TB', quiet=False):
-	fd, dd = metopen('../timeseries/%s.%d.%s_ts' % (pos, plev, qd), 'ts', cut=(slice(None),) )
-	fv, dv = metopen('../timeseries/%s.%d.%s_ts' % (pos, plev, qv), 'ts', cut=(slice(None),) )
+def phist_ts(qd='defang', qv='defabs', plev='800', pos='Greenland_TB', quiet=False, show=True, save='', title=''):
+	fd, dd = metopen('../timeseries/%s.%s.%s_ts' % (pos, plev, qd), 'ts', cut=(slice(None),) )
+	fv, dv = metopen('../timeseries/%s.%s.%s_ts' % (pos, plev, qv), 'ts', cut=(slice(None),) )
 	if not quiet:
 		yidx, xidx = fd['pos']
 		print '%s (Lat: %f, Lon: %f)' % (pos, lat[yidx,0],lon[0,xidx])
@@ -482,8 +496,17 @@ def phist_ts(qd='defang', qv='defabs', plev=800, pos='Greenland_TB', quiet=False
 	dv = np.append(dv, dv)
 	
 	wr.bar(dd, dv, bins=[0, 6, 12, 18], halfplot=True, normed=True, nsector=72)
-
-	plt.show()
+	plt.text(1.65*np.pi, 1.2*plt.gca().get_rmax(), 'Pos: %3.1f%s, %3.1f%s' % (
+			abs(lat[yidx,0]), 'N' if lat[yidx,0] > 0 else 'S', 
+			abs(lon[0,xidx]), 'E' if lon[0,xidx] > 0 else 'W'),
+		fontsize=14)
+	
+	if title:
+		plt.title(title)
+	if save:
+		plt.savefig(save, format='png')
+	if show:
+		plt.show()
 
 	return
 
