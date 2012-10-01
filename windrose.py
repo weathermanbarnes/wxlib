@@ -41,7 +41,7 @@ class WindroseAxes(PolarAxes):
 		
 		#Uncomment to have the possibility to change the resolution directly 
 		#when the instance is created
-		#self.RESOLUTION = kwargs.pop('resolution', 100)
+		self.RESOLUTION = kwargs.pop('resolution', 96)
 		PolarAxes.__init__(self, *args, **kwargs)
 		self.set_aspect('equal', adjustable='box', anchor='C')
 		self.radii_angle = kwargs.pop('radii_angle', 157.5)
@@ -536,7 +536,7 @@ def contour(dir, var, **kwargs):
 	ax = gca_or_mca()
 	ax.contour(dir, var, **kwargs)
 	if not kwargs.get('bins', 6) == 1:
-		l = ax.legend(axespad=-0.10)
+		l = ax.legend(axespad=-0.07)
 		plt.setp(l.get_texts(), fontsize=8)
 	plt.draw()
 	#plt.show()
@@ -546,7 +546,7 @@ def contourf(dir, var, **kwargs):
 	ax = gca_or_mca()
 	ax.contourf(dir, var, **kwargs)
 	if not kwargs.get('bins', 6) == 1:
-		l = ax.legend(axespad=-0.10)
+		l = ax.legend(axespad=-0.07)
 		plt.setp(l.get_texts(), fontsize=8)
 	plt.draw()
 	#plt.show()
@@ -556,7 +556,7 @@ def box(dir, var, **kwargs):
 	ax = gca_or_mca()
 	ax.box(dir, var, **kwargs)
 	if not kwargs.get('bins', 6) == 1:
-		l = ax.legend(axespad=-0.10)
+		l = ax.legend(axespad=-0.07)
 		plt.setp(l.get_texts(), fontsize=8)
 	plt.draw()
 	#plt.show()
@@ -566,7 +566,7 @@ def bar(dir, var, **kwargs):
 	ax = gca_or_mca()
 	ax.bar(dir, var, **kwargs)
 	if not kwargs.get('bins', 6) == 1:
-		l = ax.legend(axespad=-0.10)
+		l = ax.legend(axespad=-0.07)
 		plt.setp(l.get_texts(), fontsize=8)
 	plt.draw()
 	#plt.show()

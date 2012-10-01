@@ -7,17 +7,28 @@ from metopen import metopen
 import static as c
 import dynlib
 
-q = 'defabs'
+q = 'defang'
 bench = True
+
+s = (361,720)
 
 opath = '/work/csp001/deformation'
 
+def cal_mfv(hist, bins):
+	mfv = np.zeros(s)
+	for j in range(s[0]):
+		for i in range(s[1]):
+			bi = hist[:,j,i].argmax()
+			mfv[j,i] = (bins[bi+1]+bins[bi])/2.0
+	return mfv
 
 for plev in c.plevs:
 	nttot = 0
-	sum   = np.zeros((361,720))
-	sqsum = np.zeros((361,720))
-	tprod = np.zeros((361,720))
+	sum   = np.zeros(s)
+	sqsum = np.zeros(s)
+	tprod = np.zeros(s)
+	if q in c.bins:
+		hist = np.zeros((len(c.bins[q]),s[0],s[1]))
 
 	for year in c.years:
 		print 'Processing year %d, plev %s' % (year, plev)
@@ -30,6 +41,7 @@ for plev in c.plevs:
 		tprod += tprod_out
 		if q in c.bins:
 			mfv,his,med     = dynlib.stat.binned(dat, c.bins[q])
+			hist += his
 		sum  [:,:] += nt*avg[:,:]
 		sqsum[:,:] += (nt-1)*std[:,:]**2+(2*nt-1)*avg[:,:]**2
 		if year == c.years[0]:
@@ -73,13 +85,26 @@ for plev in c.plevs:
 	sqsum[:,:] = np.sqrt((sqsum[:,:]-(2*nttot-1)*sum[:,:]**2)/(nttot-1))
 
 	ofile = opath+'/'+c.file_mstat % (plev, q)
-	np.savez_compressed(ofile, 
-		mean   = np.ascontiguousarray(sum.astype('f4')), 
-		stddev = np.ascontiguousarray(sqsum.astype('f4')),
-		minv   = np.ascontiguousarray(minv.astype('f4')),
-		maxv   = np.ascontiguousarray(maxv.astype('f4')),
-		trend  = np.ascontiguousarray(trend.astype('f4')), 
-		icept  = np.ascontiguousarray(icept.astype('f4'))  ) 
+	if q not in c.bins:
+		np.savez_compressed(ofile, 
+			mean   = np.ascontiguousarray(sum.astype('f4')), 
+			stddev = np.ascontiguousarray(sqsum.astype('f4')),
+			minv   = np.ascontiguousarray(minv.astype('f4')),
+			maxv   = np.ascontiguousarray(maxv.astype('f4')),
+			trend  = np.ascontiguousarray(trend.astype('f4')), 
+			icept  = np.ascontiguousarray(icept.astype('f4'))  ) 
+	else:
+		mfv = cal_mfv(hist, c.bins[q])
+		np.savez_compressed(ofile, 
+			mean   = np.ascontiguousarray(sum.astype('f4')), 
+			stddev = np.ascontiguousarray(sqsum.astype('f4')),
+			minv   = np.ascontiguousarray(minv.astype('f4')),
+			maxv   = np.ascontiguousarray(maxv.astype('f4')),
+			trend  = np.ascontiguousarray(trend.astype('f4')), 
+			icept  = np.ascontiguousarray(icept.astype('f4')),
+			mfv    = np.ascontiguousarray(mfv.astype('f4')), 
+			hist   = np.ascontiguousarray(hist.astype('f4'))  ) 
+		
 
 
 # the end

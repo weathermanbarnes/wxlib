@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from mpl_toolkits.basemap import Basemap, cm as bmcm
+from datetime import datetime as dt, timedelta as td
 from metopen import metopen
 from utils import concat1
 import windrose as wr
@@ -477,7 +478,8 @@ def phist(year, q='defang', plev=800, yidx=51, xidx=278, quiet=False):
 	return
 
 
-def phist_ts(qd='defang', qv='defabs', plev='800', pos='Greenland_TB', quiet=False, show=True, save='', title=''):
+def ts_phist(qd='defang', qv='defabs', plev='800', pos='Greenland_TB', mons=[], years=[],
+		quiet=False, show=True, save='', title=''):
 	fd, dd = metopen('../timeseries/%s.%s.%s_ts' % (pos, plev, qd), 'ts', cut=(slice(None),) )
 	fv, dv = metopen('../timeseries/%s.%s.%s_ts' % (pos, plev, qv), 'ts', cut=(slice(None),) )
 	if not quiet:
@@ -485,6 +487,22 @@ def phist_ts(qd='defang', qv='defabs', plev='800', pos='Greenland_TB', quiet=Fal
 		print '%s (Lat: %f, Lon: %f)' % (pos, lat[yidx,0],lon[0,xidx])
 	fd.close()
 	fv.close()
+	
+	if len(mons) > 0 or len(years) > 0:
+		dates = [dt(1979,1,1,0)+td(0.25)*i for i in range(len(dd))]
+
+	if len(mons) > 0 and len(years) > 0:
+		mask = np.array(map(lambda x: x.month in mons and x.year in years, dates))
+	elif len(mons) > 0:
+		mask =  np.array(map(lambda x: x.month in mons, dates))
+	elif len(years) > 0:
+		mask =  np.array(map(lambda x: x.year in years, dates))
+	
+	if len(mons) > 0 or len(years) > 0:
+		dd = dd[mask]
+		dv = dv[mask]
+	
+	print len(dd)
 	
 	# wr is made for wind direction: N -> 0, clockwise -> pos; 
 	# however for deformation angle: E -> 0, anticlockwise -> pos;
@@ -511,8 +529,15 @@ def phist_ts(qd='defang', qv='defabs', plev='800', pos='Greenland_TB', quiet=Fal
 	return
 
 
-def wavlet(dects, skip=0):
-	# TODO: everything :-D
+def ts_wavelet(q='defabs', plev='800', pos='Greenland_TB', quiet=False, show=True, save='', title=''):
+	import mlpy.wavelet as wave
+
+	f, dat = metopen('../timeseries/%s.%s.%s_ts' % (pos, plev, q), 'ts', cut=(slice(None),) )
+	if not quiet: 
+		yidx, xidx = f['pos']
+		print '%s (Lat: %f, Lon: %f)' % (pos, lat[yidx,0],lon[0,xidx])
+	f.close()
+
 	return	
 
 
@@ -660,7 +685,7 @@ def map_oro_dat(m, dat, plev=None, mark=None, cmap=None, scale=25, overlays=[], 
 		overlay(m,x,y, zorder=2, mask=mask)
 	if mark:
 		yidx, xidx = mark
-		m.scatter(x[yidx,xidx], y[yidx,xidx], 49, marker='+', color='r', zorder=3)
+		m.scatter(x[yidx,xidx], y[yidx,xidx], 324, marker='o', facecolors=(0,0,0,0), edgecolors='r', linewidths=2, zorder=3)
 	
 	if title:
 		plt.title(title)
@@ -767,6 +792,19 @@ def map_overlay_dat(dat, cmap=None, scale=25, colors=None):
 			dat[mask] = np.nan
 		cs =  m.contour(x, y, dat, scale, cmap=cmap, colors=colors, zorder=zorder, extend='both')
 		plt.clabel(cs, fontsize=12, inline=True, inline_spacing=2)
+
+		return
+
+	return overlay
+
+
+def map_overlay_mask(dat):  
+	dat = concat1(dat)
+
+	def overlay(m, x, y, zorder, mask=None):
+		if type(mask) == np.ndarray:
+			raise NotImplementedError, 'here be dragons'
+		cs =  m.contourf(x, y, dat, cmap=_get_grey_cm(), alpha=0.7)
 
 		return
 
