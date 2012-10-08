@@ -627,6 +627,12 @@ def _get_defabs_cm():
 
 	return mpl.colors.LinearSegmentedColormap('my_defabs',cdict,256)
 
+def _get_q_cm():
+	cdict = {'red':   ((0.0, 1.0, 1.0), (0.33, 0.30, 0.30),  (0.867, 0.1, 0.1), (1.0, 0.5, 0.5)),
+		 'green': ((0.0, 1.0, 1.0), (0.33, 0.65, 0.65),  (0.867, 0.2, 0.2), (1.0, 0.2, 0.2)),
+		 'blue':  ((0.0, 1.0, 1.0), (0.33, 0.80, 0.80),  (0.867, 0.6, 0.6), (1.0, 0.8, 0.8))  }
+
+	return mpl.colors.LinearSegmentedColormap('my_defabs',cdict,256)
 
 def _get_periodic_cm():
 	cdict = {'red':   ((0.0, 0.0, 0.0), (0.25, 0.8, 0.8), (0.5, 1.0, 1.0), (0.75, 0.0, 0.0), (1.0, 0.0, 0.0)),
