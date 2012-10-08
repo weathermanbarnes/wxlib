@@ -4,6 +4,7 @@
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import matplotlib as mpl
 from mpl_toolkits.basemap import Basemap, cm as bmcm
 from datetime import datetime as dt, timedelta as td
@@ -529,14 +530,64 @@ def ts_phist(qd='defang', qv='defabs', plev='800', pos='Greenland_TB', mons=[], 
 	return
 
 
-def ts_wavelet(q='defabs', plev='800', pos='Greenland_TB', quiet=False, show=True, save='', title=''):
-	import mlpy.wavelet as wave
+def ts_wavelet(q='defabs', plev='800', pos='Greenland_TB', scale=25, cmap=None, p=np.pi,
+		quiet=False, show=True, save='', title=''):
+	import mlpy
 
-	f, dat = metopen('../timeseries/%s.%s.%s_ts' % (pos, plev, q), 'ts', cut=(slice(None),) )
+	f, ts = metopen('../timeseries/%s.%s.%s_ts' % (pos, plev, q), 'ts', cut=(slice(None),) )
 	if not quiet: 
 		yidx, xidx = f['pos']
 		print '%s (Lat: %f, Lon: %f)' % (pos, lat[yidx,0],lon[0,xidx])
 	f.close()
+
+	if q == 'defabs':
+		ts *= 86400.0
+
+	ts_2011 = ts[-1460:]
+	tswl_2011, scales_2011 = mlpy.cwt(x=ts_2011, dt=1, dj=0.125, wf='morlet', p=p)
+	dates_2011 = [dt(2011,1,1,0)+td(0.25)*i for i in range(1460)]
+	
+	ts_weekly = np.array(map(lambda i: ts[i*28:(i+1)*28].mean(), range(len(ts)/28)))
+	tswl_weekly, scales_weekly = mlpy.cwt(x=ts_weekly, dt=1, dj=0.125, wf='morlet', p=p)
+	dates_weekly = [dt(1979,1,1,0)+td(7)*i for i in range(len(ts_weekly))]
+	
+	tswl_mean = np.zeros(tswl_2011.shape)
+	dates = [dt(1979,1,1,0)+td(0.25)*i for i in range(len(ts))]
+	for yr in range(1979,2012):
+		tidx = dates.index(dt(yr,1,1,0))
+		tswl_out, scales_mean = mlpy.cwt(x=ts[tidx:tidx+1460], dt=1, dj=0.125, wf='morlet', p=p)
+		tswl_mean += np.abs(tswl_out)
+	tswl_mean /= 33.0
+	
+	# normalisation of the scale for different shape parameters p
+	norm = 2.0*np.pi/p
+
+	fig = plt.gcf()
+	dfmt = mdates.DateFormatter('%b')
+	ax1 = fig.add_subplot(311)
+	plt.contourf(dates_weekly, scales_weekly*7.0/365.25*norm, np.abs(tswl_weekly), scale, cmap=cmap, extend='max' )
+	ax1.set_yscale('log')
+	ax1.set_ylabel('Period [years]')
+	plt.colorbar()
+	ax2 = fig.add_subplot(312)
+	plt.contourf(dates_2011, scales_2011*0.25*norm, np.abs(tswl_2011), scale, cmap=cmap, extend='max' )
+	ax2.set_yscale('log')
+	ax2.set_ylabel('Period [days]')
+	ax2.xaxis.set_major_formatter(dfmt)
+	plt.colorbar()
+	ax3 = fig.add_subplot(313)
+	plt.contourf(dates_2011, scales_mean*0.25*norm, tswl_mean, scale, cmap=cmap, extend='max' )
+	ax3.set_yscale('log')
+	ax3.set_ylabel('Period [days]')
+	ax3.xaxis.set_major_formatter(dfmt)
+	plt.colorbar()
+	
+	if title:
+		plt.title(title)
+	if save:
+		plt.savefig(save, format='png')
+	if show:
+		plt.show()
 
 	return	
 
