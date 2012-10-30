@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compile script for dynlib
+# Compile scrip for dynlib
 
 # Obs: The order of the files in $files has to reflect the interdepencies!
 files='dynlib_config.f95 dynlib_conv.f95 dynlib_diag.f95 dynlib_stat.f95' 
@@ -34,7 +34,7 @@ cp $filek $files precc/
 echo "Stage 2: Creating python signature file"
 cd precc/
 f2py -m dynlib -h $pysig $filec $files > /dev/null
-sed "s/\<nr\>/8/g" $pysig | sed "s/\<ni\>/4/g" > ${pysig}_tmp
+sed "s/kind=nr/kind=8/g" $pysig | sed "s/kind=ni/kind=4/g" > ${pysig}_tmp
 mv ${pysig}_tmp $pysig
 
 
