@@ -7,6 +7,8 @@ filec='dynlib_const.f95'
 filek='dynlib_kind.f95'
 pysig='dynlib.pyf'
 
+fflags='"-fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC"'
+
 
 # Precompiler directory
 mkdir -p precc
@@ -40,12 +42,13 @@ mv ${pysig}_tmp $pysig
 
 # 3. Compiling the fortran modules 
 echo "Stage 3: Creating Fortran *.mod files"
-gfortran -c $filek $filec $files
+gfortran -c -O3 -g -fcray-pointer -fno-second-underscore -Dlinux  -ffixed-line-length-132 -fdefault-real-8 -Dgfortran -fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC  $filek $filec $files -I/usr/include -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl -llapack -lblas
 
 
 # 4. Compiling the shared object usable from within python
 echo "Stage 4: Compiling the python module (as a shared object)"
-f2py -c --fcompiler=gnu95 dynlib.pyf $files $filec $filek > /dev/null
+f2py -c --fcompiler=gnu95 --f90flags="-O3 -g -fcray-pointer -fno-second-underscore -Dlinux  -ffixed-line-length-132 -fdefault-real-8 -Dgfortran -fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC" -I/usr/include -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl -llapack -lblas dynlib.pyf $files $filec $filek  > /dev/null
+#f2py -c dynlib.pyf $files $filec $filek > /dev/null
 mv dynlib.so ../
 cd ../
 

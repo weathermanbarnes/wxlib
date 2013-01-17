@@ -3,6 +3,7 @@
 import math
 import datetime
 import numpy as np
+import scipy.io.netcdf as nc
 
 #
 # Automatic scaling according to netcdf attributes "scale_factor" and "add_offset"
@@ -40,12 +41,13 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 		print '3D mode'
 		if len(vars[0].shape) == 4:
 			raise NotImplementedError
-		
 		args = []
 		for var in vars:
-			args.append(scale(var, cut, bench=bench))
-		
-		args.extend([grid.dx[cut[1:]], grid.dy[cut[1:]]])
+                        if type(var) == nc.netcdf_variable: #np.ndarray:
+                                args.append(scale(var, cut, bench=bench))
+                        else:
+                                args.append(var)
+                args.extend([grid.dx[cut[1:]], grid.dy[cut[1:]]])
 		if bench:
 			begin = datetime.datetime.now()
 		deff = func(*args) 

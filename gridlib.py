@@ -92,13 +92,17 @@ class grid(object):
 		
 		if self.gridtype == 'latlon':
 			self.dx = np.ones((self.ny, self.nx))*111111.111111
-			self.dy = np.ones((self.ny, self.nx))*-111111.111111
+			self.dy = np.ones((self.ny, self.nx))*111111.111111
 			lat = self.f.variables[self.y][::]
 			lon = self.f.variables[self.x][::]
 			for xidx in range(1,self.nx-1):
 				for yidx in range(self.ny):
 					self.dx[yidx,xidx] *= (lon[xidx+1]-lon[xidx-1])*math.cos(math.pi/180.0*lat[yidx])
-			for yidx in range(self.ny):
+			if (self.cyclic_ew == True):
+				for yidx in range(self.ny):
+					self.dx[yidx,0] *= ((lon[1]-lon[self.nx-1])%360)*math.cos(math.pi/180.0*lat[yidx])
+					self.dx[yidx,self.nx-1] *= ((lon[0]-lon[self.nx-2])%360)*math.cos(math.pi/180.0*lat[yidx])
+			for yidx in range(1,self.ny-1):
 				self.dy[yidx,:] *= lat[yidx+1]-lat[yidx-1]
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type "%s"' % self.gridtype
