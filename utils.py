@@ -3,6 +3,7 @@
 import math
 import datetime
 import numpy as np
+from scipy.special import erfinv
 
 #
 # Automatic scaling according to netcdf attributes "scale_factor" and "add_offset"
@@ -111,5 +112,9 @@ def def_angle(u_dat, v_dat, grid):
 
 	return deff
 
+
+# 
+# Inverse of the CDF of the Gaussian distribution
+igauss = lambda p: np.sqrt(2)*erfinv(2*p-1.0)
 
 #
