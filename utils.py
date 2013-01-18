@@ -3,7 +3,7 @@
 import math
 import datetime
 import numpy as np
-import scipy.io.netcdf as nc
+from scipy.special import erfinv
 
 #
 # Automatic scaling according to netcdf attributes "scale_factor" and "add_offset"
@@ -17,7 +17,23 @@ def scale(var, cut=(slice(None),slice(None),slice(None)), bench=False):
 		if bench:
 			print 'Python scaleoff', datetime.datetime.now()-begin
 	
+	else:
+		var_dat = var[cut]
+	
 	return var_dat
+
+#
+# Reduce to i2 values with add_offset and scale_factor
+def unscale(var):
+	maxv  = var.max()
+	minv  = var.min()
+	# divide in 2^16-2 intervals, values from -32766 -> 32767 ; reserve -32767 as missing value
+	scale = (maxv-minv)/65534.0
+	off   = +32766.5*scale + minv
+
+	res = np.round((var[::] - off)/scale)
+
+	return res.astype('>i2'), scale, off
 
 #
 # Concatenate one latitude band in x-direction, taking over the values of 
@@ -26,9 +42,11 @@ def concat1(data):
 	if len(data.shape) == 1:
 		data = np.concatenate((data, np.reshape(data[0], (1,)) ), axis=0)
 	elif len(data.shape) == 2:
-		data = np.concatenate((data, np.reshape(data[:,0], (data.shape[0],1)) ), axis=1)
+		data = np.concatenate((data, np.reshape(data[:,0], (data.shape[0], 1)) ), axis=1)
 	elif len(data.shape) == 3:
-		data = np.concatenate((data, np.reshape(data[:,:,0], (data.shape[0], data.shape[1],1)) ), axis=2)
+		data = np.concatenate((data, np.reshape(data[:,:,0], (data.shape[0], data.shape[1], 1)) ), axis=2)
+	elif len(data.shape) == 4:
+		data = np.concatenate((data, np.reshape(data[:,:,:,0], (data.shape[0], data.shape[1], data.shape[2], 1)) ), axis=3)
 	else:
 		raise NotImplementedError, 'Concatenation not implemented for %d dimensions' % len(data.shape)
 	
@@ -43,19 +61,20 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 			raise NotImplementedError
 		args = []
 		for var in vars:
-                        if type(var) == nc.netcdf_variable: #np.ndarray:
-                                args.append(scale(var, cut, bench=bench))
-                        else:
-                                args.append(var)
-                args.extend([grid.dx[cut[1:]], grid.dy[cut[1:]]])
+			if type(var) == np.ndarray:
+				args.append(scale(var, cut, bench=bench))
+			else:
+				args.append(var[cut])
+		
+		args.extend([grid.dx[cut[1:]], grid.dy[cut[1:]]])
 		if bench:
 			begin = datetime.datetime.now()
-		deff = func(*args) 
+		res = func(*args) 
 		if bench:
 			print 'Calculation', datetime.datetime.now()-begin
 	
 	elif not grid.nt or grid.nt == 1:
-		print '3D mode'
+		print '2D mode'
 		raise NotImplementedError
 	
 	else:
@@ -64,7 +83,7 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 		#for t in len(u.shape[0]):
 		#	dylib.diag.def(u[t,:,:,:], v[t,:,:,:], grid.dx, grid.dy)
 	
-	return deff
+	return res
 
 #
 # Reimplementation of the recpective function in dynlib.diag for benchmarking.
@@ -92,5 +111,9 @@ def def_angle(u_dat, v_dat, grid):
 
 	return deff
 
+
+# 
+# Inverse of the CDF of the Gaussian distribution
+igauss = lambda p: np.sqrt(2)*erfinv(2*p-1.0)
 
 #

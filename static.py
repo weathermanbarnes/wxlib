@@ -1,27 +1,26 @@
 #! /usr/bin/python
 #  -*- encoding: utf-8
 
-plevs  = ['pt350'] #['pt350','pt330','pt315','pt300']
-years = [1981]
-#years = range(1979,2011) #nb end with final year+1
-#plevs=['pt350']
-#years=[1979]
 
-q = {'defabs': 'defabs', 'defang': 'defang',
+import numpy as np
+import math
+
+plevs  = ['100','200','300','400','500','550','600','650','700','750','800','850','900','950','1000']
+years = range(1979,2012)
+
+q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres',
 	'u': 'u', 'v': 'v', 'Z': 'z' }
+_rose = [17,]
+_rose.extend(range(-18,18))
+bins = { #'defabs': np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 22.5, 25, 27.5, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200, 225, 250, 275, 300, 350, 400, 450, 500])*1.0e-6,
+	'defang': np.array(_rose)*math.pi/36.0+math.pi/72.0, }
 
-datapath = ['/Data/gfi/users/tsp065/students/amu006/clim', '/Data/gfi/users/tsp065/students/amu006/rwbdata', '/Data/gfi/work/csp001/deformation', '/scratch/reanalysis', '/media/work/reanalysis/highres', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY']
+datapath = ['./', '/work/csp001/deformation', '/scratch/csp001/deformation', '/Data/gfi/work/csp001/deformation', '/Data/gfi/scratch/csp001/deformation', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY']
 file_std   = 'ei.ans.%d.%d.%s'
 file_stat  = 'ei.ans.%d.%d.%s.stat'
 file_mstat = 'ei.ans.stat.%d.%s'
 
-file_clim = 'ei.ans.%s.%s_clim' # eg (plev, 'strain')
-
-# Cut out     times        lats         longitudes
+# Cut out     times        lats         lons
 std_slice = (slice(None), slice(None), slice(None))
 
-#  the end
-
-# Useful Slices:
-# start 29 jan 0600  slice(114,313)
-# jan and feb slice(None,232)
+# the end

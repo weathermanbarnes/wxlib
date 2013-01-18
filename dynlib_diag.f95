@@ -1878,5 +1878,4 @@ beta_c_out=beta_c_outint
 
   end subroutine
 
-
 end module

@@ -15,3 +15,8 @@ precc/
 *~
 *.old
 *.orig
+# Results (pictures, numpy, matlab, etc.)
+*.png
+*.npy
+*.npz
+*.mat
