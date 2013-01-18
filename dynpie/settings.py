@@ -123,7 +123,7 @@ DATAPATH = ['./', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY']
 FILE_STD   = 'ei.ans.%d.%s.%s'
 FILE_STAT  = 'ei.ans.%d.%s.%s.stat'
 FILE_MSTAT = 'ei.ans.stat.%s.%s'
-STD_SLICE  = slice(None)
+STD_SLICE  = (slice(None), slice(None), slice(None))
 
 # DEFAULT contour settings
 if os.getenv('DYNLIB_PLOT_PRINT'):
@@ -265,7 +265,7 @@ class settings(object):
 
 		return
 
-s = settings()
+conf = settings()
 
 
 

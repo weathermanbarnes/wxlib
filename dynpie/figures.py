@@ -13,11 +13,9 @@ from utils import concat1, igauss
 import windrose as wr
 import streamplot as sp
 
-import static as c
 import stats
 
-import settings
-sts = settings.s
+from settings import conf as c
 
 
 # globally useful
@@ -40,7 +38,7 @@ f.close()
 
 # contour map of 32 year mean deformation
 def map_mean_Q(q, agg='mean', year=None, **kwargs):
-	kwargs = sts.contourf.merge(q, **kwargs)
+	kwargs = c.contourf.merge(q, **kwargs)
 	plev = kwargs.get('plev')
 
 	if year: 
@@ -71,7 +69,7 @@ def map_mean_Q(q, agg='mean', year=None, **kwargs):
 
 # Contour map of averaged wind on top of a oro map.
 def map_mean_barb(q='oro', year=None, quiver=False, **kwargs):
-	kwargs = sts.contourf.merge(q, **kwargs)
+	kwargs = c.contourf.merge(q, **kwargs)
 	plev = kwargs.get('plev')
 
 	if not year:
@@ -99,7 +97,7 @@ def map_mean_barb(q='oro', year=None, quiver=False, **kwargs):
 
 # Contour map of averaged deformation vector on top of a oro map.
 def map_mean_deform(year=None, **kwargs):
-	kwargs = sts.contourf.merge('defabs', **kwargs)
+	kwargs = c.contourf.merge('defabs', **kwargs)
 	kwargs['scale'] = settings.scale_defabs_mean
 	kwargs['extend'] = 'both'
 	plev = kwargs.get('plev')
@@ -123,7 +121,7 @@ def map_mean_deform(year=None, **kwargs):
 
 # contour map of trends
 def map_trend_Q(q, sig=0.95, **kwargs):
-	kwargs = sts.contourf.merge(q, **kwargs)
+	kwargs = c.contourf.merge(q, **kwargs)
 	plev = kwargs.get('plev')
 
 	f, trend = metopen(c.file_mstat % (plev, q), 'trend', cut=c.std_slice[1:])
@@ -142,7 +140,7 @@ def map_trend_Q(q, sig=0.95, **kwargs):
 	if q in settings.hooks:
 		trend = settings.hooks[q](trend)
 	
-	kwargs = sts.contourf.merge(q, **kwargs)
+	kwargs = c.contourf.merge(q, **kwargs)
 	kwargs['overlay'] = [overlay, ]
 	map_oro_dat(kwargs.pop('m'), trend, **kwargs)
 
@@ -239,7 +237,7 @@ def map_date_Q(q, date, **kwargs):
 	if q in settings.hooks:
 		dat = settings.hooks[q](dat)
 
-	kwargs = sts.contourf.merge(q, **kwargs)
+	kwargs = c.contourf.merge(q, **kwargs)
 	map_oro_dat(kwargs.pop('m'), dat, **kwargs)
 
 	return
@@ -255,7 +253,7 @@ def map_date_deform(date, **kwargs):
 	if 'defang' in settings.hooks:
 		defang = settings.hooks['defang'](defang)
 	
-	kwargs = sts.contourf.merge(q, **kwargs)
+	kwargs = c.contourf.merge(q, **kwargs)
 	map_oro_deform(kwargs.pop('m'), defabs, defang, **kwargs)
 
 	return
@@ -274,7 +272,7 @@ def map_date_barb(date, q='oro', quiver=False, **kwargs):
 	if q in settings.hooks:
 		dat = settings.hooks[q](dat)
 
-	kwargs = sts.contourf.merge(q, **kwargs)
+	kwargs = c.contourf.merge(q, **kwargs)
 	kwargs['quiver'] = quiver
 	map_oro_barb(kwargs.pop('m'), dau, dav, dat, **kwargs)
 
@@ -297,7 +295,7 @@ def map_date_stream(date, q='oro', **kwargs):
 		dat = settings.hooks[q](dat)
 
 	m = kwargs.pop('m')
-	kwargs = sts.contourf.merge(q, **kwargs)
+	kwargs = c.contourf.merge(q, **kwargs)
 	sp.streamplot(lon[0,:], lat[:,0], u, v, m=m, **s.contour.u)
 	map_oro_dat(m, dat, **kwargs)
 
@@ -372,7 +370,7 @@ def ypline_mean_Q(q='defabs', yidx=51, plev=800, summarize=False, agg=False, qui
 
 # era interim orographical map 15N-90N
 def map_oro(**kwargs):
-	kwargs = sts.contourf.merge('oro', **kwargs)
+	kwargs = c.contourf.merge('oro', **kwargs)
 	map_oro_dat(kwargs.pop('m'), oro[:,:-1], **kwargs)
 
 	return

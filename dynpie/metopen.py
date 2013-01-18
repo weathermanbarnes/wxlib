@@ -4,7 +4,7 @@ import os.path
 import numpy as np
 import scipy.io.netcdf as nc
 import scipy.io.matlab as mat
-import static as c
+from settings import conf as c
 import utils 
 
 def metopen(filename, q, cut=c.std_slice):
