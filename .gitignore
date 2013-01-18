@@ -7,8 +7,6 @@
 *.o
 *.so
 *.x
-# Precompile folder
-precc/
 # Swap, temp and backup files
 *.swp
 *.swo
