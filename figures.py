@@ -16,7 +16,8 @@ import streamplot as sp
 import static as c
 import stats
 
-from settings import s as sts
+import settings
+sts = settings.s
 
 
 # globally useful
@@ -29,57 +30,7 @@ lon = concat1(lon)
 lon[:,-1] += 360
 f.close()
 
-orolevs = range(-19000,51000,2000)
-
-scale_oro = range(10000,80001,10000)
-scale_defabs = np.arange(3.0,30.1)
-scale_meandefabs = np.arange(0.0,10.1,0.5)
-scale_defang = (np.arange(-18,19)-0.5)*np.pi/36.0
-scale_defang_coarse = np.arange(-4,5)*np.pi/8.0 - np.pi/72.0
-scale_Zdiff = np.arange(-5250,5251,500)
-scale_udiff = np.arange(-30,31,5)
-scale_u     = np.arange(20,71,10)
-
-ticks_defang = np.arange(-4,5)*3.1415926535/8.0 
-ticklabels_defang = [u'-π/2', u'-3π/8', u'-π/4', u'-π/8', u'0', u'π/8', u'π/4', u'3π/8', u'π/2']
-
 # TODO: Generalisation in data fetcher <-> plotter to avoid code duplication
-
-
-# #############################################################################
-# 0. Some typically used projections
-# 
-
-
-def wmap():
-	return Basemap(projection='robin',lon_0=0,resolution='c')
-
-def npmap():
-	return Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
-
-def spmap():
-	return Basemap(projection='spstere',boundinglat=-15,lon_0=0,resolution='l')
-
-def Greenmap():
-	return Basemap(projection='stere', lat_0=65, lat_ts=65, lon_0=-50, resolution='l', 
-			width=8100000, height=5400000)
-
-def NAmap():
-	return Basemap(projection='lcc', lat_0=55, lat_ts=55, lon_0=-30, resolution='l', 
-			width=9000000, height=6000000)
-def NPmap():
-	return Basemap(projection='lcc', lat_0=50, lat_ts=50, lon_0=-180, resolution='l', 
-			width=9000000, height=6000000)
-def Sibirmap():
-	return Basemap(projection='lcc', lat_0=55, lat_ts=55, lon_0=75, resolution='l', 
-			width=9000000, height=6000000)
-def Ausmap():
-	return Basemap(projection='lcc', lat_0=-50, lat_ts=-50, lon_0=120, resolution='l', 
-			width=9000000, height=6000000)
-def Bagmap():
-	return Basemap(projection='lcc', lat_0=35, lat_ts=35, lon_0=55, resolution='l', 
-			width=9000000, height=6000000)
-
 
 
 
@@ -87,9 +38,11 @@ def Bagmap():
 # 1. Plots of (multi-)yearly means for constant plev, yidx or xidx
 #
 
-
 # contour map of 32 year mean deformation
-def map_mean_Q(q='defabs', year=None, plev=800, agg='mean', quiet=False, cmap=None):
+def map_mean_Q(q, agg='mean', year=None, **kwargs):
+	kwargs = sts.contourf.merge(q, **kwargs)
+	plev = kwargs.get('plev')
+
 	if year: 
 		mean  = np.zeros((s[0],s[1]-1))
 		if type(year) == list:
@@ -107,14 +60,72 @@ def map_mean_Q(q='defabs', year=None, plev=800, agg='mean', quiet=False, cmap=No
 		mean  /= len(years)
 	else:
 		f, mean = metopen(c.file_mstat % (plev, q), agg, cut=c.std_slice[1:])
+	
+	if q in settings.hooks:
+		mean = settings.hooks[q](mean)
 
-	map_oro_dat(npmap(), mean, plev=plev, cmap=cmap)
+	map_oro_dat(kwargs.pop('m'), mean, **kwargs)
+
+	return
+
+
+# Contour map of averaged wind on top of a oro map.
+def map_mean_barb(q='oro', year=None, quiver=False, **kwargs):
+	kwargs = sts.contourf.merge(q, **kwargs)
+	plev = kwargs.get('plev')
+
+	if not year:
+		fu, meanu = metopen(c.file_mstat % (plev, 'u'), 'mean', cut=c.std_slice[1:])
+		fv, meanv = metopen(c.file_mstat % (plev, 'v'), 'mean', cut=c.std_slice[1:])
+	else: 
+		fu, meanu = metopen(c.file_stat % (year, plev, 'u'), 'mean', cut=c.std_slice[1:])
+		fv, meanv = metopen(c.file_stat % (year, plev, 'v'), 'mean', cut=c.std_slice[1:])
+	if q == 'oro':
+		dat = oro[:,:-1]
+	else:
+		if not year:
+			f, dat = metopen(c.file_mstat % (plev, q), 'mean', cut=c.std_slice[1:])
+		else:
+			f, dat = metopen(c.file_stat % (year, plev, q), 'mean', cut=c.std_slice[1:])
+
+	if q in settings.hooks:
+		dat = settings.hooks[q](dat)
+
+	kwargs['quiver'] = quiver
+	map_oro_barb(kwargs.pop('m'), meanu, meanv, dat, **kwargs)
+
+	return
+
+
+# Contour map of averaged deformation vector on top of a oro map.
+def map_mean_deform(year=None, **kwargs):
+	kwargs = sts.contourf.merge('defabs', **kwargs)
+	kwargs['scale'] = settings.scale_defabs_mean
+	kwargs['extend'] = 'both'
+	plev = kwargs.get('plev')
+
+	if not year:
+		fabs, meanabs = metopen(c.file_mstat % (plev, 'defabs'), 'mean', cut=c.std_slice[1:])
+		fang, meanang = metopen(c.file_mstat % (plev, 'defang'), 'mfv', cut=c.std_slice[1:])
+	else: 
+		fabs, meanabs = metopen(c.file_stat % (year, plev, 'defabs'), 'mean', cut=c.std_slice[1:])
+		fang, meanang = metopen(c.file_stat % (year, plev, 'defang'), 'mfv', cut=c.std_slice[1:])
+	
+	if 'defabs' in settings.hooks:
+		meanabs = settings.hooks['defabs'](meanabs)
+	if 'defang' in settings.hooks:
+		meanang = settings.hooks['defang'](meanang)
+
+	map_oro_deform(kwargs.pop('m'), meanabs, meanang, **kwargs)
 
 	return
 
 
 # contour map of trends
-def map_trend_Q(q='defabs', sig=0.95, plev=800, quiet=False, cmap=None, scale=25, disable_cb=False):
+def map_trend_Q(q, sig=0.95, **kwargs):
+	kwargs = sts.contourf.merge(q, **kwargs)
+	plev = kwargs.get('plev')
+
 	f, trend = metopen(c.file_mstat % (plev, q), 'trend', cut=c.std_slice[1:])
 	ctrend = f['strend']
 	overlay = map_overlay_dat(trend, scale=[0.0,99.0], colors='k', labels=False)
@@ -128,92 +139,12 @@ def map_trend_Q(q='defabs', sig=0.95, plev=800, quiet=False, cmap=None, scale=25
 	trend[mask] = np.nan
 	
 	trend *= 1461.0
-	if q == 'defabs':
-		trend *= 1e5 #86400.0
+	if q in settings.hooks:
+		trend = settings.hooks[q](trend)
 	
-	map_oro_dat(npmap(), trend, scale=scale, plev=plev, cmap=cmap, overlays=[overlay, ], disable_cb=disable_cb)
-
-	return
-
-
-# contour map of 32 year mean deformation
-def wmap_mean_Q(q='defabs', year=None, plev=800, agg='mean', quiet=False, cmap=None):
-	if year: 
-		mean  = np.zeros((s[0],s[1]-1))
-		if type(year) == list:
-			years = year
-		elif type(year) == int:
-			years = [year,]
-		else:
-			raise TypeError, 'year must be an integer or a list of integers'
-		for y in years:
-			f, dat = metopen(c.file_stat % (y, plev, q), agg, cut=c.std_slice[1:])
-			mean += dat[::]
-			f.close()
-
-		del dat
-		mean /= len(years)
-	else:
-		f, mean = metopen(c.file_mstat % (plev, q), agg, cut=c.std_slice[1:])
-	
-	map_oro_dat(wmap(), mean, plev=plev, cmap=cmap)
-
-	return
-
-
-# Contour map of averaged wind on top of a oro map.
-def map_mean_barb(year=None, plev=800, quiver=False):
-	if not year:
-		fu, meanu = metopen(c.file_mstat % (plev, 'u'), 'mean', cut=c.std_slice[1:])
-		fv, meanv = metopen(c.file_mstat % (plev, 'v'), 'mean', cut=c.std_slice[1:])
-	else: 
-		fu, meanu = metopen(c.file_stat % (year, plev, 'u'), 'mean', cut=c.std_slice[1:])
-		fv, meanv = metopen(c.file_stat % (year, plev, 'v'), 'mean', cut=c.std_slice[1:])
-
-	map_oro_barb(npmap(), meanu, meanv, oro[:,:-1], 
-		plev=plev, quiver=quiver, cmap=plt.cm.gist_earth, scale=orolevs)
-
-	return
-
-
-# Contour map of averaged wind on top of a oro map.
-def wmap_mean_barb(year=None, plev=800, quiver=False):
-	if not year:
-		fu, meanu = metopen(c.file_mstat % (plev, 'u'), 'mean', cut=c.std_slice[1:])
-		fv, meanv = metopen(c.file_mstat % (plev, 'v'), 'mean', cut=c.std_slice[1:])
-	else: 
-		fu, meanu = metopen(c.file_stat % (year, plev, 'u'), 'mean', cut=c.std_slice[1:])
-		fv, meanv = metopen(c.file_stat % (year, plev, 'v'), 'mean', cut=c.std_slice[1:])
-
-	map_oro_barb(wmap(), meanu, meanv, oro[:,:-1], 
-		plev=plev, quiver=quiver, cmap=plt.cm.gist_earth, scale=orolevs)
-
-	return
-
-
-# Contour map of averaged deformation vector on top of a oro map.
-def wmap_mean_deform(year=None, plev=800):
-	if not year:
-		fabs, meanabs = metopen(c.file_mstat % (plev, 'defabs'), 'mean', cut=c.std_slice[1:])
-		fang, meanang = metopen(c.file_mstat % (plev, 'defang'), 'mfv', cut=c.std_slice[1:])
-	else: 
-		fabs, meanabs = metopen(c.file_stat % (year, plev, 'defabs'), 'mean', cut=c.std_slice[1:])
-		fang, meanang = metopen(c.file_stat % (year, plev, 'defang'), 'mfv', cut=c.std_slice[1:])
-	
-	map_oro_deform(wmap(), meanabs, meanang, plev=plev, scale=scale_meandefabs)
-
-	return
-
-# Contour map of averaged deformation vector on top of a oro map.
-def map_mean_deform(year=None, plev=800):
-	if not year:
-		fabs, meanabs = metopen(c.file_mstat % (plev, 'defabs'), 'mean', cut=c.std_slice[1:])
-		fang, meanang = metopen(c.file_mstat % (plev, 'defang'), 'mfv', cut=c.std_slice[1:])
-	else: 
-		fabs, meanabs = metopen(c.file_stat % (year, plev, 'defabs'), 'mean', cut=c.std_slice[1:])
-		fang, meanang = metopen(c.file_stat % (year, plev, 'defang'), 'mfv', cut=c.std_slice[1:])
-	
-	map_oro_deform(npmap(), meanabs, meanang, plev=plev, scale=scale_meandefabs)
+	kwargs = sts.contourf.merge(q, **kwargs)
+	kwargs['overlay'] = [overlay, ]
+	map_oro_dat(kwargs.pop('m'), trend, **kwargs)
 
 	return
 
@@ -243,6 +174,9 @@ def ysect_mean_Q(q='defabs', year=None, yidx=51, agg=False, quiet=False, cmap=No
 	orop = 1000.0*np.exp(globals()['oro'][yidx,:]/(-270.0*287.0))	# tentative conversion from Phi [m^2/s^2] to p [hPa] p0 = 1000, <T> = 270K
 	orop[orop > 1000.0] = 1000.0
 	
+	if q in settings.hooks:
+		qm = settings.hooks[q](qm)
+
 	qm[(orop-10) < c.plevs[:,np.newaxis]] = np.nan
 
 	plt.contour(lon[0,:], c.plevs, qm, 15, cmap=cmap)
@@ -255,7 +189,7 @@ def ysect_mean_Q(q='defabs', year=None, yidx=51, agg=False, quiet=False, cmap=No
 	return
 
 
-# 
+# vertical profiles of 32years mean deformation
 def xsect_mean_Q(q='defabs', year=None, xidx=278, agg=False, cmap=None):
 	if not quiet:
 		print 'Lon %f' % lon[0,xidx]
@@ -280,6 +214,9 @@ def xsect_mean_Q(q='defabs', year=None, xidx=278, agg=False, cmap=None):
 	orop = 1000.0*np.exp(globals()['oro'][:,xidx]/(-270.0*287.0))	# tentative conversion from Phi [m^2/s^2] to p [hPa] p0 = 1000, <T> = 270K
 	orop[orop > 1000.0] = 1000.0
 	
+	if q in settings.hooks:
+		qm = settings.hooks[q](qm)
+
 	qm[(orop-10) < c.plevs[:,np.newaxis]] = np.nan
 	
 	plt.contour(lat[1:-1,0], levels, qm, 15, cmap=cmap)
@@ -295,47 +232,74 @@ def xsect_mean_Q(q='defabs', year=None, xidx=278, agg=False, cmap=None):
 # 2. Plots instantaneous fields or short-term averages for plev, yidx, xidx
 #
 
-
 # same as ysect_mean_deform but without any averaging; deformation sections for one point in time
-def map_date_Q(date, q='defabs', plev=800, cmap=None):
-	dat = _get_instantaneous(q, date, plevs=plev)
+def map_date_Q(q, date, **kwargs):
+	dat = _get_instantaneous(q, date, kwargs.get('plev'))
 	
-	map_oro_dat(npmap(), dat, plev=plev, cmap=cmap)
+	if q in settings.hooks:
+		dat = settings.hooks[q](dat)
+
+	kwargs = sts.contourf.merge(q, **kwargs)
+	map_oro_dat(kwargs.pop('m'), dat, **kwargs)
 
 	return
 
 
 # Contour map of averaged deformation vector on top of a oro map.
-def map_date_deform(date, plev=800):
-	defabs = _get_instantaneous('defabs', date, plevs=plev)
-	defang = _get_instantaneous('defang', date, plevs=plev)
+def map_date_deform(date, **kwargs):
+	defabs = _get_instantaneous('defabs', date, kwargs.get('plev'))
+	defang = _get_instantaneous('defang', date, kwargs.get('plev'))
 
-	map_oro_deform(npmap(), defabs, defang, plev=plev)
+	if 'defabs' in settings.hooks:
+		defabs = settings.hooks['defabs'](defabs)
+	if 'defang' in settings.hooks:
+		defang = settings.hooks['defang'](defang)
+	
+	kwargs = sts.contourf.merge(q, **kwargs)
+	map_oro_deform(kwargs.pop('m'), defabs, defang, **kwargs)
 
 	return
 
 
 # Contour map of averaged wind on top of a oro map.
-def map_date_barb(date, plev=800, quiver=False):
-	dau = _get_instantaneous('u', date, plevs=plev)
-	dav = _get_instantaneous('v', date, plevs=plev)
+def map_date_barb(date, q='oro', quiver=False, **kwargs):
+	dau = _get_instantaneous('u', date, kwargs.get('plev'))
+	dav = _get_instantaneous('v', date, kwargs.get('plev'))
+
+	if q == 'oro':
+		dat = oro[:,:-1]
+	else:
+		dat = _get_instantaneous(q, date, kwargs.get('plev'))
 	
-	map_oro_barb(npmap(), dau, dav, oro[:,:-1], 
-		plev=plev, quiver=quiver, cmap=plt.cm.gist_earth, scale=orolevs)
+	if q in settings.hooks:
+		dat = settings.hooks[q](dat)
+
+	kwargs = sts.contourf.merge(q, **kwargs)
+	kwargs['quiver'] = quiver
+	map_oro_barb(kwargs.pop('m'), dau, dav, dat, **kwargs)
 
 	return
 
 
-# Streamlines on a oro map.
-def map_date_stream(date, plev=800, cmap=None):
+# Streamlines on a contourf map.
+def map_date_stream(date, q='oro', **kwargs):
 	u = concat1(_get_instantaneous('u', date, plevs=plev))
 	v = concat1(_get_instantaneous('v', date, plevs=plev))
 
-	ff = np.sqrt(u*u + v*v)
+	if q == 'oro':
+		dat = oro[:,:-1]
+	elif q == 'ff':
+		dat = ff = np.sqrt(u*u + v*v)
+	else:
+		dat = _get_instantaneous(q, date, kwargs.get('plev'))
 	
-	m = npmap()
-	sp.streamplot(lon[0,:], lat[:,0], u, v, m=m, cmap=cmap)
-	map_oro_dat(m, oro[:,:-1], plev=plev, cmap=plt.cm.gist_earth, scale=orolevs)
+	if q in settings.hooks:
+		dat = settings.hooks[q](dat)
+
+	m = kwargs.pop('m')
+	kwargs = sts.contourf.merge(q, **kwargs)
+	sp.streamplot(lon[0,:], lat[:,0], u, v, m=m, **s.contour.u)
+	map_oro_dat(m, dat, **kwargs)
 
 	return
 
@@ -349,6 +313,9 @@ def ysect_date_Q(date, q='defabs', yidx=51, quiet=False, cmap=None):
 	
 	orop = 1000.0*np.exp(oro[yidx,:]/(-270.0*287.0))	# tentative conversion from Phi [m^2/s^2] to p [hPa] p0 = 1000, <T> = 270K
 	orop[orop > 1000.0] = 1000.0
+
+	if q in settings.hooks:
+		qm = settings.hooks[q](qm)
 
 	qm[orop[np.newaxis,:]-10 < c.plevs[:,np.newaxis]] = np.nan
 
@@ -404,8 +371,9 @@ def ypline_mean_Q(q='defabs', yidx=51, plev=800, summarize=False, agg=False, qui
 
 
 # era interim orographical map 15N-90N
-def map_oro(m=npmap()):
-	map_oro_dat(m, oro[:,:-1], cmap=plt.cm.gist_earth, scale=orolevs)
+def map_oro(**kwargs):
+	kwargs = sts.contourf.merge('oro', **kwargs)
+	map_oro_dat(kwargs.pop('m'), oro[:,:-1], **kwargs)
 
 	return
 
@@ -751,78 +719,11 @@ def _get_aggregate(q, year=None, plev=None, yidx=None, xidx=None):
 	return dat
 
 
-# #############################################################################
-# 5. Colour maps
-# 
-
-def _get_grey_cm():
-	cdict = {'red':   ((0.0, 0.4, 0.4), (1.0, 0.4, 0.4)),
-		 'green': ((0.0, 0.4, 0.4), (1.0, 0.4, 0.4)),
-		 'blue':  ((0.0, 0.4, 0.4), (1.0, 0.4, 0.4))  }
-
-	return mpl.colors.LinearSegmentedColormap('my_grey',cdict,256)
-
-def _get_greys_cm():
-	cdict = {'red':   ((0.0, 1.0, 1.0), (1.0, 0.1, 0.1)),
-		 'green': ((0.0, 1.0, 1.0), (1.0, 0.1, 0.1)),
-		 'blue':  ((0.0, 1.0, 1.0), (1.0, 0.1, 0.1))  }
-
-	return mpl.colors.LinearSegmentedColormap('my_grey',cdict,256)
-
-def _get_defabs_cm():
-	cdict = {'red':   ((0.0, 1.0, 1.0), (0.33, 0.4, 0.4), (0.867, 1.0, 1.0), (1.0, 0.5, 0.5)),
-		 'green': ((0.0, 1.0, 1.0), (0.33, 0.5, 0.5), (0.867, 0.0, 0.0), (1.0, 0.2, 0.2)),
-		 'blue':  ((0.0, 1.0, 1.0), (0.33, 1.0, 1.0), (0.867, 0.0, 0.0), (1.0, 0.2, 0.2))  }
-
-	return mpl.colors.LinearSegmentedColormap('my_defabs',cdict,256)
-
-def _get_defabs_cm2():
-	cdict = {'red':   ((0.0, 1.0, 1.0), (0.75, 0.15, 0.15), (1.0, 1.0, 1.0)),
-		 'green': ((0.0, 1.0, 1.0), (0.75, 0.15, 0.15), (1.0, 0.0, 0.0)),
-		 'blue':  ((0.0, 1.0, 1.0), (0.75, 0.15, 0.15), (1.0, 0.0, 0.0))  }
-
-	return mpl.colors.LinearSegmentedColormap('my_defabs',cdict,256)
-
-def _get_q_cm():
-	cdict = {'red':   ((0.0, 1.0, 1.0), (0.33, 0.30, 0.30),  (0.867, 0.1, 0.1), (1.0, 0.5, 0.5)),
-		 'green': ((0.0, 1.0, 1.0), (0.33, 0.65, 0.65),  (0.867, 0.2, 0.2), (1.0, 0.2, 0.2)),
-		 'blue':  ((0.0, 1.0, 1.0), (0.33, 0.80, 0.80),  (0.867, 0.6, 0.6), (1.0, 0.8, 0.8))  }
-
-	return mpl.colors.LinearSegmentedColormap('my_defabs',cdict,256)
-
-def _get_periodic_cm():
-	cdict = {'red':   ((0.0, 0.0, 0.0), (0.25, 0.8, 0.8), (0.5, 1.0, 1.0), (0.75, 0.0, 0.0), (1.0, 0.0, 0.0)),
-		 'green': ((0.0, 0.0, 0.0), (0.25, 0.0, 0.0), (0.5, 1.0, 1.0), (0.75, 0.9, 0.9), (1.0, 0.0, 0.0)),
-		 'blue':  ((0.0, 0.6, 0.6), (0.25, 0.0, 0.0), (0.5, 0.2, 0.2), (0.75, 0.0, 0.0), (1.0, 0.6, 0.6))  }
-
-	return mpl.colors.LinearSegmentedColormap('my_periodic',cdict,256)
-
-def _get_periodic_cm2():
-	cdict = {'red':   ((0.0, 0.3, 0.3), (0.25, 0.4, 0.4), (0.5, 0.6, 0.6), (0.75, 0.8, 0.8), (1.0, 0.3, 0.3)),
-		 'green': ((0.0, 0.2, 0.2), (0.25, 0.8, 0.8), (0.5, 0.6, 0.6), (0.75, 0.4, 0.4), (1.0, 0.2, 0.2)),
-		 'blue':  ((0.0, 0.5, 0.5), (0.25, 0.0, 0.0), (0.5, 1.0, 1.0), (0.75, 0.0, 0.0), (1.0, 0.5, 0.5))  }
-
-	return mpl.colors.LinearSegmentedColormap('my_periodic2',cdict,256)
-
-
-def _get_periodic_cm3():
-	cdict = {'red':   ((0.0, 1.0, 1.0), (0.03, 0.9, 0.9), (0.27, 0.3, 0.2), (0.515, 0.5, 0.5), (0.76, 0.65, 0.7), (1.0, 1.0, 1.0)),
-		 'green': ((0.0, 1.0, 1.0), (0.03, 0.9, 0.9), (0.27, 0.3, 0.2), (0.515, 0.5, 0.5), (0.76, 0.65, 0.7), (1.0, 1.0, 1.0)),
-		 'blue':  ((0.0, 1.0, 1.0), (0.03, 1.0, 1.0), (0.27, 0.7, 0.7), (0.515, 0.5, 0.5), (0.76, 0.20, 0.3), (1.0, 0.9, 1.0)) }
-
-	return mpl.colors.LinearSegmentedColormap('my_periodic3',cdict,256)
-
-
 
 # #############################################################################
-# 6. Generalised data plotters
+# 5. Generalised data plotters
 # 
-
-
 def map_oro_dat(m, dat, **kwargs):
-	# TODO: q as argument or merging kwargs earlier?
-	kwargs = sts.contourf.merge('defabs', **kwargs)
-
 	dat = concat1(dat)
 	plev = kwargs.pop('plev')
 	if plev:
@@ -836,7 +737,7 @@ def map_oro_dat(m, dat, **kwargs):
 	
 	m.drawcoastlines(color=kwargs.pop('coastcolor'))
 	x,y = m(lon,lat)
-	m.contour(x,y, oro, scale_oro, colors=kwargs.pop('orocolor'), alpha=kwargs.pop('oroalpha'), zorder=2)
+	m.contour(x,y, oro, kwargs.pop('oroscale'), colors=kwargs.pop('orocolor'), alpha=kwargs.pop('oroalpha'), zorder=2)
 	if plev:
 		m.contourf(x, y, mask, colors=kwargs.pop('maskcolor'))
 	
@@ -873,14 +774,12 @@ def map_oro_dat(m, dat, **kwargs):
 
 
 def map_oro_deform(m, defabs, defang, **kwargs):
-	kwargs = sts.contourf.merge('defabs', **kwargs)
-
 	defabs = concat1(defabs*1e5)
 	defang = concat1(defang)
 	defdex = np.cos(defang[:,:]) *defabs
 	defdey = np.sin(defang[:,:]) *defabs
 	plev = kwargs.pop('plev')
-	if plev and not type(daZ) == np.ndarray:
+	if plev: # and not type(daZ) == np.ndarray:
 		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
 		if f: f.close()
 	if type(daZ) == np.ndarray:
@@ -896,7 +795,7 @@ def map_oro_deform(m, defabs, defang, **kwargs):
 	m.drawcoastlines(color=kwargs.pop('coastcolor'))
 	x,y = m(lon,lat)
 	ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0], 24, 16, returnxy=True)
-	m.contour(x,y, oro, scale_oro, colors=kwargs.pop('orocolor'), alpha=kwargs.pop('oroalpha'), zorder=2)
+	m.contour(x,y, oro, kwargs.pop('oroscale'), colors=kwargs.pop('orocolor'), alpha=kwargs.pop('oroalpha'), zorder=2)
 	if type(daZ) == np.ndarray:
 		m.contourf(x, y, mask, colors=kwargs.pop('maskcolor'))
 	
@@ -935,8 +834,6 @@ def map_oro_deform(m, defabs, defang, **kwargs):
 
 
 def map_oro_barb(m, u, v, dat=None, **kwargs):
-	kwargs = sts.contourf.merge('defabs', **kwargs)
-
 	u   = concat1(u)
 	v   = concat1(v)
 	if not dat == None: dat = concat1(dat)
@@ -953,14 +850,14 @@ def map_oro_barb(m, u, v, dat=None, **kwargs):
 	m.drawcoastlines(color=kwargs.pop('coastcolor'))
 	x,y = m(lon,lat)
 	ut,vt,xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 60, 60, returnxy=True)
-	m.contour(x,y, oro, scale_oro, colors=kwargs.pop('orocolor'), alpha=kwargs.pop('oroalpha'), zorder=2)
+	m.contour(x,y, oro, kwargs.pop('oroscale'), colors=kwargs.pop('orocolor'), alpha=kwargs.pop('oroalpha'), zorder=2)
 
 	if plev:
 		m.contourf(x, y, daZ < oro[:,:], colors=kwargs.pop('maskcolor'))
 	
 	scale = kwargs.pop('scale')
 	if not dat == None: m.contourf(x, y, dat, scale, zorder=1, **kwargs)
-	if not quiver:
+	if not kwargs.pop('quiver'):
 		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5, zorder=3)
 	else:
 		m.quiver(xt, yt, ut, vt, zorder=3)

@@ -32,10 +32,10 @@ class settings_tester(unittest.TestCase):
 		self.assertEqual(s.contour.default, {'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
 			'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 
 			'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroalpha': 0.4,
-			'ticks': None, 'ticklabels': [], 'colors': None, 
+			'ticks': None, 'ticklabels': [], 'colors': 'k', 
 			'alpha': 1.0, 'cmap': None, 'norm': None, 'vmin': None, 'vmax': None, 'levels': None, 
-			'origin': None, 'extent': None, 'extend': 'neither', 'linewidths': None, 'linestyles': None })
-		self.assertEqual(s.contourf.defabs, {'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
+			'origin': None, 'extent': None, 'extend': 'neither', 'linewidths': 2.0, 'linestyles': None })
+		self.assertEqual(s.contourf.v, {'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
 			'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 
 			'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroalpha': 0.4,
 			'ticks': None, 'ticklabels': [], 'colors': None, 
@@ -67,45 +67,45 @@ class settings_tester(unittest.TestCase):
 		self.assertEqual(s.file_stat, 'ei.ans.%d.%s.%s.stat')
 		self.assertEqual(s.file_mstat, 'ei.ans.stat.%s.%s')
 	
-		self.assertEqual(s.contour.defabs['colors'], None)
-
-		s.contour.defabs['colors'] = 'k'
 		self.assertEqual(s.contour.defabs['colors'], 'k')
-		self.assertEqual(s.contour.Z['colors'], None)
+
+		s.contour.defabs['colors'] = 'green'
+		self.assertEqual(s.contour.defabs['colors'], 'green')
+		self.assertEqual(s.contour.Z['colors'], 'k')
 
 		s.contour.reset('defabs')
-		self.assertEqual(s.contour.defabs['colors'], None)
+		self.assertEqual(s.contour.defabs['colors'], 'k')
 
-		s.contour.Z['colors'] = 'k'
-		self.assertEqual(s.contour.Z['colors'], 'k')
+		s.contour.Z['colors'] = 'green'
+		self.assertEqual(s.contour.Z['colors'], 'green')
 		s.contour.reset('Z', 'colors')
-		self.assertEqual(s.contour.Z['colors'], None)
+		self.assertEqual(s.contour.Z['colors'], 'k')
 
 		return
 
 
 	def test_merge(self):
 		kwargs = {'colors': 'k', 'extend': 'max'}
-		self.assertEqual(s.contour.merge('Z', **kwargs), {'plev': None, 'lon': None, 'lat': None, 'mark': None, 
+		self.assertEqual(s.contour.merge('v', **kwargs), {'plev': None, 'lon': None, 'lat': None, 'mark': None, 
 			'scale': 10, 'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 
 			'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroalpha': 0.4,
 			'ticks': None, 'ticklabels': [],
 			'colors': 'k', 'alpha': 1.0, 'cmap': None, 'norm': None, 'vmin': None, 'vmax': None, 
-			'levels': None, 'origin': None, 'extent': None, 'extend': 'max', 'linewidths': None, 
+			'levels': None, 'origin': None, 'extent': None, 'extend': 'max', 'linewidths': 2.0, 
 			'linestyles': None })
-		self.assertEqual(s.contour.Z, {'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
+		self.assertEqual(s.contour.v, {'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
 			'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 
 			'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroalpha': 0.4,
-			'ticks': None, 'ticklabels': [], 'colors': None, 
+			'ticks': None, 'ticklabels': [], 'colors': 'k', 
 			'alpha': 1.0, 'cmap': None, 'norm': None, 'vmin': None, 'vmax': None, 'levels': None, 
-			'origin': None, 'extent': None, 'extend': 'neither', 'linewidths': None, 'linestyles': None })
+			'origin': None, 'extent': None, 'extend': 'neither', 'linewidths': 2.0, 'linestyles': None })
 		kwargs = {}
-		self.assertEqual(s.contour.merge('Z', **kwargs), {'plev': None, 'lon': None, 'lat': None, 'mark': None, 
+		self.assertEqual(s.contour.merge('v', **kwargs), {'plev': None, 'lon': None, 'lat': None, 'mark': None, 
 			'scale': 10, 'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 
 			'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroalpha': 0.4,
 			'ticks': None, 'ticklabels': [],
-			'colors': None, 'alpha': 1.0, 'cmap': None, 'norm': None, 'vmin': None, 'vmax': None, 
-			'levels': None, 'origin': None, 'extent': None, 'extend': 'neither', 'linewidths': None, 
+			'colors': 'k', 'alpha': 1.0, 'cmap': None, 'norm': None, 'vmin': None, 'vmax': None, 
+			'levels': None, 'origin': None, 'extent': None, 'extend': 'neither', 'linewidths': 2.0, 
 			'linestyles': None })
 
 		return
