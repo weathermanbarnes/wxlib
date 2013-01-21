@@ -21,8 +21,8 @@ for year in c.years:
 	for plev in c.plevs:
 		print 'Processing year %d, plev %s' % (year, plev)
 
-		ipath  = '/net/ukl-felles.uib.no/export/gfi-share/Reanalyses/ERA_INTERIM/6HOURLY/'
-		opath  = '/Home/stud7/amu006/data/out'
+		ipath  = '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY/'
+		opath  = './out'
 		ufile  = 'ei.ans.%d.%s.u.nc' % (year, plev)
 		vfile  = 'ei.ans.%d.%s.v.nc' % (year, plev)
                 pvfile = 'ei.ans.%d.%s.pv.nc' % (year, plev)
@@ -51,28 +51,23 @@ for year in c.years:
 		fv.close()
                 fpv.close()
 		
-                D = utils.call(dynlib.diag.def_total, [u,v], grid, cut=c.std_slice, bench=True)
-                cos2beta = utils.call(dynlib.diag.cos2beta, [u,v,pv], grid, cut=c.std_slice, bench=True)
+                deftot = utils.call(dynlib.diag.def_total, [u,v], grid, cut=c.std_slice, bench=True)
                 [pvgradx,pvgrady] = utils.call(dynlib.diag.grad, [pv], grid, cut=c.std_slice, bench=True)
-                pvgr=np.sqrt(pvgradx*pvgradx+pvgrady*pvgrady)
-                delta=utils.call(dynlib.diag.div, [u,v], grid, cut=c.std_slice, bench=True)
-                pvaccum=0.5*pvgr*(D*cos2beta-delta)
-
-                binary=utils.call(dynlib.diag.bgra, [pv], grid, cut=c.std_slice, bench=True)
-
+                pvgrad=np.sqrt(pvgradx*pvgradx+pvgrady*pvgrady)
+                divergence=utils.call(dynlib.diag.div, [u,v], grid, cut=c.std_slice, bench=True)
                 ofile = '%s/ei.ans.%d.%s.shear.mat' % (opath, year, plev)
                 #print u.typecode() # is h
                 udat=utils.scale(u, cut=c.std_slice, bench=False);
                 vdat=utils.scale(v, cut=c.std_slice, bench=False); 
                 pvdat=utils.scale(pv, cut=c.std_slice, bench=False);
-                matdict = {'u':udat, 'v':vdat, 'pv':pvdat, 'D': D, 'cos2beta':cos2beta, 'pvgradx':pvgradx, 'pvgrady':pvgrady, 'delta':delta, 'binary':binary, 'pvaccum':pvaccum }
+                matdict = {'u':udat, 'v':vdat, 'pv':pvdat, 'deftot': deftot, 'pvgrad':pvgrad,'divergence':divergence }
                 #udat2=udat.view(dtype=np.float64)
                 sp.savemat(ofile,matdict, format='5')
                 #sp.savemat(ofile,{'u':udat},format='5')
 
                 # save .npz
-		ofile = '%s/ei.ans.%d.%s.defang.npz' % (opath, year, plev)
-		begin = dt.now()
+		#ofile = '%s/ei.ans.%d.%s.defang.npz' % (opath, year, plev)
+		#begin = dt.now()
 		#np.savez(ofile, defang=deff.astype('f4'))
 		#print 'Saving', dt.now()-begin
 

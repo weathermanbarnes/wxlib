@@ -1,9 +1,9 @@
 #! /usr/bin/python
 #  -*- encoding: utf-8
 
-plevs  = ['pt350','pt330','pt315','pt300']
-#years = [1981, 1991, 2001, 2011]
-years = range(1979,2011) #nb end with final year+1
+plevs  = ['pt350'] #['pt350','pt330','pt315','pt300']
+years = [1981]
+#years = range(1979,2011) #nb end with final year+1
 #plevs=['pt350']
 #years=[1979]
 
