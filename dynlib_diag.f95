@@ -102,6 +102,11 @@ contains
          res(k,j,nx) = (dat(k,j,1_ni)+dat(k,j,nx-1_ni)-2_nr*dat(k,j,nx))/dx(j,nx)**2_nr + &
                     (dat(k,j+1_ni,nx)+dat(k,j-1_ni,nx)-2_nr*dat(k,j,nx))/dy(j,nx)**2_nr
        end forall
+    else
+       forall(j = 2_ni:ny-1_ni, k = 1_ni:nz)
+         res(k,j,1_ni) = 0_nr
+         res(k,j,nx) = = 0_nr
+       end forall
     end if
     forall(i = 1_ni:nx,k = 1_ni:nz)
         res(k,1_ni,i) = 0_nr
@@ -179,7 +184,7 @@ contains
   !   = delta (Keyser Reeder Reed)
   !   =   (Lapeyre Klein Hua) 
   !   = alpha (Markowski Richardson)
-  subroutine dil_angle(res,nx,ny,nz,u,v,dx,dy)
+  subroutine def_angle(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     real(kind=nr) :: sig_sh(nz,ny,nx), sig_st(nz,ny,nx)
@@ -194,7 +199,7 @@ contains
   end subroutine
   
   ! Calculates rotation angle  b = def_angle(a)  to achieve pure shear rotation
-  subroutine def_angle(res,nx,ny,nz,u,v,dx,dy)
+  subroutine dil_angle(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     real(kind=nr) :: def_shear, def_stretch
