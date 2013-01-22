@@ -2,21 +2,28 @@
 # Compile scrip for dynlib
 
 # Obs: The order of the files in $files has to reflect the interdepencies!
-files='dynlib_config.f95 dynlib_conv.f95 dynlib_diag.f95 dynlib_stat.f95' 
-filec='dynlib_const.f95'
-filek='dynlib_kind.f95'
-pysig='dynlib.pyf'
+cur=`pwd`
+src="$cur/src"
+precc="$src/precc"
+files="config.f95 conv.f95 stat.f95"
+# temporarily disabled: diag.f95
+filec="const.f95"
+filek="kind.f95"
+pysig="${precc}/dynlib.pyf"
 
-fflags='"-fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC"'
+# Angus' fflags: -O3 -g -fcray-pointer -fno-second-underscore -Dlinux  -ffixed-line-length-132 -fdefault-real-8 -Dgfortran -fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC
+#fflags='-fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC'
+# Angus' libraries and includes: -I/usr/include -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl -llapack -lblas
+# --f90flags="-O3 -g -fcray-pointer -fno-second-underscore -Dlinux  -ffixed-line-length-132 -fdefault-real-8 -Dgfortran -fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC" -I/usr/include -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl -llapack -lblas
 
-
-# Precompiler directory
-mkdir -p precc
-rm -r precc/*
+# Empty precompiler directory
+rm -rf ${precc}/*
 
 
 # 1. Simple sed precompiler
 echo "Stage 1: Precompiling the Fortran code"
+
+cd $src
 
 # Marker one of the source files have been changes since last commit
 [[ `git diff $files $filec $filek |  wc -l` > 0 ]] && { change=+; } || { change=; };
@@ -28,13 +35,15 @@ sed -e "s/####VERREVI####/$VERREVI/g" $filec |
 sed -e "s/####VERDATE####/$VERDATE/g" | 
 sed -e "s/####FCOMPIL####/f2py version `f2py -v`/g" | 
 sed -e "s/####FCOMTIM####/`date +'%Y-%m-%d %H:%M:%S %z'`/g" |
-sed -e "s/####FCOMHOS####/`hostname -f`/g" > precc/$filec
-cp $filek $files precc/
+sed -e "s/####FCOMHOS####/`hostname -f`/g" > $precc/$filec
+cp $filek $files $precc
 
 
 # 2. Creating new python signature file
 echo "Stage 2: Creating python signature file"
-cd precc/
+
+cd $precc
+
 f2py -m dynlib -h $pysig $filec $files > /dev/null
 sed "s/kind=nr/kind=8/g" $pysig | sed "s/kind=ni/kind=4/g" > ${pysig}_tmp
 mv ${pysig}_tmp $pysig
@@ -42,13 +51,12 @@ mv ${pysig}_tmp $pysig
 
 # 3. Compiling the fortran modules 
 echo "Stage 3: Creating Fortran *.mod files"
-gfortran -c -O3 -g -fcray-pointer -fno-second-underscore -Dlinux  -ffixed-line-length-132 -fdefault-real-8 -Dgfortran -fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC  $filek $filec $files -I/usr/include -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl -llapack -lblas
+gfortran -c $filek $filec $files 
 
 
 # 4. Compiling the shared object usable from within python
 echo "Stage 4: Compiling the python module (as a shared object)"
-f2py -c --fcompiler=gnu95 --f90flags="-O3 -g -fcray-pointer -fno-second-underscore -Dlinux  -ffixed-line-length-132 -fdefault-real-8 -Dgfortran -fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC" -I/usr/include -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl -llapack -lblas dynlib.pyf $files $filec $filek  > /dev/null
-#f2py -c dynlib.pyf $files $filec $filek > /dev/null
+f2py -c --fcompiler=gnu95  dynlib.pyf $files $filec $filek > /dev/null
 mv dynlib.so ../
 cd ../
 
