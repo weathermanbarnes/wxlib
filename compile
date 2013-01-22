@@ -5,10 +5,16 @@
 cur=`pwd`
 src="$cur/src"
 precc="$src/precc"
-files="config.f95 conv.f95 stat.f95"
+work="$cur/default"
+
+files="config.f95 conv.f95 diag_contour_rwb.f95 diag.f95 stat.f95"
 # temporarily disabled: diag.f95
 filec="const.f95"
 filek="kind.f95"
+
+filew="settings.py example_ani.py example_diag.py example_netcdf_write.py example_stat.py"
+filem=".dynlib_workdir_prepared"
+
 pysig="${precc}/dynlib.pyf"
 
 # Angus' fflags: -O3 -g -fcray-pointer -fno-second-underscore -Dlinux  -ffixed-line-length-132 -fdefault-real-8 -Dgfortran -fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC
@@ -57,8 +63,18 @@ gfortran -c $filek $filec $files
 # 4. Compiling the shared object usable from within python
 echo "Stage 4: Compiling the python module (as a shared object)"
 f2py -c --fcompiler=gnu95  dynlib.pyf $files $filec $filek > /dev/null
-mv dynlib.so ../
-cd ../
+mv dynlib.so $cur
+cd $cur/..
+
+
+if [ -f $filem ];
+then
+	echo "Stage 5: skipped [`pwd` already prepared]"
+else
+	echo "Stage 5: Preparing the work directory [`pwd`]"
+	touch $filem
+	# TODO: do the actual preparations
+fi
 
 
 echo "Done compiling dynlib version $VERREVI"
