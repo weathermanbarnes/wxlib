@@ -2,12 +2,13 @@
 *.log
 # Bedymo output
 *.nc
-# Compiled stuff
+# (Pre-)Compiled stuff
 *.pyc
 *.o
 *.so
 *.x
 *.mod
+precc
 # Swap, temp and backup files
 *.swp
 *.swo

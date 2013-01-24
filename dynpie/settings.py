@@ -127,12 +127,12 @@ STD_SLICE  = (slice(None), slice(None), slice(None))
 
 # DEFAULT contour settings
 if os.getenv('DYNLIB_PLOT_PRINT'):
-	DEFAULT_KWARGS = {'m': wmap(), 'plev': 800, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
+	DEFAULT_KWARGS = {'m': wmap, 'plev': 800, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
 		'overlays': [], 'disable_cb': True, 'show': False, 'save': '', 'title': '',
 		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro,
 		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [] }
 else:
-	DEFAULT_KWARGS = {'m': wmap(), 'plev': 800, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
+	DEFAULT_KWARGS = {'m': wmap, 'plev': 800, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
 		'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '',
 		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro,
 		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [] }

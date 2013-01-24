@@ -298,7 +298,7 @@ contains
         integer(kind=ni) sh(0:4)
         real(kind=nr) xh(0:4),yh(0:4)
         integer(kind=ni) im(1:4),jm(1:4)
-        integer(kind=ni) case
+        integer(kind=ni) caseid
         integer(kind=ni) castab(-1:1,-1:1,-1:1)
         integer(kind=ni) p1,p2,ii
         real(kind=nr) l1,l3,pi,incr
@@ -348,9 +348,9 @@ contains
             else
               m3=1
             endif
-            case = castab(sh(m1),sh(m2),sh(m3))
-            if (case.ne.0) then
-              goto (31,32,33,34,35,36,37,38,39),case
+            caseid = castab(sh(m1),sh(m2),sh(m3))
+            if (caseid.ne.0) then
+              goto (31,32,33,34,35,36,37,38,39),caseid
 !
 !     Case 1 - Line between vertices 1 and 2
 !

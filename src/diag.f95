@@ -271,7 +271,7 @@ contains
   ! Calculates the geopotential (res) from montgomery potential (m), potential
   ! temperature (theta) and pressure (p)
   subroutine geop_from_montgp(res,nx,ny,nz,m,theta,p,dx,dy)
-    use consts, only: cp, Rl, p0
+    use consts!, only: cp, Rl, p0
     !
     real(kind=nr), intent(in)  :: m(nz,ny,nx), theta(nz,ny,nx), p(nz,ny,nx), &
                                 & dx(ny,nx), dy(ny,nx)
@@ -791,7 +791,7 @@ contains
   !
   ! Calculates geostrophic velocity [ug,vg] = v_g(mont,lat)
   subroutine v_g(resx,resy,nx,ny,nz,mont,lat,dx,dy)
-    use consts, only: pi, omega
+    use consts!, only: pi, omega
     real(kind=nr), intent(in)  :: mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
     real(kind=nr), intent(out) :: resx(nz,ny,nx), resy(nz,ny,nx)
     real(kind=nr) :: montx(nz,ny,nx), monty(nz,ny,nx),f(nz,ny,nx)
@@ -828,7 +828,7 @@ contains
   !
   ! Calculates Lagrangian acceleration on the isentropic surface
   subroutine laccel(resx,resy,nx,ny,nz,u,v,mont,lat,dx,dy)
-    use consts, only: pi, omega
+    use consts!, only: pi, omega
     real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
     real(kind=nr), intent(out) :: resx(nz,ny,nx),resy(nz,ny,nx)
     real(kind=nr) :: a_pressx(nz,ny,nx), a_pressy(nz,ny,nx), f(nz,ny,nx)
@@ -848,6 +848,7 @@ contains
   !
   ! Calculates lagrangian acceleration gradient tensor eigenvalues
   ! ref: Hua and Klein (1998)
+  ! TODO: THIS FUNCTION IS BROKEN, for details see todo in function definition.
   subroutine accgrad_eigs(respr,respi,resmr,resmi,nx,ny,nz,u,v,mont,lat,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx)
     real(kind=nr), intent(in)  :: lat(ny),dx(ny,nx),dy(ny,nx)
@@ -882,7 +883,8 @@ contains
        do j=2_ni,ny-1_ni
           do k=1_ni,nz  
             tem=gamma(k,j,i)%t
-            call dgeev('N','N',2,tem,2,eigensr,eigensi,dummy1,2,dummy2,2,dummy3,6,dummy4)
+            !TODO: where is dgeev??
+            !call dgeev('N','N',2,tem,2,eigensr,eigensi,dummy1,2,dummy2,2,dummy3,6,dummy4)
             !like eigens(1:2) = eig(gamma(k,j,i)%t)
             respr(k,j,i)=eigensr(1) 
             respi(k,j,i)=eigensi(1) 
