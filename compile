@@ -7,19 +7,14 @@ src="$cur/src"
 precc="$src/precc"
 work="$cur/default"
 
-files="config.f95 conv.f95 diag_contour_rwb.f95 diag.f95 stat.f95"
+files="config.f95 conv.f95 derivatives.f95 diag_contour_rwb.f95 diag.f95 stat.f95 utils.f95"
 filec="const.f95"
 filek="kind.f95"
-
-filew="settings.py example_ani.py example_diag.py example_netcdf_write.py example_stat.py"
 filem=".dynlib_workdir_prepared"
 
 pysig="${precc}/dynlib.pyf"
 
-# Angus' fflags: -O3 -g -fcray-pointer -fno-second-underscore -Dlinux  -ffixed-line-length-132 -fdefault-real-8 -Dgfortran -fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC
-#fflags='-fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC'
-# Angus' libraries and includes: -I/usr/include -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl -llapack -lblas
-# --f90flags="-O3 -g -fcray-pointer -fno-second-underscore -Dlinux  -ffixed-line-length-132 -fdefault-real-8 -Dgfortran -fno-align-commons -fconvert=little-endian -D_LARGEFILE64_SOURCE -fPIC" -I/usr/include -lnetcdf -lnetcdff -lhdf5 -lhdf5_hl -llapack -lblas
+LIBS='-llapack'
 
 # Empty precompiler directory
 rm -rf ${precc}/*
@@ -56,12 +51,12 @@ mv ${pysig}_tmp $pysig
 
 # 3. Compiling the fortran modules 
 echo "Stage 3: Creating Fortran *.mod files"
-gfortran -c $filek $filec $files 
+gfortran $LIBS -c $filek $filec $files 
 
 
 # 4. Compiling the shared object usable from within python
 echo "Stage 4: Compiling the python module (as a shared object)"
-f2py -c --fcompiler=gnu95  dynlib.pyf $files $filec $filek > /dev/null
+f2py -c $LIBS --fcompiler=gnu95 dynlib.pyf $files $filec $filek > /dev/null
 mv dynlib.so $cur
 cd $cur/..
 
@@ -71,8 +66,9 @@ then
 	echo "Stage 5: skipped [`pwd` already prepared]"
 else
 	echo "Stage 5: Preparing the work directory [`pwd`]"
+	cp -a $cur/default/example*.py .
+	cp -a $cur/default/settings.py .
 	touch $filem
-	# TODO: do the actual preparations
 fi
 
 

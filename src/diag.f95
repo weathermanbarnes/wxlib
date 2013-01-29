@@ -6,113 +6,10 @@
 module diag
   use kind
   use config
+  use derivatives
   !
   implicit none
 contains
-  !
-  ! Calculates partial x derivative: b = partial(a)/partial(x)
-  !  Returns 0 on first and last lon for non-cyclic grid
-  subroutine ddx(res,nx,ny,nz,dat,dx,dy)
-    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: res(nz,ny,nx)
-    integer(kind=ni) :: i,j,k, nx,ny,nz
-    !f2py depend(nx,ny,nz) res
-    !f2py depend(nx,ny) dx, dy
-    ! -----------------------------------------------------------------
-    !
-    forall(i = 2_ni:nx-1_ni, j = 1_ni:ny, k = 1_ni:nz)
-             res(k,j,i) = (dat(k,j,i+1_ni)-dat(k,j,i-1_ni))/dx(j,i)
-    end forall
-    if (grid_cyclic_ew) then
-       forall(j = 1_ni:ny, k = 1_ni:nz)
-             res(k,j,1_ni) = (dat(k,j,  2_ni)-dat(k,j     ,nx))/dx(j,1_ni)
-             res(k,j,nx  ) = (dat(k,j  ,1_ni)-dat(k,j,nx-1_ni))/dx(j,nx)
-       end forall
-    else 
-       forall(j = 1_ni:ny, k = 1_ni:nz)
-             res(k,j,1_ni) = 0._nr
-             res(k,j,nx  ) = 0._nr
-       end forall
-    end if
-  end subroutine
-  !
-  ! Calculates partial y derivative: b = partial(a)/partial(y)
-  !  Returns 0 on first and last lat
-  subroutine ddy(res,nx,ny,nz,dat,dx,dy)
-    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: res(nz,ny,nx)
-    integer(kind=ni) :: i,j,k, nx,ny,nz
-    !f2py depend(nx,ny,nz) res
-    !f2py depend(nx,ny) dx, dy
-    ! -----------------------------------------------------------------
-    !
-    forall(i = 1_ni:nx, j = 2_ni:ny-1_ni, k = 1_ni:nz)
-             res(k,j,i) = (dat(k,j+1_ni,i)-dat(k,j-1_ni,i))/dy(j,i)
-    end forall
-    forall(i = 1_ni:nx, k = 1_ni:nz)
-          res(k,1_ni,i)=0._nr
-          res(k,ny,i)=0._nr
-    end forall
-  end subroutine
-  !
-  ! Calculates gradient [bx,by] = grad(a)
-  !  Returns 0 on edges
-  subroutine grad(resx,resy,nx,ny,nz,dat,dx,dy)
-    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: resx(nz,ny,nx), resy(nz,ny,nx)
-    integer(kind=ni) :: nx,ny,nz
-    !f2py depend(nx,ny,nz) resx, resy
-    !f2py depend(nx,ny) dx, dy
-    ! -----------------------------------------------------------------
-    !
-    call ddx(resx,nx,ny,nz,dat,dx,dy)
-    call ddy(resy,nx,ny,nz,dat,dx,dy)
-    ! set to 0 where grad result not valid: j=1 and ny
-    resx(:,1_ni,:) = 0._nr
-    resy(:,1_ni,:) = 0._nr
-    resx(:,ny,:  ) = 0._nr
-    resy(:,ny,:  ) = 0._nr
-    if (.not.(grid_cyclic_ew)) then
-         ! set to 0 where grad result not valid: i=1 and nx
-         resx(:,:,1_ni) = 0._nr 
-         resy(:,:,1_ni) = 0._nr
-         resx(:,:,nx  ) = 0._nr
-         resy(:,:,nx  ) = 0._nr
-    end if
-  end subroutine
-  !
-  ! Calculates  2-D laplacian lap2(a)
-  !  returns 0 on edges
-  subroutine lap2(res,nx,ny,nz,dat,dx,dy)
-    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: res(nz,ny,nx)
-    integer(kind=ni) :: i,j,k, nx,ny,nz
-    !f2py depend(nx,ny,nz) res
-    !f2py depend(nx,ny) dx, dy
-    ! -----------------------------------------------------------------
-    !
-    forall(i = 2_ni:nx-1_ni, j = 2_ni:ny-1_ni, k = 1_ni:nz)
-       res(k,j,i) = (dat(k,j,i+1_ni)+dat(k,j,i-1_ni)-2_nr*dat(k,j,i))/dx(j,i)**2_nr + &
-                    (dat(k,j+1_ni,i)+dat(k,j-1_ni,i)-2_nr*dat(k,j,i))/dy(j,i)**2_nr
-    end forall
-    if (grid_cyclic_ew) then
-       forall(j = 2_ni:ny-1_ni, k = 1_ni:nz)
-         res(k,j,1_ni) = (dat(k,j,2_ni)+dat(k,j,nx)-2_nr*dat(k,j,1_ni))/dx(j,1_ni)**2_nr + &
-             (dat(k,j+1_ni,1_ni)+dat(k,j-1_ni,1_ni)-2_nr*dat(k,j,1_ni))/dy(j,1_ni)**2_nr
-         res(k,j,nx) = (dat(k,j,1_ni)+dat(k,j,nx-1_ni)-2_nr*dat(k,j,nx))/dx(j,nx)**2_nr + &
-                    (dat(k,j+1_ni,nx)+dat(k,j-1_ni,nx)-2_nr*dat(k,j,nx))/dy(j,nx)**2_nr
-       end forall
-    else
-       forall(j = 2_ni:ny-1_ni, k = 1_ni:nz)
-         res(k,j,1_ni) = 0._nr
-         res(k,j,nx) = 0._nr
-       end forall
-    end if
-    forall(i = 1_ni:nx,k = 1_ni:nz)
-        res(k,1_ni,i) = 0._nr
-        res(k,ny  ,i) = 0._nr
-    end forall
-  end subroutine
   !
   ! Calculates vorticity vor=dxv-dyu
   subroutine vor(res,nx,ny,nz,u,v,dx,dy)
@@ -198,10 +95,10 @@ contains
     res=0.5_nr*atan2(sig_sh,sig_st)
   end subroutine
   !
-  ! Calculates angle from x-axis to iso-pv lines (direction k X gradPV)
+  ! Calculates angle from x-axis to isolines of the input field dat (direction k X grad(dat))
   !   = alpha (Keyser Reeder Reed)
-  subroutine isopv_angle(res,nx,ny,nz,pv,dx,dy)
-    real(kind=nr), intent(in)  :: pv(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+  subroutine isoline_angle(res,nx,ny,nz,dat,dx,dy)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     real(kind=nr) :: gradx(nz,ny,nx), grady(nz,ny,nx)
     integer(kind=ni) :: nx,ny,nz
@@ -209,58 +106,58 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    call ddx(gradx,nx,ny,nz,pv,dx,dy)
-    call ddy(grady,nx,ny,nz,pv,dx,dy)  
+    call ddx(gradx,nx,ny,nz,dat,dx,dy)
+    call ddy(grady,nx,ny,nz,dat,dx,dy)  
     res=atan2(-gradx,grady)
   end subroutine
   !
-  ! Calculates beta = angle between dilatation axis (u,v) and iso-lines of pv
+  ! Calculates beta = angle between dilatation axis (u,v) and iso-lines of the input field dat
   !   = beta (Keyser Reeder Reed)
   !   = beta (Markowski Richardson)
   !   = theta + phi + pi/4 (Lapeyre Klein Hua)
-  subroutine beta(res,nx,ny,nz,u,v,pv,dx,dy)
-    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), pv(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+  subroutine isoline_to_deformation_angle(res,nx,ny,nz,u,v,dat,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     real(kind=nr) :: alpha(nz,ny,nx), delta(nz,ny,nx) 
     integer(kind=ni) :: nx,ny,nz
-    !f2py depend(nx,ny,nz) res, v, pv
+    !f2py depend(nx,ny,nz) res, v, dat
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
     ! beta = delta - alpha (Keyser Reeder Reed) 
-    !  alpha = angle between x axis and iso-pv line (direction k X grad pv)
+    !  alpha = angle between x axis and iso-dat line (direction k X grad dat)
     !  delta = angle between x axis and dilatation axis (dynlib: def_angle)
-    call isopv_angle(alpha,nx,ny,nz,pv,dx,dy)
+    call isoline_angle(alpha,nx,ny,nz,dat,dx,dy)
     call def_angle(delta,nx,ny,nz,u,v,dx,dy)
     res=delta-alpha
   end subroutine
   !
-  ! PV FRONTOGENESIS: STRETCHING AND STIRRING RATES:
+  ! FRONTOGENESIS: STRETCHING AND STIRRING RATES:
   ! Calculates (stretch, stir) where:
-  ! stretch= fractional pv gradient stretching rate = 1/|gradPV| * d/dt(|gradPV|)
+  ! stretch= fractional dat gradient stretching rate = 1/|grad(dat)| * d/dt(|grad(dat)|)
   !        = gamma, 'stretching rate' (Lapeyre Klein Hua)
-  !        = -1/|gradPV| * Fn (Keyser Reeder Reed)
-  !        =  1/|gradPV| * F  (Markowski Richardson)
-  !   stir = angular rotation rate of gradPV (stirring rate)
+  !        = -1/|grad(dat=PV)| * Fn (Keyser Reeder Reed)
+  !        =  1/|grad(dat=PV)| * F  (Markowski Richardson)
+  !   stir = angular rotation rate of grad(dat) (stirring rate)
   !        = d(theta)/dt      (Lapeyre Klein Hua)
-  !        = 1/|gradPV| * Fs  (Keyser Reeder Reed)
-  subroutine stretch_stir(resstretch,resstir,nx,ny,nz,u,v,pv,dx,dy)
-    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), pv(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+  !        = 1/|grad(dat=PV)| * Fs  (Keyser Reeder Reed)
+  subroutine stretch_stir(resstretch,resstir,nx,ny,nz,u,v,dat,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: resstretch(nz,ny,nx),resstir(nz,ny,nx)
     real(kind=nr) :: bet(nz,ny,nx),totdef(nz,ny,nx),divergence(nz,ny,nx),vorticity(nz,ny,nx)
     integer(kind=ni) :: nx,ny,nz
-    !f2py depend(nx,ny,nz) resstretch,resstir,v,pv
+    !f2py depend(nx,ny,nz) resstretch,resstir,v,dat
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     ! (Lapeyre Klein Hua):
     !  stretch = gamma = 1/rho * d(rho)/dt (rho=|gradPV|) = -sigma/2 * sin(2(theta+phi))
     ! (Keyser Reeder Reed):
-    !  d(gradPV)/dt = (Fn,Fs), coordinates rotated to PV-contours (Keyser Reeder Reed) 
+    !  d(gradPV)/dt = (Fn,Fs), coordinates rotated to dat-contours (Keyser Reeder Reed) 
     !  stretch = -1/|gradPV| * Fn 
     !       Fn = 0.5*|gradPV|(D-E*cos(2*beta))
     !  stir = Fs/|gradPV|
     !    Fs = 0.5*|gradPV|(vort+E*sin(2*beta))
-    call beta(bet,nx,ny,nz,u,v,pv,dx,dy)
+    call isoline_to_deformation_angle(bet,nx,ny,nz,u,v,dat,dx,dy)
     call def_total(totdef,nx,ny,nz,u,v,dx,dy)
     call div(divergence,nx,ny,nz,u,v,dx,dy)
     call vor(vorticity,nx,ny,nz,u,v,dx,dy)
@@ -268,26 +165,146 @@ contains
     resstir=0.5_nr*(vorticity+totdef*sin(2_nr*bet))
   end subroutine
   !
-  ! Calculates the geopotential (res) from montgomery potential (m), potential
-  ! temperature (theta) and pressure (p)
-  subroutine geop_from_montgp(res,nx,ny,nz,m,theta,p,dx,dy)
-    use consts!, only: cp, Rl, p0
-    !
-    real(kind=nr), intent(in)  :: m(nz,ny,nx), theta(nz,ny,nx), p(nz,ny,nx), &
-                                & dx(ny,nx), dy(ny,nx)
+  ! Calculates Okubo-Weiss criterion lambda_0=1/4 (sigma^2-omega^2)= 1/4 W
+  ! This is the square of the eigenvalues in Okubo's paper (assumes small divergence)
+  subroutine okuboweiss(res,nx,ny,nz,u,v,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),dx(ny,nx),dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
-    integer(kind=ni) :: i,j,k, nx,ny,nz
-    !f2py depend(nx,ny,nz) res, theta, p
+    real(kind=nr) :: sig(nz,ny,nx), omega(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res,v
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
+    call def_total(sig,nx,ny,nz,u,v,dx,dy)
+    call vor(omega,nx,ny,nz,u,v,dx,dy)
+    res=0.25*(sig**2-omega**2)
+  end subroutine
+  !
+  ! Calculates Lagrangian acceleration on the isentropic surface
+  subroutine dot_uv(resx,resy,nx,ny,nz,u,v,mont,lat,dx,dy)
+    use consts!, only: pi, omega
+    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
+    real(kind=nr), intent(out) :: resx(nz,ny,nx),resy(nz,ny,nx)
+    real(kind=nr) :: a_pressx(nz,ny,nx), a_pressy(nz,ny,nx), f(nz,ny,nx)
+    integer(kind=ni) :: i,k,nx,ny,nz
+    !f2py depend(nx,ny,nz) resx,resy,v,mont
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(ny) lat
+    ! -----------------------------------------------------------------
+    !
+    forall(i = 1_ni:nx, k = 1_ni:nz)
+       f(k,:,i) = 2.*omega*sin(lat*pi/180._nr)
+    end forall
+    call grad(a_pressx,a_pressy,nx,ny,nz,mont,dx,dy)
+    resx=-a_pressx+f*v ! pressure force + coriolis force
+    resy=-a_pressy-f*u ! pressure force + coriolis force
+  end subroutine
+  !
+  ! Calculates lagrangian acceleration gradient tensor eigenvalues
+  ! ref: Hua and Klein (1998)
+  subroutine accgrad_eigs(respr,respi,resmr,resmi,nx,ny,nz,u,v,mont,lat,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx)
+    real(kind=nr), intent(in)  :: lat(ny),dx(ny,nx),dy(ny,nx)
+    real(kind=nr), intent(out) :: respr(nz,ny,nx),respi(nz,ny,nx)
+    real(kind=nr), intent(out) :: resmr(nz,ny,nx), resmi(nz,ny,nx)
+    type::tensor
+        real(kind=nr),dimension(2,2)::t
+    end type
+    type(tensor)::gamma(nz,ny,nx)
+    real(kind=nr) :: accelx(nz,ny,nx),accely(nz,ny,nx)
+    real(kind=nr) :: dxaccelx(nz,ny,nx),dyaccelx(nz,ny,nx)
+    real(kind=nr) :: dxaccely(nz,ny,nx),dyaccely(nz,ny,nx)
+    real(kind=nr) :: tem(2,2)
+    real(kind=nr) :: eigensr(2),eigensi(2)
+    real(kind=nr) :: dummy1(2,2),dummy2(2,2),dummy3(6)
+    integer(kind=ni) :: i,j,k, nx,ny,nz, dummy4
+    !f2py depend(nx,ny,nz) respr,resmr,respi,resmi,v,mont
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(ny) lat
+    ! -----------------------------------------------------------------
+    !
+    call dot_uv(accelx,accely,nx,ny,nz,u,v,mont,lat,dx,dy)
+    call grad(dxaccelx,dyaccelx,nx,ny,nz,accelx,dx,dy)
+    call grad(dxaccely,dyaccely,nx,ny,nz,accely,dx,dy)
+    forall(i = 1_ni:nx, j = 1_ni:ny, k = 1_ni:nz)
+       gamma(k,j,i)%t(1,1) = dxaccelx(k,j,i)
+       gamma(k,j,i)%t(1,2) = dyaccelx(k,j,i)
+       gamma(k,j,i)%t(2,1) = dxaccely(k,j,i)
+       gamma(k,j,i)%t(2,2) = dyaccely(k,j,i)
+    end forall 
     do i=1_ni,nx
-       do j=1_ni,ny
-          do k=1_ni,nz
-             res(k,j,i) = m(k,j,i) - cp*theta(k,j,i)*(p(k,j,i)/p0)**(Rl/cp)
+       do j=2_ni,ny-1_ni
+          do k=1_ni,nz  
+            tem=gamma(k,j,i)%t
+            call dgeev('N','N',2,tem,2,eigensr,eigensi,dummy1,2,dummy2,2,dummy3,6,dummy4)
+            !like eigens(1:2) = eig(gamma(k,j,i)%t)
+            respr(k,j,i)=eigensr(1) 
+            respi(k,j,i)=eigensi(1) 
+            resmr(k,j,i)=eigensr(2) 
+            resmi(k,j,i)=eigensi(2) 
           end do
        end do
     end do
+    !
+    respr(:,(/1,ny/),:)=0._nr
+    !respr(:,:,(/1,nx/))=0._nr
+    resmr(:,(/1,ny/),:)=0._nr
+    !resmr(:,:,(/1,nx/))=0._nr
+    respi(:,(/1,ny/),:)=0._nr
+    !respi(:,:,(/1,nx/))=0._nr
+    resmi(:,(/1,ny/),:)=0._nr
+    !resmi(:,:,(/1,nx/))=0._nr
+  end subroutine
+  !
+  ! Calculates Lagrangian time derivative of compression axis angle
+  ! d(phi)/dt (ref Lapeyre et al 1999)
+  subroutine dot_def_angle(res,nx,ny,nz,u,v,mont,lat,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    real(kind=nr) :: sig_st(nz,ny,nx),sig_sh(nz,ny,nx)
+    real(kind=nr) :: accelx(nz,ny,nx),accely(nz,ny,nx)
+    real(kind=nr) :: dxaccelx(nz,ny,nx),dyaccelx(nz,ny,nx)
+    real(kind=nr) :: dxaccely(nz,ny,nx),dyaccely(nz,ny,nx)
+    real(kind=nr) :: ddtsig_st(nz,ny,nx),ddtsig_sh(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res,v,mont
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(ny) lat
+    ! -----------------------------------------------------------------
+    !
+    call def_shear(sig_sh,nx,ny,nz,u,v,dx,dy)
+    call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)
+    call dot_uv(accelx,accely,nx,ny,nz,u,v,mont,lat,dx,dy)
+    ! calculate the lagrangian acceleration gradient tensor:
+    call grad(dxaccelx,dyaccelx,nx,ny,nz,accelx,dx,dy)
+    call grad(dxaccely,dyaccely,nx,ny,nz,accely,dx,dy)
+    ! 1. Calculate d/dt(sig_st)
+    ddtsig_st=-(dxaccelx-dyaccely)
+    ! 2. calculate d/dt(sig_sh)
+    ddtsig_sh=-(dyaccelx+dxaccely)
+    ! 3. Calculate d/dt(phi)
+    res=0.5*(sig_sh*ddtsig_st-sig_st*ddtsig_sh)/(sig_sh**2+sig_st**2)
+  end subroutine
+  !
+  !Calculates the r diagnostic of Lapeyre et al (1999)
+  ! r is the ratio of effective rotation to strain rate
+  ! where effective rotation comprises both vorticity and strain-axes rotation
+  subroutine rotation_strain_ratio(res,nx,ny,nz,u,v,mont,lat,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    real(kind=nr) :: ddtphi(nz,ny,nx), omega(nz,ny,nx), sig(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res,v,mont
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(ny) lat
+    ! -----------------------------------------------------------------
+    !
+    call dot_def_angle(ddtphi,nx,ny,nz,u,v,mont,lat,dx,dy)
+    call vor(omega,nx,ny,nz,u,v,dx,dy)
+    call def_total(sig,nx,ny,nz,u,v,dx,dy)
+    !
+    res=(omega+2.*ddtphi)/sig
   end subroutine
   !
   ! Gradient reversal: At each (i,j,k) grid point, finds the reversals of pv y-gradient. 
@@ -314,7 +331,7 @@ contains
   !          int*1:: tested (flag to 1 all tested points: where highenough==1 
   !                          and not on edge of grid)
   !
-  subroutine rev(resa,resc,resai,resci,resaiy,resciy,tested,nx,ny,nz, &
+  subroutine grad_rev(resa,resc,resai,resci,resaiy,resciy,tested,nx,ny,nz, &
        pv,highenough,latitudes,ddythres,dx,dy)
     real(kind=nr), intent(in)  :: pv(nz,ny,nx), latitudes(ny), ddythres, dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: resai(nz,ny,nx), resci(nz,ny,nx), & 
@@ -388,132 +405,6 @@ contains
           end do !k
        end do !j
     end do !i
-  end subroutine
-  !
-  ! Prepare global data for FFT: 
-  !
-  ! Returns the data extended along complementary meridians (for fft)
-  ! For each lon, the reflected (lon+180) is attached below
-  ! so that data is periodic in x and y.
-  ! NOTE: Input data must be lats -90 to 90!!! and nx must be even
-  subroutine prepare_fft(res,nx,ny,nz,thedata,dx,dy)
-    real(kind=nr), intent(in)  :: thedata(nz,ny,nx), dx(ny,nx), dy(ny,nx)
-    !real(kind=nr), intent(out) :: res(nz,2*ny-2_ni,nx)
-    real(kind=nr), intent(out) :: res(nz,2*ny-2,nx)
-    integer(kind=ni) :: i,j,k, nx,ny,nz,iextra
-    !f2py depend(nx,ny,nz) res
-    !f2py depend(nx,ny) dx, dy
-    ! -----------------------------------------------------------------
-    !
-    do k=1_ni,nz
-       do i=1_ni,nx
-          iextra=i+nx/2_ni
-          if (iextra.GT.nx) then
-             iextra=iextra-nx          
-          end if
-          do j=2_ni,ny-1_ni
-             res(k,j,i) = thedata(k,j,i)
-             res(k,2*ny-j,i)=thedata(k,j,iextra)
-          end do
-          res(k,1_ni,i)=thedata(k,1_ni,i)
-          res(k,ny,i)=thedata(k,ny,i) 
-       end do
-    end do
-  end subroutine
-  !
-  ! subroutine sum_kix: calculates sum along k dimension for k values 
-  !                     which are flagged in kix vector
-  ! returns:
-  !    res(ny,nx) - thedata summed over k where kix==1
-  !    nres       - sum(kix)
-  subroutine sum_kix(res,nres,nx,ny,nz,thedata,kix,dx,dy)
-    real(kind=nr), intent(in)  :: thedata(nz,ny,nx), dx(ny,nx), dy(ny,nx)
-    integer(kind=ni), intent(in) :: kix(nz)
-    real(kind=nr), intent(out) :: res(ny,nx)
-    integer(kind=ni), intent(out) :: nres
-    integer(kind=ni) :: i,j,k, nx,ny,nz
-    !f2py depend(nx,ny) res, dx, dy
-    !f2py depend(nz) kix
-    ! -----------------------------------------------------------------
-    !
-    do i=1_ni,nx
-       do j=1_ni,ny
-          res(j,i) = 0._nr
-          do k=1_ni,nz
-             if (kix(k)==1) then
-                res(j,i) = res(j,i) + thedata(k,j,i)
-             end if
-          end do
-       end do
-    end do
-    nres = 0
-    do k=1_ni,nz
-       if (kix(k)==1) then 
-          nres = nres + 1
-       end if
-    end do
-  end subroutine
-  !
-  ! Calculates sum of thedata(k,j,i) along k where:
-  !  ( zdata(k,j,i) > ztest(1,j,i)+test_thres )
-  !   zdata(k,j,i) is the geopotential of the isentropic surface.
-  !   ztest(1,j,i) is the geopotential of earth's surface
-  !   test_thres is minimum geopotential difference from earth's surface
-  ! So it only sums values where the surface is sufficiently above ground
-  ! OUTPUT ntimes IS NUMBER OF TIMES SUFFICIENTLY ABOVE GROUND AT EACH GRIDPOINT
-  ! OUTPUT ntimesall IS TOTAL NUMBER OF TIMES BROADCAST OVER GRID
-  subroutine summation(res,ntimes,ntimesall,nx,ny,nz,thedata,zdata,ztest,zthres,dx,dy)
-    real(kind=nr), intent(in)  :: thedata(nz,ny,nx), zdata(nz,ny,nx), ztest(1,ny,nx), zthres, dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: res(ny,nx)
-    integer(kind=ni), intent(out) :: ntimes(ny,nx),ntimesall(ny,nx)
-    integer(kind=ni) :: i,j,k, nx,ny,nz
-    integer(kind=1) :: high(nz,ny,nx)
-    !f2py depend(nx,ny) res, ntimes, ntimesall, dx, dy
-    !f2py depend(nx,ny,nz) high
-    ! -----------------------------------------------------------------
-    !
-    call high_enough(high,nx,ny,nz,zdata,ztest,zthres,dx,dy)
-    do i=1_ni,nx
-       do j=1_ni,ny
-          res(j,i) = 0._nr
-          ntimes(j,i) = 0_ni
-          ntimesall(j,i) = 0_ni
-          do k=1_ni,nz
-             if (high(k,j,i)==1) then
-                res(j,i) = res(j,i) + thedata(k,j,i)
-                ntimes(j,i) = ntimes(j,i)+1_ni
-             end if
-             ntimesall(j,i) = ntimesall(j,i)+1_ni
-          end do
-       end do
-    end do
-  end subroutine
-  !
-  ! Tests if level data (3-D input array zdata(nz,ny,nx)) geopotential is 
-  !  sufficiently above test geopotential (eg, topography) ztest(1,ny,nx) 
-  ! Returns 3-D flag array:
-  !  = 1 if zdata(t,y,x) > (ztest(1,y,x) + zthres)
-  !  = 0 otherwise
-  !  test_thres is minimum geopotential height above ztest surface
-  subroutine high_enough(res,nx,ny,nz,zdata,ztest,zthres,dx,dy)
-    real(kind=nr), intent(in)  :: zdata(nz,ny,nx), ztest(1,ny,nx), zthres, dx(ny,nx), dy(ny,nx)
-    integer(kind=1), intent(out) :: res(nz,ny,nx)
-    integer(kind=ni) :: i,j,k, nx,ny,nz
-    !f2py depend(nx,ny,nz) res
-    !f2py depend(nx,ny) dx, dy, ztest
-    ! -----------------------------------------------------------------
-    !
-    do i=1_ni,nx
-       do j=1_ni,ny
-          do k=1_ni,nz
-             if (zdata(k,j,i).GT.(ztest(1,j,i)+zthres)) then
-                res(k,j,i) = 1_1
-             else
-                res(k,j,i) = 0_1
-             end if
-          end do
-       end do
-    end do
   end subroutine
   !
   ! RWB detection, adapted from algorithm by Riviere
@@ -810,148 +701,26 @@ contains
     resy=montx/f
   end subroutine
   !
-  ! Calculates Okubo-Weiss criterion lambda_0=1/4 (sigma^2-omega^2)= 1/4 W
-  ! This is the square of the eigenvalues in Okubo's paper (assumes small divergence)
-  subroutine okuboweiss(res,nx,ny,nz,u,v,dx,dy)
-    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),dx(ny,nx),dy(ny,nx)
+  ! Calculates the geopotential (res) from montgomery potential (m), potential
+  ! temperature (theta) and pressure (p)
+  subroutine geop_from_montgp(res,nx,ny,nz,m,theta,p,dx,dy)
+    use consts!, only: cp, Rl, p0
+    !
+    real(kind=nr), intent(in)  :: m(nz,ny,nx), theta(nz,ny,nx), p(nz,ny,nx), &
+                                & dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
-    real(kind=nr) :: sig(nz,ny,nx), omega(nz,ny,nx)
-    integer(kind=ni) :: nx,ny,nz
-    !f2py depend(nx,ny,nz) res,v
+    integer(kind=ni) :: i,j,k, nx,ny,nz
+    !f2py depend(nx,ny,nz) res, theta, p
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
-    call def_total(sig,nx,ny,nz,u,v,dx,dy)
-    call vor(omega,nx,ny,nz,u,v,dx,dy)
-    res=0.25*(sig**2-omega**2)
-  end subroutine
-  !
-  ! Calculates Lagrangian acceleration on the isentropic surface
-  subroutine laccel(resx,resy,nx,ny,nz,u,v,mont,lat,dx,dy)
-    use consts!, only: pi, omega
-    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
-    real(kind=nr), intent(out) :: resx(nz,ny,nx),resy(nz,ny,nx)
-    real(kind=nr) :: a_pressx(nz,ny,nx), a_pressy(nz,ny,nx), f(nz,ny,nx)
-    integer(kind=ni) :: i,k,nx,ny,nz
-    !f2py depend(nx,ny,nz) resx,resy,v,mont
-    !f2py depend(nx,ny) dx, dy
-    !f2py depend(ny) lat
-    ! -----------------------------------------------------------------
-    !
-    forall(i = 1_ni:nx, k = 1_ni:nz)
-       f(k,:,i) = 2.*omega*sin(lat*pi/180._nr)
-    end forall
-    call grad(a_pressx,a_pressy,nx,ny,nz,mont,dx,dy)
-    resx=-a_pressx+f*v ! pressure force + coriolis force
-    resy=-a_pressy-f*u ! pressure force + coriolis force
-  end subroutine
-  !
-  ! Calculates lagrangian acceleration gradient tensor eigenvalues
-  ! ref: Hua and Klein (1998)
-  ! TODO: THIS FUNCTION IS BROKEN, for details see todo in function definition.
-  subroutine accgrad_eigs(respr,respi,resmr,resmi,nx,ny,nz,u,v,mont,lat,dx,dy)
-    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx)
-    real(kind=nr), intent(in)  :: lat(ny),dx(ny,nx),dy(ny,nx)
-    real(kind=nr), intent(out) :: respr(nz,ny,nx),respi(nz,ny,nx)
-    real(kind=nr), intent(out) :: resmr(nz,ny,nx), resmi(nz,ny,nx)
-    type::tensor
-        real(kind=nr),dimension(2,2)::t
-    end type
-    type(tensor)::gamma(nz,ny,nx)
-    real(kind=nr) :: accelx(nz,ny,nx),accely(nz,ny,nx)
-    real(kind=nr) :: dxaccelx(nz,ny,nx),dyaccelx(nz,ny,nx)
-    real(kind=nr) :: dxaccely(nz,ny,nx),dyaccely(nz,ny,nx)
-    real(kind=nr) :: tem(2,2)
-    real(kind=nr) :: eigensr(2),eigensi(2)
-    real(kind=nr) :: dummy1(2,2),dummy2(2,2),dummy3(6)
-    integer(kind=ni) :: i,j,k, nx,ny,nz, dummy4
-    !f2py depend(nx,ny,nz) respr,resmr,respi,resmi,v,mont
-    !f2py depend(nx,ny) dx, dy
-    !f2py depend(ny) lat
-    ! -----------------------------------------------------------------
-    !
-    call laccel(accelx,accely,nx,ny,nz,u,v,mont,lat,dx,dy)
-    call grad(dxaccelx,dyaccelx,nx,ny,nz,accelx,dx,dy)
-    call grad(dxaccely,dyaccely,nx,ny,nz,accely,dx,dy)
-    forall(i = 1_ni:nx, j = 1_ni:ny, k = 1_ni:nz)
-       gamma(k,j,i)%t(1,1) = dxaccelx(k,j,i)
-       gamma(k,j,i)%t(1,2) = dyaccelx(k,j,i)
-       gamma(k,j,i)%t(2,1) = dxaccely(k,j,i)
-       gamma(k,j,i)%t(2,2) = dyaccely(k,j,i)
-    end forall 
     do i=1_ni,nx
-       do j=2_ni,ny-1_ni
-          do k=1_ni,nz  
-            tem=gamma(k,j,i)%t
-            !TODO: where is dgeev??
-            !call dgeev('N','N',2,tem,2,eigensr,eigensi,dummy1,2,dummy2,2,dummy3,6,dummy4)
-            !like eigens(1:2) = eig(gamma(k,j,i)%t)
-            respr(k,j,i)=eigensr(1) 
-            respi(k,j,i)=eigensi(1) 
-            resmr(k,j,i)=eigensr(2) 
-            resmi(k,j,i)=eigensi(2) 
+       do j=1_ni,ny
+          do k=1_ni,nz
+             res(k,j,i) = m(k,j,i) - cp*theta(k,j,i)*(p(k,j,i)/p0)**(Rl/cp)
           end do
        end do
     end do
-    !
-    respr(:,(/1,ny/),:)=0._nr
-    !respr(:,:,(/1,nx/))=0._nr
-    resmr(:,(/1,ny/),:)=0._nr
-    !resmr(:,:,(/1,nx/))=0._nr
-    respi(:,(/1,ny/),:)=0._nr
-    !respi(:,:,(/1,nx/))=0._nr
-    resmi(:,(/1,ny/),:)=0._nr
-    !resmi(:,:,(/1,nx/))=0._nr
-  end subroutine
-  !
-  ! Calculates Lagrangian time derivative of compression axis angle
-  ! d(phi)/dt (ref Lapeyre et al 1999)
-  subroutine dphidt(res,nx,ny,nz,u,v,mont,lat,dx,dy)
-    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
-    real(kind=nr), intent(out) :: res(nz,ny,nx)
-    real(kind=nr) :: sig_st(nz,ny,nx),sig_sh(nz,ny,nx)
-    real(kind=nr) :: accelx(nz,ny,nx),accely(nz,ny,nx)
-    real(kind=nr) :: dxaccelx(nz,ny,nx),dyaccelx(nz,ny,nx)
-    real(kind=nr) :: dxaccely(nz,ny,nx),dyaccely(nz,ny,nx)
-    real(kind=nr) :: ddtsig_st(nz,ny,nx),ddtsig_sh(nz,ny,nx)
-    integer(kind=ni) :: nx,ny,nz
-    !f2py depend(nx,ny,nz) res,v,mont
-    !f2py depend(nx,ny) dx, dy
-    !f2py depend(ny) lat
-    ! -----------------------------------------------------------------
-    !
-    call def_shear(sig_sh,nx,ny,nz,u,v,dx,dy)
-    call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)
-    call laccel(accelx,accely,nx,ny,nz,u,v,mont,lat,dx,dy)
-    ! calculate the lagrangian acceleration gradient tensor:
-    call grad(dxaccelx,dyaccelx,nx,ny,nz,accelx,dx,dy)
-    call grad(dxaccely,dyaccely,nx,ny,nz,accely,dx,dy)
-    ! 1. Calculate d/dt(sig_st)
-    ddtsig_st=-(dxaccelx-dyaccely)
-    ! 2. calculate d/dt(sig_sh)
-    ddtsig_sh=-(dyaccelx+dxaccely)
-    ! 3. Calculate d/dt(phi)
-    res=0.5*(sig_sh*ddtsig_st-sig_st*ddtsig_sh)/(sig_sh**2+sig_st**2)
-  end subroutine
-  !
-  !Calculates the r disgnostic of Lapeyre et al (1999)
-  ! r is the ratio of effective rotation to strain rate
-  ! where effective rotation comprises both vorticity and strain-axes rotation
-  subroutine r(res,nx,ny,nz,u,v,mont,lat,dx,dy)
-    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
-    real(kind=nr), intent(out) :: res(nz,ny,nx)
-    real(kind=nr) :: ddtphi(nz,ny,nx), omega(nz,ny,nx), sig(nz,ny,nx)
-    integer(kind=ni) :: nx,ny,nz
-    !f2py depend(nx,ny,nz) res,v,mont
-    !f2py depend(nx,ny) dx, dy
-    !f2py depend(ny) lat
-    ! -----------------------------------------------------------------
-    !
-    call dphidt(ddtphi,nx,ny,nz,u,v,mont,lat,dx,dy)
-    call vor(omega,nx,ny,nz,u,v,dx,dy)
-    call def_total(sig,nx,ny,nz,u,v,dx,dy)
-    !
-    res=(omega+2.*ddtphi)/sig
   end subroutine
   !
 end module
