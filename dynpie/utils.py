@@ -117,3 +117,12 @@ def def_angle(u_dat, v_dat, grid):
 igauss = lambda p: np.sqrt(2)*erfinv(2*p-1.0)
 
 #
+# Calculate the most frequent value from a given histogram and bins
+def cal_mfv(hist, bins):
+	mfv = np.zeros(s)
+	for j in range(s[0]):
+		for i in range(s[1]):
+			bi = hist[:,j,i].argmax()
+			mfv[j,i] = (bins[bi+1]+bins[bi])/2.0
+	return mfv
+#

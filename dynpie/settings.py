@@ -119,11 +119,16 @@ labls_defang = [u'-π/2', u'-3π/8', u'-π/4', u'-π/8', u'0', u'π/8', u'π/4',
 #
 Q = {'defabs': 'defabs', 'defang': 'defang', 
 	'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'Z': 'z', 'oro': 'oro'}
-DATAPATH = ['./', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY']
+DATAPATH = ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY']
+OPATH    = '.'
 FILE_STD   = 'ei.ans.%d.%s.%s'
 FILE_STAT  = 'ei.ans.%d.%s.%s.stat'
 FILE_MSTAT = 'ei.ans.stat.%s.%s'
 STD_SLICE  = (slice(None), slice(None), slice(None))
+YEARS  = range(1979,2012)
+PLEVS  = ['100', '200', '300', '400', '500', '550', '600', '650', '700', '750', '800', '850', '900', '950', '1000', ]
+PTLEVS = ['pt300', 'pt315', 'pt330', 'pt350', ]
+PVLEVS = ['pv2000', ]
 
 # DEFAULT contour settings
 if os.getenv('DYNLIB_PLOT_PRINT'):
@@ -159,7 +164,10 @@ DEFAULT_Q['oro'] = {'scale': scale_oro_full, 'cmap': plt.cm.gist_earth}
 #
 hooks = {}
 hooks['defabs'] = lambda defabs: defabs*1e5
-#hooks['oro'] = lambda oro: oro[
+def _tmp(oro):
+	oro[oro <= 100] = -17000
+	return oro
+hooks['oro'] = _tmp
 
 
 
@@ -226,10 +234,15 @@ class settings(object):
 	__default = {
 		'q': Q,
 		'datapath': DATAPATH,
+		'opath': OPATH,
 		'file_std': FILE_STD,
 		'file_stat': FILE_STAT,
 		'file_mstat': FILE_MSTAT,
 		'std_slice': STD_SLICE,
+		'years': YEARS,
+		'plevs': PLEVS,
+		'ptlevs': PTLEVS,
+		'pvlevs': PVLEVS,
 		'contour': settings_contour(),
 		'contourf': settings_contourf(),
 	}
@@ -272,7 +285,7 @@ conf = settings()
 # #############################################################################
 # 7. Clean-Up: Making the default settings only available through settings objects
 # 
-del Q, DATAPATH, FILE_STD, FILE_STAT, FILE_MSTAT, STD_SLICE
+del Q, DATAPATH, OPATH, FILE_STD, FILE_STAT, FILE_MSTAT, STD_SLICE, YEARS, PLEVS, PTLEVS, PVLEVS
 del DEFAULT_KWARGS, DEFAULT_CONTOUR_KWARGS, DEFAULT_CONTOURF_KWARGS, DEFAULT_Q
 
 

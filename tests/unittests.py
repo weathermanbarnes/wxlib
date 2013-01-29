@@ -21,11 +21,16 @@ class settings_tester(unittest.TestCase):
 		self.maxDiff = None
 		self.assertEqual(conf.q, {'defabs': 'defabs', 'defang': 'defang', 
 			'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'Z': 'z', 'oro': 'oro' })
-		self.assertEqual(conf.datapath, ['./', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'] )
+		self.assertEqual(conf.datapath, ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'] )
+		self.assertEqual(conf.opath, '.')
 		self.assertEqual(conf.file_std, 'ei.ans.%d.%s.%s')
 		self.assertEqual(conf.file_stat, 'ei.ans.%d.%s.%s.stat')
 		self.assertEqual(conf.file_mstat, 'ei.ans.stat.%s.%s')
 		self.assertEqual(conf.std_slice, (slice(None), slice(None), slice(None)))
+		self.assertEqual(conf.years, range(1979,2012))
+		self.assertEqual(conf.plevs, ['100', '200', '300', '400', '500', '550', '600', '650', '700', '750', '800', '850', '900', '950', '1000', ] )
+		self.assertEqual(conf.ptlevs, ['pt300', 'pt315', 'pt330', 'pt350', ])
+		self.assertEqual(conf.pvlevs, ['pv2000', ])
 
 		self.assertTrue(isinstance(conf.contour, settings_contour))
 		self.assertEqual(conf.contour.default, {'m': wmap, 'plev': 800, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
@@ -49,11 +54,11 @@ class settings_tester(unittest.TestCase):
 	def test_override(self):
 		conf.datapath.insert(1, '/Data/gfi/scratch/csp001/deformation')
 		conf.datapath.insert(1, '/work/csp001/deformation')
-		self.assertEqual(conf.datapath, ['./', '/work/csp001/deformation', '/Data/gfi/scratch/csp001/deformation', 
+		self.assertEqual(conf.datapath, ['.', '/work/csp001/deformation', '/Data/gfi/scratch/csp001/deformation', 
 			'/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'] )
 
 		conf.reset('datapath')
-		self.assertEqual(conf.datapath, ['./', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'] )
+		self.assertEqual(conf.datapath, ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'] )
 
 		conf.file_std = 'somethingelse'
 		conf.file_mstat = 'somethingdifferent'
@@ -61,7 +66,7 @@ class settings_tester(unittest.TestCase):
 		self.assertEqual(conf.file_mstat, 'somethingdifferent')
 
 		conf.reset()
-		self.assertEqual(conf.datapath, ['./', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'] )
+		self.assertEqual(conf.datapath, ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'] )
 		self.assertEqual(conf.file_std, 'ei.ans.%d.%s.%s')
 		self.assertEqual(conf.file_stat, 'ei.ans.%d.%s.%s.stat')
 		self.assertEqual(conf.file_mstat, 'ei.ans.stat.%s.%s')
