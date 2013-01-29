@@ -258,7 +258,8 @@ contains
   end subroutine
   !
   ! Calculates Lagrangian time derivative of compression axis angle
-  ! d(phi)/dt (ref Lapeyre et al 1999)
+  !  d(gamma)/dt (ref Spensberger and Spengler 2013)
+  ! -d(phi)/dt (ref Lapeyre et al 1999)
   subroutine dot_def_angle(res,nx,ny,nz,u,v,mont,lat,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -284,7 +285,7 @@ contains
     ! 2. calculate d/dt(sig_sh)
     ddtsig_sh=-(dyaccelx+dxaccely)
     ! 3. Calculate d/dt(phi)
-    res=0.5*(sig_sh*ddtsig_st-sig_st*ddtsig_sh)/(sig_sh**2+sig_st**2)
+    res=0.5*(sig_st*ddtsig_sh-sig_sh*ddtsig_st)/(sig_sh**2+sig_st**2)
   end subroutine
   !
   !Calculates the r diagnostic of Lapeyre et al (1999)
@@ -304,7 +305,8 @@ contains
     call vor(omega,nx,ny,nz,u,v,dx,dy)
     call def_total(sig,nx,ny,nz,u,v,dx,dy)
     !
-    res=(omega+2.*ddtphi)/sig
+    ! dot_def_angle is - dot(phi)
+    res=(omega-2.*ddtphi)/sig
   end subroutine
   !
   ! Gradient reversal: At each (i,j,k) grid point, finds the reversals of pv y-gradient. 
