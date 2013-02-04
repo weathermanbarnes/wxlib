@@ -61,6 +61,14 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 			raise NotImplementedError
 		args = []
 		for var in vars:
+			if len(var.shape) == 3:
+				if getattr(var, 'dtype', None) == 'i2':
+					args.append(scale(var, cut, bench=bench))
+				else:
+					args.append(var[cut])
+			else:
+				args.append(var) 
+			
 			if type(var) == np.ndarray:
 				args.append(scale(var, cut, bench=bench))
 			else:

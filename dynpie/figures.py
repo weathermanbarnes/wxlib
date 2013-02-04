@@ -721,9 +721,10 @@ def _get_aggregate(q, year=None, plev=None, yidx=None, xidx=None):
 # #############################################################################
 # 5. Generalised data plotters
 # 
-def map_oro_dat(m, dat, **kwargs):
+def map_oro_dat(dat, **kwargs):
 	dat = concat1(dat)
 	plev = kwargs.pop('plev')
+	m = kwargs.pop('m')()
 	if plev:
 		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
 		if f: f.close()
@@ -771,12 +772,13 @@ def map_oro_dat(m, dat, **kwargs):
 	return
 
 
-def map_oro_deform(m, defabs, defang, **kwargs):
+def map_oro_deform(defabs, defang, **kwargs):
 	defabs = concat1(defabs*1e5)
 	defang = concat1(defang)
 	defdex = np.cos(defang[:,:]) *defabs
 	defdey = np.sin(defang[:,:]) *defabs
 	plev = kwargs.pop('plev')
+	m = kwargs.pop('m')()
 	if plev: # and not type(daZ) == np.ndarray:
 		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
 		if f: f.close()
@@ -823,8 +825,8 @@ def map_oro_deform(m, defabs, defang, **kwargs):
 	
 	if kwargs.pop('title'):
 		plt.title(title)
-	if kwargs.pop('save'):
-		plt.savefig(save, format='png')
+	if kwargs.get('save', False):
+		plt.savefig(kwargs.pop('save'), format='png')
 	if kwargs.pop('show'):
 		plt.show()
 
