@@ -833,7 +833,7 @@ def map_oro_deform(defabs, defang, **kwargs):
 	return
 
 
-def map_oro_barb(m, u, v, dat=None, **kwargs):
+def map_oro_barb(u, v, dat=None, **kwargs):
 	u   = concat1(u)
 	v   = concat1(v)
 	if not dat == None: dat = concat1(dat)
