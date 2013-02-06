@@ -17,6 +17,7 @@ pysig="${precc}/dynlib.pyf"
 LIBS='-llapack'
 
 # Empty precompiler directory
+mkdir -p $precc
 rm -rf ${precc}/*
 
 
