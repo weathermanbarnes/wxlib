@@ -2,6 +2,7 @@
 # -*- encoding: utf-8
 
 from dynlib.dynpie.settings import conf
+from dynlib.dynpie.proj import *
 
 # Adapt the default settings to your needs here, then use 
 # >>> from settings import conf
@@ -15,8 +16,8 @@ from dynlib.dynpie.settings import conf
 # >>> conf.contourf.Z['cmap'] = plt.cm.RdBu_r
 #
 # Note that you can always access the default settings by
-# >>> import dynlib
-# >>> dynlib.default_conf
+# >>> from dynlib import default_conf
+# >>> default_conf
 # >>> print default_conf.datapath
 # >>> print default_conf.contourf.Z
 

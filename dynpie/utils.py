@@ -62,7 +62,7 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 		args = []
 		for var in vars:
 			if len(var.shape) == 3:
-				if getattr(var, 'dtype', None) == 'i2':
+				if getattr(var, 'dtype', None) in ('i2','>i2','<i2'):
 					args.append(scale(var, cut, bench=bench))
 				else:
 					args.append(var[cut])

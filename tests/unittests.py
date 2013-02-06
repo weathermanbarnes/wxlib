@@ -33,14 +33,14 @@ class settings_tester(unittest.TestCase):
 		self.assertEqual(conf.pvlevs, ['pv2000', ])
 
 		self.assertTrue(isinstance(conf.contour, settings_contour))
-		self.assertEqual(conf.contour.default, {'m': wmap, 'plev': 800, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
-			'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 
+		self.assertEqual(conf.contour.default, {'m': wmap, 'plev': '800', 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
+			'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 'hook': None,
 			'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroalpha': 0.4,
 			'oroscale': scale_oro, 'ticks': None, 'ticklabels': [], 'colors': 'k', 
 			'alpha': 1.0, 'cmap': None, 'norm': None, 'vmin': None, 'vmax': None, 'levels': None, 
 			'origin': None, 'extent': None, 'extend': 'neither', 'linewidths': 2.0, 'linestyles': None })
-		self.assertEqual(conf.contourf.v, {'m': wmap, 'plev': 800, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
-			'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 
+		self.assertEqual(conf.contourf.v, {'m': wmap, 'plev': '800', 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
+			'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 'hook': None,
 			'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroalpha': 0.4,
 			'oroscale': scale_oro, 'ticks': None, 'ticklabels': [], 'colors': None, 
 			'alpha': 1.0, 'cmap': None, 'norm': None, 'vmin': None, 'vmax': None, 'levels': None, 
@@ -86,27 +86,60 @@ class settings_tester(unittest.TestCase):
 		self.assertEqual(conf.contour.Z['colors'], 'k')
 
 		return
+	
+
+	def test_mutex(self):
+		conf.contour.Z['cmap'] = 'jet'
+		self.assertEqual(conf.contour.Z['colors'], None)
+		self.assertEqual(conf.contour.Z['cmap'], 'jet')
+
+		conf.contour.Z.reset('cmap')
+		self.assertEqual(conf.contour.Z['colors'], 'k')
+		self.assertEqual(conf.contour.Z['cmap'], None)
+
+		return
+
+
+	def test_default_override(self):
+		conf.contourf.default['plev'] = '300'
+		self.assertEqual(conf.contourf.default['plev'], '300')
+		self.assertEqual(conf.contourf.defabs['plev'], '300')
+
+		conf.contourf.default['plev'] = '800'
+		self.assertEqual(conf.contourf.default['plev'], '800')
+		self.assertEqual(conf.contourf.defabs['plev'], '800')
+
+		return
+
+
+	def test_default_q_restore_by_reset(self):
+		conf.contourf.Z.reset()
+		self.assertTrue((conf.contourf.Z['scale'] == scale_Z_diff).all())
+		conf.contourf.reset('Z')
+		self.assertTrue((conf.contourf.Z['scale'] == scale_Z_diff).all())
+
+		return
 
 
 	def test_merge(self):
 		self.maxDiff = None
 		kwargs = {'colors': 'k', 'extend': 'max'}
-		self.assertEqual(conf.contour.merge('v', **kwargs), {'m': wmap, 'plev': 800, 'lon': None, 'lat': None, 'mark': None, 
-			'scale': 10, 'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 
+		self.assertEqual(conf.contour.merge('v', **kwargs), {'m': wmap, 'plev': '800', 'lon': None, 'lat': None, 'mark': None, 
+			'scale': 10, 'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 'hook': None,
 			'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroalpha': 0.4,
 			'oroscale': scale_oro, 'ticks': None, 'ticklabels': [],
 			'colors': 'k', 'alpha': 1.0, 'cmap': None, 'norm': None, 'vmin': None, 'vmax': None, 
 			'levels': None, 'origin': None, 'extent': None, 'extend': 'max', 'linewidths': 2.0, 
 			'linestyles': None })
-		self.assertEqual(conf.contour.v, {'m': wmap, 'plev': 800, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
-			'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 
+		self.assertEqual(conf.contour.v, {'m': wmap, 'plev': '800', 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
+			'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 'hook': None,
 			'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroalpha': 0.4,
 			'oroscale': scale_oro, 'ticks': None, 'ticklabels': [], 'colors': 'k', 
 			'alpha': 1.0, 'cmap': None, 'norm': None, 'vmin': None, 'vmax': None, 'levels': None, 
 			'origin': None, 'extent': None, 'extend': 'neither', 'linewidths': 2.0, 'linestyles': None })
 		kwargs = {}
-		self.assertEqual(conf.contour.merge('v', **kwargs), {'m': wmap, 'plev': 800, 'lon': None, 'lat': None, 'mark': None, 
-			'scale': 10, 'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 
+		self.assertEqual(conf.contour.merge('v', **kwargs), {'m': wmap, 'plev': '800', 'lon': None, 'lat': None, 'mark': None, 
+			'scale': 10, 'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 'hook': None,
 			'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroalpha': 0.4,
 			'oroscale': scale_oro, 'ticks': None, 'ticklabels': [],
 			'colors': 'k', 'alpha': 1.0, 'cmap': None, 'norm': None, 'vmin': None, 'vmax': None, 

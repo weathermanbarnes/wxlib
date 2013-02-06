@@ -3,11 +3,14 @@
 
 from copy import copy, deepcopy
 import os
+from collections import MutableMapping as mutmap
 
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
+
+from proj import wmap
+
 
 
 # #############################################################################
@@ -65,36 +68,9 @@ def _get_periodic_cm3():
 
 
 
-# #############################################################################
-# 2. Some often used map projections
-#
-
-# (a) World map
-def wmap():
-	return Basemap(projection='robin',lon_0=0,resolution='c')
-# (b) Northern polar centered map
-def npmap():
-	return Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
-# (c) Southern polar centered map
-def spmap():
-	return Basemap(projection='spstere',boundinglat=-15,lon_0=0,resolution='l')
-# (d) North-Atlantic map
-def NAmap():
-	return Basemap(projection='lcc', lat_0=55, lat_ts=55, lon_0=-30, resolution='l', 
-			width=9000000, height=6000000)
-# (e) North-Pacific map
-def NPmap():
-	return Basemap(projection='lcc', lat_0=50, lat_ts=50, lon_0=-180, resolution='l', 
-			width=9000000, height=6000000)
-# (f) Australia map
-def Ausmap():
-	return Basemap(projection='lcc', lat_0=-50, lat_ts=-50, lon_0=120, resolution='l', 
-			width=9000000, height=6000000)
-
-
 
 # #############################################################################
-# 3. Scales, ticks and labels
+# 2. Scales, ticks and labels
 # 
 scale_oro = range(10000,80001,10000)
 scale_oro_full = range(-19000,51000,2000)
@@ -111,6 +87,18 @@ scale_defang = (np.arange(-18,19)-0.5)*np.pi/36.0
 scale_defang_coarse = np.arange(-4,5)*np.pi/8.0 - np.pi/72.0
 ticks_defang = np.arange(-4,5)*3.1415926535/8.0 
 labls_defang = [u'-π/2', u'-3π/8', u'-π/4', u'-π/8', u'0', u'π/8', u'π/4', u'3π/8', u'π/2']
+
+
+
+# #############################################################################
+# 3. Default hooks for plotting
+#
+hooks = {}
+hooks['defabs'] = lambda defabs: defabs*1e5
+def _tmp(oro):
+	oro[oro <= 100] = -17000
+	return oro
+hooks['oro'] = _tmp
 
 
 
@@ -132,13 +120,13 @@ PVLEVS = ['pv2000', ]
 
 # DEFAULT contour settings
 if os.getenv('DYNLIB_PLOT_PRINT'):
-	DEFAULT_KWARGS = {'m': wmap, 'plev': 800, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
-		'overlays': [], 'disable_cb': True, 'show': False, 'save': '', 'title': '',
+	DEFAULT_KWARGS = {'m': wmap, 'plev': '800', 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
+		'overlays': [], 'disable_cb': True, 'show': False, 'save': '', 'title': '', 'hook': None,
 		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro,
 		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [] }
 else:
-	DEFAULT_KWARGS = {'m': wmap, 'plev': 800, 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
-		'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '',
+	DEFAULT_KWARGS = {'m': wmap, 'plev': '800', 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
+		'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 'hook': None,
 		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro,
 		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [] }
 DEFAULT_CONTOUR_KWARGS = {'colors': 'k', 'alpha': 1.0, 'cmap': None, 'norm': None, 
@@ -148,83 +136,204 @@ DEFAULT_CONTOURF_KWARGS = {'colors': None, 'alpha': 1.0, 'cmap': None, 'norm': N
 	'vmin': None, 'vmax': None, 'levels': None, 'origin': None, 'extent': None, 
 	'extend': 'neither', 'hatches': None }
 
+MUTEX_GROUPS = [set(['colors', 'cmap']), ]
+
 # DEFAULT settings per quantity Q
 DEFAULT_Q = {}
-DEFAULT_Q['defabs'] = {'cmap': _get_defabs_cm2(), 'extend': 'max', 'scale': scale_defabs}
+DEFAULT_Q['defabs'] = {'cmap': _get_defabs_cm2(), 'extend': 'max', 'scale': scale_defabs, 'hook': hooks['defabs']}
 DEFAULT_Q['defang'] = {'cmap': _get_periodic_cm3(), 'scale': scale_defang, 'ticks': ticks_defang, 
 	'ticklabels': labls_defang}
 DEFAULT_Q['u'] = {'scale': scale_u_diff}
 DEFAULT_Q['Z'] = {'scale': scale_Z_diff}
-DEFAULT_Q['oro'] = {'scale': scale_oro_full, 'cmap': plt.cm.gist_earth}
+DEFAULT_Q['oro'] = {'scale': scale_oro_full, 'cmap': plt.cm.gist_earth, 'hook': hooks['oro']}
 
 
 
 # #############################################################################
-# 5. Default settings
+# 5. Making the settings easily available
 #
-hooks = {}
-hooks['defabs'] = lambda defabs: defabs*1e5
-def _tmp(oro):
-	oro[oro <= 100] = -17000
-	return oro
-hooks['oro'] = _tmp
+class settings_dict(mutmap):
+	_mutexes = {}
 
+	def __init__(self, init={}, contourobj=None):
+		for mutex_group in MUTEX_GROUPS:
+			for key in mutex_group:
+				self._mutexes[key] = copy(mutex_group)
+				self._mutexes[key].remove(key)
 
+		if contourobj:
+			self.default = contourobj.default
+		else: 
+			self.default = None
+		self.default_q = copy(init)
+		self._ = init
 
-# #############################################################################
-# 6. Making the settings easily available
-#
-class settings_contour(object):
-	default = DEFAULT_CONTOUR_KWARGS
-	default.update(DEFAULT_KWARGS)
-	_overrides = {}
+		mutmap.__init__(self)
 
-	def __init__(self):
-		for q in Q:
-			self._overrides[q] = copy(self.default)
-			for setting in DEFAULT_Q.get(q, []):
-				self._overrides[q][setting] = DEFAULT_Q[q][setting]
+		return
+
+	
+	def __getitem__(self, key):
+		if key not in self._ and self.default:
+			return self.default[key]
+		else: 	
+			return self._[key]
+	
+
+	def __setitem__(self, key, value):
+		if self.default and key not in self.default:
+			raise KeyError, 'Cannot add new keys to the configuration'
+		#elif key not in self:
+		#	raise KeyError, 'Cannot add new keys to the configuration'
+
+		if value != None:
+			for mutex in self._mutexes.get(key, []):
+				self._[mutex] = None
+		self._[key] = value
 
 		return
 
 
-	def __getattribute__(self, key):
-		if key[0] == '_':
-			return object.__getattribute__(self, key)
-		elif key not in self._overrides:
-			return object.__getattribute__(self, key)
-		
-		return self._overrides[key]
-
-
-	def __setattr__(self, key, value):
-		if key in self._overrides or key == 'default':
-			raise AttributeError, 'The attributes cannot be overwritten'
-		object.__setattr__(self, key, value)
+	def __delitem__(self, key):
+		self.reset(key)
 
 		return
 	
 
-	def merge(self, key, **kwargs):
-		rkwargs = copy(self.__getattribute__(key))
+	def __contains__(self, key):
+		return key in self.keys()
+
+
+	def __iter__(self):
+		if self.default:
+			for key in self.default:
+				yield key
+		else:
+			for key in self._:
+				yield key
+	
+	iterkeys = __iter__
+
+	#def __nonzero__(self):
+	#	return True
+
+
+	def __eq__(self, other):
+        	return sorted(self.iteritems()) == sorted(other.iteritems())
+
+
+
+	def __len__(self):
+		if self.default:
+			return len(self.default)
+		else:
+			return len(self._)
+	
+
+	def __repr__(self):
+		return dict(self.iteritems()).__repr__()
+
+	
+	def __reset_key(self, key):
+		if key in self.default_q:
+			self._[key] = self.default_q[key]
+		else:
+			del self._[key]
+
+		return
+
+
+	def iteritems(self):
+		for key in self.iterkeys():
+			yield key, self[key]
+	
+
+	#def items(self):
+	#
+	#	return
+
+
+	def values(self):
+		raise NotImplementedError, 'If you need it, implement it!'
+	itervalues = values
+	viewitems = values
+	viewvalues = values
+	
+
+	#def get(self, key):
+	#	if key in self._:
+	#		return self._[key]
+	#	else:
+	#		return default
+
+
+	def reset(self, key=None):
+		if not self.default:
+			raise TypeError, 'Reset not possible for default object!'
+
+		if key:
+			for mutex in self._mutexes.get(key, []):
+				if mutex in self._:
+					self.__reset_key(mutex)
+			self.__reset_key(key)
+		else:
+			self._ = copy(self.default_q)
+
+		return
+
+
+
+class settings_contour(object):
+	default = settings_dict(DEFAULT_CONTOUR_KWARGS)
+	default.update(DEFAULT_KWARGS)
+	default_q = DEFAULT_Q
+
+	_overrides = {}
+
+	def __init__(self):
+		for q in Q:
+			if q in self.default_q:
+				self._overrides[q] = settings_dict(self.default_q[q], self)
+			else:
+				self._overrides[q] = settings_dict({}, self)
+
+		return
+
+
+	def __getattribute__(self, q):
+		if q[0] == '_':
+			return object.__getattribute__(self, q)
+		elif q not in self._overrides:
+			return object.__getattribute__(self, q)
+		
+		return self._overrides[q]
+
+
+	def __setattr__(self, q, value):
+		if q in self._overrides or q == 'default':
+			raise AttributeError, 'The attributes cannot be overwritten'
+		object.__setattr__(self, q, value)
+
+		return
+	
+
+	def merge(self, q, **kwargs):
+		rkwargs = dict(self.__getattribute__(q))
 		for kwarg, argv in kwargs.items():
 			rkwargs[kwarg] = argv
 
 		return rkwargs
 
 
-	def reset(self, key, setting=None):
-		if not setting:
-			self._overrides[key] = copy(self.default)
-		else:
-			self._overrides[key][setting] = self.default[setting]
+	def reset(self, q, key=None):
+		self.__getattribute__(q).reset(key)
 
 		return
 
 
 
 class settings_contourf(settings_contour):
-	default = DEFAULT_CONTOURF_KWARGS
+	default = settings_dict(DEFAULT_CONTOURF_KWARGS)
 	default.update(DEFAULT_KWARGS)
 	_overrides = {}
 	
@@ -283,10 +392,10 @@ conf = settings()
 
 
 # #############################################################################
-# 7. Clean-Up: Making the default settings only available through settings objects
+# 6. Clean-Up: Making the default settings only available through settings objects
 # 
 del Q, DATAPATH, OPATH, FILE_STD, FILE_STAT, FILE_MSTAT, STD_SLICE, YEARS, PLEVS, PTLEVS, PVLEVS
-del DEFAULT_KWARGS, DEFAULT_CONTOUR_KWARGS, DEFAULT_CONTOURF_KWARGS, DEFAULT_Q
+del DEFAULT_KWARGS, DEFAULT_CONTOUR_KWARGS, DEFAULT_CONTOURF_KWARGS, DEFAULT_Q, MUTEX_GROUPS
 
 
 # that's it
