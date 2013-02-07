@@ -105,8 +105,8 @@ hooks['oro'] = _tmp
 # #############################################################################
 # 4. Default settings
 #
-Q = {'defabs': 'defabs', 'defang': 'defang', 
-	'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'Z': 'z', 'oro': 'oro'}
+Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 
+		'T': 't', 'Z': 'z', 'oro': 'oro'}
 DATAPATH = ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY']
 OPATH    = '.'
 FILE_STD   = 'ei.ans.%d.%s.%s'
@@ -145,6 +145,7 @@ DEFAULT_Q['defang'] = {'cmap': _get_periodic_cm3(), 'scale': scale_defang, 'tick
 	'ticklabels': labls_defang}
 DEFAULT_Q['u'] = {'scale': scale_u_diff}
 DEFAULT_Q['Z'] = {'scale': scale_Z_diff}
+DEFAULT_Q['T'] = {'cmap': plt.cm.RdBu_r}
 DEFAULT_Q['oro'] = {'scale': scale_oro_full, 'cmap': plt.cm.gist_earth, 'hook': hooks['oro']}
 
 

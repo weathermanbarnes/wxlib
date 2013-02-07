@@ -12,7 +12,7 @@
 from dynlib import *
 from settings import *
 
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta as td
 
 
 plotname = 'dagmar'					# Prefix for the all filenames
@@ -31,33 +31,33 @@ for plev in plevs:
 	
 	# On potential temperature levels plot PV contours on top
 	if plev[:2] == 'pt':
-		con = f._get_instantaneous('pv', dates, plevs=plev, tavg=False)
-		Z   = f._get_instantaneous('Z', dates, plevs=plev, tavg=False)
+		con = fig._get_instantaneous('pv', dates, plevs=plev, tavg=False)
+		Z   = fig._get_instantaneous('Z', dates, plevs=plev, tavg=False)
 		con_scale = np.array([-2,-1, 1,2])*1e-6
 
 	# On PV levels plot geopotential on top
 	elif plev[:2] == 'pv':
-		con = f._get_instantaneous('Z', dates, plevs=plev, tavg=False)
+		con = fig._get_instantaneous('Z', dates, plevs=plev, tavg=False)
 		Z   = con
 		con_scale = np.arange(1000,100001,1000)
 	
 	# On presure levels plot geopotential on top
 	else:
-		con = f._get_instantaneous('Z', dates, plevs=plev, tavg=False)
+		con = fig._get_instantaneous('Z', dates, plevs=plev, tavg=False)
 		Z   = con
 		con_scale = np.arange(1000,100001,1000)
 	
 	# Do the actual plots
-	for date, tidx in zip(dates, range(dabs.shape[0])):
+	for date, tidx in zip(dates, range(T.shape[0])):
 		# Figure setup
-		fig = plt.figure(figsize=(12.0,8.8), dpi=96)
-		fig.subplotpars.update(left=0.01, right=0.99, top=0.99, bottom=0.01)
+		fio = plt.figure(figsize=(12.0,8.8), dpi=96)
+		fio.subplotpars.update(left=0.01, right=0.99, top=0.99, bottom=0.01)
 
 		# Contours to put on top of the shading and barbs
-		overlays = [f.map_overlay_dat(con[tidx,:,:], **conf.contour.merge('default', scale=con_scale) ), ]
-		plotconf = conf.contourf.merge('T', overlays=overlays, show=False,
-				save='%s/deform_typ_%s_%s_%s.png' % (conf.opath, plotname, plev, date.strftime('%Y%m%d%H'))
-		f.map_oro_barb(u[tidx,:,:], v[tidx,:,:], dat=T[tidx,:,:], **plotconf)
+		overlays = [fig.map_overlay_dat(con[tidx,:,:], **conf.contour.merge('default', scale=con_scale) ), ]
+		plotconf = conf.contourf.merge('T', overlays=overlays, show=False, plev=plev, m=proj,
+				save='%s/%s_Tbarb_%s_%s.png' % (conf.opath, plotname, plev, date.strftime('%Y%m%d%H')) )
+		fig.map_oro_barb(u[tidx,:,:], v[tidx,:,:], dat=T[tidx,:,:], **plotconf)
 
 	# Clean up
 	plt.close('all')

@@ -17,6 +17,7 @@ import stats
 
 from settings import conf as c
 
+print id(c)
 
 # globally useful
 f, oro = metopen('static', 'oro', cut=c.std_slice[1:])
@@ -839,25 +840,29 @@ def map_oro_barb(u, v, dat=None, **kwargs):
 	if not dat == None: dat = concat1(dat)
 	
 	plev = kwargs.pop('plev')
+	m = kwargs.pop('m')()
 	if plev:
 		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
 		if f: f.close()
 		daZ = concat1(daZ)
-		u[daZ < oro[:,:]] = np.nan
-		v[daZ < oro[:,:]] = np.nan
-		if not dat == None: dat[daZ < oro[:,:]] = np.nan
+		mask = daZ < oro[:,:]
+		u[mask] = np.nan
+		v[mask] = np.nan
+		if not dat == None: dat[mask] = np.nan
+	else:
+		mask = slice(None)
 	
 	m.drawcoastlines(color=kwargs.pop('coastcolor'))
 	x,y = m(lon,lat)
-	ut,vt,xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 60, 60, returnxy=True)
+	ut,vt,xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
 	m.contour(x,y, oro, kwargs.pop('oroscale'), colors=kwargs.pop('orocolor'), alpha=kwargs.pop('oroalpha'), zorder=2)
 
 	if plev:
-		m.contourf(x, y, daZ < oro[:,:], colors=kwargs.pop('maskcolor'))
+		m.contourf(x, y, mask, colors=kwargs.pop('maskcolor'))
 	
 	scale = kwargs.pop('scale')
 	if not dat == None: m.contourf(x, y, dat, scale, zorder=1, **kwargs)
-	if not kwargs.pop('quiver'):
+	if not kwargs.pop('quiver', False):
 		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5, zorder=3)
 	else:
 		m.quiver(xt, yt, ut, vt, zorder=3)
@@ -871,6 +876,9 @@ def map_oro_barb(u, v, dat=None, **kwargs):
 		if kwargs.get('ticklabels'): 
 			cb.ax.set_yticklabels(kwargs.pop('ticklabels'))
 	
+	for overlay in kwargs.pop('overlays'):
+		overlay(m,x,y, zorder=3, mask=mask)
+	
 	if kwargs.get('mark'):
 		yidx, xidx = kwargs.pop('mark')
 		m.scatter(x[yidx,xidx], y[yidx,xidx], 484, marker='o', facecolors=(0,0,0,0), 
@@ -878,8 +886,8 @@ def map_oro_barb(u, v, dat=None, **kwargs):
 	
 	if kwargs.pop('title'):
 		plt.title(title)
-	if kwargs.pop('save'):
-		plt.savefig(save, format='png')
+	if kwargs.get('save'):
+		plt.savefig(kwargs.pop('save'), format='png')
 	if kwargs.pop('show'):
 		plt.show()
 
