@@ -7,8 +7,10 @@ import scipy.io.matlab as mat
 from settings import conf as c
 import utils 
 
-def metopen(filename, q, cut=c.std_slice):
+def metopen(filename, q, cut=c.std_slice, verbose=False):
 	for path in c.datapath:
+		if verbose:
+			print 'Trying: '+path+'/'+filename+'.*'
 		if os.path.exists(path+'/'+filename+'.npy'):
 			dat = np.load(path+'/'+filename+'.npy', mmap_mode='r')
 			dat = dat[cut].astype('f8')

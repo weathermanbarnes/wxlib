@@ -17,7 +17,6 @@ import stats
 
 from settings import conf as c
 
-print id(c)
 
 # globally useful
 f, oro = metopen('static', 'oro', cut=c.std_slice[1:])
@@ -60,9 +59,6 @@ def map_mean_Q(q, agg='mean', year=None, **kwargs):
 	else:
 		f, mean = metopen(c.file_mstat % (plev, q), agg, cut=c.std_slice[1:])
 	
-	if q in settings.hooks:
-		mean = settings.hooks[q](mean)
-
 	map_oro_dat(kwargs.pop('m'), mean, **kwargs)
 
 	return
@@ -87,9 +83,6 @@ def map_mean_barb(q='oro', year=None, quiver=False, **kwargs):
 		else:
 			f, dat = metopen(c.file_stat % (year, plev, q), 'mean', cut=c.std_slice[1:])
 
-	if q in settings.hooks:
-		dat = settings.hooks[q](dat)
-
 	kwargs['quiver'] = quiver
 	map_oro_barb(kwargs.pop('m'), meanu, meanv, dat, **kwargs)
 
@@ -110,11 +103,6 @@ def map_mean_deform(year=None, **kwargs):
 		fabs, meanabs = metopen(c.file_stat % (year, plev, 'defabs'), 'mean', cut=c.std_slice[1:])
 		fang, meanang = metopen(c.file_stat % (year, plev, 'defang'), 'mfv', cut=c.std_slice[1:])
 	
-	if 'defabs' in settings.hooks:
-		meanabs = settings.hooks['defabs'](meanabs)
-	if 'defang' in settings.hooks:
-		meanang = settings.hooks['defang'](meanang)
-
 	map_oro_deform(kwargs.pop('m'), meanabs, meanang, **kwargs)
 
 	return
@@ -138,9 +126,6 @@ def map_trend_Q(q, sig=0.95, **kwargs):
 	trend[mask] = np.nan
 	
 	trend *= 1461.0
-	if q in settings.hooks:
-		trend = settings.hooks[q](trend)
-	
 	kwargs = c.contourf.merge(q, **kwargs)
 	kwargs['overlay'] = [overlay, ]
 	map_oro_dat(kwargs.pop('m'), trend, **kwargs)
@@ -235,9 +220,6 @@ def xsect_mean_Q(q='defabs', year=None, xidx=278, agg=False, cmap=None):
 def map_date_Q(q, date, **kwargs):
 	dat = _get_instantaneous(q, date, kwargs.get('plev'))
 	
-	if q in settings.hooks:
-		dat = settings.hooks[q](dat)
-
 	kwargs = c.contourf.merge(q, **kwargs)
 	map_oro_dat(kwargs.pop('m'), dat, **kwargs)
 
@@ -249,11 +231,6 @@ def map_date_deform(date, **kwargs):
 	defabs = _get_instantaneous('defabs', date, kwargs.get('plev'))
 	defang = _get_instantaneous('defang', date, kwargs.get('plev'))
 
-	if 'defabs' in settings.hooks:
-		defabs = settings.hooks['defabs'](defabs)
-	if 'defang' in settings.hooks:
-		defang = settings.hooks['defang'](defang)
-	
 	kwargs = c.contourf.merge(q, **kwargs)
 	map_oro_deform(kwargs.pop('m'), defabs, defang, **kwargs)
 
@@ -270,9 +247,6 @@ def map_date_barb(date, q='oro', quiver=False, **kwargs):
 	else:
 		dat = _get_instantaneous(q, date, kwargs.get('plev'))
 	
-	if q in settings.hooks:
-		dat = settings.hooks[q](dat)
-
 	kwargs = c.contourf.merge(q, **kwargs)
 	kwargs['quiver'] = quiver
 	map_oro_barb(kwargs.pop('m'), dau, dav, dat, **kwargs)
@@ -723,154 +697,126 @@ def _get_aggregate(q, year=None, plev=None, yidx=None, xidx=None):
 # 5. Generalised data plotters
 # 
 def map_oro_dat(dat, **kwargs):
-	dat = concat1(dat)
-	plev = kwargs.pop('plev')
-	m = kwargs.pop('m')()
-	if plev:
-		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
-		if f: f.close()
-		daZ = concat1(daZ)
-		mask = daZ[:,:] < oro[:,:]
-		dat[mask] = np.nan
-	else:
-		mask = slice(None)
-	
-	m.drawcoastlines(color=kwargs.pop('coastcolor'))
-	x,y = m(lon,lat)
-	m.contour(x,y, oro, kwargs.pop('oroscale'), colors=kwargs.pop('orocolor'), alpha=kwargs.pop('oroalpha'), zorder=2)
-	if plev:
-		m.contourf(x, y, mask, colors=kwargs.pop('maskcolor'))
-	
-	scale = kwargs.pop('scale')
-	cs = m.contourf(x, y, dat, scale, zorder=1, **kwargs)
-	if not type(scale) == int:
-		cs.set_clim(scale[0], scale[-1])
+	# 1. Prepare
+	mask = __map_create_mask(kwargs)
 
-	gridcolor = kwargs.pop('gridcolor')
-	m.drawparallels(range(-80,81,5), color=gridcolor)
-	m.drawmeridians(range(0,360,30), color=gridcolor)
+	dat = __map_prepare_dat(dat, mask, kwargs)
+	
+	m, x, y = __map_setup(mask, kwargs)
+	
+	# 2. Plot the actual data
+	__map_contourf_dat(m, x, y, dat, kwargs)
 
-	if not kwargs.pop('disable_cb'):
-		cb = plt.colorbar(ticks=kwargs.pop('ticks'), shrink=0.85, pad=0.015, fraction=0.10)
-		if kwargs.get('ticklabels'): 
-			cb.ax.set_yticklabels(kwargs.pop('ticklabels'))
-	
-	for overlay in kwargs.pop('overlays'):
-		overlay(m,x,y, zorder=2, mask=mask)
-	
-	if kwargs.get('mark'):
-		yidx, xidx = kwargs.pop('mark')
-		m.scatter(x[yidx,xidx], y[yidx,xidx], 484, marker='o', facecolors=(0,0,0,0), 
-				edgecolors='k', linewidths=3, zorder=3)
-	
-	if kwargs.get('title'):
-		plt.title(kwargs.pop('title'))
-	if kwargs.get('save'):
-		plt.savefig(kwargs.pop('save'), format='png')
-	if kwargs.pop('show'):
-		plt.show()
+	# 3. Finish off
+	__map_decorate(m, x, y, mask, kwargs)
+	__map_output(kwargs)
 
 	return
 
 
 def map_oro_deform(defabs, defang, **kwargs):
-	defabs = concat1(defabs*1e5)
-	defang = concat1(defang)
+	# 1. Prepare
+	mask = __map_create_mask(kwargs)
+
+	defabs = __map_prepare_dat(defabs, mask, kwargs)
+	defang = __map_prepare_dat(defang, mask, c.contour.defang)
 	defdex = np.cos(defang[:,:]) *defabs
 	defdey = np.sin(defang[:,:]) *defabs
-	plev = kwargs.pop('plev')
-	m = kwargs.pop('m')()
-	if plev: # and not type(daZ) == np.ndarray:
-		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
-		if f: f.close()
-	if type(daZ) == np.ndarray:
-		daZ = concat1(daZ)
-		mask = daZ[:,:] < oro[:,:]
-		defabs[mask] = np.nan
-		defang[mask] = np.nan
-		defdex[mask] = np.nan
-		defdey[mask] = np.nan
-	else:
-		mask = slice(None)
-	
-	m.drawcoastlines(color=kwargs.pop('coastcolor'))
-	x,y = m(lon,lat)
+
+	m, x, y = __map_setup(mask, kwargs)
+
+	#2. Plot the actual deformation
+	__map_contourf_dat(m, x, y, defabs, kwargs)
+
 	ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0], 24, 16, returnxy=True)
-	m.contour(x,y, oro, kwargs.pop('oroscale'), colors=kwargs.pop('orocolor'), alpha=kwargs.pop('oroalpha'), zorder=2)
-	if type(daZ) == np.ndarray:
-		m.contourf(x, y, mask, colors=kwargs.pop('maskcolor'))
-	
-	scale = kwargs.pop('scale')
-	cs = m.contourf(x, y, defabs, scale, zorder=1, **kwargs)
-	if not type(scale) == int:
-		cs.set_clim(scale[0], scale[-1])
 	m.quiver(xt, yt, ut, vt, zorder=4, scale=360, alpha=0.7)
 	m.quiver(xt, yt, -ut, -vt, zorder=4, scale=360, alpha=0.7)
 	
-	gridcolor = kwargs.pop('gridcolor')
-	m.drawparallels(range(-80,81,10), color=gridcolor)
-	m.drawmeridians(range(0,360,30), color=gridcolor)
-
-	if not kwargs.pop('disable_cb'):
-		plt.colorbar(ticks=kwargs.pop('ticks'), orientation='horizontal', shrink=0.8, fraction=0.08, pad=0.02)
-		if kwargs.get('ticklabels'): 
-			cb.ax.set_yticklabels(kwargs.pop('ticklabels'))
-	
-	for overlay in kwargs.pop('overlays'):
-		overlay(m,x,y, zorder=3, mask=mask)
-	
-	if kwargs.get('mark'):
-		yidx, xidx = kwargs.pop('mark')
-		m.scatter(x[yidx,xidx], y[yidx,xidx], 484, marker='o', facecolors=(0,0,0,0), 
-				edgecolors='k', linewidths=3, zorder=3)
-	
-	if kwargs.pop('title'):
-		plt.title(title)
-	if kwargs.get('save', False):
-		plt.savefig(kwargs.pop('save'), format='png')
-	if kwargs.pop('show'):
-		plt.show()
+	# 3. Finish off
+	__map_decorate(m, x, y, mask, kwargs)
+	__map_output(kwargs)	
 
 	return
 
 
 def map_oro_barb(u, v, dat=None, **kwargs):
-	u   = concat1(u)
-	v   = concat1(v)
-	if not dat == None: dat = concat1(dat)
-	
-	plev = kwargs.pop('plev')
-	m = kwargs.pop('m')()
-	if plev:
-		f,daZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
-		if f: f.close()
-		daZ = concat1(daZ)
-		mask = daZ < oro[:,:]
-		u[mask] = np.nan
-		v[mask] = np.nan
-		if not dat == None: dat[mask] = np.nan
-	else:
-		mask = slice(None)
-	
-	m.drawcoastlines(color=kwargs.pop('coastcolor'))
-	x,y = m(lon,lat)
-	ut,vt,xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
-	m.contour(x,y, oro, kwargs.pop('oroscale'), colors=kwargs.pop('orocolor'), alpha=kwargs.pop('oroalpha'), zorder=2)
+	# 1. Prepare
+	mask = __map_create_mask(kwargs)
 
-	if plev:
-		m.contourf(x, y, mask, colors=kwargs.pop('maskcolor'))
+	u = __map_prepare_dat(u, mask, c.contour.u)
+	v = __map_prepare_dat(v, mask, c.contour.v)
+	if not dat == None: 
+		dat = __map_prepare_dat(dat, mask, kwargs)
 	
-	scale = kwargs.pop('scale')
-	if not dat == None: m.contourf(x, y, dat, scale, zorder=1, **kwargs)
+	m, x, y = __map_setup(mask, kwargs)
+	
+	# 2. Plot the actual data
+	if not dat == None: __map_contourf_dat(m, x, y, dat, kwargs)
+
+	ut,vt,xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
 	if not kwargs.pop('quiver', False):
 		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5, zorder=3)
 	else:
 		m.quiver(xt, yt, ut, vt, zorder=3)
 	
+	# 3. Finish off
+	__map_decorate(m, x, y, mask, kwargs)
+	__map_output(kwargs)
+
+	return
+
+
+# Helper functions
+def __map_create_mask(kwargs):
+	plev = kwargs.pop('plev')
+	datZ = kwargs.pop('Zdata', None)
+
+	if plev and not type(datZ) == np.ndarray:
+		f,datZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
+		if f: f.close()
+	if type(datZ) == np.ndarray:
+		datZ = concat1(datZ)
+		mask = datZ[:,:] < oro[:,:]
+	else:
+		mask = slice(None)
+	
+	return mask
+
+def __map_prepare_dat(dat, mask, kwargs):
+	if kwargs.get('hook'):
+		dat = kwargs.pop('hook')(dat)
+	
+	dat = concat1(dat)
+
+	return dat
+
+def __map_setup(mask, kwargs):
+	m = kwargs.pop('m')()
+	x, y = m(lon,lat)
+	
+	m.drawcoastlines(color=kwargs.pop('coastcolor'))
+
 	gridcolor = kwargs.pop('gridcolor')
 	m.drawparallels(range(-80,81,5), color=gridcolor)
 	m.drawmeridians(range(0,360,30), color=gridcolor)
 
+	m.contour(x, y, oro, kwargs.pop('oroscale'), colors=kwargs.pop('orocolor'), 
+			alpha=kwargs.pop('oroalpha'), zorder=2)
+	if not type(mask) == np.ndarray:
+		m.contourf(x, y, mask, colors=kwargs.pop('maskcolor'))
+	
+	return m, x, y
+
+def __map_contourf_dat(m, x, y, dat, kwargs):
+	hatch = kwargs.pop('hatches')
+	scale = kwargs.pop('scale')
+	cs = m.contourf(x, y, dat, scale, zorder=1, **kwargs)
+	if not type(scale) == int:
+		cs.set_clim(scale[0], scale[-1])
+	
+	return
+
+def __map_decorate(m, x, y, mask, kwargs):
 	if not kwargs.pop('disable_cb'):
 		cb = plt.colorbar(ticks=kwargs.pop('ticks'), shrink=0.85, pad=0.015, fraction=0.10)
 		if kwargs.get('ticklabels'): 
@@ -886,14 +832,19 @@ def map_oro_barb(u, v, dat=None, **kwargs):
 	
 	if kwargs.pop('title'):
 		plt.title(title)
+	
+	return
+
+def __map_output(kwargs):
 	if kwargs.get('save'):
 		plt.savefig(kwargs.pop('save'), format='png')
 	if kwargs.pop('show'):
 		plt.show()
-
+	
 	return
 
 
+# Overlays
 def map_overlay_dat(dat, **kwargs):  
 	dat = concat1(dat)
 

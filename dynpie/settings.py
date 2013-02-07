@@ -80,6 +80,8 @@ scale_Z_diff = np.arange(-5250,5251,500)
 scale_u     = np.arange(20,71,10)
 scale_u_diff = np.arange(-30,31,5)
 
+scale_pv = np.array([-2,-1, 1, 2])
+
 scale_defabs = np.arange(5.0,30.1,5.0)
 scale_defabs_mean = np.arange(2.0,12.1,2.0)
 
@@ -95,6 +97,7 @@ labls_defang = [u'-π/2', u'-3π/8', u'-π/4', u'-π/8', u'0', u'π/8', u'π/4',
 #
 hooks = {}
 hooks['defabs'] = lambda defabs: defabs*1e5
+hooks['pv']     = lambda pv: pv*1e6
 def _tmp(oro):
 	oro[oro <= 100] = -17000
 	return oro
@@ -143,9 +146,10 @@ DEFAULT_Q = {}
 DEFAULT_Q['defabs'] = {'cmap': _get_defabs_cm2(), 'extend': 'max', 'scale': scale_defabs, 'hook': hooks['defabs']}
 DEFAULT_Q['defang'] = {'cmap': _get_periodic_cm3(), 'scale': scale_defang, 'ticks': ticks_defang, 
 	'ticklabels': labls_defang}
-DEFAULT_Q['u'] = {'scale': scale_u_diff}
-DEFAULT_Q['Z'] = {'scale': scale_Z_diff}
-DEFAULT_Q['T'] = {'cmap': plt.cm.RdBu_r}
+DEFAULT_Q['u']   = {'scale': scale_u_diff}
+DEFAULT_Q['Z']   = {'scale': scale_Z_diff}
+DEFAULT_Q['T']   = {'cmap': plt.cm.RdBu_r}
+DEFAULT_Q['pv']  = {'scale': scale_pv, 'hook': hooks['pv']}
 DEFAULT_Q['oro'] = {'scale': scale_oro_full, 'cmap': plt.cm.gist_earth, 'hook': hooks['oro']}
 
 
