@@ -69,11 +69,6 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 			else:
 				args.append(var) 
 			
-			if type(var) == np.ndarray:
-				args.append(scale(var, cut, bench=bench))
-			else:
-				args.append(var[cut])
-		
 		args.extend([grid.dx[cut[1:]], grid.dy[cut[1:]]])
 		if bench:
 			begin = datetime.datetime.now()
