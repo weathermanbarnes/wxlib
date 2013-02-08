@@ -193,7 +193,7 @@ contains
     !f2py depend(ny) lat
     ! -----------------------------------------------------------------
     !
-    forall(i = 1_ni:nx, k = 1_ni:nz)
+    forall(k = 1_ni:nz, i = 1_ni:nx)
        f(k,:,i) = 2.*omega*sin(lat*pi/180._nr)
     end forall
     call grad(a_pressx,a_pressy,nx,ny,nz,mont,dx,dy)
@@ -227,7 +227,7 @@ contains
     call dot_uv(accelx,accely,nx,ny,nz,u,v,mont,lat,dx,dy)
     call grad(dxaccelx,dyaccelx,nx,ny,nz,accelx,dx,dy)
     call grad(dxaccely,dyaccely,nx,ny,nz,accely,dx,dy)
-    forall(i = 1_ni:nx, j = 1_ni:ny, k = 1_ni:nz)
+    forall(k = 1_ni:nz, j = 1_ni:ny, i = 1_ni:nx)
        gamma(k,j,i)%t(1,1) = dxaccelx(k,j,i)
        gamma(k,j,i)%t(1,2) = dyaccelx(k,j,i)
        gamma(k,j,i)%t(2,1) = dxaccely(k,j,i)
@@ -695,7 +695,7 @@ contains
     ! -----------------------------------------------------------------
     !
     call grad(montx,monty,nx,ny,nz,mont,dx,dy)
-    forall(i = 1_ni:nx, k = 1_ni:nz)
+    forall(k = 1_ni:nz, i = 1_ni:nx)
        f(k,:,i) = 2*omega*sin(lat*pi/180._nr)
     end forall
     where (f==0._nr) f=9.E99_nr !avoid singularity calculating v_g at equator
