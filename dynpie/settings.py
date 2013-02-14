@@ -3,6 +3,7 @@
 
 from copy import copy, deepcopy
 import os
+import math
 from collections import MutableMapping as mutmap
 
 import numpy as np
@@ -110,6 +111,10 @@ hooks['oro'] = _tmp
 #
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 'qstir': 'qfil',
 		'T': 't', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 'pvstir': 'pvstir', 'pvfil': 'pvfil'}
+_rose = [17,]
+_rose.extend(range(-18,18))
+BINS_Q = {'defang': np.array(_rose)*math.pi/36.0+math.pi/72.0, }
+
 DATAPATH = ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY']
 OPATH    = '.'
 FILE_STD   = 'ei.ans.%d.%s.%s'
@@ -347,6 +352,7 @@ class settings_contourf(settings_contour):
 class settings(object):
 	__default = {
 		'q': Q,
+		'bins': BINS_Q,
 		'datapath': DATAPATH,
 		'opath': OPATH,
 		'file_std': FILE_STD,
@@ -399,7 +405,7 @@ conf = settings()
 # #############################################################################
 # 6. Clean-Up: Making the default settings only available through settings objects
 # 
-del Q, DATAPATH, OPATH, FILE_STD, FILE_STAT, FILE_MSTAT, STD_SLICE, YEARS, PLEVS, PTLEVS, PVLEVS
+del Q, BINS_Q, DATAPATH, OPATH, FILE_STD, FILE_STAT, FILE_MSTAT, STD_SLICE, YEARS, PLEVS, PTLEVS, PVLEVS
 del DEFAULT_KWARGS, DEFAULT_CONTOUR_KWARGS, DEFAULT_CONTOURF_KWARGS, DEFAULT_Q, MUTEX_GROUPS
 
 
