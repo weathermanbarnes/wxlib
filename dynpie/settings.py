@@ -108,8 +108,8 @@ hooks['oro'] = _tmp
 # #############################################################################
 # 4. Default settings
 #
-Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 
-		'T': 't', 'Z': 'z', 'oro': 'oro'}
+Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 'qstir': 'qfil',
+		'T': 't', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 'pvstir': 'pvstir', 'pvfil': 'pvfil'}
 DATAPATH = ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY']
 OPATH    = '.'
 FILE_STD   = 'ei.ans.%d.%s.%s'
