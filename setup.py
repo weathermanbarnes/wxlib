@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- encoding: utf-8
 
 import os
 import os.path
@@ -49,6 +50,7 @@ setup(cmdclass={'build_py': build_py},
 	py_modules=['test', ],
 	package_dir={'dynpie': '.'},
 	package_data={'dynpie': ['default/*.py', ] },
+	scripts=['scripts/dynlib_init.py', ]
 )
 
 # the end
