@@ -110,7 +110,7 @@ hooks['oro'] = _tmp
 #
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 
 		'T': 't', 'Z': 'z', 'oro': 'oro'}
-DATAPATH = ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY']
+DATAPATH = ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY', '/Data/gfi/users/csp001/share', ]
 OPATH    = '.'
 FILE_STD   = 'ei.ans.%d.%s.%s'
 FILE_STAT  = 'ei.ans.%d.%s.%s.stat'
