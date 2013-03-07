@@ -1,0 +1,2 @@
+include compile
+include src/*.f95

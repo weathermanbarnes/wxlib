@@ -9,6 +9,10 @@
 *.x
 *.mod
 precc
+# Python packaging and building
+build
+dist
+MANIFEST
 # Swap, temp and backup files
 *.swp
 *.swo

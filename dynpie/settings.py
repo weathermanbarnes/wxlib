@@ -115,7 +115,9 @@ _rose = [17,]
 _rose.extend(range(-18,18))
 BINS_Q = {'defang': np.array(_rose)*math.pi/36.0+math.pi/72.0, }
 
-DATAPATH = ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY']
+Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 
+		'T': 't', 'Z': 'z', 'oro': 'oro'}
+DATAPATH = ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY', '/Data/gfi/users/csp001/share', ]
 OPATH    = '.'
 FILE_STD   = 'ei.ans.%d.%s.%s'
 FILE_STAT  = 'ei.ans.%d.%s.%s.stat'

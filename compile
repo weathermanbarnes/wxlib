@@ -65,6 +65,9 @@ cd $cur/..
 if [ -f $filem ];
 then
 	echo "Stage 5: skipped [`pwd` already prepared]"
+elif [ $1 == '--no-prepare' ];
+then
+	echo "Stage 5: skipped by instruction"
 else
 	echo "Stage 5: Preparing the work directory [`pwd`]"
 	cp -a $cur/default/example*.py .
