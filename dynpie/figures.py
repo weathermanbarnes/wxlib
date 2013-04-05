@@ -134,6 +134,7 @@ def map_trend_Q(q, sig=0.95, **kwargs):
 
 
 # vertical profiles of 32years mean deformation
+# TODO: Generalize to accept kwargs!
 def ysect_mean_Q(q='defabs', year=None, yidx=51, agg=False, quiet=False, cmap=None):
 	if not quiet:
 		print 'Lat %f' % lat[yidx,0]
@@ -174,6 +175,7 @@ def ysect_mean_Q(q='defabs', year=None, yidx=51, agg=False, quiet=False, cmap=No
 
 
 # vertical profiles of 32years mean deformation
+# TODO: Generalize to accept kwargs!
 def xsect_mean_Q(q='defabs', year=None, xidx=278, agg=False, cmap=None):
 	if not quiet:
 		print 'Lon %f' % lon[0,xidx]
@@ -278,6 +280,7 @@ def map_date_stream(date, q='oro', **kwargs):
 
 
 # same as ysect_mean_deform but without any averaging; deformation sections for one point in time
+# TODO: Generalize to accept kwargs!
 def ysect_date_Q(date, q='defabs', yidx=51, quiet=False, cmap=None):
 	if not quiet:
 		print 'Lat %f' % lat[yidx,0]
@@ -307,6 +310,7 @@ def ysect_date_Q(date, q='defabs', yidx=51, quiet=False, cmap=None):
 # 
 
 # Constant yidx and plev; plotting (multi-)year means
+# TODO: Generalize to accept kwargs!
 def ypline_mean_Q(q='defabs', yidx=51, plev=800, summarize=False, agg=False, quiet=False):
 	if not quiet:
 		print 'Lat %f' % lat[yidx,0]
@@ -352,6 +356,7 @@ def map_oro(**kwargs):
 
 
 # Hovmöller diagram
+# TODO: Generalize to accept kwargs!
 def ypline_hov_Q(year, q='defabs', plev=800, yidx=51, quiet=False, cmap=None, scale=25, slc=slice(None), 
 		disable_cb=False, save=None, show=True):
 	if not quiet:
@@ -404,6 +409,7 @@ def ypline_hov_Q(year, q='defabs', plev=800, yidx=51, quiet=False, cmap=None, sc
 	return
 
 
+# TODO: Generalize to accept kwargs!
 def hist(year, q='defang', plev=800, yidx=51, xidx=278, quiet=False):
 	if not quiet:
 		print 'Lat: %f, Lon: %f' % (lat[yidx,0],lon[0,xidx])
@@ -432,6 +438,7 @@ def hist(year, q='defang', plev=800, yidx=51, xidx=278, quiet=False):
 	return
 
 
+# TODO: Generalize to accept kwargs!
 def phist(year, q='defang', plev=800, yidx=51, xidx=278, quiet=False):
 	if not quiet:
 		print 'Lat: %f, Lon: %f' % (lat[yidx,0],lon[0,xidx])
@@ -461,6 +468,7 @@ def phist(year, q='defang', plev=800, yidx=51, xidx=278, quiet=False):
 	return
 
 
+# TODO: Generalize to accept kwargs!
 def ts_phist(qd='defang', qv='defabs', plev='800', pos='Greenland_TB', mons=[], years=[], mask=None,
 		quiet=False, show=True, save='', title='', cmap=None, disable_legend=False):
 	fd, dd = metopen('../timeseries/%s.%s.%s_ts' % (pos, plev, qd), 'ts', cut=(slice(None),) )
@@ -515,6 +523,7 @@ def ts_phist(qd='defang', qv='defabs', plev='800', pos='Greenland_TB', mons=[], 
 	return
 
 
+# TODO: Generalize to accept kwargs!
 def ts_hist(q='defabs', plev='800', pos='Greenland_TB', bins=20, mons=[], years=[], mask=None, ylim=None,
 		quiet=False, show=True, save='', title='', color=None):
 	f, dat = metopen('../timeseries/%s.%s.%s_ts' % (pos, plev, q), 'ts', cut=(slice(None),) )
@@ -563,6 +572,7 @@ def ts_hist(q='defabs', plev='800', pos='Greenland_TB', bins=20, mons=[], years=
 	return
 
 
+# TODO: Generalize to accept kwargs!
 def ts_wavelet(q='defabs', plev='800', pos='Greenland_TB', scale=25, cmap=None, p=np.pi,
 		quiet=False, show=True, save='', title=''):
 	import mlpy
@@ -786,7 +796,10 @@ def __map_prepare_dat(dat, mask, kwargs):
 	if kwargs.get('hook'):
 		dat = kwargs.pop('hook')(dat)
 	
-	dat = concat1(dat)
+	if not dat.shape == s:
+		dat = concat1(dat)
+	
+	dat[mask] = np.nan
 
 	return dat
 
