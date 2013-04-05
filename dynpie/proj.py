@@ -27,7 +27,7 @@ def NPmap():
 			width=9000000, height=6000000)
 # (f) Australia map
 def Ausmap():
-	return Basemap(projection='lcc', lat_0=-50, lat_ts=-50, lon_0=120, resolution='l', 
-			width=9000000, height=6000000)
+	return Basemap(projection='lcc', lat_0=-35, lat_ts=-35, lon_0=120, resolution='l', 
+			width=12000000, height=8000000)
 
 # the end

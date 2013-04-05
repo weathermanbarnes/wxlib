@@ -798,6 +798,8 @@ def __map_prepare_dat(dat, mask, kwargs):
 	
 	if not dat.shape == s:
 		dat = concat1(dat)
+	
+	dat[mask] = np.nan
 
 	return dat
 
