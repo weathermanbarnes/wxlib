@@ -7,7 +7,7 @@ src="$cur/src"
 precc="$src/precc"
 work="$cur/default"
 
-files="config.f95 conv.f95 derivatives.f95 diag_contour_rwb.f95 diag.f95 stat.f95 utils.f95"
+files="config.f95 conv.f95 derivatives.f95 humidity.f95 diag_contour_rwb.f95 diag.f95 stat.f95 utils.f95"
 filec="const.f95"
 filek="kind.f95"
 filem=".dynlib_workdir_prepared"
