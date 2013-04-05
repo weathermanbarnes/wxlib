@@ -77,6 +77,22 @@ contains
     res=sqrt(sig_sh**2+sig_st**2)
   end subroutine
   !
+  ! Calculates total [coordinate independent] deformation tendency due to
+  ! pressure
+  subroutine tend_def_total_pres(res,nx,ny,nz,u,v,z,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), z(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    real(kind=nr) :: sig_sh(nz,ny,nx), sig_st(nz,ny,nx), zxxyy(nz,ny,nx), z2xy(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res, v, z
+    !f2py depend(nx,ny) dx, dy
+    call def_shear(sig_sh,nx,ny,nz,u,v,dx,dy)
+    call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)
+    call antilap2(zxxyy,nx,ny,nz,z,dx,dy)
+    call crosslap2(z2xy,nx,ny,nz,z,dx,dy)
+    res = - (sig_sh*zxxyy + sig_st*z2xy)/sqrt(sig_sh**2+sig_st**2)
+  end subroutine
+  !
   ! Calculates angle from x-axis to axis of dilatation :
   !   = delta (Keyser Reeder Reed)
   !   =   (Lapeyre Klein Hua) 

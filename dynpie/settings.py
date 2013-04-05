@@ -99,7 +99,8 @@ scale_pvfil_mean  = np.arange(-7.0, 7.1, 2.0)*1.0e-6
 scale_rsr_mean = np.arange(-13.5, 13.6, 3.0)
 
 scale_q = np.arange(0.0, 10.1, 1.0)*1.0e-3
-scale_qfs = np.arange(-2.25,2.26,0.5)*1.0e-4
+scale_qfs = np.arange(-1.65,1.66,0.3)*1.0e-4
+scale_qfs_mean = np.arange(-4.5,4.6,1.0)*1.0e-5
 
 # #############################################################################
 # 3. Default hooks for plotting
@@ -118,7 +119,7 @@ hooks['oro'] = _tmp
 # 4. Default settings
 #
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 'qstir': 'qstir', 'qfil': 'qfil',
-		'T': 't', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 'pvstir': 'pvstir', 'pvfil': 'pvfil'}
+		'T': 't', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 'pvstir': 'pvstir', 'pvfil': 'pvfil', }
 _rose = [17,]
 _rose.extend(range(-18,18))
 BINS_Q = {'defang': np.array(_rose)*math.pi/36.0+math.pi/72.0, }
@@ -170,7 +171,7 @@ DEFAULT_Q['pvfil']  = {'scale': scale_pvfil_mean, 'extend': 'both', 'cmap': plt.
 DEFAULT_Q['rsr']  = {'scale': scale_rsr_mean, 'extend': 'both'}
 DEFAULT_Q['q'] = {'scale': scale_q, 'extend': 'max', 'cmap': _get_q_cm()}
 DEFAULT_Q['qfil'] = {'scale': scale_qfs, 'extend': 'both', 'cmap': plt.cm.RdBu}
-DEFAULT_Q['qstir'] = {'scale': scale_qfs, 'extend': 'both'}
+DEFAULT_Q['qstir'] = {'scale': scale_qfs, 'extend': 'both', 'cmap': plt.cm.BrBG}
 
 
 # #############################################################################
