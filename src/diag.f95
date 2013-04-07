@@ -741,4 +741,39 @@ contains
     end do
   end subroutine
   !
+  ! Frontal detection after G. Berry et al, based on the frontal detection
+  ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
+  ! temperature
+  subroutine fronts_from_theta_q(res,nx,ny,nz,theta,q,u,v,dx,dy)
+    real(kind=nr), intent(in)  :: theta(nz,ny,nx), q(nz,ny,nx), dx(ny,nx), dx(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res, q
+    !f2py depend(nx,ny) dx dy
+    !
+    real(kind=nr) :: thetax(nz,ny,nx), thetay(nz,ny,nx), absgrad(nz,ny,nx), &
+                 &   absx  (nz,ny,nx), absy  (nz,ny,nx), abslap (nz,ny,nx), &
+                 &   absxx (nz,ny,nx), absyy (nz,ny,nx), loc    (nz,ny,nx), &
+                 &   ggt(nz,ny,nx), frontspeed(nz,ny,nx)
+    ! -----------------------------------------------------------------
+    !
+    ! todo: input smoothing, equivalent to wrf_smooth_2d() in NCL
+    !
+    call grad(thetax,thetay, nx,ny,nz, theta, dx,dy)
+    absgrad(:,:,:) = sqrt(thetax**2.0_nr + thetay**2.0_nr)
+    call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
+    abslap(:,:,:) = sqrt(absx**2.0_nr + absy**2.0_nr)
+    !
+    ggt(:,:,:) = (thetax(:,:,:)*magx(:,:,:) + thetay(:,:,:)*magy(:,:,:)) / maggrad(:,:,:)
+    frontspeed(:,:,:) = (u(:,:,:)*absx(:,:,:) + v(:,:,:)*absy(:,:,:)) / abslap(:,:,:)
+    !
+    ! determine front line location type after Hewson 1998, eq. 5
+    call ddx(absxx, nx,ny,nz, absx, dx,dy)
+    call ddy(absyy, nx,ny,nz, abxy, dx,dy)
+    loc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
+    !
+
+
+  end subroutine
+  !
 end module
