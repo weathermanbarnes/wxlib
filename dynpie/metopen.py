@@ -29,6 +29,8 @@ def metopen(filename, q, cut=c.std_slice, verbose=False, no_dtype_conversion=Fal
 			var = f.variables[q]
 			dat = utils.scale(var, cut)
 			print 'Found '+path+'/'+filename+'.nc'
+		else: 
+			continue
 		
 		if not no_dtype_conversion:
 			dat = dat.astype('f8')
