@@ -164,8 +164,8 @@ contains
     call mv_from_q(mv,nx,ny,nz,q,dx,dy)
     call e_from_q(e,nx,ny,nz,q,pres,dx,dy)
     call rh_from_e(rh,nx,ny,nz,e,temp,dx,dy)
-    res(:,:,:) = temp(:,:,:) + (p0/(pres(:,:,:)-e(:,:,:)))**(Rl/cp) &
-            &  *   rh(:,:,:) ** (-mv(:,:,:)*(Rl/cp)) * exp(Lv*mv(:,:,:)/(cp*temp(:,:,:))) 
+    res(:,:,:) = temp(:,:,:) * (p0/(pres(:,:,:)-e(:,:,:)))**(Rl/cp) &
+            &  *   rh(:,:,:) ** (-mv(:,:,:)*(Rv/cp)) * exp(Lv*mv(:,:,:)/(cp*temp(:,:,:))) 
     !
     return
   end subroutine

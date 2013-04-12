@@ -90,7 +90,7 @@ contains
     call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)
     call antilap2(zxxyy,nx,ny,nz,z,dx,dy)
     call crosslap2(z2xy,nx,ny,nz,z,dx,dy)
-    res = - (sig_sh*zxxyy + sig_st*z2xy)/sqrt(sig_sh**2+sig_st**2)
+    res = - (sig_st*zxxyy + sig_sh*z2xy)/sqrt(sig_sh**2+sig_st**2)
   end subroutine
   !
   ! Calculates angle from x-axis to axis of dilatation :
