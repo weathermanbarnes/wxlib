@@ -62,12 +62,13 @@ hooks['oro'] = _tmp
 # 3. Default settings
 #
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 'qstir': 'qstir', 'qfil': 'qfil',
-		'T': 't', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 'pvstir': 'pvstir', 'pvfil': 'pvfil', }
+		'T': 't', 'the': 'thetae', 'thefil': 'thetaefil', 'thestir': 'thetaestir', 
+		'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 'pvstir': 'pvstir', 'pvfil': 'pvfil', }
 _rose = [17,]
 _rose.extend(range(-18,18))
 BINS_Q = {'defang': np.array(_rose)*math.pi/36.0+math.pi/72.0, }
 
-DATAPATH = ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY']
+DATAPATH = ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY', '/Data/gfi/users/csp001/share', ]
 OPATH    = '.'
 PPATH    = '.'
 FILE_STD   = 'ei.ans.%d.%s.%s'
@@ -106,7 +107,10 @@ DEFAULT_Q['defang'] = {'cmap': cm.periodic3(), 'scale': scale_defang, 'ticks': t
 	'ticklabels': labels_defang}
 DEFAULT_Q['u']   = {'scale': scale_u_diff}
 DEFAULT_Q['Z']   = {'scale': scale_Z_diff}
-DEFAULT_Q['T']   = {'cmap': plt.cm.RdBu_r}
+DEFAULT_Q['T']   = {'cmap': plt.cm.RdBu_r,' extend': 'both'}
+DEFAULT_Q['the']   = {'cmap': plt.cm.RdBu_r, 'extend': 'both'}
+DEFAULT_Q['thestir']  = {'extend': 'both', 'cmap': plt.cm.BrBG}
+DEFAULT_Q['thefil']  = {'extend': 'both', 'cmap': plt.cm.PRGn}
 DEFAULT_Q['pv']  = {'scale': scale_pv, 'hook': hooks['pv']}
 DEFAULT_Q['oro'] = {'scale': scale_oro_full, 'cmap': plt.cm.gist_earth, 'hook': hooks['oro']}
 DEFAULT_Q['ow']  = {'scale': scale_ow_mean, 'extend': 'both'}

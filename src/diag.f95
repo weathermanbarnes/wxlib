@@ -90,7 +90,7 @@ contains
     call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)
     call antilap2(zxxyy,nx,ny,nz,z,dx,dy)
     call crosslap2(z2xy,nx,ny,nz,z,dx,dy)
-    res = - (sig_sh*zxxyy + sig_st*z2xy)/sqrt(sig_sh**2+sig_st**2)
+    res = - (sig_st*zxxyy + sig_sh*z2xy)/sqrt(sig_sh**2+sig_st**2)
   end subroutine
   !
   ! Calculates angle from x-axis to axis of dilatation :
@@ -745,7 +745,8 @@ contains
   ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
   ! temperature
   subroutine fronts_from_theta_q(res,nx,ny,nz,theta,q,u,v,dx,dy)
-    real(kind=nr), intent(in)  :: theta(nz,ny,nx), q(nz,ny,nx), dx(ny,nx), dx(ny,nx)
+    real(kind=nr), intent(in)  :: theta(nz,ny,nx), q(nz,ny,nx), u(nz,ny,nx), & 
+                &                 v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     integer(kind=ni) :: nx,ny,nz
     !f2py depend(nx,ny,nz) res, q
@@ -753,6 +754,7 @@ contains
     !
     real(kind=nr) :: thetax(nz,ny,nx), thetay(nz,ny,nx), absgrad(nz,ny,nx), &
                  &   absx  (nz,ny,nx), absy  (nz,ny,nx), abslap (nz,ny,nx), &
+                 &   magx  (nz,ny,nx), magy  (nz,ny,nx), maggrad(nz,ny,nx), &
                  &   absxx (nz,ny,nx), absyy (nz,ny,nx), loc    (nz,ny,nx), &
                  &   ggt(nz,ny,nx), frontspeed(nz,ny,nx)
     ! -----------------------------------------------------------------
@@ -769,7 +771,7 @@ contains
     !
     ! determine front line location type after Hewson 1998, eq. 5
     call ddx(absxx, nx,ny,nz, absx, dx,dy)
-    call ddy(absyy, nx,ny,nz, abxy, dx,dy)
+    call ddy(absyy, nx,ny,nz, absy, dx,dy)
     loc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
     !
 
