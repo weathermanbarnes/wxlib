@@ -40,11 +40,11 @@ def _find_scale(lthres, uthres, target_steps, symmetric_zero, intervals=DEFAULT_
 		raise ValueError, 'Either interval or target_steps must be given'
 
 	if symmetric_zero:
-		lthres = (round(lthres/interval - 0.5)+0.5)*interval
-		uthres = (round(uthres/interval + 0.5)-0.5)*interval + interval/10.0
+		lthres = (np.floor(lthres/interval - 0.5)+0.5)*interval
+		uthres = (np.ceil(uthres/interval + 0.5)-0.5)*interval + interval/10.0
 	else:
-		lthres =  round(lthres/interval)*interval
-		uthres =  round(uthres/interval)*interval + interval/10.0
+		lthres =  np.floor(lthres/interval)*interval
+		uthres =  np.ceil(uthres/interval)*interval + interval/10.0
 
 	return np.arange(lthres,uthres,interval)
 
