@@ -119,7 +119,7 @@ hooks['oro'] = _tmp
 # 4. Default settings
 #
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 'qstir': 'qstir', 'qfil': 'qfil',
-		'T': 't', 'the': 'thetae', 'thefil': 'thetaefil', 'thestir': 'thetaestir', 
+		'T': 't', 'the': 'thetae', 'thefil': 'thetaefil', 'thestir': 'thetaestir', 'tdefabs_p': 'tdefabs_p',
 		'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 'pvstir': 'pvstir', 'pvfil': 'pvfil', }
 _rose = [17,]
 _rose.extend(range(-18,18))
@@ -159,6 +159,7 @@ MUTEX_GROUPS = [set(['colors', 'cmap']), ]
 # DEFAULT settings per quantity Q
 DEFAULT_Q = {}
 DEFAULT_Q['defabs'] = {'cmap': _get_defabs_cm2(), 'extend': 'max', 'scale': scale_defabs, 'hook': hooks['defabs']}
+DEFAULT_Q['tdefabs_p']  = {'extend': 'both', 'cmap': plt.cm.PRGn}
 DEFAULT_Q['defang'] = {'cmap': _get_periodic_cm3(), 'scale': scale_defang, 'ticks': ticks_defang, 
 	'ticklabels': labls_defang}
 DEFAULT_Q['u']   = {'scale': scale_u_diff}
