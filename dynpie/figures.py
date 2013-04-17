@@ -788,8 +788,10 @@ def map_overlay_dat(dat, **kwargs):
 		if type(mask) == np.ndarray:
 			dat[mask] = np.nan
 		cs =  m.contour(x, y, dat, **kwargs)
-		#if labels:
-		#	plt.clabel(cs, fontsize=12, inline=True, inline_spacing=2)
+
+		labels = kwargs.pop('contour_labels')
+		if labels:
+			plt.clabel(cs, fontsize=12, inline=True, inline_spacing=2)
 
 		return
 
