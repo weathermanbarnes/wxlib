@@ -18,16 +18,6 @@ import stats
 from settings import conf as c
 
 
-# globally useful
-f, oro = metopen('static', 'oro', cut=c.std_slice[1:])
-oro = concat1(oro)
-s   = oro.shape
-lat = np.tile(f['lat'][c.std_slice[1]], (s[1],1)).T
-lon = np.tile(f['lon'][c.std_slice[2]], (s[0],1))
-lon = concat1(lon)
-lon[:,-1] += 360
-f.close()
-
 # TODO: Generalisation in data fetcher <-> plotter to avoid code duplication
 
 
@@ -632,79 +622,12 @@ def ts_wavelet(q='defabs', plev='800', pos='Greenland_TB', scale=25, cmap=None, 
 	if show:
 		plt.show()
 
-	return	
+	return
 
 
 
 # #############################################################################
-# 4. Generalised data fetchers
-# 
-
-# Generalised data fetcher for instantaneous or short-term averaged fields
-def _get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=True, quiet=False):
-	# None means "take everything there is"
-	if not plevs:
-		plevs = c.plevs
-	else:
-		plevs = [plevs,]
-	
-	if yidx == None:
-		yidxs = slice(None)
-		ylen  = s[0]
-	else:
-		yidxs = yidx
-		ylen  = 1
-	
-	if xidx == None:
-		xidxs = slice(None)
-		xlen  = s[1]-1
-	else:
-		xidxs = xidx
-		xlen  = 1
-
-	# Convert dates to time indexes
-	if type(dates) not in ([np.ndarray, list, tuple, set]):
-		dates = [dates, ]
-	tidxs = map(lambda x: (x.timetuple().tm_yday-1)*4 + int(x.hour/6), dates)
-
-	# Construct the slice
-	cut = (slice(min(tidxs),max(tidxs)+1), yidxs, xidxs)
-	
-	# One ore more vertical levels?
-	if len(plevs) > 1:
-		i = 0
-		dat = np.zeros((1+max(tidxs)-min(tidxs), len(c.plevs), ylen, xlen))
-		#dat = dat.squeeze()
-		for plev in plevs:
-			if not quiet:
-				print "Reading from "+c.file_std % (dates[0].year, plev, q)
-			f, d = metopen(c.file_std % (dates[0].year, plev, q), c.q[q], cut=cut)
-			dat[:,i,::] = d
-			i += 1
-	else:
-		if not quiet:
-			print "Reading from "+c.file_std % (dates[0].year, plevs[0], q)
-		f, dat = metopen(c.file_std % (dates[0].year, plevs[0], q), c.q[q], cut=cut)
-	
-	# Time-averaging if specified
-	if tavg and len(dates) > 1:
-		dat = dat.mean(axis=0)
-	
-	dat = dat.squeeze()
-	
-	return dat
-
-
-# Get aggregated (average, standard deviation, etc.) fields
-def _get_aggregate(q, year=None, plev=None, yidx=None, xidx=None):
-
-
-	return dat
-
-
-
-# #############################################################################
-# 5. Generalised data plotters
+# 4. Generalised data plotters
 # 
 def map_oro_dat(dat, **kwargs):
 	# 1. Prepare
@@ -866,8 +789,10 @@ def map_overlay_dat(dat, **kwargs):
 			dat[mask] = np.nan
 		scale = kwargs.pop('scale')
 		cs =  m.contour(x, y, dat, scale, **kwargs)
-		#if labels:
-		#	plt.clabel(cs, fontsize=12, inline=True, inline_spacing=2)
+
+		labels = kwargs.pop('contour_labels')
+		if labels:
+			plt.clabel(cs, fontsize=12, inline=True, inline_spacing=2)
 
 		return
 

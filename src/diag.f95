@@ -741,32 +741,59 @@ contains
     end do
   end subroutine
   !
-  ! Frontal detection after G. Berry et al, based on the frontal detection
+  ! Front intensity function after G. Berry et al, based on the frontal detection
   ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
-  ! temperature
-  subroutine fronts_from_theta_q(res,nx,ny,nz,theta,q,u,v,dx,dy)
-    real(kind=nr), intent(in)  :: theta(nz,ny,nx), q(nz,ny,nx), u(nz,ny,nx), & 
-                &                 v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+  ! temperature as dat
+  subroutine front_intensity_speed(frint,frspd,nx,ny,nz,dat,u,v,dx,dy)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
+                 &                dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: frint(nz,ny,nx), frspd(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) frint, frspd, u, v
+    !f2py depend(nx,ny) dx, dy
+    !
+    real(kind=nr) :: datx (nz,ny,nx), daty (nz,ny,nx), absgrad(nz,ny,nx), &
+                 &   absx (nz,ny,nx), absy (nz,ny,nx), abslap (nz,ny,nx)
+    ! -----------------------------------------------------------------
+    !
+    ! todo: howto reduce duplication with front_location?
+    !
+    call grad(datx,daty, nx,ny,nz, dat, dx,dy)
+    absgrad(:,:,:) = sqrt(datx(:,:,:)**2.0_nr + daty(:,:,:)**2.0_nr)
+    call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
+    abslap (:,:,:) = sqrt(absx(:,:,:)**2.0_nr + absy(:,:,:)**2.0_nr)
+    !
+    frint(:,:,:) = (datx(:,:,:)*absx(:,:,:) + daty(:,:,:)*absy(:,:,:)) / absgrad(:,:,:)
+    frspd(:,:,:) = (u(:,:,:)*absx(:,:,:) + v(:,:,:)*absy(:,:,:)) / abslap(:,:,:)
+    !
+    return
+  end subroutine
+  !
+  ! Front detection after G. Berry et al, based on the frontal detection
+  ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
+  ! temperature as dat
+  subroutine front_location(res,nx,ny,nz,dat,u,v,dx,dy)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
+                 &                dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     integer(kind=ni) :: nx,ny,nz
-    !f2py depend(nx,ny,nz) res, q
-    !f2py depend(nx,ny) dx dy
+    !f2py depend(nx,ny,nz) u, v
+    !f2py depend(nx,ny) dx, dy
     !
-    real(kind=nr) :: thetax(nz,ny,nx), thetay(nz,ny,nx), absgrad(nz,ny,nx), &
+    real(kind=nr) :: datx(nz,ny,nx), daty(nz,ny,nx), absgrad(nz,ny,nx), &
                  &   absx  (nz,ny,nx), absy  (nz,ny,nx), abslap (nz,ny,nx), &
-                 &   magx  (nz,ny,nx), magy  (nz,ny,nx), maggrad(nz,ny,nx), &
                  &   absxx (nz,ny,nx), absyy (nz,ny,nx), loc    (nz,ny,nx), &
                  &   ggt(nz,ny,nx), frontspeed(nz,ny,nx)
     ! -----------------------------------------------------------------
     !
     ! todo: input smoothing, equivalent to wrf_smooth_2d() in NCL
     !
-    call grad(thetax,thetay, nx,ny,nz, theta, dx,dy)
-    absgrad(:,:,:) = sqrt(thetax**2.0_nr + thetay**2.0_nr)
+    call grad(datx,daty, nx,ny,nz, dat, dx,dy)
+    absgrad(:,:,:) = sqrt(datx**2.0_nr + daty**2.0_nr)
     call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
     abslap(:,:,:) = sqrt(absx**2.0_nr + absy**2.0_nr)
     !
-    ggt(:,:,:) = (thetax(:,:,:)*magx(:,:,:) + thetay(:,:,:)*magy(:,:,:)) / maggrad(:,:,:)
+    ggt(:,:,:) = (datx(:,:,:)*absx(:,:,:) + daty(:,:,:)*absy(:,:,:)) / absgrad(:,:,:)
     frontspeed(:,:,:) = (u(:,:,:)*absx(:,:,:) + v(:,:,:)*absy(:,:,:)) / abslap(:,:,:)
     !
     ! determine front line location type after Hewson 1998, eq. 5
@@ -774,8 +801,7 @@ contains
     call ddy(absyy, nx,ny,nz, absy, dx,dy)
     loc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
     !
-
-
+    ! todo: linejoin, output, etc.
   end subroutine
   !
 end module
