@@ -773,6 +773,8 @@ contains
   ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
   ! temperature as dat
   subroutine front_location(fr,froff,nx,ny,nz,no,nf,dat,u,v,dx,dy)
+    use diag_fronts
+    !
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
                  &                dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: fr(nz,3_ni,no,3_ni), froff(nz,3_ni,nf)
