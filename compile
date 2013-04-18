@@ -46,7 +46,8 @@ echo "Stage 2: Creating python signature file"
 cd $precc
 
 f2py -m dynlib -h $pysig $filec $files > /dev/null
-sed "s/kind=nr/kind=8/g" $pysig | sed "s/kind=ni/kind=4/g" > ${pysig}_tmp
+sed "s/kind=nr/kind=8/g" $pysig | sed "s/_nr//g" |
+sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" > ${pysig}_tmp
 mv ${pysig}_tmp $pysig
 
 

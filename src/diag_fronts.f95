@@ -9,14 +9,15 @@ module diag_fronts
   use config
   !
   implicit none
-  ! The module is used (only) in the fronts_by_theta_q subroutine in diag.f95
+  ! The module is used (only) in the front_location subroutine in diag.f95
 contains
   !
   ! Find locations where dat is zero by interpolating the 2-dim gridded data
-  subroutine find_zeroloc(dat, nx,ny, amiss,tloc_1,tloc_2)
+  ! todo: combine tloc_1 and tloc_2 into combined zeroloc result array, return zerocnt 
+  subroutine find_zeroloc(dat, nx,ny,nn, NaN, tloc_1,tloc_2)
     real(kind=nr), intent(in)  ::  dat(ny,nx)
-    real(kind=nr), intent(out) :: tloc_1(5000_ni,2_ni),tloc_2(5000,2_ni)
-    real(kind=nr) :: amiss
+    real(kind=nr), intent(out) :: tloc_1(nn,2_ni),tloc_2(nn,2_ni)
+    real(kind=nr) :: NaN
     integer(kind=ni) :: nx,ny
     !
     real   (kind=nr) :: latB, dist
@@ -31,14 +32,14 @@ contains
           ! Zero line hits a grid point
           if (axisdata(j,i) == 0.0_nr) then
              cntx = cntx + 1_ni
-             tloc_1(cntx,1) = i
-             tloc_1(cntx,2) = j
+             tloc_1(cntx,1_ni) = i
+             tloc_1(cntx,2_ni) = j
              gotflag = 1_ni
           ! interpolate to find line, h direction first
           else   
              ip1 = i+1_ni
-             if (axisdata(ip1,h) /= amiss .and. gotflag == 0_ni .and. & 
-               &   axisdata(g,h) /= amiss) then
+             if (axisdata(ip1,h) /= NaN .and. gotflag == 0_ni .and. & 
+               &   axisdata(g,h) /= NaN) then
                 if ((axisdata(g,h) > 0.0_nr .and. axisdata(ip1,h) > 0.0_nr) .or. &
                   & (axisdata(g,h) < 0.0_nr .and. axisdata(ip1,h) > 0.0_nr)) then
                    latB = axisdata(j, ip1)
@@ -63,7 +64,7 @@ contains
     cnty = 0_ni
     do j = 1_ni,ny-1_ni
        do i = 1_ni,nx-1_ni
-          gotflag=0
+          gotflag = 0_ni
           ! Zero line hits a grid point
           if (axisdata(j,i) == 0) then
              cnty = cnty + 1_ni
@@ -73,8 +74,8 @@ contains
           ! interpolate to find line, h direction first
           else   
              ip1 = j + 1_ni
-             if (axisdata(g,ip1) /= amiss .and. gotflag == 0_ni .and. &
-               & axisdata(g,h) /= amiss) then
+             if (axisdata(g,ip1) /= NaN .and. gotflag == 0_ni .and. &
+               & axisdata(g,h) /= NaN) then
                 if ((axisdata(g,h) > 0.0_nr .and. axisdata(g,ip1) < 0.0_nr) .or. &
                   & (axisdata(g,h) < 0.0_nr .and. axisdata(g,ip1) > 0.0_nr)) then
                    latB = axisdata(ip1,i)
@@ -96,7 +97,7 @@ contains
     end do
     !
     return
-  end  subroutine finder
+  end  subroutine find_zeroloc
   !
   !
   ! Join a cloud of frontal points into frontal lines

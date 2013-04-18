@@ -772,36 +772,115 @@ contains
   ! Front detection after G. Berry et al, based on the frontal detection
   ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
   ! temperature as dat
-  subroutine front_location(res,nx,ny,nz,dat,u,v,dx,dy)
+  subroutine front_location(fr,froff,nx,ny,nz,no,nf,dat,u,v,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
                  &                dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: res(nz,ny,nx)
-    integer(kind=ni) :: nx,ny,nz
+    real(kind=nr), intent(out) :: fr(nz,no,3_ni), froff(nz,nf)
+    integer(kind=ni) :: nx,ny,nz, no, nf
     !f2py depend(nx,ny,nz) u, v
     !f2py depend(nx,ny) dx, dy
+    !f2py depend(nz) fr, froff
+    !
+    real   (kind=nr), parameter :: NaN = -9999.9_nr, frint_thres = -11.7e-11_nr, &
+                  &                searchrad = 3.1_nr
+    integer(kind=ni), parameter :: nn = 30000_ni, minlen = 10_ni
+    !
+    real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
+    integer(kind=ni), allocatable :: linelen(:)
     !
     real(kind=nr) :: datx(nz,ny,nx), daty(nz,ny,nx), absgrad(nz,ny,nx), &
                  &   absx  (nz,ny,nx), absy  (nz,ny,nx), abslap (nz,ny,nx), &
-                 &   absxx (nz,ny,nx), absyy (nz,ny,nx), loc    (nz,ny,nx), &
-                 &   ggt(nz,ny,nx), frontspeed(nz,ny,nx)
+                 &   absxx (nz,ny,nx), absyy (nz,ny,nx),  &
+                 &   frint(nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx), &
+                 &   zeroloc(2_ni,nn), frac_idx
+    integer(kind=ni) :: k, m, n, idx, zerocnt, ptcnt, linecnt, off
     ! -----------------------------------------------------------------
     !
     ! todo: input smoothing, equivalent to wrf_smooth_2d() in NCL
+    ! todo: frint_thres, minlen, searchrad in config / argument list
+    ! todo: cyclic boundary condition?
+    write(*,*) 'preparing'
     !
     call grad(datx,daty, nx,ny,nz, dat, dx,dy)
     absgrad(:,:,:) = sqrt(datx**2.0_nr + daty**2.0_nr)
     call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
     abslap(:,:,:) = sqrt(absx**2.0_nr + absy**2.0_nr)
     !
-    ggt(:,:,:) = (datx(:,:,:)*absx(:,:,:) + daty(:,:,:)*absy(:,:,:)) / absgrad(:,:,:)
-    frontspeed(:,:,:) = (u(:,:,:)*absx(:,:,:) + v(:,:,:)*absy(:,:,:)) / abslap(:,:,:)
+    frint(:,:,:) = (datx(:,:,:)*absx(:,:,:) + daty(:,:,:)*absy(:,:,:)) / absgrad(:,:,:)
+    frspd(:,:,:) = (u(:,:,:)*absx(:,:,:) + v(:,:,:)*absy(:,:,:)) / abslap(:,:,:)
     !
     ! determine front line location type after Hewson 1998, eq. 5
     call ddx(absxx, nx,ny,nz, absx, dx,dy)
     call ddy(absyy, nx,ny,nz, absy, dx,dy)
-    loc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
+    frloc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
     !
-    ! todo: linejoin, output, etc.
+    ! frint must be negative for front
+    where(frint > frint_thres)
+       frloc = NaN
+    end where
+    ! 
+    ! and not just negative, but below a threshold
+    !where(frint > frint_thres)
+    !   frloc_cold = NaN
+    !elsewhere 
+    !   frloc_cold = frloc
+    !end where
+    !
+    do k = 1_ni,nz
+       !
+       write(*,*) k, 'of', nz
+       ! find fronts
+       call find_zeroloc(frloc(k,:,:), nx,ny,nn, NaN, zeroloc,zerocnt)
+       ! 
+       ! searchrad is in grid point indexes, as it is easier to transform one
+       ! scalar instead of two arrays. For standard grids the two options are
+       ! equivalent. In the long-term one should try to adapt the search radius and
+       ! the minimum length to SI length scales (km)
+       !
+       ! todo why sort points?
+       !
+       allocate(recj(zerocnt,zerocnt), reci(zerocnt,zerocnt), linelen(zerocnt) )
+       reci(:,:) = NaN
+       recj(:,:) = NaN
+       call linejoin(zerocnt, zeroloc(:,2_ni), zeroloc(:,1_ni), searchrad, recj, reci) 
+       !
+       ! filter by length
+       linecnt    = 0_ni ! number of lines
+       ptcnt      = 0_ni ! total numer of points
+       linelen(:) = 0_ni ! number of points per line
+       !
+       do n = 1_ni,zerocnt
+          if (recj(n,1_ni) == NaN) then
+             exit
+          end if
+          do m = 1_ni,zerocnt
+             if (recj(n,m) == NaN) then
+                exit
+             end if
+             linelen(n) = linelen(n) + 1_ni
+          end do
+          if (linelen(n) >= minlen) then
+             linecnt = linecnt + 1_ni
+             ptcnt = ptcnt + linelen(n)
+          end if
+       end do
+       !
+       ! write into output array
+       off = 0_ni
+       do n = 1_ni,linecnt
+          do m = 1_ni,linelen(n)
+             fr(k,off+m,1_ni) = reci(n,m)
+             fr(k,off+m,2_ni) = recj(n,m)
+             fr(k,off+m,3_ni) = absgrad(k,int(recj(n,m),ni),int(reci(n,m),ni))
+          end do
+          froff(nz,n) = off
+          off = off + linelen(n)
+       end do
+       !
+       ! todo: split into cold / warm and stationary fronts
+       deallocate(reci, recj, linelen)
+    end do
+    !
   end subroutine
   !
 end module
