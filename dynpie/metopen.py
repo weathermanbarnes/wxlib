@@ -51,7 +51,13 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 
 		if not no_static:
 			if not static:
-				fo, oro = metopen('static', 'oro', cut, verbose, no_dtype_conversion, True)
+				if type(cut) == tuple:
+					if len(cut) > 1:
+						cuts = tuple(list(cut)[1:])
+					else: 
+						cuts = slice(None)
+						
+				fo, oro = metopen('static', 'oro', cuts, verbose, no_dtype_conversion, True)
 				static = grid_by_static(fo)
 				static.oro = oro[::]
 				fo.close()

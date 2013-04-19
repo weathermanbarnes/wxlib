@@ -19,7 +19,8 @@ from settings import conf as c
 
 
 # TODO: Generalisation in data fetcher <-> plotter to avoid code duplication
-
+# TODO: avoid that line!
+s = (361,721)
 
 
 # #############################################################################
@@ -701,11 +702,11 @@ def map_oro_barb(u, v, dat=None, **kwargs):
 
 # Helper functions
 def __map_create_mask(kwargs):
-	plev = kwargs.pop('plev')
+	plev = kwargs.pop('plev', None)
 	datZ = kwargs.pop('Zdata', None)
 
 	if plev and not type(datZ) == np.ndarray:
-		f,datZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
+		f,datZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:], no_static=True)
 		if f: f.close()
 	if type(datZ) == np.ndarray:
 		datZ = concat1(datZ)

@@ -794,7 +794,7 @@ contains
                  &   absx  (nz,ny,nx), absy  (nz,ny,nx), abslap (nz,ny,nx), &
                  &   absxx (nz,ny,nx), absyy (nz,ny,nx),  &
                  &   frint(nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx), &
-                 &   zeroloc(2_ni,nn), frloc_cws(nz,ny,nx), frac_idx
+                 &   zeroloc(nn,2_ni), frloc_cws(nz,ny,nx), frac_idx
     integer(kind=ni) :: k, m, n, typ, idx, zerocnt, ptcnt, linecnt, off
     ! -----------------------------------------------------------------
     !

@@ -51,7 +51,8 @@ def _find_scale(lthres, uthres, target_steps, symmetric_zero, intervals=DEFAULT_
 
 # Find upper and lower limit of the colorbar, based on the extend keyword and given exceedence percentiles
 def _find_thres(dat, mask, extend, exceed_percentiles, symmetric_zero):
-	dat = sorted(dat[mask].flatten())
+	nanmask = np.logical_not(np.isnan(dat[mask]))
+	dat = sorted(dat[mask][nanmask].flatten())
 	ldat = len(dat)
 
 	lower, upper = exceed_percentiles

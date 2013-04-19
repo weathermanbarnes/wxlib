@@ -40,7 +40,7 @@ contains
              ip1 = i+1_ni
              if (dat(j,ip1) /= NaN .and. gotflag == 0_ni .and. & 
                &   dat(j,i) /= NaN) then
-                if ((dat(j,i) > 0.0_nr .and. dat(j,ip1) > 0.0_nr) .or. &
+                if ((dat(j,i) > 0.0_nr .and. dat(j,ip1) < 0.0_nr) .or. &
                   & (dat(j,i) < 0.0_nr .and. dat(j,ip1) > 0.0_nr)) then
                    latB = dat(j,ip1)
                    if (dat(j,i) /= latB) then 
@@ -65,7 +65,7 @@ contains
        do j = 1_ni,ny-1_ni
           gotflag = 0_ni
           ! Zero line hits a grid point
-          if (dat(j,i) == 0) then
+          if (dat(j,i) == 0.0_nr) then
              zerocnt = zerocnt + 1_ni
              zeroloc(zerocnt,1_ni) = i
              zeroloc(zerocnt,2_ni) = j
