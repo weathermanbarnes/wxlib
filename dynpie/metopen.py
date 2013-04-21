@@ -74,7 +74,7 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 # 
 
 # Generalised data fetcher for instantaneous or short-term averaged fields
-def _get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=True, quiet=False):
+def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=True, quiet=False):
 	# None means "take everything there is as pressure levels"
 	if not plevs:
 		plevs = c.plevs
@@ -129,7 +129,7 @@ def _get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=True, qu
 
 
 # Get aggregated (average, standard deviation, etc.) fields
-def _get_aggregate(q, year=None, plev=None, yidx=None, xidx=None):
+def get_aggregate(q, year=None, plev=None, yidx=None, xidx=None):
 	raise NotImplementedError, 'If you need it, implement it!'
 
 	return dat

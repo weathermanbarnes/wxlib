@@ -9,16 +9,18 @@ import matplotlib as mpl
 from mpl_toolkits.basemap import Basemap, cm as bmcm
 from datetime import datetime as dt, timedelta as td
 from metopen import metopen
-from utils import concat1, igauss
+from utils import concat1, concat1lonlat, igauss
 import windrose as wr
 import streamplot as sp
 
 import stats
 
 from settings import conf as c
+from autoscale import autoscale
 
 
 # TODO: Generalisation in data fetcher <-> plotter to avoid code duplication
+# TODO: Cleanup import!
 # TODO: avoid that line!
 s = (361,721)
 
@@ -630,13 +632,14 @@ def ts_wavelet(q='defabs', plev='800', pos='Greenland_TB', scale=25, cmap=None, 
 # #############################################################################
 # 4. Generalised data plotters
 # 
-def map_oro_dat(dat, **kwargs):
+def map_oro_dat(dat, static, **kwargs):
 	# 1. Prepare
+	kwargs = __map_prepare_config(kwargs)
 	mask = __map_create_mask(kwargs)
 
 	dat = __map_prepare_dat(dat, mask, kwargs)
 	
-	m, x, y = __map_setup(mask, kwargs)
+	m, x, y = __map_setup(mask, static, kwargs)
 	
 	# 2. Plot the actual data
 	__map_contourf_dat(m, x, y, dat, kwargs)
@@ -648,8 +651,9 @@ def map_oro_dat(dat, **kwargs):
 	return
 
 
-def map_oro_deform(defabs, defang, **kwargs):
+def map_oro_deform(defabs, defang, static, **kwargs):
 	# 1. Prepare
+	kwargs = __map_prepare_config(kwargs)
 	mask = __map_create_mask(kwargs)
 
 	defabs = __map_prepare_dat(defabs, mask, kwargs)
@@ -657,7 +661,7 @@ def map_oro_deform(defabs, defang, **kwargs):
 	defdex = np.cos(defang[:,:]) *defabs
 	defdey = np.sin(defang[:,:]) *defabs
 
-	m, x, y = __map_setup(mask, kwargs)
+	m, x, y = __map_setup(mask, static, kwargs)
 
 	#2. Plot the actual deformation
 	__map_contourf_dat(m, x, y, defabs, kwargs)
@@ -673,8 +677,9 @@ def map_oro_deform(defabs, defang, **kwargs):
 	return
 
 
-def map_oro_barb(u, v, dat=None, **kwargs):
+def map_oro_barb(u, v, static, dat=None, **kwargs):
 	# 1. Prepare
+	kwargs = __map_prepare_config(kwargs)
 	mask = __map_create_mask(kwargs)
 
 	u = __map_prepare_dat(u, mask, c.contour.u)
@@ -682,7 +687,7 @@ def map_oro_barb(u, v, dat=None, **kwargs):
 	if not dat == None: 
 		dat = __map_prepare_dat(dat, mask, kwargs)
 	
-	m, x, y = __map_setup(mask, kwargs)
+	m, x, y = __map_setup(mask, static, kwargs)
 	
 	# 2. Plot the actual data
 	if not dat == None: __map_contourf_dat(m, x, y, dat, kwargs)
@@ -701,6 +706,15 @@ def map_oro_barb(u, v, dat=None, **kwargs):
 
 
 # Helper functions
+def __map_prepare_config(kwargs):
+	q = kwargs.pop('q', None)
+	if q:
+		kwargs = c.contourf.merge(q, **kwargs)
+	else:
+		kwargs = c.contourf.default.merge(**kwargs)
+	
+	return kwargs
+
 def __map_create_mask(kwargs):
 	plev = kwargs.pop('plev', None)
 	datZ = kwargs.pop('Zdata', None)
@@ -712,7 +726,7 @@ def __map_create_mask(kwargs):
 		datZ = concat1(datZ)
 		mask = datZ[:,:] < oro[:,:]
 	else:
-		mask = slice(None)
+		mask = slice(1,0)
 	
 	return mask
 
@@ -727,8 +741,10 @@ def __map_prepare_dat(dat, mask, kwargs):
 
 	return dat
 
-def __map_setup(mask, kwargs):
+def __map_setup(mask, static, kwargs):
 	m = kwargs.pop('m')()
+
+	lon, lat = concat1lonlat(static.x, static.y)
 	x, y = m(lon,lat)
 	
 	m.drawcoastlines(color=kwargs.pop('coastcolor'))
@@ -737,9 +753,9 @@ def __map_setup(mask, kwargs):
 	m.drawparallels(range(-80,81,5), color=gridcolor)
 	m.drawmeridians(range(0,360,30), color=gridcolor)
 
-	m.contour(x, y, oro, kwargs.pop('oroscale'), colors=kwargs.pop('orocolor'), 
+	m.contour(x, y, concat1(static.oro), kwargs.pop('oroscale'), colors=kwargs.pop('orocolor'), 
 			alpha=kwargs.pop('oroalpha'), zorder=2)
-	if not type(mask) == np.ndarray:
+	if type(mask) == np.ndarray:
 		m.contourf(x, y, mask, colors=kwargs.pop('maskcolor'))
 	
 	return m, x, y
@@ -747,6 +763,8 @@ def __map_setup(mask, kwargs):
 def __map_contourf_dat(m, x, y, dat, kwargs):
 	hatch = kwargs.pop('hatches')
 	scale = kwargs.pop('scale')
+	if scale == 'auto':
+		scale = autoscale(dat, **kwargs)
 	cs = m.contourf(x, y, dat, scale, zorder=1, **kwargs)
 	if not type(scale) == int:
 		cs.set_clim(scale[0], scale[-1])

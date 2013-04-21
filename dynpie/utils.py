@@ -53,6 +53,18 @@ def concat1(data):
 	return data
 
 #
+# Concatenate one latitude band in x-direction, taking over the values of 
+# the first latitude band to emulate a cyclic field in Basemap plots
+def concat1lonlat(x, y):
+	# Some map projections need the lon, lat array to be Fortran-aligned.
+	lon = np.asfortranarray(concat1(x))
+	lat = np.asfortranarray(concat1(y))
+
+	lon[:,-1] += 360.0
+
+	return lon, lat
+
+#
 # Generic calculation preparations and the actual call of the Fortran function
 def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=False):
 	if not grid.nz or grid.nz == 1:

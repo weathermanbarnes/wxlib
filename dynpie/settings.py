@@ -16,34 +16,20 @@ import cm
 # #############################################################################
 # 1. Scales, ticks and labels
 # 
-scale_oro = range(10000,80001,10000)
-scale_oro_full = range(-19000,51000,2000)
-
-scale_Z_diff = np.arange(-5250,5251,500)
-
-scale_u     = np.arange(20,71,10)
-scale_u_diff = np.arange(-30,31,5)
+scale_oro_c = range(10000,80001,10000)
+scale_oro_cf = range(-19000,51000,2000)
 
 scale_pv = np.array([-2,-1, 1, 2])
 
-scale_defabs = np.arange(5.0,30.1,5.0)
-scale_defabs_mean = np.arange(2.0,12.1,2.0)
-
 scale_defang = (np.arange(-18,19)-0.5)*np.pi/36.0
-scale_defang_coarse = np.arange(-4,5)*np.pi/8.0 - np.pi/72.0
 ticks_defang = np.arange(-4,5)*3.1415926535/8.0 
 labels_defang = [u'-π/2', u'-3π/8', u'-π/4', u'-π/8', u'0', u'π/8', u'π/4', u'3π/8', u'π/2']
 
-scale_ow_mean = np.arange(-0.35, 0.36, 0.1)*1.0e-9
+scale_dd = np.arange(0,36.1)*10.0
+ticks_dd = np.arange(0,8)*360.0/8.0 
+labels_dd = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 
-scale_pvstir_mean = np.arange(-2.25, 2.26, 0.5)*1.0e-6
-scale_pvfil_mean  = np.arange(-7.0, 7.1, 2.0)*1.0e-6
-
-scale_rsr_mean = np.arange(-13.5, 13.6, 3.0)
-
-scale_q = np.arange(0.0, 10.1, 1.0)*1.0e-3
-scale_qfs = np.arange(-1.65,1.66,0.3)*1.0e-4
-scale_qfs_mean = np.arange(-4.5,4.6,1.0)*1.0e-5
+scale_q = np.arange(0.0, 10.1, 1.0)
 
 # #############################################################################
 # 2. Default hooks for plotting
@@ -51,6 +37,7 @@ scale_qfs_mean = np.arange(-4.5,4.6,1.0)*1.0e-5
 hooks = {}
 hooks['defabs'] = lambda defabs: defabs*1e5
 hooks['pv']     = lambda pv: pv*1e6
+hooks['q']     = lambda q: q*1e3
 def _tmp(oro):
 	oro[oro <= 100] = -17000
 	return oro
@@ -82,45 +69,43 @@ PVLEVS = ['pv2000', ]
 
 # DEFAULT contour settings
 if os.getenv('DYNLIB_PLOT_PRINT'):
-	DEFAULT_KWARGS = {'m': proj.wmap, 'plev': '800', 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
+	DEFAULT_KWARGS = {'m': proj.wmap, 'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 'auto', 
 		'overlays': [], 'disable_cb': True, 'show': False, 'save': '', 'title': '', 'hook': None,
-		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro,
+		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro_c,
 		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [] }
 else:
-	DEFAULT_KWARGS = {'m': proj.wmap, 'plev': '800', 'lon': None, 'lat': None, 'mark': None, 'scale': 10, 
+	DEFAULT_KWARGS = {'m': proj.wmap, 'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 'auto', 
 		'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 'hook': None,
-		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro,
+		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro_c,
 		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [] }
 DEFAULT_CONTOUR_KWARGS = {'colors': 'k', 'alpha': 1.0, 'cmap': None, 'norm': None, 
 	'vmin': None, 'vmax': None, 'levels': None, 'origin': None, 'extent': None, 
 	'extend': 'neither', 'linewidths': 2.0, 'linestyles': None, 'contour_labels': False}
 DEFAULT_CONTOURF_KWARGS = {'colors': None, 'alpha': 1.0, 'cmap': None, 'norm': None, 
 	'vmin': None, 'vmax': None, 'levels': None, 'origin': None, 'extent': None, 
-	'extend': 'neither', 'hatches': None }
+	'extend': 'both', 'hatches': None }
 
 MUTEX_GROUPS = [set(['colors', 'cmap']), ]
 
-# DEFAULT settings per quantity Q
-DEFAULT_Q = {}
-DEFAULT_Q['defabs'] = {'cmap': cm.defabs2(), 'extend': 'max', 'scale': scale_defabs, 'hook': hooks['defabs']}
-DEFAULT_Q['tdefabs_p']  = {'extend': 'both', 'cmap': plt.cm.PRGn}
-DEFAULT_Q['defang'] = {'cmap': cm.periodic3(), 'scale': scale_defang, 'ticks': ticks_defang, 
+# DEFAULT settings per quantity Q on contourf plots
+DEFAULT_Q_C = {}
+
+# DEFAULT settings per quantity Q on contourf plots
+DEFAULT_Q_CF = {}
+DEFAULT_Q_CF['defabs'] = {'cmap': cm.defabs2(), 'hook': hooks['defabs']}
+DEFAULT_Q_CF['tdefabs_p']  = {'cmap': plt.cm.PRGn}
+DEFAULT_Q_CF['defang'] = {'cmap': cm.periodic3(), 'scale': scale_defang, 'ticks': ticks_defang, 
 	'ticklabels': labels_defang}
-DEFAULT_Q['u']   = {'scale': scale_u_diff}
-DEFAULT_Q['Z']   = {'scale': scale_Z_diff}
-DEFAULT_Q['T']   = {'cmap': plt.cm.RdBu_r,' extend': 'both'}
-DEFAULT_Q['the']   = {'cmap': plt.cm.RdBu_r, 'extend': 'both'}
-DEFAULT_Q['thestir']  = {'extend': 'both', 'cmap': plt.cm.BrBG}
-DEFAULT_Q['thefil']  = {'extend': 'both', 'cmap': plt.cm.PRGn}
-DEFAULT_Q['pv']  = {'scale': scale_pv, 'hook': hooks['pv']}
-DEFAULT_Q['oro'] = {'scale': scale_oro_full, 'cmap': plt.cm.gist_earth, 'hook': hooks['oro']}
-DEFAULT_Q['ow']  = {'scale': scale_ow_mean, 'extend': 'both'}
-DEFAULT_Q['pvstir']  = {'scale': scale_pvstir_mean, 'extend': 'both'}
-DEFAULT_Q['pvfil']  = {'scale': scale_pvfil_mean, 'extend': 'both', 'cmap': plt.cm.PRGn}
-DEFAULT_Q['rsr']  = {'scale': scale_rsr_mean, 'extend': 'both'}
-DEFAULT_Q['q'] = {'scale': scale_q, 'extend': 'max', 'cmap': cm.q()}
-DEFAULT_Q['qfil'] = {'scale': scale_qfs, 'extend': 'both', 'cmap': plt.cm.RdBu}
-DEFAULT_Q['qstir'] = {'scale': scale_qfs, 'extend': 'both', 'cmap': plt.cm.BrBG}
+DEFAULT_Q_CF['T']   = {'cmap': plt.cm.RdBu_r}
+DEFAULT_Q_CF['the']   = {'cmap': plt.cm.RdBu_r}
+DEFAULT_Q_CF['thestir']  = {'cmap': plt.cm.BrBG}
+DEFAULT_Q_CF['thefil']  = {'cmap': plt.cm.PRGn}
+DEFAULT_Q_CF['pv']  = {'hook': hooks['pv']}
+DEFAULT_Q_CF['oro'] = {'scale': scale_oro_cf, 'cmap': plt.cm.gist_earth, 'hook': hooks['oro']}
+DEFAULT_Q_CF['pvfil']  = {'cmap': plt.cm.PRGn}
+DEFAULT_Q_CF['q'] = {'cmap': cm.q()}
+DEFAULT_Q_CF['qfil'] = {'cmap': plt.cm.RdBu}
+DEFAULT_Q_CF['qstir'] = {'cmap': plt.cm.BrBG}
 
 
 # #############################################################################
@@ -239,7 +224,13 @@ class settings_dict(mutmap):
 	#		return self._[key]
 	#	else:
 	#		return default
+	
+	def merge(self, **kwargs):
+		rkwargs = dict(self)
+		for kwarg, argv in kwargs.items():
+			rkwargs[kwarg] = argv
 
+		return rkwargs
 
 	def reset(self, key=None):
 		if not self.default:
@@ -260,7 +251,7 @@ class settings_dict(mutmap):
 class settings_contour(object):
 	default = settings_dict(DEFAULT_CONTOUR_KWARGS)
 	default.update(DEFAULT_KWARGS)
-	default_q = DEFAULT_Q
+	default_q = DEFAULT_Q_C
 
 	_overrides = {}
 
@@ -292,11 +283,7 @@ class settings_contour(object):
 	
 
 	def merge(self, q, **kwargs):
-		rkwargs = dict(self.__getattribute__(q))
-		for kwarg, argv in kwargs.items():
-			rkwargs[kwarg] = argv
-
-		return rkwargs
+		return self.__getattribute__(q).merge(**kwargs)
 
 
 	def reset(self, q, key=None):
@@ -309,6 +296,7 @@ class settings_contour(object):
 class settings_contourf(settings_contour):
 	default = settings_dict(DEFAULT_CONTOURF_KWARGS)
 	default.update(DEFAULT_KWARGS)
+	default_q = DEFAULT_Q_CF
 	_overrides = {}
 	
 
@@ -371,7 +359,7 @@ conf = settings()
 # 5. Clean-Up: Making the default settings only available through settings objects
 # 
 del Q, BINS_Q, DATAPATH, OPATH, PPATH, FILE_STD, FILE_STAT, FILE_MSTAT, STD_SLICE, YEARS, PLEVS, PTLEVS, PVLEVS
-del DEFAULT_KWARGS, DEFAULT_CONTOUR_KWARGS, DEFAULT_CONTOURF_KWARGS, DEFAULT_Q, MUTEX_GROUPS
+del DEFAULT_KWARGS, DEFAULT_CONTOUR_KWARGS, DEFAULT_CONTOURF_KWARGS, DEFAULT_Q_C, DEFAULT_Q_CF, MUTEX_GROUPS
 
 
 # that's it
