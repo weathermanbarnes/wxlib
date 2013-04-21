@@ -48,9 +48,8 @@ hooks['oro'] = _tmp
 # #############################################################################
 # 3. Default settings
 #
-Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 'qstir': 'qstir', 'qfil': 'qfil',
-		'T': 't', 'the': 'thetae', 'thefil': 'thetaefil', 'thestir': 'thetaestir', 'tdefabs_p': 'tdefabs_p',
-		'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 'pvstir': 'pvstir', 'pvfil': 'pvfil', }
+Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 
+		'T': 't', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', }
 _rose = [17,]
 _rose.extend(range(-18,18))
 BINS_Q = {'defang': np.array(_rose)*math.pi/36.0+math.pi/72.0, }
@@ -93,19 +92,13 @@ DEFAULT_Q_C = {}
 # DEFAULT settings per quantity Q on contourf plots
 DEFAULT_Q_CF = {}
 DEFAULT_Q_CF['defabs'] = {'cmap': cm.defabs2(), 'hook': hooks['defabs']}
-DEFAULT_Q_CF['tdefabs_p']  = {'cmap': plt.cm.PRGn}
 DEFAULT_Q_CF['defang'] = {'cmap': cm.periodic3(), 'scale': scale_defang, 'ticks': ticks_defang, 
 	'ticklabels': labels_defang}
 DEFAULT_Q_CF['T']   = {'cmap': plt.cm.RdBu_r}
 DEFAULT_Q_CF['the']   = {'cmap': plt.cm.RdBu_r}
-DEFAULT_Q_CF['thestir']  = {'cmap': plt.cm.BrBG}
-DEFAULT_Q_CF['thefil']  = {'cmap': plt.cm.PRGn}
 DEFAULT_Q_CF['pv']  = {'hook': hooks['pv']}
 DEFAULT_Q_CF['oro'] = {'scale': scale_oro_cf, 'cmap': plt.cm.gist_earth, 'hook': hooks['oro']}
-DEFAULT_Q_CF['pvfil']  = {'cmap': plt.cm.PRGn}
 DEFAULT_Q_CF['q'] = {'cmap': cm.q()}
-DEFAULT_Q_CF['qfil'] = {'cmap': plt.cm.RdBu}
-DEFAULT_Q_CF['qstir'] = {'cmap': plt.cm.BrBG}
 
 
 # #############################################################################
@@ -257,10 +250,7 @@ class settings_contour(object):
 
 	def __init__(self):
 		for q in Q:
-			if q in self.default_q:
-				self._overrides[q] = settings_dict(self.default_q[q], self)
-			else:
-				self._overrides[q] = settings_dict({}, self)
+			self.new(q, self.default_q.get(q, {}))
 
 		return
 
@@ -278,6 +268,12 @@ class settings_contour(object):
 		if q in self._overrides or q == 'default':
 			raise AttributeError, 'The attributes cannot be overwritten'
 		object.__setattr__(self, q, value)
+
+		return
+
+
+	def new(self, q, conf):
+		self._overrides[q] = settings_dict(conf, self)	
 
 		return
 	
@@ -327,7 +323,7 @@ class settings(object):
 
 
 	def __getattribute__(self, key):
-		if key[0] == '_' or key in ['reset', ]:
+		if key[0] == '_' or key in ['reset', 'new_variable', ]:
 			return object.__getattribute__(self, key)
 
 		return self.__current[key]
@@ -339,6 +335,14 @@ class settings(object):
 		elif key[0] == '_' or key in ['reset', ]:
 			return object.__setattr__(self, key, value)
 		self.__current[key] = value
+
+		return
+	
+
+	def new_variable(self, q, qlong, conf_cf={}, conf_c={}):
+		self.contourf.new(q, conf_cf)
+		self.contour.new(q, conf_c)
+		self.q[q] = qlong
 
 		return
 
@@ -359,7 +363,7 @@ conf = settings()
 # 5. Clean-Up: Making the default settings only available through settings objects
 # 
 del Q, BINS_Q, DATAPATH, OPATH, PPATH, FILE_STD, FILE_STAT, FILE_MSTAT, STD_SLICE, YEARS, PLEVS, PTLEVS, PVLEVS
-del DEFAULT_KWARGS, DEFAULT_CONTOUR_KWARGS, DEFAULT_CONTOURF_KWARGS, DEFAULT_Q_C, DEFAULT_Q_CF, MUTEX_GROUPS
+del DEFAULT_KWARGS, DEFAULT_CONTOUR_KWARGS, DEFAULT_CONTOURF_KWARGS, DEFAULT_Q_C, DEFAULT_Q_CF
 
 
 # that's it
