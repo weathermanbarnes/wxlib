@@ -7,7 +7,7 @@ src="$cur/src"
 precc="$src/precc"
 work="$cur/default"
 
-files="config.f95 conv.f95 derivatives.f95 humidity.f95 diag_contour_rwb.f95 diag.f95 stat.f95 utils.f95"
+files="config.f95 conv.f95 derivatives.f95 humidity.f95 diag_contour_rwb.f95 diag_fronts.f95 diag.f95 stat.f95 utils.f95"
 filec="const.f95"
 filek="kind.f95"
 filem=".dynlib_workdir_prepared"
@@ -46,7 +46,8 @@ echo "Stage 2: Creating python signature file"
 cd $precc
 
 f2py -m dynlib -h $pysig $filec $files > /dev/null
-sed "s/kind=nr/kind=8/g" $pysig | sed "s/kind=ni/kind=4/g" > ${pysig}_tmp
+sed "s/kind=nr/kind=8/g" $pysig | sed "s/_nr//g" |
+sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" > ${pysig}_tmp
 mv ${pysig}_tmp $pysig
 
 
@@ -57,6 +58,7 @@ gfortran $LIBS -c $filek $filec $files
 
 # 4. Compiling the shared object usable from within python
 echo "Stage 4: Compiling the python module (as a shared object)"
+DEBUG='--debug --opt="-fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace -g -pedantic"'
 f2py -c $LIBS --fcompiler=gnu95 dynlib.pyf $files $filec $filek > /dev/null
 mv dynlib.so $cur
 cd $cur/..

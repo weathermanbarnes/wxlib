@@ -90,7 +90,7 @@ contains
     call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)
     call antilap2(zxxyy,nx,ny,nz,z,dx,dy)
     call crosslap2(z2xy,nx,ny,nz,z,dx,dy)
-    res = - (sig_sh*zxxyy + sig_st*z2xy)/sqrt(sig_sh**2+sig_st**2)
+    res = - (sig_st*zxxyy + sig_sh*z2xy)/sqrt(sig_sh**2+sig_st**2)
   end subroutine
   !
   ! Calculates angle from x-axis to axis of dilatation :
@@ -741,39 +741,175 @@ contains
     end do
   end subroutine
   !
-  ! Frontal detection after G. Berry et al, based on the frontal detection
+  ! Front intensity function after G. Berry et al, based on the frontal detection
   ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
-  ! temperature
-  subroutine fronts_from_theta_q(res,nx,ny,nz,theta,q,u,v,dx,dy)
-    real(kind=nr), intent(in)  :: theta(nz,ny,nx), q(nz,ny,nx), dx(ny,nx), dx(ny,nx)
-    real(kind=nr), intent(out) :: res(nz,ny,nx)
+  ! temperature as dat
+  subroutine front_intensity_speed(frint,frspd,nx,ny,nz,dat,u,v,dx,dy)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
+                 &                dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: frint(nz,ny,nx), frspd(nz,ny,nx)
     integer(kind=ni) :: nx,ny,nz
-    !f2py depend(nx,ny,nz) res, q
-    !f2py depend(nx,ny) dx dy
+    !f2py depend(nx,ny,nz) frint, frspd, u, v
+    !f2py depend(nx,ny) dx, dy
     !
-    real(kind=nr) :: thetax(nz,ny,nx), thetay(nz,ny,nx), absgrad(nz,ny,nx), &
+    real(kind=nr) :: datx (nz,ny,nx), daty (nz,ny,nx), absgrad(nz,ny,nx), &
+                 &   absx (nz,ny,nx), absy (nz,ny,nx), abslap (nz,ny,nx)
+    ! -----------------------------------------------------------------
+    !
+    ! todo: howto reduce duplication with front_location?
+    !
+    call grad(datx,daty, nx,ny,nz, dat, dx,dy)
+    absgrad(:,:,:) = sqrt(datx(:,:,:)**2.0_nr + daty(:,:,:)**2.0_nr)
+    call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
+    abslap (:,:,:) = sqrt(absx(:,:,:)**2.0_nr + absy(:,:,:)**2.0_nr)
+    !
+    frint(:,:,:) = (datx(:,:,:)*absx(:,:,:) + daty(:,:,:)*absy(:,:,:)) / absgrad(:,:,:)
+    frspd(:,:,:) = (u(:,:,:)*absx(:,:,:) + v(:,:,:)*absy(:,:,:)) / abslap(:,:,:)
+    !
+    return
+  end subroutine
+  !
+  ! Front detection after G. Berry et al, based on the frontal detection
+  ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
+  ! temperature as dat
+  subroutine front_location(fr,froff,nx,ny,nz,no,nf,dat,u,v,dx,dy)
+    use diag_fronts
+    !
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
+                 &                dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: fr(nz,3_ni,no,3_ni), froff(nz,3_ni,nf)
+    integer(kind=ni) :: nx,ny,nz, no, nf
+    !f2py depend(nx,ny,nz) u, v
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(nz) fr, froff
+    !
+    real   (kind=nr), parameter :: NaN = -9999.9_nr, frint_thres = -11.7e-11_nr, &
+                  &                frspd_thres = 1.5_nr, searchrad = 3.1_nr
+    integer(kind=ni), parameter :: nn = 30000_ni, minlen = 10_ni
+    !
+    real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
+    integer(kind=ni), allocatable :: linelen(:)
+    !
+    real(kind=nr) :: datx(nz,ny,nx), daty(nz,ny,nx), absgrad(nz,ny,nx), &
                  &   absx  (nz,ny,nx), absy  (nz,ny,nx), abslap (nz,ny,nx), &
-                 &   absxx (nz,ny,nx), absyy (nz,ny,nx), loc    (nz,ny,nx), &
-                 &   ggt(nz,ny,nx), frontspeed(nz,ny,nx)
+                 &   absxx (nz,ny,nx), absyy (nz,ny,nx),  &
+                 &   frint(nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx), &
+                 &   zeroloc(nn,2_ni), frloc_cws(nz,ny,nx), frac_idx
+    integer(kind=ni) :: k, m, n, typ, idx, zerocnt, ptcnt, linecnt, off
     ! -----------------------------------------------------------------
     !
     ! todo: input smoothing, equivalent to wrf_smooth_2d() in NCL
+    ! todo: frint_thres, frspd_thres, minlen, searchrad in config / argument list
+    ! todo: cyclic boundary condition?
+    write(*,*) 'preparing'
     !
-    call grad(thetax,thetay, nx,ny,nz, theta, dx,dy)
-    absgrad(:,:,:) = sqrt(thetax**2.0_nr + thetay**2.0_nr)
+    call grad(datx,daty, nx,ny,nz, dat, dx,dy)
+    absgrad(:,:,:) = sqrt(datx**2.0_nr + daty**2.0_nr)
     call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
-    abslap(:,:,:) = sqrt(absx**2.0_nr + absy**2.0_nr)
+    abslap (:,:,:) = sqrt(absx**2.0_nr + absy**2.0_nr)
     !
-    ggt(:,:,:) = (thetax(:,:,:)*magx(:,:,:) + thetay(:,:,:)*magy(:,:,:)) / maggrad(:,:,:)
-    frontspeed(:,:,:) = (u(:,:,:)*absx(:,:,:) + v(:,:,:)*absy(:,:,:)) / abslap(:,:,:)
+    frint(:,:,:) = (datx(:,:,:)*absx(:,:,:) + daty(:,:,:)*absy(:,:,:)) / absgrad(:,:,:)
+    frspd(:,:,:) = (u(:,:,:)*absx(:,:,:) + v(:,:,:)*absy(:,:,:)) / abslap(:,:,:)
     !
     ! determine front line location type after Hewson 1998, eq. 5
     call ddx(absxx, nx,ny,nz, absx, dx,dy)
-    call ddy(absyy, nx,ny,nz, abxy, dx,dy)
-    loc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
+    call ddy(absyy, nx,ny,nz, absy, dx,dy)
+    frloc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
     !
-
-
+    ! frint must be negative for front
+    where(frint > frint_thres)
+       frloc = NaN
+    end where
+    ! 
+    ! and not just negative, but below a threshold
+    !where(frint > frint_thres)
+    !   frloc_cold = NaN
+    !elsewhere 
+    !   frloc_cold = frloc
+    !end where
+    !
+    do k = 1_ni,nz
+       write(*,*) k, 'of', nz
+       !
+       do typ = 1_ni,3_ni
+          ! cold fronts
+          if (typ == 1_ni) then
+             where(frspd < -1_ni*frspd_thres)
+                frloc_cws = frloc
+             elsewhere
+                frloc_cws = NaN
+             end where
+          ! warm fronts
+          elseif(typ == 2_ni) then
+             where(frspd > frspd_thres)
+                frloc_cws = frloc
+             elsewhere
+                frloc_cws = NaN
+             end where
+          ! stationary fronts
+          else
+             where(frspd > -1_ni*frspd_thres .and. frspd < frspd_thres)
+                frloc_cws = frloc
+             elsewhere
+                frloc_cws = NaN
+             end where
+          end if
+          !
+          ! find fronts
+          call find_zeroloc(frloc_cws(k,:,:), nx,ny,nn, NaN, zeroloc,zerocnt)
+          ! 
+          ! searchrad is in grid point indexes, as it is easier to transform one
+          ! scalar instead of two arrays. For standard grids the two options are
+          ! equivalent. In the long-term one should try to adapt the search radius and
+          ! the minimum length to SI length scales (km)
+          !
+          ! todo why sort points?
+          !
+          allocate(recj(zerocnt,zerocnt), reci(zerocnt,zerocnt), linelen(zerocnt) )
+          reci(:,:) = NaN
+          recj(:,:) = NaN
+          call linejoin(zerocnt, zeroloc(:,2_ni), zeroloc(:,1_ni), searchrad, recj, reci) 
+          !
+          ! filter by length
+          linecnt    = 0_ni ! number of lines
+          ptcnt      = 0_ni ! total numer of points
+          linelen(:) = 0_ni ! number of points per line
+          !
+          do n = 1_ni,zerocnt
+             if (recj(n,1_ni) == NaN) then
+                exit
+             end if
+             do m = 1_ni,zerocnt
+                if (recj(n,m) == NaN) then
+                   exit
+                end if
+                linelen(n) = linelen(n) + 1_ni
+             end do
+             if (linelen(n) >= minlen) then
+                linecnt = linecnt + 1_ni
+                ptcnt = ptcnt + linelen(n)
+             end if
+          end do
+          !
+          ! write into output arrays fr and froff
+          off = 0_ni
+          do n = 1_ni,linecnt
+             do m = 1_ni,linelen(n)
+                fr(k,typ,off+m,1_ni) = reci(n,m)
+                fr(k,typ,off+m,2_ni) = recj(n,m)
+                fr(k,typ,off+m,3_ni) = absgrad(k,int(recj(n,m),ni),int(reci(n,m),ni))
+             end do
+             froff(k,typ,n) = off
+             off = off + linelen(n)
+          end do
+          !
+          deallocate(reci, recj, linelen)
+          !
+       end do ! loop over front type
+       !
+    end do ! loop over k
+    !
+    return
   end subroutine
   !
 end module

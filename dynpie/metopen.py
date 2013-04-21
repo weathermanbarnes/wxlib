@@ -51,7 +51,13 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 
 		if not no_static:
 			if not static:
-				fo, oro = metopen('static', 'oro', cut, verbose, no_dtype_conversion, True)
+				if type(cut) == tuple:
+					if len(cut) > 1:
+						cuts = tuple(list(cut)[1:])
+					else: 
+						cuts = slice(None)
+						
+				fo, oro = metopen('static', 'oro', cuts, verbose, no_dtype_conversion, True)
 				static = grid_by_static(fo)
 				static.oro = oro[::]
 				fo.close()
@@ -77,17 +83,13 @@ def _get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=True, qu
 	
 	if yidx == None:
 		yidxs = slice(None)
-		ylen  = s[0]
 	else:
 		yidxs = yidx
-		ylen  = 1
 	
 	if xidx == None:
 		xidxs = slice(None)
-		xlen  = s[1]-1
 	else:
 		xidxs = xidx
-		xlen  = 1
 
 	# Convert dates to time indexes
 	if type(dates) not in ([np.ndarray, list, tuple, set]):
@@ -100,13 +102,14 @@ def _get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=True, qu
 	# One ore more vertical levels?
 	if len(plevs) > 1:
 		i = 0
-		dat = np.zeros((1+max(tidxs)-min(tidxs), len(c.plevs), ylen, xlen))
 		#dat = dat.squeeze()
 		for plev in plevs:
 			if not quiet:
 				print "Reading from "+c.file_std % (dates[0].year, plev, q)
 			if plev == plevs[0]:
 				f, d, static = metopen(c.file_std % (dates[0].year, plev, q), c.q[q], cut=cut, no_static=True)
+				dat = np.zeros((1+max(tidxs)-min(tidxs), len(c.plevs), d.shape[1], d.shape[2]))
+				
 			else:
 				f, d = metopen(c.file_std % (dates[0].year, plev, q), c.q[q], cut=cut)
 			dat[:,i,::] = d

@@ -9,48 +9,49 @@ module diag_fronts
   use config
   !
   implicit none
-  ! The module is used (only) in the fronts_by_theta_q subroutine in diag.f95
+  ! The module is used (only) in the front_location subroutine in diag.f95
 contains
   !
   ! Find locations where dat is zero by interpolating the 2-dim gridded data
-  subroutine find_zeroloc(dat, nx,ny, amiss,tloc_1,tloc_2)
+  subroutine find_zeroloc(dat, nx,ny,nn, NaN, zeroloc, zerocnt)
     real(kind=nr), intent(in)  ::  dat(ny,nx)
-    real(kind=nr), intent(out) :: tloc_1(5000_ni,2_ni),tloc_2(5000,2_ni)
-    real(kind=nr) :: amiss
-    integer(kind=ni) :: nx,ny
+    real(kind=nr), intent(out) :: zeroloc(nn,2_ni)
+    real(kind=nr), intent(in) :: NaN
+    integer(kind=ni), intent(in) :: nx,ny, nn
+    integer(kind=ni), intent(out) :: zerocnt 
     !
     real   (kind=nr) :: latB, dist
-    integer(kind=ni) :: i,j, nx,ny, ip1,gotflag, cntx,cnty
+    integer(kind=ni) :: i,j, ip1,gotflag
     ! -----------------------------------------------------------------
     !
     ! (1) scan along x
-    cntx = 0_ni
+    zerocnt = 0_ni
     do i = 1_ni,nx-1_ni
-       do j=1_ni,ny-1_ni
+       do j = 1_ni,ny-1_ni
           gotflag = 0_ni
           ! Zero line hits a grid point
-          if (axisdata(j,i) == 0.0_nr) then
-             cntx = cntx + 1_ni
-             tloc_1(cntx,1) = i
-             tloc_1(cntx,2) = j
+          if (dat(j,i) == 0.0_nr) then
+             zerocnt = zerocnt + 1_ni
+             zeroloc(zerocnt,1_ni) = i
+             zeroloc(zerocnt,2_ni) = j
              gotflag = 1_ni
-          ! interpolate to find line, h direction first
+          ! interpolate to find line, i direction first
           else   
              ip1 = i+1_ni
-             if (axisdata(ip1,h) /= amiss .and. gotflag == 0_ni .and. & 
-               &   axisdata(g,h) /= amiss) then
-                if ((axisdata(g,h) > 0.0_nr .and. axisdata(ip1,h) > 0.0_nr) .or. &
-                  & (axisdata(g,h) < 0.0_nr .and. axisdata(ip1,h) > 0.0_nr)) then
-                   latB = axisdata(j, ip1)
-                   if (axisdata(g,h) /= latB) then 
-                      cntx = cntx + 1_ni
-                      tloc_1(cntx,2_ni) = j
-                      tloc_1(cntx,1_ni) = i + axisdata(j,i)/(axisdata(j,i) - axisdata(j,ip1))
+             if (dat(j,ip1) /= NaN .and. gotflag == 0_ni .and. & 
+               &   dat(j,i) /= NaN) then
+                if ((dat(j,i) > 0.0_nr .and. dat(j,ip1) < 0.0_nr) .or. &
+                  & (dat(j,i) < 0.0_nr .and. dat(j,ip1) > 0.0_nr)) then
+                   latB = dat(j,ip1)
+                   if (dat(j,i) /= latB) then 
+                      zerocnt = zerocnt + 1_ni
+                      zeroloc(zerocnt,2_ni) = j
+                      zeroloc(zerocnt,1_ni) = i + dat(j,i)/(dat(j,i) - dat(j,ip1))
                    ! points same magn, diff sign
                    else
-                      cntx = cntx + 1_ni
-                      tloc_1(cntx,2_ni) = j
-                      tloc_1(cntx,1_ni) = i + 0.5_nr
+                      zerocnt = zerocnt + 1_ni
+                      zeroloc(zerocnt,2_ni) = j
+                      zeroloc(zerocnt,1_ni) = i + 0.5_nr
                    end if    ! latB
                    gotflag = 1
                 end if    ! diff signs
@@ -60,33 +61,32 @@ contains
     end do
     ! 
     ! (2) scan along y
-    cnty = 0_ni
-    do j = 1_ni,ny-1_ni
-       do i = 1_ni,nx-1_ni
-          gotflag=0
+    do i = 1_ni,nx-1_ni
+       do j = 1_ni,ny-1_ni
+          gotflag = 0_ni
           ! Zero line hits a grid point
-          if (axisdata(j,i) == 0) then
-             cnty = cnty + 1_ni
-             tloc_2(cnty,1_ni) = i
-             tloc_2(cnty,2_ni) = j
+          if (dat(j,i) == 0.0_nr) then
+             zerocnt = zerocnt + 1_ni
+             zeroloc(zerocnt,1_ni) = i
+             zeroloc(zerocnt,2_ni) = j
              gotflag = 1_ni
-          ! interpolate to find line, h direction first
+          ! interpolate to find line, j direction first
           else   
              ip1 = j + 1_ni
-             if (axisdata(g,ip1) /= amiss .and. gotflag == 0_ni .and. &
-               & axisdata(g,h) /= amiss) then
-                if ((axisdata(g,h) > 0.0_nr .and. axisdata(g,ip1) < 0.0_nr) .or. &
-                  & (axisdata(g,h) < 0.0_nr .and. axisdata(g,ip1) > 0.0_nr)) then
-                   latB = axisdata(ip1,i)
-                   if (axisdata(g,h) /= latB) then
-                      cnty = cnty + 1_ni
-                      tloc_2(cnty,2_ni) = j + axisdata(j,i)/(axisdata(j,i) - axisdata(ip1,i))
-                      tloc_2(cnty,1_ni) = i
+             if (dat(ip1,i) /= NaN .and. gotflag == 0_ni .and. &
+               & dat(j,i) /= NaN) then
+                if ((dat(j,i) > 0.0_nr .and. dat(ip1,i) < 0.0_nr) .or. &
+                  & (dat(j,i) < 0.0_nr .and. dat(ip1,i) > 0.0_nr)) then
+                   latB = dat(ip1,i)
+                   if (dat(j,i) /= latB) then
+                      zerocnt = zerocnt + 1_ni
+                      zeroloc(zerocnt,2_ni) = j + dat(j,i)/(dat(j,i) - dat(ip1,i))
+                      zeroloc(zerocnt,1_ni) = i
                    ! points same magn, diff sign
                    else
-                      cnty = cnty + 1_ni
-                      tloc_1(cnty,2_ni) = j + 0.5_nr          
-                      tloc_1(cnty,1_ni) = i
+                      zerocnt = zerocnt + 1_ni
+                      zeroloc(zerocnt,2_ni) = j + 0.5_nr          
+                      zeroloc(zerocnt,1_ni) = i
                    end if    ! latB
                    gotflag = 1
                 end if    ! diff signs
@@ -96,7 +96,7 @@ contains
     end do
     !
     return
-  end  subroutine finder
+  end  subroutine find_zeroloc
   !
   !
   ! Join a cloud of frontal points into frontal lines

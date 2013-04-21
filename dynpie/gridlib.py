@@ -123,8 +123,8 @@ class grid_by_nc(grid):
 
 		self.nx = self.f.variables[self.x].shape[0]
 		self.ny = self.f.variables[self.y].shape[0]
-		self.x  = self.f.variables[self.y][::]
-		self.y  = self.f.variables[self.x][::]
+		self.x  = self.f.variables[self.x][::]
+		self.y  = self.f.variables[self.y][::]
 		if self.z:
 			self.nz = self.f.variables[self.z].shape[0]
 			self.z  = self.f.variables[self.z][::]

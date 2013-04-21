@@ -19,7 +19,8 @@ from settings import conf as c
 
 
 # TODO: Generalisation in data fetcher <-> plotter to avoid code duplication
-
+# TODO: avoid that line!
+s = (361,721)
 
 
 # #############################################################################
@@ -701,11 +702,11 @@ def map_oro_barb(u, v, dat=None, **kwargs):
 
 # Helper functions
 def __map_create_mask(kwargs):
-	plev = kwargs.pop('plev')
+	plev = kwargs.pop('plev', None)
 	datZ = kwargs.pop('Zdata', None)
 
 	if plev and not type(datZ) == np.ndarray:
-		f,datZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:])
+		f,datZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:], no_static=True)
 		if f: f.close()
 	if type(datZ) == np.ndarray:
 		datZ = concat1(datZ)
@@ -787,9 +788,12 @@ def map_overlay_dat(dat, **kwargs):
 	def overlay(m, x, y, zorder, mask=None):
 		if type(mask) == np.ndarray:
 			dat[mask] = np.nan
-		cs =  m.contour(x, y, dat, **kwargs)
-		#if labels:
-		#	plt.clabel(cs, fontsize=12, inline=True, inline_spacing=2)
+		scale = kwargs.pop('scale')
+		cs =  m.contour(x, y, dat, scale, **kwargs)
+
+		labels = kwargs.pop('contour_labels')
+		if labels:
+			plt.clabel(cs, fontsize=12, inline=True, inline_spacing=2)
 
 		return
 

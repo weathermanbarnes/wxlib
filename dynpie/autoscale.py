@@ -21,15 +21,12 @@ def _find_scale(lthres, uthres, target_steps, symmetric_zero, intervals=DEFAULT_
 		log10 = np.log(10)
 		log10intervals = np.log(intervals)/log10
 		log10interval  = np.log((uthres - lthres)/target_steps)/log10
-		print log10interval
 		
 		if intervals_periodic:
 			exp = np.floor(log10interval)
 			log10interval = log10interval % 1.0
 		else:
 			exp = 0
-		
-		print log10interval, exp
 		
 		i = 0
 		diff = 9999.0
@@ -39,23 +36,23 @@ def _find_scale(lthres, uthres, target_steps, symmetric_zero, intervals=DEFAULT_
 		
 		i -= 1
 		interval = intervals[i] * 10**int(exp)
-		print log10intervals[i]
 	else:
 		raise ValueError, 'Either interval or target_steps must be given'
 
 	if symmetric_zero:
-		lthres = (round(lthres/interval - 0.5)+0.5)*interval
-		uthres = (round(uthres/interval + 0.5)-0.5)*interval + interval/10.0
+		lthres = (np.floor(lthres/interval - 0.5)+0.5)*interval
+		uthres = (np.ceil(uthres/interval + 0.5)-0.5)*interval + interval/10.0
 	else:
-		lthres =  round(lthres/interval)*interval
-		uthres =  round(uthres/interval)*interval + interval/10.0
+		lthres =  np.floor(lthres/interval)*interval
+		uthres =  np.ceil(uthres/interval)*interval + interval/10.0
 
 	return np.arange(lthres,uthres,interval)
 
 
 # Find upper and lower limit of the colorbar, based on the extend keyword and given exceedence percentiles
 def _find_thres(dat, mask, extend, exceed_percentiles, symmetric_zero):
-	dat = sorted(dat[mask].flatten())
+	nanmask = np.logical_not(np.isnan(dat[mask]))
+	dat = sorted(dat[mask][nanmask].flatten())
 	ldat = len(dat)
 
 	lower, upper = exceed_percentiles
