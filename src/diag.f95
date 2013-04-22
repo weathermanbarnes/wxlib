@@ -908,6 +908,9 @@ contains
                 off = off + linelen(n)
              end if
           end do
+          ! Save the ending of the last front by saving the beginning of the
+          ! first non-existant
+          froff(k,typ,n+1_ni) = off
           !
           deallocate(reci, recj, linelen)
           !
