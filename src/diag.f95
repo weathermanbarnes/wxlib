@@ -897,6 +897,10 @@ contains
                    write(*,*) 'Found more points than output array allows: ', no
                    stop 1
                 end if
+                if (linecnt > nf) then
+                   write(*,*) 'Found more fronts than output array allows: ', nf
+                   stop 1
+                end if
                 !
                 ! write into output arrays fr and froff
                 do m = 1_ni,linelen(n)
@@ -904,13 +908,13 @@ contains
                    fr(k,typ,off+m,2_ni) = recj(n,m)
                    fr(k,typ,off+m,3_ni) = absgrad(k,int(recj(n,m),ni),int(reci(n,m),ni))
                 end do
-                froff(k,typ,n) = off
+                froff(k,typ,linecnt) = off
                 off = off + linelen(n)
              end if
           end do
           ! Save the ending of the last front by saving the beginning of the
           ! first non-existant
-          froff(k,typ,n+1_ni) = off
+          froff(k,typ,linecnt+1_ni) = off
           !
           deallocate(reci, recj, linelen)
           !

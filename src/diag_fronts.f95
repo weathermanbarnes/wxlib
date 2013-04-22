@@ -88,7 +88,7 @@ contains
                       zeroloc(zerocnt,2_ni) = j + 0.5_nr          
                       zeroloc(zerocnt,1_ni) = i
                    end if    ! latB
-                   gotflag = 1
+                   gotflag = 1_ni
                 end if    ! diff signs
              end if    ! Missin ip1
           end if    ! zero exactly at grid point
