@@ -9,7 +9,7 @@ import matplotlib as mpl
 from mpl_toolkits.basemap import Basemap, cm as bmcm
 from datetime import datetime as dt, timedelta as td
 from metopen import metopen
-from utils import concat1, concat1lonlat, igauss
+from utils import concat1, concat1lonlat, igauss, __unflatten_fronts_t
 import windrose as wr
 import streamplot as sp
 
@@ -698,6 +698,50 @@ def map_oro_barb(u, v, static, dat=None, **kwargs):
 	else:
 		m.quiver(xt, yt, ut, vt, zorder=3)
 	
+	# 3. Finish off
+	__map_decorate(m, x, y, mask, kwargs)
+	__map_output(kwargs)
+
+	return
+
+
+def map_oro_fronts(fronts, froff, static, dat=None, **kwargs):
+	# 1. Prepare
+	kwargs = __map_prepare_config(kwargs)
+	mask = __map_create_mask(kwargs)
+	
+	# TODO: remove once fixed
+	froff = froff.astype('i2')
+
+	cfrs = __unflatten_fronts_t(fronts[0], froff[0], minlength=5)
+	wfrs = __unflatten_fronts_t(fronts[1], froff[1], minlength=5)
+	sfrs = __unflatten_fronts_t(fronts[2], froff[2], minlength=5)
+
+	if not dat == None: 
+		dat = __map_prepare_dat(dat, mask, kwargs)
+	
+	m, x, y = __map_setup(mask, static, kwargs)
+	
+	# 2. Plot the actual data
+	if not dat == None: __map_contourf_dat(m, x, y, dat, kwargs)
+
+	# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
+	for cfr in cfrs:
+		lonfr = -180 + cfr[:,0]*0.5
+		latfr = 90.0 - cfr[:,1]*0.5
+		xfr, yfr = m(lonfr, latfr)
+		m.plot(xfr, yfr, 'b-', linewidth=2)
+	for wfr in wfrs:
+		lonfr = -180 + wfr[:,0]*0.5
+		latfr = 90.0 - wfr[:,1]*0.5
+		xfr, yfr = m(lonfr, latfr)
+		m.plot(xfr, yfr, 'r-', linewidth=2)
+	for sfr in sfrs:
+		lonfr = -180 + sfr[:,0]*0.5
+		latfr = 90.0 - sfr[:,1]*0.5
+		xfr, yfr = m(lonfr, latfr)
+		m.plot(xfr, yfr, 'm-', linewidth=2)
+
 	# 3. Finish off
 	__map_decorate(m, x, y, mask, kwargs)
 	__map_output(kwargs)

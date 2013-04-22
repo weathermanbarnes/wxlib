@@ -875,6 +875,7 @@ contains
           ptcnt      = 0_ni ! total numer of points
           linelen(:) = 0_ni ! number of points per line
           !
+          off = 0_ni
           do n = 1_ni,zerocnt
              if (recj(n,1_ni) == NaN) then
                 exit
@@ -885,22 +886,27 @@ contains
                 end if
                 linelen(n) = linelen(n) + 1_ni
              end do
+             !
+             ! filter fronts by length
              if (linelen(n) >= minlen) then
                 linecnt = linecnt + 1_ni
                 ptcnt = ptcnt + linelen(n)
+                !
+                ! check if results larger than output array
+                if (ptcnt > no) then
+                   write(*,*) 'Found more points than output array allows: ', no
+                   stop 1
+                end if
+                !
+                ! write into output arrays fr and froff
+                do m = 1_ni,linelen(n)
+                   fr(k,typ,off+m,1_ni) = reci(n,m)
+                   fr(k,typ,off+m,2_ni) = recj(n,m)
+                   fr(k,typ,off+m,3_ni) = absgrad(k,int(recj(n,m),ni),int(reci(n,m),ni))
+                end do
+                froff(k,typ,n) = off
+                off = off + linelen(n)
              end if
-          end do
-          !
-          ! write into output arrays fr and froff
-          off = 0_ni
-          do n = 1_ni,linecnt
-             do m = 1_ni,linelen(n)
-                fr(k,typ,off+m,1_ni) = reci(n,m)
-                fr(k,typ,off+m,2_ni) = recj(n,m)
-                fr(k,typ,off+m,3_ni) = absgrad(k,int(recj(n,m),ni),int(reci(n,m),ni))
-             end do
-             froff(k,typ,n) = off
-             off = off + linelen(n)
           end do
           !
           deallocate(reci, recj, linelen)

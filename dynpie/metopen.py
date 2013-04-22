@@ -56,17 +56,23 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 						cuts = tuple(list(cut)[1:])
 					else: 
 						cuts = slice(None)
+				static = get_static(cuts, verbose, no_dtype_conversion)
 						
-				fo, oro = metopen('static', 'oro', cuts, verbose, no_dtype_conversion, True)
-				static = grid_by_static(fo)
-				static.oro = oro[::]
-				fo.close()
 		else:
 			return f, dat
 
 		return f, dat, static
 	
 	raise RuntimeError, '%s.* not found in any data location.' % filename
+
+
+def get_static(cuts=slice(None), verbose=False, no_dtype_conversion=False):
+	fo, oro = metopen('static', 'oro', cuts, verbose, no_dtype_conversion, True)
+	static = grid_by_static(fo)
+	static.oro = oro[::]
+	fo.close()
+
+	return static
 
 
 # #############################################################################

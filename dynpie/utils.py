@@ -100,6 +100,7 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 	
 	return res
 
+
 #
 # Reimplementation of the recpective function in dynlib.diag for benchmarking.
 def def_angle(u_dat, v_dat, grid):
@@ -125,6 +126,24 @@ def def_angle(u_dat, v_dat, grid):
 				deff[k,j,-1] = 0.5*math.atan2(def_shear, def_stretch)
 
 	return deff
+
+
+#
+# Unflatten a flattened front array, using the froff list; 
+#  separately for cold/warm and stationary fronts
+def unflatten_fronts(fronts, froff, minlength=1):
+	cold = [__unflatten_fronts_t(fronts[t,0,:,:], froff[t,0,:], minlength) for t in range(fronts.shape[0])]
+	warm = [__unflatten_fronts_t(fronts[t,1,:,:], froff[t,1,:], minlength) for t in range(fronts.shape[0])]
+	stat = [__unflatten_fronts_t(fronts[t,2,:,:], froff[t,2,:], minlength) for t in range(fronts.shape[0])]
+
+	return cold, warm, stat
+
+# unflatten one time step and front type
+def __unflatten_fronts_t(fronts, froff, minlength):
+	fronts = [fronts[froff[i]:froff[i+1],:] for i in range(froff.shape[0]-1)]
+	fronts = filter(lambda lst: len(lst) >= minlength, fronts)
+
+	return fronts
 
 
 # 
