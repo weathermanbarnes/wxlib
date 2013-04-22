@@ -3,6 +3,9 @@
 
 import matplotlib as mpl
 
+# Make the standard matplotlib colorbars available in the same name space
+from matplotlib.cm import *
+
 
 def greys():
 	cdict = {'red':   ((0.0, 1.0, 1.0), (1.0, 0.1, 0.1)),

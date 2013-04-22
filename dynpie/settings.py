@@ -80,7 +80,7 @@ else:
 DEFAULT_CONTOUR_KWARGS = {'colors': 'k', 'alpha': 1.0, 'cmap': None, 'norm': None, 
 	'vmin': None, 'vmax': None, 'levels': None, 'origin': None, 'extent': None, 
 	'extend': 'neither', 'linewidths': 2.0, 'linestyles': None, 'contour_labels': False}
-DEFAULT_CONTOURF_KWARGS = {'colors': None, 'alpha': 1.0, 'cmap': None, 'norm': None, 
+DEFAULT_CONTOURF_KWARGS = {'colors': None, 'alpha': 1.0, 'cmap': cm.gist_ncar, 'norm': None, 
 	'vmin': None, 'vmax': None, 'levels': None, 'origin': None, 'extent': None, 
 	'extend': 'both', 'hatches': None }
 
