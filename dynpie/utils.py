@@ -145,6 +145,22 @@ def __unflatten_fronts_t(fronts, froff, minlength):
 
 	return fronts
 
+#
+# return a 3d boolean array where frontal points are True, elsewere False
+def mask_fronts(fronts, froff, s=(361,720)):
+	masks = [np.zeros((len(fronts), s[0], s[1]), dtype='bool'),
+		 np.zeros((len(fronts), s[0], s[1]), dtype='bool'),
+		 np.zeros((len(fronts), s[0], s[1]), dtype='bool') ]
+
+	for t in range(len(fronts)):
+		for f in range(3):
+			for n in range(froff[t,f].max()):
+				j = round(fronts[t,f,n,1])
+				i = round(fronts[t,f,n,0])
+				masks[f][t,j,i] = True
+
+	return masks
+
 
 # 
 # Inverse of the CDF of the Gaussian distribution

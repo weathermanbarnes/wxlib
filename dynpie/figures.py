@@ -635,7 +635,7 @@ def ts_wavelet(q='defabs', plev='800', pos='Greenland_TB', scale=25, cmap=None, 
 def map_oro_dat(dat, static, **kwargs):
 	# 1. Prepare
 	kwargs = __map_prepare_config(kwargs)
-	mask = __map_create_mask(kwargs)
+	mask = __map_create_mask(static, kwargs)
 
 	dat = __map_prepare_dat(dat, mask, kwargs)
 	
@@ -654,7 +654,7 @@ def map_oro_dat(dat, static, **kwargs):
 def map_oro_deform(defabs, defang, static, **kwargs):
 	# 1. Prepare
 	kwargs = __map_prepare_config(kwargs)
-	mask = __map_create_mask(kwargs)
+	mask = __map_create_mask(static, kwargs)
 
 	defabs = __map_prepare_dat(defabs, mask, kwargs)
 	defang = __map_prepare_dat(defang, mask, c.contour.defang)
@@ -680,7 +680,7 @@ def map_oro_deform(defabs, defang, static, **kwargs):
 def map_oro_barb(u, v, static, dat=None, **kwargs):
 	# 1. Prepare
 	kwargs = __map_prepare_config(kwargs)
-	mask = __map_create_mask(kwargs)
+	mask = __map_create_mask(static, kwargs)
 
 	u = __map_prepare_dat(u, mask, c.contour.u)
 	v = __map_prepare_dat(v, mask, c.contour.v)
@@ -708,11 +708,8 @@ def map_oro_barb(u, v, static, dat=None, **kwargs):
 def map_oro_fronts(fronts, froff, static, dat=None, **kwargs):
 	# 1. Prepare
 	kwargs = __map_prepare_config(kwargs)
-	mask = __map_create_mask(kwargs)
+	mask = __map_create_mask(static, kwargs)
 	
-	# TODO: remove once fixed
-	froff = froff.astype('i2')
-
 	cfrs = __unflatten_fronts_t(fronts[0], froff[0], minlength=5)
 	wfrs = __unflatten_fronts_t(fronts[1], froff[1], minlength=5)
 	sfrs = __unflatten_fronts_t(fronts[2], froff[2], minlength=5)
@@ -759,7 +756,7 @@ def __map_prepare_config(kwargs):
 	
 	return kwargs
 
-def __map_create_mask(kwargs):
+def __map_create_mask(static, kwargs):
 	plev = kwargs.pop('plev', None)
 	datZ = kwargs.pop('Zdata', None)
 
@@ -768,7 +765,7 @@ def __map_create_mask(kwargs):
 		if f: f.close()
 	if type(datZ) == np.ndarray:
 		datZ = concat1(datZ)
-		mask = datZ[:,:] < oro[:,:]
+		mask = datZ[:,:] < concat1(static.oro[:,:])
 	else:
 		mask = slice(1,0)
 	
