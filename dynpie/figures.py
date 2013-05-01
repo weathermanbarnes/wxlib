@@ -639,7 +639,7 @@ def map_oro_dat(dat, static, **kwargs):
 
 	dat = __map_prepare_dat(dat, mask, kwargs)
 	
-	m, x, y = __map_setup(mask, static, kwargs)
+	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
 	# 2. Plot the actual data
 	__map_contourf_dat(m, x, y, dat, kwargs)
@@ -661,7 +661,7 @@ def map_oro_deform(defabs, defang, static, **kwargs):
 	defdex = np.cos(defang[:,:]) *defabs
 	defdey = np.sin(defang[:,:]) *defabs
 
-	m, x, y = __map_setup(mask, static, kwargs)
+	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 
 	#2. Plot the actual deformation
 	__map_contourf_dat(m, x, y, defabs, kwargs)
@@ -687,7 +687,7 @@ def map_oro_barb(u, v, static, dat=None, **kwargs):
 	if not dat == None: 
 		dat = __map_prepare_dat(dat, mask, kwargs)
 	
-	m, x, y = __map_setup(mask, static, kwargs)
+	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
 	# 2. Plot the actual data
 	if not dat == None: __map_contourf_dat(m, x, y, dat, kwargs)
@@ -717,7 +717,7 @@ def map_oro_fronts(fronts, froff, static, dat=None, **kwargs):
 	if not dat == None: 
 		dat = __map_prepare_dat(dat, mask, kwargs)
 	
-	m, x, y = __map_setup(mask, static, kwargs)
+	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
 	# 2. Plot the actual data
 	if not dat == None: __map_contourf_dat(m, x, y, dat, kwargs)
@@ -753,6 +753,15 @@ def __map_prepare_config(kwargs):
 		kwargs = c.contourf.merge(q, **kwargs)
 	else:
 		kwargs = c.contourf.default.merge(**kwargs)
+	
+	return kwargs
+
+def __line_prepare_config(kwargs):
+	q = kwargs.pop('q', None)
+	if q:
+		kwargs = c.contour.merge(q, **kwargs)
+	else:
+		kwargs = c.contour.default.merge(**kwargs)
 	
 	return kwargs
 
@@ -799,7 +808,7 @@ def __map_setup(mask, static, kwargs):
 	if type(mask) == np.ndarray:
 		m.contourf(x, y, mask, colors=kwargs.pop('maskcolor'))
 	
-	return m, x, y
+	return m, x, y, lon, lat
 
 def __map_contourf_dat(m, x, y, dat, kwargs):
 	hatch = kwargs.pop('hatches')
@@ -842,6 +851,8 @@ def __map_output(kwargs):
 
 # Overlays
 def map_overlay_dat(dat, **kwargs):  
+	kwargs = __line_prepare_config(kwargs)
+
 	dat = concat1(dat)
 
 	def overlay(m, x, y, zorder, mask=None):
@@ -860,6 +871,8 @@ def map_overlay_dat(dat, **kwargs):
 
 
 def map_overlay_mask(dat, **kwargs):  
+	kwargs = __line_prepare_config(kwargs)
+
 	dat = concat1(dat)
 
 	def overlay(m, x, y, zorder, mask=None):

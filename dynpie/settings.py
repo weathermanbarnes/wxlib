@@ -49,7 +49,8 @@ hooks['oro'] = _tmp
 # 3. Default settings
 #
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 
-		'T': 't', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', }
+		'T': 't', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
+		'fronts': 'fronts'}
 _rose = [17,]
 _rose.extend(range(-18,18))
 BINS_Q = {'defang': np.array(_rose)*math.pi/36.0+math.pi/72.0, }
@@ -88,6 +89,9 @@ MUTEX_GROUPS = [set(['colors', 'cmap']), ]
 
 # DEFAULT settings per quantity Q on contourf plots
 DEFAULT_Q_C = {}
+DEFAULT_Q_C['defabs'] = {'hook': hooks['defabs']}
+DEFAULT_Q_CF['pv']  = {'hook': hooks['pv']}
+DEFAULT_Q_CF['q'] = {'hook': hooks['q']}
 
 # DEFAULT settings per quantity Q on contourf plots
 DEFAULT_Q_CF = {}
@@ -98,7 +102,7 @@ DEFAULT_Q_CF['T']   = {'cmap': plt.cm.RdBu_r}
 DEFAULT_Q_CF['the']   = {'cmap': plt.cm.RdBu_r}
 DEFAULT_Q_CF['pv']  = {'hook': hooks['pv']}
 DEFAULT_Q_CF['oro'] = {'scale': scale_oro_cf, 'cmap': plt.cm.gist_earth, 'hook': hooks['oro']}
-DEFAULT_Q_CF['q'] = {'cmap': cm.q()}
+DEFAULT_Q_CF['q'] = {'cmap': cm.q(), 'hook': hooks['q']}
 
 
 # #############################################################################
