@@ -90,8 +90,8 @@ MUTEX_GROUPS = [set(['colors', 'cmap']), ]
 # DEFAULT settings per quantity Q on contourf plots
 DEFAULT_Q_C = {}
 DEFAULT_Q_C['defabs'] = {'hook': hooks['defabs']}
-DEFAULT_Q_CF['pv']  = {'hook': hooks['pv']}
-DEFAULT_Q_CF['q'] = {'hook': hooks['q']}
+DEFAULT_Q_C['pv']  = {'hook': hooks['pv']}
+DEFAULT_Q_C['q'] = {'hook': hooks['q']}
 
 # DEFAULT settings per quantity Q on contourf plots
 DEFAULT_Q_CF = {}
