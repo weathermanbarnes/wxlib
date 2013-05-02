@@ -56,6 +56,8 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 						cuts = tuple(list(cut)[1:])
 					else: 
 						cuts = slice(None)
+				else: 
+					cuts = slice(None)
 				static = get_static(cuts, verbose, no_dtype_conversion)
 						
 		else:
