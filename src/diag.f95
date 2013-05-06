@@ -774,6 +774,7 @@ contains
   ! temperature as dat
   subroutine front_location(fr,froff,nx,ny,nz,no,nf,dat,u,v,dx,dy)
     use diag_fronts
+    use utils, only: smooth_xy
     !
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
                  &                dx(ny,nx), dy(ny,nx)
