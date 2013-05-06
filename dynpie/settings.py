@@ -49,7 +49,8 @@ hooks['oro'] = _tmp
 # 3. Default settings
 #
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 
-		'T': 't', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', }
+		'T': 't', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
+		'fronts': 'fronts'}
 _rose = [17,]
 _rose.extend(range(-18,18))
 BINS_Q = {'defang': np.array(_rose)*math.pi/36.0+math.pi/72.0, }
