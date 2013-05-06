@@ -785,25 +785,25 @@ contains
     !
     real   (kind=nr), parameter :: NaN = -9999.9_nr, frint_thres = -11.7e-11_nr, &
                   &                frspd_thres = 1.5_nr, searchrad = 3.1_nr
-    integer(kind=ni), parameter :: nn = 30000_ni, minlen = 10_ni
+    integer(kind=ni), parameter :: nn = 30000_ni, minlen = 10_ni, nsmooth = 2_ni
     !
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
     integer(kind=ni), allocatable :: linelen(:)
     !
-    real(kind=nr) :: datx(nz,ny,nx), daty(nz,ny,nx), absgrad(nz,ny,nx), &
-                 &   absx  (nz,ny,nx), absy  (nz,ny,nx), abslap (nz,ny,nx), &
-                 &   absxx (nz,ny,nx), absyy (nz,ny,nx),  &
-                 &   frint(nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx), &
+    real(kind=nr) :: dats   (nz,ny,nx), datx (nz,ny,nx), daty (nz,ny,nx), &
+                 &   absgrad(nz,ny,nx), absx (nz,ny,nx), absy (nz,ny,nx), &
+                 &   abslap (nz,ny,nx), absxx(nz,ny,nx), absyy(nz,ny,nx), &
+                 &   frint  (nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx), &
                  &   zeroloc(nn,2_ni), frloc_cws(nz,ny,nx), frac_idx
     integer(kind=ni) :: k, m, n, typ, idx, zerocnt, ptcnt, linecnt, off
     ! -----------------------------------------------------------------
     !
-    ! todo: input smoothing, equivalent to wrf_smooth_2d() in NCL
-    ! todo: frint_thres, frspd_thres, minlen, searchrad in config / argument list
-    ! todo: cyclic boundary condition?
+    ! todo: frint_thres, frspd_thres, minlen, searchrad, nsmooth in config / argument list
     write(*,*) 'preparing'
     !
-    call grad(datx,daty, nx,ny,nz, dat, dx,dy)
+    call smooth_xy(dats, nx,ny,nz, dat, nsmooth)
+    !
+    call grad(datx,daty, nx,ny,nz, dats, dx,dy)
     absgrad(:,:,:) = sqrt(datx**2.0_nr + daty**2.0_nr)
     call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
     abslap (:,:,:) = sqrt(absx**2.0_nr + absy**2.0_nr)
@@ -816,18 +816,11 @@ contains
     call ddy(absyy, nx,ny,nz, absy, dx,dy)
     frloc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
     !
-    ! frint must be negative for front
+    ! frint must be negative and below a configurable threshold for front
     where(frint > frint_thres)
        frloc = NaN
     end where
     ! 
-    ! and not just negative, but below a threshold
-    !where(frint > frint_thres)
-    !   frloc_cold = NaN
-    !elsewhere 
-    !   frloc_cold = frloc
-    !end where
-    !
     do k = 1_ni,nz
        write(*,*) k, 'of', nz
        !

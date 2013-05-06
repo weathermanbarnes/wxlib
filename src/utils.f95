@@ -18,8 +18,7 @@ contains
   ! NOTE: Input data must be lats -90 to 90!!! and nx must be even
   subroutine mirror_y_domain(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
-    !real(kind=nr), intent(out) :: res(nz,2*ny-2_ni,nx)
-    real(kind=nr), intent(out) :: res(nz,2*ny-2,nx)
+    real(kind=nr), intent(out) :: res(nz,2_ni*ny-2_ni,nx)
     integer(kind=ni) :: i,j,k, nx,ny,nz,iextra
     !f2py depend(nx,ny,nz) res
     !f2py depend(nx,ny) dx, dy
@@ -39,6 +38,40 @@ contains
           res(k,ny,i)=dat(k,ny,i) 
        end do
     end do
+  end subroutine
+  !
+  ! Smooth in 2D. Applies the same filter for all (x,y)-slices in a 3D (Z/t,y,x) field
+  !
+  ! The routine is taken from NCL 6.1.2, where it is called [d]filter2d and used in wrf_smooth_2d
+  subroutine smooth_xy(res,nx,ny,nz,dat,niter)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni), intent(in) :: niter
+    integer(kind=ni) :: i,j,k, n, nx,ny,nz
+    !f2py depend(nx,ny,nz) res
+    !
+    ! TODO: Make accessible via config
+    real(kind=nr), parameter :: coef = 0.25_nr 
+    ! -----------------------------------------------------------------
+    !
+    res(:,:,:) = dat(:,:,:)
+    !
+    do n = 1_ni,niter
+       do k = 1_ni,nz
+          do j = 2_ni,ny-1_ni
+             do i = 1_ni,nx
+                res(k,j,i) = res(k,j,i) + coef * (dat(k,j-1_ni,i)-2_ni*dat(k,j,i)+dat(k,j+1_ni,i))
+             end do
+          end do
+          do j = 1_ni,ny
+             do i = 1_ni,nx-1_ni
+                res(k,j,i) = res(k,j,i) + coef * (dat(k,j,i-1_ni)-2_ni*dat(k,j,i)+dat(k,j,i+1_ni))
+             end do
+          end do
+       end do
+    end do
+    !
+    return
   end subroutine
   !
 end module

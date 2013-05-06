@@ -745,6 +745,38 @@ def map_oro_fronts(fronts, froff, static, dat=None, **kwargs):
 
 	return
 
+def map_oro_fronts_nc(cfrs, wfrs, sfrs, static, dat=None, **kwargs):
+	# 1. Prepare
+	kwargs = __map_prepare_config(kwargs)
+	mask = __map_create_mask(static, kwargs)
+	
+	if not dat == None: 
+		dat = __map_prepare_dat(dat, mask, kwargs)
+	
+	m, x, y = __map_setup(mask, static, kwargs)
+	
+	# 2. Plot the actual data
+	if not dat == None: __map_contourf_dat(m, x, y, dat, kwargs)
+
+	for cfr in cfrs:
+		lenfr = sum(cfr[:,0] > -200)
+		xfr, yfr = m(cfr[:lenfr,1], cfr[:lenfr,0])
+		m.plot(xfr, yfr, 'b-', linewidth=2)
+	for wfr in wfrs:
+		lenfr = sum(wfr[:,0] > -200)
+		xfr, yfr = m(wfr[:lenfr,1], wfr[:lenfr,0])
+		m.plot(xfr, yfr, 'r-', linewidth=2)
+	for sfr in sfrs:
+		lenfr = sum(sfr[:,0] > -200)
+		xfr, yfr = m(sfr[:lenfr,1], sfr[:lenfr,0])
+		m.plot(xfr, yfr, 'm-', linewidth=2)
+
+	# 3. Finish off
+	__map_decorate(m, x, y, mask, kwargs)
+	__map_output(kwargs)
+
+	return
+
 
 # Helper functions
 def __map_prepare_config(kwargs):

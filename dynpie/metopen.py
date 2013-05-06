@@ -39,9 +39,10 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 			f   = nc.netcdf_file(path+'/'+filename+'.nc', 'r')
 			var = f.variables[q]
 			dat = utils.scale(var, cut)
-			static = grid_by_nc(f)
-			# TODO: Where to search for topography in nc files?
-			static.oro = np.zeros((static.ny, static.nx))
+			if not no_static:
+				static = grid_by_nc(f)
+				# TODO: Where to search for topography in nc files?
+				static.oro = np.zeros((static.ny, static.nx))
 			print 'Found '+path+'/'+filename+'.nc'
 		else:
 			continue
