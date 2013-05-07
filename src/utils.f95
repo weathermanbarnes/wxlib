@@ -64,7 +64,7 @@ contains
              end do
           end do
           do j = 1_ni,ny
-             do i = 1_ni,nx-1_ni
+             do i = 2_ni,nx-1_ni
                 res(k,j,i) = res(k,j,i) + coef * (dat(k,j,i-1_ni)-2_ni*dat(k,j,i)+dat(k,j,i+1_ni))
              end do
           end do
