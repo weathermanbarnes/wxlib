@@ -128,14 +128,15 @@ contains
              reclon(na,nn) = lon(next)
              cur = next
              !
-             mindist = 181.0_nr
+             mindist = 362.0_nr
              ! find the closest point of all points not considered so far
+             ! todo: make periodicity configurable and generalize for different grids.
              do m = 1_ni,cnt
                 if (.not. look(m)) then
                    dist = sqrt((lat(cur)-lat(m))**2_ni + (lon(cur)-lon(m))**2_ni)
                    ! take periodicity into account
-                   if ( dist > 270.0_nr) then
-                      dist = sqrt((lat(cur)-lat(m))**2_ni + (abs(lon(cur)-lon(m))-360.0_nr)**2_ni)
+                   if ( dist > 705.0_nr) then
+                      dist = sqrt((lat(cur)-lat(m))**2_ni + (abs(lon(cur)-lon(m))-720.0_nr)**2_ni)
                    end if
                    !
                    if (dist /= 0.0_nr .and. mindist > dist) then
