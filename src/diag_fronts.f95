@@ -59,6 +59,41 @@ contains
           end if     ! zero exactly at grid point
        end do   
     end do
+    !
+    ! take into account periodicity in x
+    if ( grid_cyclic_ew ) then
+       do j = 1_ni,ny-1_ni
+          gotflag = 0_ni
+          ! Zero line hits a grid point
+          if (dat(j,nx) == 0.0_nr) then
+             zerocnt = zerocnt + 1_ni
+             zeroloc(zerocnt,1_ni) = nx
+             zeroloc(zerocnt,2_ni) = j
+             gotflag = 1_ni
+          ! interpolate to find line, i direction first
+          else   
+             ip1 = 1_ni
+             if (dat(j,ip1) /= NaN .and. gotflag == 0_ni .and. & 
+               &   dat(j,nx) /= NaN) then
+                if ((dat(j,nx) > 0.0_nr .and. dat(j,ip1) < 0.0_nr) .or. &
+                  & (dat(j,nx) < 0.0_nr .and. dat(j,ip1) > 0.0_nr)) then
+                   latB = dat(j,ip1)
+                   if (dat(j,nx) /= latB) then 
+                      zerocnt = zerocnt + 1_ni
+                      zeroloc(zerocnt,2_ni) = j
+                      zeroloc(zerocnt,1_ni) = nx + dat(j,nx)/(dat(j,nx) - dat(j,ip1))
+                   ! points same magn, diff sign
+                   else
+                      zerocnt = zerocnt + 1_ni
+                      zeroloc(zerocnt,2_ni) = j
+                      zeroloc(zerocnt,1_ni) = nx + 0.5_nr
+                   end if    ! latB
+                   gotflag = 1
+                end if    ! diff signs
+             end if    ! Missin ip1
+          end if     ! zero exactly at grid point
+       end do   
+    end if
     ! 
     ! (2) scan along y
     do i = 1_ni,nx-1_ni
@@ -130,12 +165,12 @@ contains
              !
              mindist = 362.0_nr
              ! find the closest point of all points not considered so far
-             ! todo: make periodicity configurable and generalize for different grids.
+             ! todo: generalize constants for different grids.
              do m = 1_ni,cnt
                 if (.not. look(m)) then
                    dist = sqrt((lat(cur)-lat(m))**2_ni + (lon(cur)-lon(m))**2_ni)
                    ! take periodicity into account
-                   if ( dist > 705.0_nr) then
+                   if ( grid_cyclic_ew .and. dist > 705.0_nr) then
                       dist = sqrt((lat(cur)-lat(m))**2_ni + (abs(lon(cur)-lon(m))-720.0_nr)**2_ni)
                    end if
                    !
