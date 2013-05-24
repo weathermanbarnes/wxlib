@@ -53,7 +53,7 @@ contains
                       zeroloc(zerocnt,2_ni) = j
                       zeroloc(zerocnt,1_ni) = i + 0.5_nr
                    end if    ! latB
-                   gotflag = 1
+                   gotflag = 1_ni
                 end if    ! diff signs
              end if    ! Missin ip1
           end if     ! zero exactly at grid point
@@ -88,7 +88,7 @@ contains
                       zeroloc(zerocnt,2_ni) = j
                       zeroloc(zerocnt,1_ni) = nx + 0.5_nr
                    end if    ! latB
-                   gotflag = 1
+                   gotflag = 1_ni
                 end if    ! diff signs
              end if    ! Missin ip1
           end if     ! zero exactly at grid point

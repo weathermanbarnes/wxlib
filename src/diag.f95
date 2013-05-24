@@ -919,4 +919,128 @@ contains
     return
   end subroutine
   !
+  ! Convergence line detection based on the front detection algorithm, using
+  ! convergence instead of grad(dat)
+  subroutine convline_location(fr,froff,nx,ny,nz,no,nf,u,v,dx,dy)
+    use diag_fronts
+    use utils, only: smooth_xy
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), & 
+                 &                dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: fr(nz,no,3_ni), froff(nz,nf)
+    integer(kind=ni) :: nx,ny,nz, no, nf
+    !f2py depend(nx,ny,nz) v
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(nz) fr, froff
+    !
+    real   (kind=nr), parameter :: NaN = -9999.9_nr, frint_thres = -1.6e-9_nr, &
+                  &                searchrad = 3.1_nr
+    integer(kind=ni), parameter :: nn = 30000_ni, minlen = 10_ni, nsmooth = 2_ni
+    !
+    real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
+    integer(kind=ni), allocatable :: linelen(:)
+    !
+    real(kind=nr) :: us(nz,ny,nx), vs(ny,ny,nx), datx (nz,ny,nx), daty (nz,ny,nx), &
+                 &   absgrad(nz,ny,nx), absx (nz,ny,nx), absy (nz,ny,nx), &
+                 &   abslap (nz,ny,nx), absxx(nz,ny,nx), absyy(nz,ny,nx), &
+                 &   frint  (nz,ny,nx), frloc(nz,ny,nx), &
+                 &   zeroloc(nn,2_ni), frloc_cws(nz,ny,nx), frac_idx
+    integer(kind=ni) :: k, m, n,  idx, zerocnt, ptcnt, linecnt, off
+    ! -----------------------------------------------------------------
+    !
+    ! todo: frint_thres, minlen, searchrad, nsmooth in config / argument list
+    write(*,*) 'preparing'
+    !
+    call smooth_xy(vs, nx,ny,nz, u, nsmooth)
+    call smooth_xy(us, nx,ny,nz, v, nsmooth)
+    !
+    call ddx(datx, nx,ny,nz, us, dx,dy)
+    call ddy(daty, nx,ny,nz, vs, dx,dy)
+    absgrad = datx + daty
+    call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
+    abslap (:,:,:) = sqrt(absx**2.0_nr + absy**2.0_nr)
+    !
+    frint(:,:,:) = (datx(:,:,:)*absx(:,:,:) + daty(:,:,:)*absy(:,:,:)) / absgrad(:,:,:)
+    !
+    ! determine convergence line location after Hewson 1998, eq. 5
+    call ddx(absxx, nx,ny,nz, absx, dx,dy)
+    call ddy(absyy, nx,ny,nz, absy, dx,dy)
+    frloc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
+    !
+    ! frint must be negative and below a configurable threshold for front
+    where(frint > frint_thres)
+       frloc = NaN
+    end where
+    ! 
+    do k = 1_ni,nz
+       write(*,*) k, 'of', nz
+       !
+       ! find fronts
+       call find_zeroloc(frloc_cws(k,:,:), nx,ny,nn, NaN, zeroloc,zerocnt)
+       ! 
+       ! searchrad is in grid point indexes, as it is easier to transform one
+       ! scalar instead of two arrays. For standard grids the two options are
+       ! equivalent. In the long-term one should try to adapt the search radius and
+       ! the minimum length to SI length scales (km)
+       !
+       ! todo why sort points?
+       !
+       allocate(recj(zerocnt,zerocnt), reci(zerocnt,zerocnt), linelen(zerocnt) )
+       reci(:,:) = NaN
+       recj(:,:) = NaN
+       call linejoin(zerocnt, zeroloc(:,2_ni), zeroloc(:,1_ni), searchrad, recj, reci) 
+       !
+       ! filter by length
+       linecnt    = 0_ni ! number of lines
+       ptcnt      = 0_ni ! total numer of points
+       linelen(:) = 0_ni ! number of points per line
+       !
+       off = 0_ni
+       do n = 1_ni,zerocnt
+          if (recj(n,1_ni) == NaN) then
+             exit
+          end if
+          do m = 1_ni,zerocnt
+             if (recj(n,m) == NaN) then
+                exit
+             end if
+             linelen(n) = linelen(n) + 1_ni
+          end do
+          !
+          ! filter fronts by length
+          if (linelen(n) >= minlen) then
+             linecnt = linecnt + 1_ni
+             ptcnt = ptcnt + linelen(n)
+             !
+             ! check if results larger than output array
+             if (ptcnt > no) then
+                write(*,*) 'Found more points than output array allows: ', no
+                stop 1
+             end if
+             if (linecnt > nf) then
+                write(*,*) 'Found more fronts than output array allows: ', nf
+                stop 1
+             end if
+             !
+             ! write into output arrays fr and froff
+             do m = 1_ni,linelen(n)
+                fr(k,off+m,1_ni) = reci(n,m)
+                fr(k,off+m,2_ni) = recj(n,m)
+                fr(k,off+m,3_ni) = absgrad(k,int(recj(n,m),ni),int(reci(n,m),ni))
+             end do
+             froff(k,linecnt) = off
+             off = off + linelen(n)
+          end if
+       end do
+       ! Save the ending of the last front by saving the beginning of the
+       ! first non-existant
+       froff(k,linecnt+1_ni) = off
+       !
+       deallocate(reci, recj, linelen)
+       !
+    end do ! loop over k
+    !
+    return
+  end subroutine
+  !
 end module

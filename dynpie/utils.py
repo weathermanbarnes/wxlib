@@ -156,7 +156,7 @@ def mask_fronts(fronts, froff, s=(361,720)):
 		for f in range(3):
 			for n in range(froff[t,f].max()):
 				j = round(fronts[t,f,n,1])
-				i = round(fronts[t,f,n,0])
+				i = round(fronts[t,f,n,0]) % s[1]
 				masks[f][t,j,i] = True
 
 	return masks
