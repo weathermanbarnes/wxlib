@@ -25,4 +25,7 @@ module consts
   ! Mathematical constants
   real(kind=nr), parameter :: pi = 3.14159265359_nr ! should be clear
   !
+  ! Technical stuff
+  character, parameter :: cr = char(13_1)        ! Carriage Retirm is ASCI code 13
+  !
 end module

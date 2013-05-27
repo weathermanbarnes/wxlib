@@ -58,7 +58,7 @@ gfortran $LIBS -c $filek $filec $files
 
 # 4. Compiling the shared object usable from within python
 echo "Stage 4: Compiling the python module (as a shared object)"
-DEBUG='--debug --opt="-fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace -g -pedantic"'
+DEBUG='--debug-capi --debug --opt="-fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace -g -pedantic"'
 f2py -c $LIBS --fcompiler=gnu95 dynlib.pyf $files $filec $filek > /dev/null
 mv dynlib.so $cur
 cd $cur/..

@@ -51,21 +51,25 @@ contains
     !f2py depend(nx,ny,nz) res
     !
     ! TODO: Make accessible via config
+    real(kind=nr) :: tmp(nz,ny,nx) ! temporary helper array to avoid changing dat
     real(kind=nr), parameter :: coef = 0.25_nr 
     ! -----------------------------------------------------------------
     !
     res(:,:,:) = dat(:,:,:)
     !
     do n = 1_ni,niter
-       do k = 1_ni,nz
+       tmp(:,:,:) = res(:,:,:)
+       do i = 1_ni,nx
           do j = 2_ni,ny-1_ni
-             do i = 1_ni,nx
-                res(k,j,i) = res(k,j,i) + coef * (dat(k,j-1_ni,i)-2_ni*dat(k,j,i)+dat(k,j+1_ni,i))
+             do k = 1_ni,nz
+                res(k,j,i) = res(k,j,i) + coef * (tmp(k,j-1_ni,i)-2_ni*tmp(k,j,i)+tmp(k,j+1_ni,i))
              end do
           end do
+       end do
+       do i = 2_ni,nx-1_ni
           do j = 1_ni,ny
-             do i = 2_ni,nx-1_ni
-                res(k,j,i) = res(k,j,i) + coef * (dat(k,j,i-1_ni)-2_ni*dat(k,j,i)+dat(k,j,i+1_ni))
+             do k = 1_ni,nz
+                res(k,j,i) = res(k,j,i) + coef * (tmp(k,j,i-1_ni)-2_ni*tmp(k,j,i)+tmp(k,j,i+1_ni))
              end do
           end do
        end do

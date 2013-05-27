@@ -773,6 +773,7 @@ contains
   ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
   ! temperature as dat
   subroutine front_location(fr,froff,nx,ny,nz,no,nf,dat,u,v,dx,dy)
+    use consts
     use diag_fronts
     use utils, only: smooth_xy
     !
@@ -795,7 +796,7 @@ contains
                  &   absgrad(nz,ny,nx), absx (nz,ny,nx), absy (nz,ny,nx), &
                  &   abslap (nz,ny,nx), absxx(nz,ny,nx), absyy(nz,ny,nx), &
                  &   frint  (nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx), &
-                 &   zeroloc(nn,2_ni), frloc_cws(nz,ny,nx), frac_idx
+                 &   zeroloc(nn,2_ni), frloc_cws(ny,nx), frac_idx
     integer(kind=ni) :: k, m, n, typ, idx, zerocnt, ptcnt, linecnt, off
     ! -----------------------------------------------------------------
     !
@@ -823,34 +824,34 @@ contains
     end where
     ! 
     do k = 1_ni,nz
-       write(*,*) k, 'of', nz
+       write(*,'(I5,A4,I5,A)', advance='no') k, 'of', nz, cr
        !
        do typ = 1_ni,3_ni
           ! cold fronts
           if (typ == 1_ni) then
-             where(frspd < -1_ni*frspd_thres)
-                frloc_cws = frloc
+             where(frspd(k,:,:) < -1_ni*frspd_thres)
+                frloc_cws = frloc(k,:,:)
              elsewhere
                 frloc_cws = NaN
              end where
           ! warm fronts
           elseif(typ == 2_ni) then
-             where(frspd > frspd_thres)
-                frloc_cws = frloc
+             where(frspd(k,:,:) > frspd_thres)
+                frloc_cws = frloc(k,:,:)
              elsewhere
                 frloc_cws = NaN
              end where
           ! stationary fronts
           else
-             where(frspd > -1_ni*frspd_thres .and. frspd < frspd_thres)
-                frloc_cws = frloc
+             where(frspd(k,:,:) > -1_ni*frspd_thres .and. frspd(k,:,:) < frspd_thres)
+                frloc_cws = frloc(k,:,:)
              elsewhere
                 frloc_cws = NaN
              end where
           end if
           !
           ! find fronts
-          call find_zeroloc(frloc_cws(k,:,:), nx,ny,nn, NaN, zeroloc,zerocnt)
+          call find_zeroloc(frloc_cws(:,:), nx,ny,nn, NaN, zeroloc,zerocnt)
           ! 
           ! searchrad is in grid point indexes, as it is easier to transform one
           ! scalar instead of two arrays. For standard grids the two options are
@@ -922,6 +923,7 @@ contains
   ! Convergence line detection based on the front detection algorithm, using
   ! convergence instead of grad(dat)
   subroutine convline_location(fr,froff,nx,ny,nz,no,nf,u,v,dx,dy)
+    use consts
     use diag_fronts
     use utils, only: smooth_xy
     !
@@ -933,36 +935,38 @@ contains
     !f2py depend(nx,ny) dx, dy
     !f2py depend(nz) fr, froff
     !
-    real   (kind=nr), parameter :: NaN = -9999.9_nr, frint_thres = -1.6e-9_nr, &
-                  &                searchrad = 3.1_nr
+    real   (kind=nr), parameter :: NaN = -9999.9_nr, frint_thres = -5.19e-10_nr, &
+                  &                frspd_thres = 1.5_nr, searchrad = 3.1_nr
     integer(kind=ni), parameter :: nn = 30000_ni, minlen = 10_ni, nsmooth = 2_ni
     !
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
     integer(kind=ni), allocatable :: linelen(:)
     !
-    real(kind=nr) :: us(nz,ny,nx), vs(ny,ny,nx), datx (nz,ny,nx), daty (nz,ny,nx), &
+    real(kind=nr) :: us(nz,ny,nx), vs(ny,ny,nx), datx(nz,ny,nx), daty(nz,ny,nx), &
                  &   absgrad(nz,ny,nx), absx (nz,ny,nx), absy (nz,ny,nx), &
                  &   abslap (nz,ny,nx), absxx(nz,ny,nx), absyy(nz,ny,nx), &
-                 &   frint  (nz,ny,nx), frloc(nz,ny,nx), &
-                 &   zeroloc(nn,2_ni), frloc_cws(nz,ny,nx), frac_idx
-    integer(kind=ni) :: k, m, n,  idx, zerocnt, ptcnt, linecnt, off
+                 &   frint  (nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx), &
+                 &   zeroloc(nn,2_ni), frloc_cws(ny,nx), frac_idx
+    integer(kind=ni) :: k, m, n, typ, idx, zerocnt, ptcnt, linecnt, off
     ! -----------------------------------------------------------------
     !
-    ! todo: frint_thres, minlen, searchrad, nsmooth in config / argument list
+    ! todo: frint_thres, frspd_thres, minlen, searchrad, nsmooth in config / argument list
     write(*,*) 'preparing'
     !
-    call smooth_xy(vs, nx,ny,nz, u, nsmooth)
-    call smooth_xy(us, nx,ny,nz, v, nsmooth)
+    ! todo why does the below lead to segfaults "double free" on return?
+    !call smooth_xy(us, nx,ny,nz, u, nsmooth)
+    !call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
-    call ddx(datx, nx,ny,nz, us, dx,dy)
-    call ddy(daty, nx,ny,nz, vs, dx,dy)
-    absgrad = datx + daty
+    call ddx(datx, nx,ny,nz, u, dx,dy)
+    call ddy(daty, nx,ny,nz, v, dx,dy)
+    absgrad(:,:,:) = sqrt(datx**2.0_nr + daty**2.0_nr)
     call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
     abslap (:,:,:) = sqrt(absx**2.0_nr + absy**2.0_nr)
     !
     frint(:,:,:) = (datx(:,:,:)*absx(:,:,:) + daty(:,:,:)*absy(:,:,:)) / absgrad(:,:,:)
+    frspd(:,:,:) = (u(:,:,:)*absx(:,:,:) + v(:,:,:)*absy(:,:,:)) / abslap(:,:,:)
     !
-    ! determine convergence line location after Hewson 1998, eq. 5
+    ! determine front line location type after Hewson 1998, eq. 5
     call ddx(absxx, nx,ny,nz, absx, dx,dy)
     call ddy(absyy, nx,ny,nz, absy, dx,dy)
     frloc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
@@ -973,10 +977,10 @@ contains
     end where
     ! 
     do k = 1_ni,nz
-       write(*,*) k, 'of', nz
+       write(*,'(I5,A4,I5,A)', advance='no') k, 'of', nz, cr
        !
        ! find fronts
-       call find_zeroloc(frloc_cws(k,:,:), nx,ny,nn, NaN, zeroloc,zerocnt)
+       call find_zeroloc(frloc(k,:,:), nx,ny,nn, NaN, zeroloc,zerocnt)
        ! 
        ! searchrad is in grid point indexes, as it is easier to transform one
        ! scalar instead of two arrays. For standard grids the two options are
