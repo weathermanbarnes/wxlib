@@ -959,12 +959,11 @@ contains
     !
     call ddx(datx, nx,ny,nz, u, dx,dy)
     call ddy(daty, nx,ny,nz, v, dx,dy)
-    absgrad(:,:,:) = sqrt(datx**2.0_nr + daty**2.0_nr)
+    absgrad(:,:,:) = datx + daty
     call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
     abslap (:,:,:) = sqrt(absx**2.0_nr + absy**2.0_nr)
     !
     frint(:,:,:) = (datx(:,:,:)*absx(:,:,:) + daty(:,:,:)*absy(:,:,:)) / absgrad(:,:,:)
-    frspd(:,:,:) = (u(:,:,:)*absx(:,:,:) + v(:,:,:)*absy(:,:,:)) / abslap(:,:,:)
     !
     ! determine front line location type after Hewson 1998, eq. 5
     call ddx(absxx, nx,ny,nz, absx, dx,dy)
