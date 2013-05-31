@@ -9,6 +9,8 @@ from settings import conf as c
 import utils
 from gridlib import grid_by_nc, grid_by_static
 
+from datetime import datetime as dt, timedelta as td
+
 
 # #############################################################################
 # 1. Open all sorts of files
@@ -99,35 +101,45 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=True, qui
 		xidxs = slice(None)
 	else:
 		xidxs = xidx
-
+	
+	dt0 = dt(1979,1,1,0)
 	# Convert dates to time indexes
 	if type(dates) not in ([np.ndarray, list, tuple, set]):
 		dates = [dates, ]
-	tidxs = map(lambda x: (x.timetuple().tm_yday-1)*4 + int(x.hour/6), dates)
-
-	# Construct the slice
-	cut = (slice(min(tidxs),max(tidxs)+1), yidxs, xidxs)
+	years = set(map(lambda date: date.year, dates))
+	tidxs = map(lambda date: date-dt0, dates)
+	tidxs = map(lambda diff: diff.days*4 + diff.seconds/21600, tidxs)
+	tsmin, tsmax = min(tidxs), max(tidxs)
 	
-	# One ore more vertical levels?
-	if len(plevs) > 1:
+	# Checking max length
+	maxtlen = 1500
+	if tsmax-tsmin > maxtlen:
+		raise RuntimeError, 'Cowardly refusing to fetch %d > %d time steps.' % (tsmax-tsmin, maxtlen)
+	
+	dat = None
+	for year in years:
+		# Construct the slice
+		fst = dt(year,1,1,0) - dt0
+		lst = dt(year,12,31,18) - dt0
+		fst = fst.days*4 + fst.seconds/21600
+		lst = lst.days*4 + lst.seconds/21600 +1
+		cut = (slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst)), yidxs, xidxs)
+		datcut = slice(fst+cut[0].start-tsmin, fst+cut[0].stop-tsmin)
+		
+		# One ore more vertical levels?
 		i = 0
-		#dat = dat.squeeze()
 		for plev in plevs:
 			if not quiet:
-				print "Reading from "+c.file_std % (dates[0].year, plev, q)
-			if plev == plevs[0]:
-				f, d, static = metopen(c.file_std % (dates[0].year, plev, q), c.q[q], cut=cut, no_static=True)
-				dat = np.zeros((1+max(tidxs)-min(tidxs), len(c.plevs), d.shape[1], d.shape[2]))
-				
+				print "Reading from "+c.file_std % (year, plev, c.qi[q])
+			if type(dat) == type(None):
+				f, d, static = metopen(c.file_std % (year, plev, c.qi[q]), q, cut=cut)
+				s = tuple([1+tsmax-tsmin,len(plevs)] + list(d.shape)[1:])
+				dat = np.empty(s)
 			else:
-				f, d = metopen(c.file_std % (dates[0].year, plev, q), c.q[q], cut=cut)
-			dat[:,i,::] = d
+				f, d = metopen(c.file_std % (year, plev, c.qi[q]), q, cut=cut, no_static=True)
+			dat[datcut,i,::] = d
 			i += 1
-	else:
-		if not quiet:
-			print "Reading from "+c.file_std % (dates[0].year, plevs[0], q)
-		f, dat, static = metopen(c.file_std % (dates[0].year, plevs[0], q), c.q[q], cut=cut)
-	
+
 	# Time-averaging if specified
 	if tavg and len(dates) > 1:
 		dat = dat.mean(axis=0)
