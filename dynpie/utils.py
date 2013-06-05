@@ -155,8 +155,9 @@ def mask_fronts(fronts, froff, s=(361,720)):
 	for t in range(len(fronts)):
 		for f in range(3):
 			for n in range(froff[t,f].max()):
-				j = round(fronts[t,f,n,1])
-				i = round(fronts[t,f,n,0]) % s[1]
+				# python starts counting at zero, unlike fortran
+				j = round(fronts[t,f,n,1] -1)
+				i = round(fronts[t,f,n,0] -1) % s[1]
 				masks[f][t,j,i] = True
 
 	return masks
