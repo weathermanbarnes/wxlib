@@ -1006,7 +1006,7 @@ contains
     !f2py depend(nx,ny) dx, dy
     !f2py depend(nz) fr, froff
     !
-    real   (kind=nr), parameter :: NaN = -9999.9_nr, frint_thres = -5.19e-10_nr, &
+    real   (kind=nr), parameter :: NaN = -9999.9_nr, div_thres = -0.25e-5_nr, &
                   &                frspd_thres = 1.5_nr, searchrad = 3.1_nr
     integer(kind=ni), parameter :: nn = 30000_ni, minlen = 10_ni, nsmooth = 2_ni
     !
@@ -1032,17 +1032,10 @@ contains
     call ddy(daty, nx,ny,nz, v, dx,dy)
     absgrad(:,:,:) = datx + daty
     call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
-    abslap (:,:,:) = sqrt(absx**2.0_nr + absy**2.0_nr)
-    !
-    frint(:,:,:) = (datx(:,:,:)*absx(:,:,:) + daty(:,:,:)*absy(:,:,:)) / absgrad(:,:,:)
-    !
-    ! determine front line location type after Hewson 1998, eq. 5
-    call ddx(absxx, nx,ny,nz, absx, dx,dy)
-    call ddy(absyy, nx,ny,nz, absy, dx,dy)
-    frloc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
+    frloc(:,:,:) = absx + absy
     !
     ! frint must be negative and below a configurable threshold for front
-    where(frint > frint_thres)
+    where(absgrad > div_thres)
        frloc = NaN
     end where
     ! 
