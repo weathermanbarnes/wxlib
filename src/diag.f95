@@ -111,6 +111,77 @@ contains
     res=0.5_nr*atan2(sig_sh,sig_st)
   end subroutine
   !
+  ! Calculates 3d deformation 
+  subroutine def_3d(res_eval,res_evec,nx,ny,nz,nt,u,v,w,dx,dy,dz)
+    real(kind=nr), intent(in)  :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), w(nt,nz,ny,nx), & 
+            &                     dx(ny,nx), dy(ny,nx), dz
+    real(kind=nr), intent(out) :: res_eval(nt,2_ni:nz-1_ni,ny,nx,3_ni), &
+                                  res_evec(nt,2_ni:nz-1_ni,ny,nx,3_ni,3_ni)
+    integer(kind=ni) :: nx,ny,nz,nt
+    !f2py depend(nx,ny,nz,nt) res, v, w
+    !f2py depend(nx,ny) dx, dy
+    !
+    real(kind=nr) :: ux(nt,nz,ny,nx), uy(nt,nz,ny,nx), uz(nt,nz,ny,nx), &
+            &        vx(nt,nz,ny,nx), vy(nt,nz,ny,nx), vz(nt,nz,ny,nx), &
+            &        wx(nt,nz,ny,nx), wy(nt,nz,ny,nx), wz(nt,nz,ny,nx), &
+            &        vor_x(nt,nz,ny,nx), vor_y(nt,nz,ny,nx), vor_z(nt,nz,ny,nz), &
+            &        div(nt,nz,ny,nx)
+    real(kind=nr) :: jac(3_ni,3_ni), evalr(3_ni), dummy0(3_ni), dummy1(1_ni,3_ni), &
+            &        evec(3_ni,3_ni), work(102_ni)
+    integer(kind=ni) :: i,j,k,n,t, info
+    ! -----------------------------------------------------------------
+    !
+    call grad_3d(ux,uy,uz, nx,ny,nz,nt, u, dx,dy,dz)
+    call grad_3d(vx,vy,vz, nx,ny,nz,nt, v, dx,dy,dz)
+    call grad_3d(wx,wy,wz, nx,ny,nz,nt, w, dx,dy,dz)
+    !
+    ! Subtracting divergence and vorticity
+    div = ux + vy + wz
+    ux = ux - 1.0_nr/3.0_nr * div
+    vy = vy - 1.0_nr/3.0_nr * div
+    wz = wz - 1.0_nr/3.0_nr * div
+    !
+    vor_x = wy - vz
+    vor_y = uz - wx
+    vor_z = vy - ux
+    !
+    wy = wy - 1.0_nr/2.0_nr * vor_x
+    vz = vz - 1.0_nr/2.0_nr * vor_x
+    uz = uz - 1.0_nr/2.0_nr * vor_y
+    wx = wx - 1.0_nr/2.0_nr * vor_y
+    vy = vy - 1.0_nr/2.0_nr * vor_z
+    ux = ux - 1.0_nr/2.0_nr * vor_z
+    !
+    ! Find the eigenvectors of the remaining symmetric zero-trace matrixes
+    do i = 1_ni,nx
+       do j = 1_ni,ny
+          do k = 2_ni,nz-1_ni
+             do t = 1_ni,nt
+                ! jac is in major column order
+                jac = reshape( (/ ux, vx, wx, uy, vy, wy, uz, vz, wz /), (/ 3_ni, 3_ni /) )
+                call dgeev('N', 'V', 3_ni, jac, 3_ni, evalr, dummy0, & 
+                        & dummy1, 1_ni, evec, 3_ni, work, 102_ni, info)
+                ! sort eigenvalues and eigenvectors by eigenvalue
+                ! first: max
+                n = maxloc(evalr, dim=1_ni)
+                res_eval(t,k,j,i,1_ni)   = evalr(n)
+                res_evec(t,k,j,i,1_ni,:) = evec(:,n)
+                ! second: middle
+                n = 6_ni - n - minloc(evalr, dim=1_ni)
+                res_eval(t,k,j,i,2_ni)   = evalr(n)
+                res_evec(t,k,j,i,2_ni,:) = evec(:,n)
+                ! last and least
+                n = minloc(evalr, dim=1_ni)
+                res_eval(t,k,j,i,3_ni)   = evalr(n)
+                res_evec(t,k,j,i,3_ni,:) = evec(:,n)
+             end do
+          end do
+       end do
+    end do
+    !
+    return
+  end subroutine
+  !
   ! Calculates angle from x-axis to isolines of the input field dat (direction k X grad(dat))
   !   = alpha (Keyser Reeder Reed)
   subroutine isoline_angle(res,nx,ny,nz,dat,dx,dy)
