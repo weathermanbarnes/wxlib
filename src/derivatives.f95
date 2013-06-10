@@ -55,6 +55,25 @@ contains
     end forall
   end subroutine
   !
+  ! Calculates partial y derivative: b = partial(a)/partial(y)
+  !  Returns 0 on first and last lat
+  subroutine ddz(res,nx,ny,nz,dat,dz)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dz
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni) :: i,j,k, nx,ny,nz
+    !f2py depend(nx,ny,nz) res
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    forall(k = 2_ni:nz-1_ni, j = 1_ni:ny, i = 1_ni:nx)
+       res(k,j,i) = (dat(k+1_ni,j,i)-dat(k-1_ni,j,i))/dz
+    end forall
+    forall(j = 1_ni:ny, i = 1_ni:nx)
+       res(1_ni,j,i)=0._nr
+       res(nz  ,j,i)=0._nr
+    end forall
+  end subroutine
+  !
   ! Calculates gradient [bx,by] = grad(a)
   !  Returns 0 on edges
   subroutine grad(resx,resy,nx,ny,nz,dat,dx,dy)
@@ -79,6 +98,25 @@ contains
        resx(:,:,nx  ) = 0._nr
        resy(:,:,nx  ) = 0._nr
     end if
+  end subroutine
+  !
+  ! Calculates gradient [bx,by,bz] = grad(a)
+  !  Returns 0 on edges
+  subroutine grad_3d(resx,resy,resz,nx,ny,nz,nt,dat,dx,dy,dz)
+    real(kind=nr), intent(in)  :: dat(nt,nz,ny,nx), dx(ny,nx), dy(ny,nx), dz
+    real(kind=nr), intent(out) :: resx(nt,nz,ny,nx), resy(nt,nz,ny,nx), resz(nt,nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz,nt
+    !f2py depend(nx,ny,nz,nt) resx, resy, resz
+    !f2py depend(nx,ny) dx, dy
+    !
+    integer(kind=ni) :: t
+    ! -----------------------------------------------------------------
+    !
+    do t = 1_ni,nt
+       call ddx(resx(t,:,:,:),nx,ny,nz,dat(t,:,:,:),dx,dy)
+       call ddy(resy(t,:,:,:),nx,ny,nz,dat(t,:,:,:),dx,dy)
+       call ddz(resz(t,:,:,:),nx,ny,nz,dat(t,:,:,:),dz)
+    end do
   end subroutine
   !
   ! Calculates  2-D laplacian lap2(a)
