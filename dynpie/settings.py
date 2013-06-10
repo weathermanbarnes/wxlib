@@ -51,6 +51,9 @@ hooks['oro'] = _tmp
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 
 		'T': 't', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
 		'fronts': 'fronts'}
+QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'u': 'u', 'v': 'v', 'q': 'q', 
+		't': 'T', 'thetae': 'the', 'z': 'Z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
+		'fronts': 'fronts', 'froff': 'fronts'}
 _rose = [17,]
 _rose.extend(range(-18,18))
 BINS_Q = {'defang': np.array(_rose)*math.pi/36.0+math.pi/72.0, }
@@ -98,8 +101,8 @@ DEFAULT_Q_CF = {}
 DEFAULT_Q_CF['defabs'] = {'cmap': cm.defabs2(), 'hook': hooks['defabs']}
 DEFAULT_Q_CF['defang'] = {'cmap': cm.periodic3(), 'scale': scale_defang, 'ticks': ticks_defang, 
 	'ticklabels': labels_defang}
-DEFAULT_Q_CF['T']   = {'cmap': plt.cm.RdBu_r}
-DEFAULT_Q_CF['the']   = {'cmap': plt.cm.RdBu_r}
+DEFAULT_Q_CF['t']   = {'cmap': plt.cm.RdBu_r}
+DEFAULT_Q_CF['thetae']   = {'cmap': plt.cm.RdBu_r}
 DEFAULT_Q_CF['pv']  = {'hook': hooks['pv']}
 DEFAULT_Q_CF['oro'] = {'scale': scale_oro_cf, 'cmap': plt.cm.gist_earth, 'hook': hooks['oro']}
 DEFAULT_Q_CF['q'] = {'cmap': cm.q(), 'hook': hooks['q']}
@@ -253,7 +256,7 @@ class settings_contour(object):
 	_overrides = {}
 
 	def __init__(self):
-		for q in Q:
+		for q in QI:
 			self.new(q, self.default_q.get(q, {}))
 
 		return
@@ -304,6 +307,7 @@ class settings_contourf(settings_contour):
 class settings(object):
 	__default = {
 		'q': Q,
+		'qi': QI,
 		'bins': BINS_Q,
 		'datapath': DATAPATH,
 		'opath': OPATH,
@@ -366,7 +370,7 @@ conf = settings()
 # #############################################################################
 # 5. Clean-Up: Making the default settings only available through settings objects
 # 
-del Q, BINS_Q, DATAPATH, OPATH, PPATH, FILE_STD, FILE_STAT, FILE_MSTAT, STD_SLICE, YEARS, PLEVS, PTLEVS, PVLEVS
+del Q, QI, BINS_Q, DATAPATH, OPATH, PPATH, FILE_STD, FILE_STAT, FILE_MSTAT, STD_SLICE, YEARS, PLEVS, PTLEVS, PVLEVS
 del DEFAULT_KWARGS, DEFAULT_CONTOUR_KWARGS, DEFAULT_CONTOURF_KWARGS, DEFAULT_Q_C, DEFAULT_Q_CF
 
 

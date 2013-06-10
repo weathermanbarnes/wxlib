@@ -161,6 +161,19 @@ def mask_fronts(fronts, froff, s=(361,720)):
 
 	return masks
 
+#
+# return a 3d boolean array where convline points are True, elsewere False
+def mask_convline(convls, cloff, s=(361,720)):
+	mask = np.zeros((len(convls), s[0], s[1]), dtype='bool')
+
+	for t in range(len(convls)):
+		for n in range(cloff[t].max()):
+			j = round(convls[t,n,1])
+			i = round(convls[t,n,0]) % s[1]
+			mask[t,j,i] = True
+
+	return mask
+
 
 # 
 # Inverse of the CDF of the Gaussian distribution

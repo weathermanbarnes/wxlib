@@ -904,6 +904,37 @@ def map_overlay_dat(dat, **kwargs):
 	return overlay
 
 
+def map_overlay_fronts(fronts, froff, **kwargs):  
+	kwargs = __line_prepare_config(kwargs)
+
+	cfrs = __unflatten_fronts_t(fronts[0], froff[0], minlength=5)
+	wfrs = __unflatten_fronts_t(fronts[1], froff[1], minlength=5)
+	sfrs = __unflatten_fronts_t(fronts[2], froff[2], minlength=5)
+
+	def overlay(m, x, y, zorder, mask=None):
+		# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
+		for cfr in cfrs:
+			lonfr = -180 + cfr[:,0]*0.5
+			latfr = 90.0 - cfr[:,1]*0.5
+			xfr, yfr = m(lonfr, latfr)
+			m.plot(xfr, yfr, 'b-', linewidth=2)
+		for wfr in wfrs:
+			lonfr = -180 + wfr[:,0]*0.5
+			latfr = 90.0 - wfr[:,1]*0.5
+			xfr, yfr = m(lonfr, latfr)
+			m.plot(xfr, yfr, 'r-', linewidth=2)
+		for sfr in sfrs:
+			lonfr = -180 + sfr[:,0]*0.5
+			latfr = 90.0 - sfr[:,1]*0.5
+			xfr, yfr = m(lonfr, latfr)
+			m.plot(xfr, yfr, 'm-', linewidth=2)
+
+
+		return
+
+	return overlay
+
+
 def map_overlay_mask(dat, **kwargs):  
 	kwargs = __line_prepare_config(kwargs)
 
