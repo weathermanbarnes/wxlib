@@ -123,7 +123,14 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=True, qui
 		lst = dt(year,12,31,18) - dt0
 		fst = fst.days*4 + fst.seconds/21600
 		lst = lst.days*4 + lst.seconds/21600 +1
-		cut = (slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst)), yidxs, xidxs)
+		# Leave out unnecessary indexes for better compatibility
+		if xidxs == slice(None): 
+			if yidxs == slice(None):
+				cut = (slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst)), )
+			else:
+				cut = (slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst)), yidxs)
+		else:
+			cut = (slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst)), yidxs, xidxs)
 		datcut = slice(fst+cut[0].start-tsmin, fst+cut[0].stop-tsmin)
 		
 		# One ore more vertical levels?

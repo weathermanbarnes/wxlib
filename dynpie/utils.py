@@ -176,6 +176,14 @@ def mask_convline(convls, cloff, s=(361,720)):
 	return mask
 
 
+#
+# mask parts of the field that are insignificant at the chosen level
+def mask_insignificant(dat, mean, sig, nsig):
+	dat[np.logical_and(dat < mean + nsig*sig, dat > mean - nsig*sig)] = np.nan
+
+	return dat
+
+
 # 
 # Inverse of the CDF of the Gaussian distribution
 igauss = lambda p: np.sqrt(2)*erfinv(2*p-1.0)

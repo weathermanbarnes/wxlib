@@ -867,8 +867,8 @@ def __map_decorate(m, x, y, mask, kwargs):
 		m.scatter(x[yidx,xidx], y[yidx,xidx], 484, marker='o', facecolors=(0,0,0,0), 
 				edgecolors='k', linewidths=3, zorder=3)
 	
-	if kwargs.pop('title'):
-		plt.title(title)
+	if kwargs.get('title'):
+		plt.title(kwargs.pop('title'))
 	
 	return
 
@@ -928,6 +928,25 @@ def map_overlay_fronts(fronts, froff, **kwargs):
 			latfr = 90.0 - sfr[:,1]*0.5
 			xfr, yfr = m(lonfr, latfr)
 			m.plot(xfr, yfr, 'm-', linewidth=2)
+
+
+		return
+
+	return overlay
+
+
+def map_overlay_lines(lines, loff, **kwargs):  
+	kwargs = __line_prepare_config(kwargs)
+
+	lns = __unflatten_fronts_t(lines, loff, minlength=5)
+
+	def overlay(m, x, y, zorder, mask=None):
+		# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
+		for ln in lns:
+			lonfr = -180 + ln[:,0]*0.5
+			latfr = 90.0 - ln[:,1]*0.5
+			xfr, yfr = m(lonfr, latfr)
+			m.plot(xfr, yfr, kwargs['linecolor'], linewidth=2)
 
 
 		return
