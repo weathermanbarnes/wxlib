@@ -21,6 +21,7 @@ module consts
   ! Other constants
   real(kind=nr), parameter :: p0 = 100000.0_nr   ! Reference pressure for T <-> Theta conversion
   real(kind=nr), parameter :: omega = 7.292123516990375e-05 ! angular velocity of the earth's rotation
+  real(kind=nr), parameter :: g  = 9.81_nr       ! Gravitiy constant close to Earth surface
   !
   ! Mathematical constants
   real(kind=nr), parameter :: pi = 3.14159265359_nr ! should be clear

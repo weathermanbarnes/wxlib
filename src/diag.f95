@@ -98,6 +98,8 @@ contains
   !   =   (Lapeyre Klein Hua) 
   !   = alpha (Markowski Richardson)
   subroutine def_angle(res,nx,ny,nz,u,v,dx,dy)
+    use consts
+    !
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     real(kind=nr) :: sig_sh(nz,ny,nx), sig_st(nz,ny,nx)
@@ -108,13 +110,43 @@ contains
     !
     call def_shear(sig_sh,nx,ny,nz,u,v,dx,dy)
     call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)    
-    res=0.5_nr*atan2(sig_sh,sig_st)
+    res = 0.5_nr * atan2(sig_sh,sig_st)
+  end subroutine
+  !
+  ! Calculates angle from wind direction to axis of dilatation 
+  ! = the same as def_angle, but in natural coordinates
+  subroutine def_angle_nat(res,nx,ny,nz,u,v,dx,dy)
+    use consts
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    real(kind=nr) :: sig_sh(nz,ny,nx), sig_st(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res, v
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    call def_shear(sig_sh,nx,ny,nz,u,v,dx,dy)
+    call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)    
+    res = 0.5_nr * atan2(sig_sh,sig_st)
+    !
+    ! rotate along wind direction instead of x-axis
+    res = res - atan2(v,u)
+    where ( res >= pi/2.0_nr )
+       res = res - pi
+    end where
+    where ( res < -pi/2.0_nr )
+       res = res + pi
+    end where
   end subroutine
   !
   ! Calculates 3d deformation 
-  subroutine def_3d(res_eval,res_evec,nx,ny,nz,nt,u,v,w,dx,dy,dz)
+  subroutine def_3d(res_eval,res_evec,nx,ny,nz,nt,u,v,w,rho,dx,dy,dz)
+    use consts
+    !
     real(kind=nr), intent(in)  :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), w(nt,nz,ny,nx), & 
-            &                     dx(ny,nx), dy(ny,nx), dz
+            &                     rho(nt,nz,ny,nx),                               &
+            &                     dx(ny,nx), dy(ny,nx), dz(nt,2_ni:nz-1_ni,ny,nx)
     real(kind=nr), intent(out) :: res_eval(nt,2_ni:nz-1_ni,ny,nx,3_ni), &
                                   res_evec(nt,2_ni:nz-1_ni,ny,nx,3_ni,3_ni)
     integer(kind=ni) :: nx,ny,nz,nt
@@ -124,16 +156,23 @@ contains
     real(kind=nr) :: ux(nt,nz,ny,nx), uy(nt,nz,ny,nx), uz(nt,nz,ny,nx), &
             &        vx(nt,nz,ny,nx), vy(nt,nz,ny,nx), vz(nt,nz,ny,nx), &
             &        wx(nt,nz,ny,nx), wy(nt,nz,ny,nx), wz(nt,nz,ny,nx), &
-            &        vor_x(nt,nz,ny,nx), vor_y(nt,nz,ny,nx), vor_z(nt,nz,ny,nz), &
-            &        div(nt,nz,ny,nx)
+            &        vor_x(nt,nz,ny,nx), vor_y(nt,nz,ny,nx), vor_z(nt,nz,ny,nx), &
+            &        div(nt,nz,ny,nx), wm(nt,nz,ny,nx)
     real(kind=nr) :: jac(3_ni,3_ni), evalr(3_ni), dummy0(3_ni), dummy1(1_ni,3_ni), &
             &        evec(3_ni,3_ni), work(102_ni)
     integer(kind=ni) :: i,j,k,n,t, info
     ! -----------------------------------------------------------------
     !
+    ! Crude transformation from Pa/s to m/s
+    wm = -w(:,:,:,:) / (rho(:,:,:,:)*g)
+    !
     call grad_3d(ux,uy,uz, nx,ny,nz,nt, u, dx,dy,dz)
     call grad_3d(vx,vy,vz, nx,ny,nz,nt, v, dx,dy,dz)
-    call grad_3d(wx,wy,wz, nx,ny,nz,nt, w, dx,dy,dz)
+    call grad_3d(wx,wy,wz, nx,ny,nz,nt, wm, dx,dy,dz)
+    !
+    ! TEST: Disregard vertical wind shear
+    uz = wx
+    vz = wy
     !
     ! Subtracting divergence and vorticity
     div = ux + vy + wz
@@ -143,22 +182,26 @@ contains
     !
     vor_x = wy - vz
     vor_y = uz - wx
-    vor_z = vy - ux
+    vor_z = vx - uy
     !
     wy = wy - 1.0_nr/2.0_nr * vor_x
-    vz = vz - 1.0_nr/2.0_nr * vor_x
+    vz = vz + 1.0_nr/2.0_nr * vor_x
     uz = uz - 1.0_nr/2.0_nr * vor_y
-    wx = wx - 1.0_nr/2.0_nr * vor_y
-    vy = vy - 1.0_nr/2.0_nr * vor_z
-    ux = ux - 1.0_nr/2.0_nr * vor_z
+    wx = wx + 1.0_nr/2.0_nr * vor_y
+    vx = vx - 1.0_nr/2.0_nr * vor_z
+    uy = uy + 1.0_nr/2.0_nr * vor_z
     !
     ! Find the eigenvectors of the remaining symmetric zero-trace matrixes
     do i = 1_ni,nx
+       write(*,'(I5,A4,I5,A)', advance='no') i, 'of', nx, cr
+       !
        do j = 1_ni,ny
           do k = 2_ni,nz-1_ni
              do t = 1_ni,nt
                 ! jac is in major column order
-                jac = reshape( (/ ux, vx, wx, uy, vy, wy, uz, vz, wz /), (/ 3_ni, 3_ni /) )
+                jac = reshape( (/ ux(t,k,j,i), vx(t,k,j,i), wx(t,k,j,i), &
+                           &      uy(t,k,j,i), vy(t,k,j,i), wy(t,k,j,i), &
+                           &      uz(t,k,j,i), vz(t,k,j,i), wz(t,k,j,i) /), (/ 3_ni, 3_ni /) )
                 call dgeev('N', 'V', 3_ni, jac, 3_ni, evalr, dummy0, & 
                         & dummy1, 1_ni, evec, 3_ni, work, 102_ni, info)
                 ! sort eigenvalues and eigenvectors by eigenvalue
@@ -840,6 +883,123 @@ contains
     return
   end subroutine
   !
+  ! Find jetaxis by deformation angle. Using zerolines of the deformation angle
+  ! as locator and the quantity v cross grad(deformation angle) with the upper
+  ! threshold jetint_thres as mask
+  subroutine jetaxis_location(ja,jaoff,nx,ny,nz,no,nf,u,v,dx,dy)
+    use consts
+    use diag_fronts
+    use utils, only: smooth_xy
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), & 
+                 &                dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: ja(nz,no,3_ni), jaoff(nz,nf)
+    integer(kind=ni) :: nx,ny,nz, no, nf
+    !f2py depend(nx,ny,nz) v
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(nz) ja, jaoff
+    !
+    real   (kind=nr), parameter :: NaN = -9999.9_nr, jetint_thres = -2.5e-4_nr, &
+                  &                searchrad = 3.5_nr
+    integer(kind=ni), parameter :: nn = 30000_ni, minlen = 50_ni, nsmooth = 2_ni
+    !
+    real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
+    integer(kind=ni), allocatable :: linelen(:)
+    !
+    real(kind=nr) :: us(nz,ny,nx), vs(nz,ny,nx), ddangdx(nz,ny,nx), ddangdy(nz,ny,nx), &
+                 &   jetint(nz,ny,nx), jaloc(nz,ny,nx), zeroloc(nn,2_ni)
+    integer(kind=ni) :: k, m, n, idx, zerocnt, ptcnt, linecnt, off
+    ! -----------------------------------------------------------------
+    !
+    ! todo: jetint_thres, minlen, searchrad, nsmooth in config / argument list
+    ! todo: reduce duplication between front detection, convline, vorline,
+    ! defline and this function
+    write(*,*) 'preparing'
+    !
+    call smooth_xy(us, nx,ny,nz, u, nsmooth)
+    call smooth_xy(vs, nx,ny,nz, v, nsmooth)
+    !
+    call def_angle(jaloc, nx,ny,nz, us, vs, dx,dy)
+    call grad(ddangdx, ddangdy, nx,ny,nz, jaloc, dx,dy)
+    !
+    jetint(:,:,:) = us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)
+    !
+    ! frint must be negative and below a configurable threshold for front
+    where(jetint > jetint_thres)
+       jaloc = NaN
+    end where
+    !
+    do k = 1_ni,nz
+       write(*,'(I5,A4,I5,A)', advance='no') k, 'of', nz, cr
+       !
+       ! find fronts
+       call find_zeroloc(jaloc(k,:,:), nx,ny,nn, NaN, zeroloc,zerocnt)
+       ! 
+       ! searchrad is in grid point indexes, as it is easier to transform one
+       ! scalar instead of two arrays. For standard grids the two options are
+       ! equivalent. In the long-term one should try to adapt the search radius and
+       ! the minimum length to SI length scales (km)
+       !
+       ! todo why sort points?
+       !
+       allocate(recj(zerocnt,zerocnt), reci(zerocnt,zerocnt), linelen(zerocnt) )
+       reci(:,:) = NaN
+       recj(:,:) = NaN
+       call linejoin(zerocnt, zeroloc(:,2_ni), zeroloc(:,1_ni), searchrad, recj, reci) 
+       !
+       ! filter by length
+       linecnt    = 0_ni ! number of lines
+       ptcnt      = 0_ni ! total numer of points
+       linelen(:) = 0_ni ! number of points per line
+       !
+       off = 0_ni
+       do n = 1_ni,zerocnt
+          if (recj(n,1_ni) == NaN) then
+             exit
+          end if
+          do m = 1_ni,zerocnt
+             if (recj(n,m) == NaN) then
+                exit
+             end if
+             linelen(n) = linelen(n) + 1_ni
+          end do
+          !
+          ! filter fronts by length
+          if (linelen(n) >= minlen) then
+             linecnt = linecnt + 1_ni
+             ptcnt = ptcnt + linelen(n)
+             !
+             ! check if results larger than output array
+             if (ptcnt > no) then
+                write(*,*) 'Found more points than output array allows: ', no
+                stop 1
+             end if
+             if (linecnt > nf) then
+                write(*,*) 'Found more fronts than output array allows: ', nf
+                stop 1
+             end if
+             !
+             ! write into output arrays fr and froff
+             do m = 1_ni,linelen(n)
+                ja(k,off+m,1_ni) = reci(n,m)
+                ja(k,off+m,2_ni) = recj(n,m)
+                ja(k,off+m,3_ni) = jetint(k,int(recj(n,m),ni),int(reci(n,m),ni))
+             end do
+             jaoff(k,linecnt) = off
+             off = off + linelen(n)
+          end if
+       end do
+       ! Save the ending of the last front by saving the beginning of the
+       ! first non-existant
+       jaoff(k,linecnt+1_ni) = off
+       !
+       deallocate(reci, recj, linelen)
+       !
+    end do ! loop over k
+    !
+    return
+  end subroutine
+  !
   ! Front detection after G. Berry et al, based on the frontal detection
   ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
   ! temperature as dat
@@ -857,8 +1017,8 @@ contains
     !f2py depend(nz) fr, froff
     !
     real   (kind=nr), parameter :: NaN = -9999.9_nr, frint_thres = -11.7e-11_nr, &
-                  &                frspd_thres = 1.5_nr, searchrad = 3.1_nr
-    integer(kind=ni), parameter :: nn = 30000_ni, minlen = 10_ni, nsmooth = 2_ni
+                  &                frspd_thres = 1.5_nr, searchrad = 2.5_nr
+    integer(kind=ni), parameter :: nn = 30000_ni, minlen = 20_ni, nsmooth = 2_ni
     !
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
     integer(kind=ni), allocatable :: linelen(:)
@@ -1006,9 +1166,9 @@ contains
     !f2py depend(nx,ny) dx, dy
     !f2py depend(nz) fr, froff
     !
-    real   (kind=nr), parameter :: NaN = -9999.9_nr, div_thres = -0.25e-5_nr, &
-                  &                frspd_thres = 1.5_nr, searchrad = 3.1_nr
-    integer(kind=ni), parameter :: nn = 30000_ni, minlen = 10_ni, nsmooth = 2_ni
+    real   (kind=nr), parameter :: NaN = -9999.9_nr, div_thres = -0.25e-4_nr, &
+                  &                frspd_thres = 1.5_nr, searchrad = 2.5_nr
+    integer(kind=ni), parameter :: nn = 30000_ni, minlen = 20_ni, nsmooth = 2_ni
     !
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
     integer(kind=ni), allocatable :: linelen(:)
@@ -1036,6 +1196,242 @@ contains
     !
     ! frint must be negative and below a configurable threshold for front
     where(absgrad > div_thres)
+       frloc = NaN
+    end where
+    ! 
+    do k = 1_ni,nz
+       write(*,'(I5,A4,I5,A)', advance='no') k, 'of', nz, cr
+       !
+       ! find fronts
+       call find_zeroloc(frloc(k,:,:), nx,ny,nn, NaN, zeroloc,zerocnt)
+       ! 
+       ! searchrad is in grid point indexes, as it is easier to transform one
+       ! scalar instead of two arrays. For standard grids the two options are
+       ! equivalent. In the long-term one should try to adapt the search radius and
+       ! the minimum length to SI length scales (km)
+       !
+       ! todo why sort points?
+       !
+       allocate(recj(zerocnt,zerocnt), reci(zerocnt,zerocnt), linelen(zerocnt) )
+       reci(:,:) = NaN
+       recj(:,:) = NaN
+       call linejoin(zerocnt, zeroloc(:,2_ni), zeroloc(:,1_ni), searchrad, recj, reci) 
+       !
+       ! filter by length
+       linecnt    = 0_ni ! number of lines
+       ptcnt      = 0_ni ! total numer of points
+       linelen(:) = 0_ni ! number of points per line
+       !
+       off = 0_ni
+       do n = 1_ni,zerocnt
+          if (recj(n,1_ni) == NaN) then
+             exit
+          end if
+          do m = 1_ni,zerocnt
+             if (recj(n,m) == NaN) then
+                exit
+             end if
+             linelen(n) = linelen(n) + 1_ni
+          end do
+          !
+          ! filter fronts by length
+          if (linelen(n) >= minlen) then
+             linecnt = linecnt + 1_ni
+             ptcnt = ptcnt + linelen(n)
+             !
+             ! check if results larger than output array
+             if (ptcnt > no) then
+                write(*,*) 'Found more points than output array allows: ', no
+                stop 1
+             end if
+             if (linecnt > nf) then
+                write(*,*) 'Found more fronts than output array allows: ', nf
+                stop 1
+             end if
+             !
+             ! write into output arrays fr and froff
+             do m = 1_ni,linelen(n)
+                fr(k,off+m,1_ni) = reci(n,m)
+                fr(k,off+m,2_ni) = recj(n,m)
+                fr(k,off+m,3_ni) = absgrad(k,int(recj(n,m),ni),int(reci(n,m),ni))
+             end do
+             froff(k,linecnt) = off
+             off = off + linelen(n)
+          end if
+       end do
+       ! Save the ending of the last front by saving the beginning of the
+       ! first non-existant
+       froff(k,linecnt+1_ni) = off
+       !
+       deallocate(reci, recj, linelen)
+       !
+    end do ! loop over k
+    !
+    return
+  end subroutine
+  !
+  ! Convergence line detection based on the front detection algorithm, using
+  ! convergence instead of grad(dat)
+  subroutine vorline_location(fr,froff,nx,ny,nz,no,nf,u,v,dx,dy)
+    use consts
+    use diag_fronts
+    use utils, only: smooth_xy
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), & 
+                 &                dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: fr(nz,no,3_ni), froff(nz,nf)
+    integer(kind=ni) :: nx,ny,nz, no, nf
+    !f2py depend(nx,ny,nz) v
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(nz) fr, froff
+    !
+    real   (kind=nr), parameter :: NaN = -9999.9_nr, vor_thres = 0.75e-4_nr, &
+                  &                frspd_thres = 1.5_nr, searchrad = 2.5_nr
+    integer(kind=ni), parameter :: nn = 30000_ni, minlen = 20_ni, nsmooth = 2_ni
+    !
+    real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
+    integer(kind=ni), allocatable :: linelen(:)
+    !
+    real(kind=nr) :: us(nz,ny,nx), vs(ny,ny,nx), datx(nz,ny,nx), daty(nz,ny,nx), &
+                 &   absgrad(nz,ny,nx), absx (nz,ny,nx), absy (nz,ny,nx), &
+                 &   abslap (nz,ny,nx), absxx(nz,ny,nx), absyy(nz,ny,nx), &
+                 &   frint  (nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx), &
+                 &   zeroloc(nn,2_ni), frloc_cws(ny,nx), frac_idx
+    integer(kind=ni) :: k, m, n, typ, idx, zerocnt, ptcnt, linecnt, off
+    ! -----------------------------------------------------------------
+    !
+    ! todo: frint_thres, frspd_thres, minlen, searchrad, nsmooth in config / argument list
+    write(*,*) 'preparing'
+    !
+    ! todo why does the below lead to segfaults "double free" on return?
+    !call smooth_xy(us, nx,ny,nz, u, nsmooth)
+    !call smooth_xy(vs, nx,ny,nz, v, nsmooth)
+    !
+    call ddx(datx, nx,ny,nz, v, dx,dy)
+    call ddy(daty, nx,ny,nz, u, dx,dy)
+    absgrad(:,:,:) = datx - daty
+    call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
+    frloc(:,:,:) = absx + absy
+    !
+    ! frint must be negative and below a configurable threshold for front
+    where(absgrad < vor_thres)
+       frloc = NaN
+    end where
+    ! 
+    do k = 1_ni,nz
+       write(*,'(I5,A4,I5,A)', advance='no') k, 'of', nz, cr
+       !
+       ! find fronts
+       call find_zeroloc(frloc(k,:,:), nx,ny,nn, NaN, zeroloc,zerocnt)
+       ! 
+       ! searchrad is in grid point indexes, as it is easier to transform one
+       ! scalar instead of two arrays. For standard grids the two options are
+       ! equivalent. In the long-term one should try to adapt the search radius and
+       ! the minimum length to SI length scales (km)
+       !
+       ! todo why sort points?
+       !
+       allocate(recj(zerocnt,zerocnt), reci(zerocnt,zerocnt), linelen(zerocnt) )
+       reci(:,:) = NaN
+       recj(:,:) = NaN
+       call linejoin(zerocnt, zeroloc(:,2_ni), zeroloc(:,1_ni), searchrad, recj, reci) 
+       !
+       ! filter by length
+       linecnt    = 0_ni ! number of lines
+       ptcnt      = 0_ni ! total numer of points
+       linelen(:) = 0_ni ! number of points per line
+       !
+       off = 0_ni
+       do n = 1_ni,zerocnt
+          if (recj(n,1_ni) == NaN) then
+             exit
+          end if
+          do m = 1_ni,zerocnt
+             if (recj(n,m) == NaN) then
+                exit
+             end if
+             linelen(n) = linelen(n) + 1_ni
+          end do
+          !
+          ! filter fronts by length
+          if (linelen(n) >= minlen) then
+             linecnt = linecnt + 1_ni
+             ptcnt = ptcnt + linelen(n)
+             !
+             ! check if results larger than output array
+             if (ptcnt > no) then
+                write(*,*) 'Found more points than output array allows: ', no
+                stop 1
+             end if
+             if (linecnt > nf) then
+                write(*,*) 'Found more fronts than output array allows: ', nf
+                stop 1
+             end if
+             !
+             ! write into output arrays fr and froff
+             do m = 1_ni,linelen(n)
+                fr(k,off+m,1_ni) = reci(n,m)
+                fr(k,off+m,2_ni) = recj(n,m)
+                fr(k,off+m,3_ni) = absgrad(k,int(recj(n,m),ni),int(reci(n,m),ni))
+             end do
+             froff(k,linecnt) = off
+             off = off + linelen(n)
+          end if
+       end do
+       ! Save the ending of the last front by saving the beginning of the
+       ! first non-existant
+       froff(k,linecnt+1_ni) = off
+       !
+       deallocate(reci, recj, linelen)
+       !
+    end do ! loop over k
+    !
+    return
+  end subroutine
+   !
+  ! Convergence line detection based on the front detection algorithm, using
+  ! convergence instead of grad(dat)
+  subroutine defline_location(fr,froff,nx,ny,nz,no,nf,u,v,dx,dy)
+    use consts
+    use diag_fronts
+    use utils, only: smooth_xy
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), & 
+                 &                dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: fr(nz,no,3_ni), froff(nz,nf)
+    integer(kind=ni) :: nx,ny,nz, no, nf
+    !f2py depend(nx,ny,nz) v
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(nz) fr, froff
+    !
+    real   (kind=nr), parameter :: NaN = -9999.9_nr, def_thres = 0.75e-4_nr, &
+                  &                frspd_thres = 1.5_nr, searchrad = 2.5_nr
+    integer(kind=ni), parameter :: nn = 30000_ni, minlen = 20_ni, nsmooth = 2_ni
+    !
+    real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
+    integer(kind=ni), allocatable :: linelen(:)
+    !
+    real(kind=nr) :: us(nz,ny,nx), vs(ny,ny,nx), datx(nz,ny,nx), daty(nz,ny,nx), &
+                 &   absgrad(nz,ny,nx), absx (nz,ny,nx), absy (nz,ny,nx), &
+                 &   abslap (nz,ny,nx), absxx(nz,ny,nx), absyy(nz,ny,nx), &
+                 &   frint  (nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx), &
+                 &   zeroloc(nn,2_ni), frloc_cws(ny,nx), frac_idx
+    integer(kind=ni) :: k, m, n, typ, idx, zerocnt, ptcnt, linecnt, off
+    ! -----------------------------------------------------------------
+    !
+    ! todo: frint_thres, frspd_thres, minlen, searchrad, nsmooth in config / argument list
+    write(*,*) 'preparing'
+    !
+    ! todo why does the below lead to segfaults "double free" on return?
+    !call smooth_xy(us, nx,ny,nz, u, nsmooth)
+    !call smooth_xy(vs, nx,ny,nz, v, nsmooth)
+    !
+    call def_total(absgrad, nx,ny,nz, u,v, dx,dy)
+    call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
+    frloc(:,:,:) = absx + absy
+    !
+    ! frint must be negative and below a configurable threshold for front
+    where(absgrad < def_thres)
        frloc = NaN
     end where
     ! 
