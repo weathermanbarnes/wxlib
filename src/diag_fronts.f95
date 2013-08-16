@@ -9,8 +9,99 @@ module diag_fronts
   use config
   !
   implicit none
-  ! The module is used (only) in the front_location subroutine in diag.f95
+  ! The module is used in the front/line/axis_location subroutines in diag.f95
 contains
+  !
+  !
+  subroutine line_locate(lines,lnoff,nx,ny,nz,no,nf,lnloc,lnint,searchrad,minlen,NaN)
+    use consts
+    !
+    real(kind=nr), intent(in) :: lnloc(nz,ny,nx), lnint(nz,ny,nx), &
+                 &               searchrad, NaN
+    real(kind=nr), intent(out) :: lines(nz,no,3_ni), lnoff(nz,nf)
+    integer(kind=ni) :: nx,ny,nz, no, nf, minlen
+    !f2py depend(nx,ny,nz) lnint
+    !f2py depend(nz) lines, lnoff
+    !
+    integer(kind=ni), parameter :: nn = 30000_ni
+    !
+    real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
+    integer(kind=ni), allocatable :: linelen(:)
+    !
+    real(kind=nr) :: zeroloc(nn,2_ni)
+    integer(kind=ni) :: k, m, n, zerocnt, ptcnt, linecnt, off
+    ! -----------------------------------------------------------------
+    !
+    do k = 1_ni,nz
+       write(*,'(I5,A4,I5,A)', advance='no') k, 'of', nz, cr
+       !
+       ! find fronts
+       call find_zeroloc(lnloc(k,:,:), nx,ny,nn, NaN, zeroloc,zerocnt)
+       ! 
+       ! searchrad is in grid point indexes, as it is easier to transform one
+       ! scalar instead of two arrays. For standard grids the two options are
+       ! equivalent. In the long-term one should try to adapt the search radius and
+       ! the minimum length to SI length scales (km)
+       !
+       ! todo why sort points?
+       !
+       allocate(recj(zerocnt,zerocnt), reci(zerocnt,zerocnt), linelen(zerocnt) )
+       reci(:,:) = NaN
+       recj(:,:) = NaN
+       call linejoin(zerocnt, zeroloc(:,2_ni), zeroloc(:,1_ni), searchrad, recj, reci) 
+       !
+       ! filter by length
+       linecnt    = 0_ni ! number of lines
+       ptcnt      = 0_ni ! total numer of points
+       linelen(:) = 0_ni ! number of points per line
+       !
+       off = 0_ni
+       do n = 1_ni,zerocnt
+          if (recj(n,1_ni) == NaN) then
+             exit
+          end if
+          do m = 1_ni,zerocnt
+             if (recj(n,m) == NaN) then
+                exit
+             end if
+             linelen(n) = linelen(n) + 1_ni
+          end do
+          !
+          ! filter fronts by length
+          if (linelen(n) >= minlen) then
+             linecnt = linecnt + 1_ni
+             ptcnt = ptcnt + linelen(n)
+             !
+             ! check if results larger than output array
+             if (ptcnt > no) then
+                write(*,*) 'Found more points than output array allows: ', no
+                stop 1
+             end if
+             if (linecnt > nf) then
+                write(*,*) 'Found more fronts than output array allows: ', nf
+                stop 1
+             end if
+             !
+             ! write into output arrays fr and froff
+             do m = 1_ni,linelen(n)
+                lines(k,off+m,1_ni) = reci(n,m)
+                lines(k,off+m,2_ni) = recj(n,m)
+                lines(k,off+m,3_ni) = lnint(k,int(recj(n,m),ni),int(reci(n,m),ni))
+             end do
+             lnoff(k,linecnt) = off
+             off = off + linelen(n)
+          end if
+       end do
+       ! Save the ending of the last front by saving the beginning of the
+       ! first non-existant
+       lnoff(k,linecnt+1_ni) = off
+       !
+       deallocate(reci, recj, linelen)
+       !
+    end do ! loop over k
+    !
+    return
+  end subroutine
   !
   ! Find locations where dat is zero by interpolating the 2-dim gridded data
   subroutine find_zeroloc(dat, nx,ny,nn, NaN, zeroloc, zerocnt)
