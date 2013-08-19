@@ -15,7 +15,8 @@ module config
           &          div_thres =-0.25e-4_nr, &
           &          def_thres = 0.75e-4_nr, &
           &       jetint_thres =-2.5e-4_nr, & 
-          &          searchrad = 2.5_nr
+          &          searchrad = 2.5_nr, & 
+          &        smooth_coef = 0.25_nr
   integer(kind=ni) ::   minlen = 20_ni, &
           &            nsmooth = 2_ni 
 end module

@@ -953,7 +953,6 @@ contains
     integer(kind=ni) :: typ
     ! -----------------------------------------------------------------
     !
-    ! todo: frint_thres, frspd_thres, minlen, searchrad, nsmooth in config / argument list
     write(*,*) 'preparing'
     !
     call smooth_xy(dats, nx,ny,nz, dat, nsmooth)

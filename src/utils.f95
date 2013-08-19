@@ -50,9 +50,7 @@ contains
     integer(kind=ni) :: i,j,k, n, nx,ny,nz
     !f2py depend(nx,ny,nz) res
     !
-    ! TODO: Make accessible via config
     real(kind=nr) :: tmp(nz,ny,nx) ! temporary helper array to avoid changing dat
-    real(kind=nr), parameter :: coef = 0.25_nr 
     ! -----------------------------------------------------------------
     !
     res(:,:,:) = dat(:,:,:)
@@ -62,22 +60,22 @@ contains
        do i = 1_ni,nx
           do j = 2_ni,ny-1_ni
              do k = 1_ni,nz
-                res(k,j,i) = res(k,j,i) + coef * (tmp(k,j-1_ni,i)-2_ni*tmp(k,j,i)+tmp(k,j+1_ni,i))
+                res(k,j,i) = res(k,j,i) + smooth_coef * (tmp(k,j-1_ni,i)-2_ni*tmp(k,j,i)+tmp(k,j+1_ni,i))
              end do
           end do
        end do
        do i = 2_ni,nx-1_ni
           do j = 1_ni,ny
              do k = 1_ni,nz
-                res(k,j,i) = res(k,j,i) + coef * (tmp(k,j,i-1_ni)-2_ni*tmp(k,j,i)+tmp(k,j,i+1_ni))
+                res(k,j,i) = res(k,j,i) + smooth_coef * (tmp(k,j,i-1_ni)-2_ni*tmp(k,j,i)+tmp(k,j,i+1_ni))
              end do
           end do
        end do
        if ( grid_cyclic_ew ) then
           do j = 1_ni,ny
              do k = 1_ni,nz
-                res(k,j,1_ni) = res(k,j,1_ni) + coef * (tmp(k,j,nx)-2_ni*tmp(k,j,1_ni)+tmp(k,j,2_ni))
-                res(k,j,nx) = res(k,j,nx) + coef * (tmp(k,j,nx-1_ni)-2_ni*tmp(k,j,nx)+tmp(k,j,1_ni))
+                res(k,j,1_ni) = res(k,j,1_ni) + smooth_coef * (tmp(k,j,nx)-2_ni*tmp(k,j,1_ni)+tmp(k,j,2_ni))
+                res(k,j,nx) = res(k,j,nx) + smooth_coef * (tmp(k,j,nx-1_ni)-2_ni*tmp(k,j,nx)+tmp(k,j,1_ni))
              end do
           end do
        end if
