@@ -909,7 +909,7 @@ contains
     call smooth_xy(us, nx,ny,nz, u, nsmooth)
     call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
-    call def_angle(jaloc, nx,ny,nz, us, vs, dx,dy)
+    call def_angle_nat(jaloc, nx,ny,nz, us, vs, dx,dy)
     call grad(ddangdx, ddangdy, nx,ny,nz, jaloc, dx,dy)
     !
     jetint(:,:,:) = us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)

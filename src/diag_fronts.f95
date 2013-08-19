@@ -147,7 +147,7 @@ contains
                    gotflag = 1_ni
                 end if    ! diff signs
              end if    ! Missin ip1
-          end if     ! zero exactly at grid point
+          end if    ! zero exactly at grid point
        end do   
     end do
     !
@@ -261,11 +261,11 @@ contains
                 if (.not. look(m)) then
                    dist = sqrt((lat(cur)-lat(m))**2_ni + (lon(cur)-lon(m))**2_ni)
                    ! take periodicity into account
-                   if ( grid_cyclic_ew .and. dist > 705.0_nr) then
+                   if ( grid_cyclic_ew .and. dist > 705.0_nr ) then
                       dist = sqrt((lat(cur)-lat(m))**2_ni + (abs(lon(cur)-lon(m))-720.0_nr)**2_ni)
                    end if
                    !
-                   if (dist /= 0.0_nr .and. mindist > dist) then
+                   if ( dist /= 0.0_nr .and. mindist > dist ) then
                       mindist = dist 
                       next = m
                    end if

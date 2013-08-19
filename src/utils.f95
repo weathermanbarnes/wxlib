@@ -73,6 +73,14 @@ contains
              end do
           end do
        end do
+       if ( grid_cyclic_ew ) then
+          do j = 1_ni,ny
+             do k = 1_ni,nz
+                res(k,j,1_ni) = res(k,j,1_ni) + coef * (tmp(k,j,nx)-2_ni*tmp(k,j,1_ni)+tmp(k,j,2_ni))
+                res(k,j,nx) = res(k,j,nx) + coef * (tmp(k,j,nx-1_ni)-2_ni*tmp(k,j,nx)+tmp(k,j,1_ni))
+             end do
+          end do
+       end if
     end do
     !
     return
