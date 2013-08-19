@@ -4,7 +4,7 @@
 !
 ! Module adopted from code by Gwendal Rivière
 ! Module maintained by <?>
-module diag_contour_rwb
+module detect_rwb_contour
   use kind
   use config
   !

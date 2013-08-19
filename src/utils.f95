@@ -84,4 +84,23 @@ contains
     return
   end subroutine
   !
+  ! Scaling and offsetting data
+  ! [frequently used on netCDF input, see attributes "add_offset" and "scale"]
+  subroutine scaleoff(res,nx,ny,nz,dat,scale,offset)
+    integer(kind=2), intent(in) :: dat(nz,ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    real(kind=nr), intent( in) :: scale, offset
+    integer(kind=ni) :: i,j,k, nx,ny,nz
+    !f2py depend(nx,ny,nz) res
+    ! -----------------------------------------------------------------
+    !
+    do i=1_ni,nx
+       do j=1_ni,ny
+          do k=1_ni,nz
+             res(k,j,i) = dat(k,j,i)*scale + offset
+          end do
+       end do
+    end do
+  end subroutine
+  !
 end module

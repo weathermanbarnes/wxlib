@@ -4,7 +4,7 @@
 !
 ! Module adopted from code by Gareth Berry
 ! Module maintained by Clemens Spensberger
-module diag_fronts
+module detect_fronts
   use kind
   use config
   !
