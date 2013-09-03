@@ -22,7 +22,7 @@ from autoscale import autoscale
 # TODO: Generalisation in data fetcher <-> plotter to avoid code duplication
 # TODO: Cleanup import!
 # TODO: avoid that line!
-s = (361,721)
+#s = (361,721)
 
 
 # #############################################################################
@@ -637,7 +637,7 @@ def map_oro_dat(dat, static, **kwargs):
 	kwargs = __map_prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
 
-	dat = __map_prepare_dat(dat, mask, kwargs)
+	dat = __map_prepare_dat(dat, mask, static, kwargs)
 	
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
@@ -656,8 +656,8 @@ def map_oro_deform(defabs, defang, static, **kwargs):
 	kwargs = __map_prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
 
-	defabs = __map_prepare_dat(defabs, mask, kwargs)
-	defang = __map_prepare_dat(defang, mask, c.contour.defang)
+	defabs = __map_prepare_dat(defabs, mask, static, kwargs)
+	defang = __map_prepare_dat(defang, mask, static, c.contour.defang)
 	defdex = np.cos(defang[:,:]) *defabs
 	defdey = np.sin(defang[:,:]) *defabs
 
@@ -665,10 +665,18 @@ def map_oro_deform(defabs, defang, static, **kwargs):
 
 	#2. Plot the actual deformation
 	__map_contourf_dat(m, x, y, defabs, kwargs)
-
-	ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0], 24, 16, returnxy=True)
-	m.quiver(xt, yt, ut, vt, zorder=4, scale=360, alpha=0.7)
-	m.quiver(xt, yt, -ut, -vt, zorder=4, scale=360, alpha=0.7)
+	
+	if hasattr(m, 'transform_vector'):
+		ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0], 24, 16, returnxy=True)
+		qscale = 360
+	else:
+		skipx = defdex.shape[1]/24
+		skipy = defdey.shape[0]/16
+		slc = (slice(skipy/2,None,skipy), slice(skipx/2,None,skipx))
+		ut,vt,xt,yt = defdex[slc],defdey[slc],x[slc],y[slc]
+		qscale=72
+	m.quiver(xt, yt, ut, vt, zorder=4, scale=qscale, alpha=0.7)
+	m.quiver(xt, yt, -ut, -vt, zorder=4, scale=qscale, alpha=0.7)
 	
 	# 3. Finish off
 	__map_decorate(m, x, y, mask, kwargs)
@@ -682,10 +690,10 @@ def map_oro_barb(u, v, static, dat=None, **kwargs):
 	kwargs = __map_prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
 
-	u = __map_prepare_dat(u, mask, c.contour.u)
-	v = __map_prepare_dat(v, mask, c.contour.v)
+	u = __map_prepare_dat(u, mask, static, c.contour.u)
+	v = __map_prepare_dat(v, mask, static, c.contour.v)
 	if not dat == None: 
-		dat = __map_prepare_dat(dat, mask, kwargs)
+		dat = __map_prepare_dat(dat, mask, static, kwargs)
 	
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
@@ -715,7 +723,7 @@ def map_oro_fronts(fronts, froff, static, dat=None, **kwargs):
 	sfrs = __unflatten_fronts_t(fronts[2], froff[2], minlength=5)
 
 	if not dat == None: 
-		dat = __map_prepare_dat(dat, mask, kwargs)
+		dat = __map_prepare_dat(dat, mask, static, kwargs)
 	
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
@@ -751,7 +759,7 @@ def map_oro_fronts_nc(cfrs, wfrs, sfrs, static, dat=None, **kwargs):
 	mask = __map_create_mask(static, kwargs)
 	
 	if not dat == None: 
-		dat = __map_prepare_dat(dat, mask, kwargs)
+		dat = __map_prepare_dat(dat, mask, static, kwargs)
 	
 	m, x, y = __map_setup(mask, static, kwargs)
 	
@@ -812,11 +820,11 @@ def __map_create_mask(static, kwargs):
 	
 	return mask
 
-def __map_prepare_dat(dat, mask, kwargs):
+def __map_prepare_dat(dat, mask, static, kwargs):
 	if kwargs.get('hook'):
 		dat = kwargs.pop('hook')(dat)
 	
-	if not dat.shape == s:
+	if static.cyclic_ew:
 		dat = concat1(dat)
 	
 	dat[mask] = np.nan
@@ -824,18 +832,28 @@ def __map_prepare_dat(dat, mask, kwargs):
 	return dat
 
 def __map_setup(mask, static, kwargs):
-	m = kwargs.pop('m')()
-
-	lon, lat = concat1lonlat(static.x, static.y)
-	x, y = m(lon,lat)
+	if static.cyclic_ew:
+		lon, lat = concat1lonlat(static.x, static.y)
+		concat = concat1
+	else:
+		lon, lat = static.x, static.y
+		concat = lambda x: x
 	
-	m.drawcoastlines(color=kwargs.pop('coastcolor'))
+	m = kwargs.pop('m')
+	if not m:
+		m = plt
+		x, y = lon, lat
+	else:
+		m = m()
+		x, y = m(lon,lat)
+	
+		m.drawcoastlines(color=kwargs.pop('coastcolor'))
 
-	gridcolor = kwargs.pop('gridcolor')
-	m.drawparallels(range(-80,81,5), color=gridcolor)
-	m.drawmeridians(range(0,360,30), color=gridcolor)
-
-	m.contour(x, y, concat1(static.oro), kwargs.pop('oroscale'), colors=kwargs.pop('orocolor'), 
+		gridcolor = kwargs.pop('gridcolor')
+		m.drawparallels(range(-80,81,5), color=gridcolor)
+		m.drawmeridians(range(0,360,30), color=gridcolor)
+	
+	m.contour(x, y, concat(static.oro), kwargs.pop('oroscale'), colors=kwargs.pop('orocolor'), 
 			alpha=kwargs.pop('oroalpha'), zorder=2)
 	if type(mask) == np.ndarray:
 		m.contourf(x, y, mask, colors=kwargs.pop('maskcolor'))
@@ -914,19 +932,28 @@ def map_overlay_fronts(fronts, froff, **kwargs):
 	def overlay(m, x, y, zorder, mask=None):
 		# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
 		for cfr in cfrs:
-			lonfr = -180 + cfr[:,0]*0.5
-			latfr = 90.0 - cfr[:,1]*0.5
-			xfr, yfr = m(lonfr, latfr)
+			if hasattr(m, '__call__'):
+				lonfr = -180 + cfr[:,0]*0.5
+				latfr = 90.0 - cfr[:,1]*0.5
+				xfr, yfr = m(lonfr, latfr)
+			else:
+				xfr, yfr = cfr[:,0]*50000, cfr[:,1]*50000
 			m.plot(xfr, yfr, 'b-', linewidth=2)
 		for wfr in wfrs:
-			lonfr = -180 + wfr[:,0]*0.5
-			latfr = 90.0 - wfr[:,1]*0.5
-			xfr, yfr = m(lonfr, latfr)
+			if hasattr(m, '__call__'):
+				lonfr = -180 + wfr[:,0]*0.5
+				latfr = 90.0 - wfr[:,1]*0.5
+				xfr, yfr = m(lonfr, latfr)
+			else:
+				xfr, yfr = wfr[:,0]*50000, wfr[:,1]*50000
 			m.plot(xfr, yfr, 'r-', linewidth=2)
 		for sfr in sfrs:
-			lonfr = -180 + sfr[:,0]*0.5
-			latfr = 90.0 - sfr[:,1]*0.5
-			xfr, yfr = m(lonfr, latfr)
+			if hasattr(m, '__call__'):
+				lonfr = -180 + sfr[:,0]*0.5
+				latfr = 90.0 - sfr[:,1]*0.5
+				xfr, yfr = m(lonfr, latfr)
+			else:
+				xfr, yfr = sfr[:,0]*50000, sfr[:,1]*50000
 			m.plot(xfr, yfr, 'm-', linewidth=2)
 
 
