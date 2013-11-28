@@ -81,7 +81,7 @@ contains
     end forall
   end subroutine
   !
-  ! Calculates partial y derivative: b = partial(a)/partial(y)
+  ! Calculates partial y derivative: b = partial^2(a)/partial(y)^2
   !  Returns 0 on first and last lat
   subroutine ddy2(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
@@ -100,6 +100,38 @@ contains
     end forall
   end subroutine
   !
+  ! Calculates partial y derivative: b = partial^2(a)/(partial(y)*partial(x)
+  !  Returns 0 on first and last lat
+  subroutine ddxy(res,nx,ny,nz,dat,dx,dy)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni) :: i,j,k, nx,ny,nz
+    !f2py depend(nx,ny,nz) res
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    forall(k = 1_ni:nz, j = 2_ni:ny-1_ni, i = 2_ni:nx-1_ni)
+       res(k,j,i) = ( dat(k,j+1_ni,i+1_ni)-dat(k,j+1_ni,i-1_ni) - &
+            &        (dat(k,j-1_ni,i+1_ni)-dat(k,j-1_ni,i-1_ni)) )/(dx(j,i)*dy(j,i))
+    end forall
+    if (grid_cyclic_ew) then
+       forall(k = 1_ni:nz, j = 2_ni:ny-1_ni)
+          res(k,j,1_ni) = ( dat(k,j+1_ni,2_ni)-dat(k,j+1_ni,nx) - &
+               &           (dat(k,j-1_ni,2_ni)-dat(k,j-1_ni,nx)) )/(dx(j,1_ni)*dy(j,1_ni))
+          res(k,j,nx)   = ( dat(k,j+1_ni,1_ni)-dat(k,j+1_ni,nx-1_ni) - &
+               &           (dat(k,j-1_ni,1_ni)-dat(k,j-1_ni,nx-1_ni)) )/(dx(j,nx)*dy(j,nx))
+       end forall
+    else
+       forall(k = 1_ni:nz, j = 2_ni:ny-1_ni)
+          res(k,j,1_ni) = 0._nr
+          res(k,j,nx) = 0._nr
+       end forall
+    end if
+    forall(k = 1_ni:nz, i = 1_ni:nx)
+       res(k,1_ni,i) = 0._nr
+       res(k,ny  ,i) = 0._nr
+    end forall
+  end subroutine  !
   ! Calculates partial y derivative: b = partial(a)/partial(y)
   !  Returns 0 on first and last lat
   subroutine ddz(res,nx,ny,nz,dat,dz)

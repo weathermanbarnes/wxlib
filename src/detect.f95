@@ -609,23 +609,25 @@ contains
     !call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
     call div(absgrad, nx,ny,nz, u,v, dx,dy)
-    call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
-    call ddx2(absxx, nx,ny,nz, absgrad, dx,dy)
-    call ddy2(absyy, nx,ny,nz, absgrad, dx,dy)
+    !call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
+    !call ddx2(absxx, nx,ny,nz, absgrad, dx,dy)
+    !call ddy2(absyy, nx,ny,nz, absgrad, dx,dy)
     !
     ! frint must be negative and below a configurable threshold for front
-    where(absgrad > div_thres)
-       absx = NaN
-       absy = NaN
-    end where
+    !where(absgrad > div_thres)
+    !   absx = NaN
+    !   absy = NaN
+    !end where
     ! Masking which criterion to use
-    where(absxx > absyy)
-       absx = NaN
-    else where
-       absy = NaN
-    end where
-    ! 
-    call line_locate2(fr,froff, nx,ny,nz,no,nf, absx,absy,absgrad,searchrad,minlen,NaN, dx,dy)
+    !where(absxx > absyy)
+    !   absx = NaN
+    !else where
+    !   absy = NaN
+    !end where
+    !
+    absgrad = -absgrad
+    !
+    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,-div_thres, searchrad,minlen,NaN, dx,dy)
     !
     return
   end subroutine
@@ -663,23 +665,23 @@ contains
     !call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
     call vor(absgrad, nx,ny,nz, u,v, dx,dy)
-    call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
-    call ddx2(absxx, nx,ny,nz, absgrad, dx,dy)
-    call ddy2(absyy, nx,ny,nz, absgrad, dx,dy)
+    !call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
+    !call ddx2(absxx, nx,ny,nz, absgrad, dx,dy)
+    !call ddy2(absyy, nx,ny,nz, absgrad, dx,dy)
     !
     ! frint must be negative and below a configurable threshold for front
-    where(absgrad < vor_thres)
-       absx = NaN
-       absy = NaN
-    end where
+    !where(absgrad < vor_thres)
+    !   absx = NaN
+    !   absy = NaN
+    !end where
     ! Masking which criterion to use
-    where(absxx > absyy)
-       absx = NaN
-    else where
-       absy = NaN
-    end where
+    !where(absxx > absyy)
+    !   absx = NaN
+    !else where
+    !   absy = NaN
+    !end where
     ! 
-    call line_locate2(fr,froff, nx,ny,nz,no,nf, absx,absy,absgrad,searchrad,minlen,NaN, dx,dy)
+    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,vor_thres, searchrad,minlen,NaN, dx,dy)
     !
     return
   end subroutine
@@ -715,23 +717,23 @@ contains
     !call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
     call def_total(absgrad, nx,ny,nz, u,v, dx,dy)
-    call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
-    call ddx2(absxx, nx,ny,nz, absgrad, dx,dy)
-    call ddy2(absyy, nx,ny,nz, absgrad, dx,dy)
+    !call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
+    !call ddx2(absxx, nx,ny,nz, absgrad, dx,dy)
+    !call ddy2(absyy, nx,ny,nz, absgrad, dx,dy)
     !
     ! frint must be negative and below a configurable threshold for front
-    where(absgrad < def_thres)
-       absx = NaN
-       absy = NaN
-    end where
+    !where(absgrad < def_thres)
+    !   absx = NaN
+    !   absy = NaN
+    !end where
     ! Masking which criterion to use
-    where(absxx > absyy)
-       absx = NaN
-    else where
-       absy = NaN
-    end where
+    !where(absxx > absyy)
+    !   absx = NaN
+    !else where
+    !   absy = NaN
+    !end where
     ! 
-    call line_locate2(fr,froff, nx,ny,nz,no,nf, absx,absy,absgrad,searchrad,minlen,NaN, dx,dy)
+    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,def_thres, searchrad,minlen,NaN, dx,dy)
     !
     return
   end subroutine

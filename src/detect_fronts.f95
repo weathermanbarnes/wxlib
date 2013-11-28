@@ -7,6 +7,7 @@
 module detect_fronts
   use kind
   use config
+  use derivatives
   !
   implicit none
   ! The module is used in the front/line/axis_location subroutines in diag.f95
@@ -21,6 +22,7 @@ contains
     real(kind=nr), intent(out) :: lines(nz,no,3_ni), lnoff(nz,nf)
     integer(kind=ni) :: nx,ny,nz, no, nf
     !f2py depend(nx,ny,nz) lnint
+    !f2py depend(nx,ny) dx, dy
     !f2py depend(nz) lines, lnoff
     !
     integer(kind=ni), parameter :: nn = 30000_ni
@@ -94,15 +96,14 @@ contains
     return
   end subroutine
   !
-  ! 
-  subroutine line_locate2(lines,lnoff,nx,ny,nz,no,nf,lnloc1,lnloc2,lnint,searchrad,minlen,NaN,dx,dy)
+  ! TODO: Reduce duplication with line_locate
+  subroutine maxline_locate(lines,lnoff,nx,ny,nz,no,nf,dat,thres,searchrad,minlen,NaN,dx,dy)
     use consts
     !
-    real(kind=nr), intent(in) :: lnloc1(nz,ny,nx), lnloc2(nz,ny,nx), lnint(nz,ny,nx), &
-                 &               dx(ny,nx), dy(ny,nx), searchrad, NaN, minlen
+    real(kind=nr), intent(in) :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx), thres, searchrad, NaN, minlen
     real(kind=nr), intent(out) :: lines(nz,no,3_ni), lnoff(nz,nf)
     integer(kind=ni) :: nx,ny,nz, no, nf
-    !f2py depend(nx,ny,nz) lnint
+    !f2py depend(nx,ny) dx, dy
     !f2py depend(nz) lines, lnoff
     !
     integer(kind=ni), parameter :: nn = 30000_ni
@@ -110,36 +111,31 @@ contains
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:), linelen(:)
     integer(kind=ni), allocatable :: lineptcnt(:)
     !
-    real(kind=nr), target :: zeroloc(nn*2_ni,2_ni)
-    real(kind=nr), pointer :: zerolocptr(:,:)
-    integer(kind=ni) :: i,j,k, di, m, n, zerocnt,zerocnt1,zerocnt2, ptcnt, linecnt, off
+    real(kind=nr) :: maxloc_(nz,nn,2_ni)
+    integer(kind=ni) :: i,j,k, di, m, n, maxcnt(nz), ptcnt, linecnt, off
     ! -----------------------------------------------------------------
+    !
+    ! find lines by zero-criterion
+    call find_maxloc(dat(:,:,:),thres, nx,ny,nz, nn, NaN, maxloc_(:,:,:),maxcnt(:), dx,dy)
     !
     do k = 1_ni,nz
        write(*,'(I5,A4,I5,A)', advance='no') k, 'of', nz, cr
        !
-       ! find lines by zero-criterion
-       zerolocptr => zeroloc(1_ni:nn,:)
-       call find_zeroloc(lnloc1(k,:,:), nx,ny,nn, NaN, zerolocptr,zerocnt1)
-       zerolocptr => zeroloc(zerocnt1+1_ni:zerocnt1+nn,:)
-       call find_zeroloc(lnloc2(k,:,:), nx,ny,nn, NaN, zerolocptr,zerocnt2)
-       zerocnt = zerocnt1 + zerocnt2
-       ! 
        ! searchrad is in grid point indexes, as zero locations are found at grid
        ! resolution, hence the number of neighbours for a given searchrad does not
        ! depend on location within the grid
        !
-       allocate(recj(zerocnt,zerocnt), reci(zerocnt,zerocnt), lineptcnt(zerocnt), linelen(zerocnt) )
+       allocate(recj(maxcnt(k),maxcnt(k)), reci(maxcnt(k),maxcnt(k)), lineptcnt(maxcnt(k)), linelen(maxcnt(k)) )
        reci(:,:) = NaN
        recj(:,:) = NaN
        linecnt    = 0_ni ! number of lines
        ptcnt      = 0_ni ! total numer of points
        lineptcnt(:) = 0_ni ! number of points per line
-       call linejoin(zerocnt, nf*3_ni, nx,ny, zeroloc(:,2_ni), zeroloc(:,1_ni), searchrad, &
+       call linejoin(maxcnt(k), nf*3_ni, nx,ny, maxloc_(k,:,2_ni), maxloc_(k,:,1_ni), searchrad, &
                & recj, reci, linelen, lineptcnt, dx,dy) 
        !
        off = 0_ni
-       do n = 1_ni,zerocnt
+       do n = 1_ni,maxcnt(k)
           if (recj(n,1_ni) == NaN) then
              exit
           end if
@@ -164,7 +160,7 @@ contains
              do m = 1_ni,lineptcnt(n)
                 lines(k,off+m,1_ni) = reci(n,m)
                 lines(k,off+m,2_ni) = recj(n,m)
-                lines(k,off+m,3_ni) = lnint(k,int(recj(n,m),ni),int(reci(n,m),ni))
+                lines(k,off+m,3_ni) = dat(k,int(recj(n,m),ni),int(reci(n,m),ni))
              end do
              lnoff(k,linecnt) = off
              off = off + lineptcnt(n)
@@ -302,6 +298,78 @@ contains
     return
   end  subroutine find_zeroloc
   !
+  ! Find maximum axis locations by interpolating the 2-dim gridded data
+  subroutine find_maxloc(dat,thres, nx,ny,nz, nn, NaN, maxloc_, maxcnt, dx,dy)
+    real(kind=nr), intent(in)  ::  dat(nz,ny,nx), dx(ny,nx), dy(ny,nx), thres
+    real(kind=nr), intent(out) :: maxloc_(nz,nn,2_ni)
+    real(kind=nr), intent(in) :: NaN
+    integer(kind=ni), intent(in) :: nx,ny,nz, nn
+    integer(kind=ni), intent(out) :: maxcnt(nz)
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(nz) maxloc_, maxcnt
+    !
+    real(kind=nr) :: datxx(nz,ny,nx), datyy(nz,ny,nx), datxy(nz,ny,nx), &
+                &    datx (nz,ny,nx), daty (nz,ny,nx), dats, ds, di, dj
+    real(kind=nr) :: hess(2_ni,2_ni), evalr(2_ni), evali(2_ni), evec(2_ni,2_ni), &
+                &    dummy(2_ni,2_ni), work(68_ni)
+    integer(kind=ni) :: i,j,k, minidx, info, cnt
+    ! -----------------------------------------------------------------
+    !
+    call ddx(datx, nx,ny,nz, dat, dx,dy)
+    call ddy(daty, nx,ny,nz, dat, dx,dy)
+    call ddx2(datxx, nx,ny,nz, dat, dx,dy)
+    call ddy2(datyy, nx,ny,nz, dat, dx,dy)
+    call ddxy(datxy, nx,ny,nz, dat, dx,dy)
+    !
+    do k = 1_ni,nz
+       cnt = 0_ni
+       do i = 1_ni,nx
+          do j = 1_ni,ny
+             if ( dat(k,j,i) < thres ) cycle
+             !
+             hess(:,:) = reshape((/ datxx(k,j,i), datxy(k,j,i), datxy(k,j,i), datyy(k,j,i) /), (/ 2_ni, 2_ni /) )
+             call dgeev('N','V',2_ni,hess,2_ni,evalr,evali,dummy,2_ni,evec,2_ni,work,68_ni,info)
+             !
+             ! Minimum eigenvalue: Largest negative curvature
+             minidx = minloc(evalr, 1_ni)
+             if ( evalr(minidx) > 0.0_nr ) cycle
+             ! Enforce an elongated aspect ratio
+             if ( evalr(minidx)/abs(evalr(3_ni-minidx)) > -1.0_nr ) cycle
+
+             ! Slope in direction of the largest negative curvature
+             dats = datx(k,j,i)*evec(1_ni,minidx) + daty(k,j,i)*evec(2_ni,minidx)
+             !
+             ! Extrapolate to find zero-slope
+             ds = -dats/evalr(minidx)
+             di = ds*evec(1_ni,minidx)/dx(j,i)
+             dj = ds*evec(2_ni,minidx)/dy(j,i)
+             if ( abs(di) > 0.5_nr .or. abs(dj) > 0.5_nr ) cycle
+             !
+             cnt = cnt + 1_ni
+             maxloc_(k,cnt,2_ni) = j + 0.5_nr + dj
+             maxloc_(k,cnt,1_ni) = i + 0.5_nr + di
+             !
+             !if ( i == 371_ni .and. j == 60_ni .and. k == 1_ni ) then
+             !   hess(:,:) = reshape((/ datxx(k,j,i), datxy(k,j,i), datxy(k,j,i), datyy(k,j,i) /), (/ 2_ni, 2_ni /) )
+             !   write(*,*) 'matrix', hess
+             !   write(*,*) 'eval 1', evalr(1_ni), evali(1_ni)
+             !   write(*,*) 'evec 1', evec(:,1_ni)
+             !   write(*,*) 'eval 2', evalr(2_ni), evali(2_ni)
+             !   write(*,*) 'evec 2', evec(:,2_ni)
+             !   write(*,*) 'work len', work(1_ni)
+             !   write(*,*) 'info', info
+             !   write(*,*) 'min val', evalr(minidx)
+             !   write(*,*) 'slope xys', datx(k,j,i), daty(k,j,i), dats
+             !   write(*,*) 'zero dist', ds
+             !   write(*,*) 'dpos', di, dj
+             !   stop 1
+             !end if
+          end do
+       end do
+       maxcnt(k) = cnt
+    end do
+    !
+  end subroutine
   !
   ! Join a cloud of frontal points into frontal lines
   subroutine linejoin(cnt,nstruct_max,nx,ny,jidx,iidx,searchrad,recj,reci,linelen,lineptcnt,dx,dy)
