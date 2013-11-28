@@ -19,7 +19,7 @@ from settings import conf as c
 from autoscale import autoscale
 
 
-# TODO: Generalisation in data fetcher <-> plotter to avoid code duplication
+# TODO: Generalisation i0n data fetcher <-> plotter to avoid code duplication
 # TODO: Cleanup import!
 # TODO: avoid that line!
 #s = (361,721)
@@ -664,8 +664,6 @@ def map_oro_deform(defabs, defang, static, **kwargs):
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 
 	#2. Plot the actual deformation
-	__map_contourf_dat(m, x, y, defabs, kwargs)
-	
 	if hasattr(m, 'transform_vector'):
 		ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0], 24, 16, returnxy=True)
 		qscale = 360
@@ -677,6 +675,8 @@ def map_oro_deform(defabs, defang, static, **kwargs):
 		qscale=72
 	m.quiver(xt, yt, ut, vt, zorder=4, scale=qscale, alpha=0.7)
 	m.quiver(xt, yt, -ut, -vt, zorder=4, scale=qscale, alpha=0.7)
+	
+	__map_contourf_dat(m, x, y, defabs, kwargs)
 	
 	# 3. Finish off
 	__map_decorate(m, x, y, mask, kwargs)
@@ -873,7 +873,8 @@ def __map_contourf_dat(m, x, y, dat, kwargs):
 
 def __map_decorate(m, x, y, mask, kwargs):
 	if not kwargs.pop('disable_cb'):
-		cb = plt.colorbar(ticks=kwargs.pop('ticks'), shrink=0.85, pad=0.015, fraction=0.10)
+		cb = plt.colorbar(ticks=kwargs.pop('ticks'), orientation=kwargs.pop('cb_orientation', 'vertical'), 
+				shrink=0.8, pad=0.02, fraction=0.08)
 		if kwargs.get('ticklabels'): 
 			cb.ax.set_yticklabels(kwargs.pop('ticklabels'))
 	
@@ -965,15 +966,31 @@ def map_overlay_fronts(fronts, froff, **kwargs):
 def map_overlay_lines(lines, loff, **kwargs):  
 	kwargs = __line_prepare_config(kwargs)
 
-	lns = __unflatten_fronts_t(lines, loff, minlength=5)
+	lns = __unflatten_fronts_t(lines, loff, minlength=0)
 
 	def overlay(m, x, y, zorder, mask=None):
 		# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
 		for ln in lns:
-			lonfr = -180 + ln[:,0]*0.5
-			latfr = 90.0 - ln[:,1]*0.5
+			lonfr = -180 + (ln[:,0]-1)*0.5
+			latfr = 90.0 - (ln[:,1]-1)*0.5
 			xfr, yfr = m(lonfr, latfr)
 			m.plot(xfr, yfr, kwargs['linecolor'], linewidth=2)
+
+
+		return
+
+	return overlay
+
+
+def map_overlay_dots(xidxs, yidxs, **kwargs):  
+	kwargs = __line_prepare_config(kwargs)
+
+	def overlay(m, x, y, zorder, mask=None):
+		# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
+		lonfr = -180 + (xidxs -1)*0.5
+		latfr = 90.0 - (yidxs -1)*0.5
+		xfr, yfr = m(lonfr, latfr)
+		m.scatter(xfr, yfr, 9, marker='.', edgecolors=kwargs['linecolor'])
 
 
 		return

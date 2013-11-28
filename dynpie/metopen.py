@@ -18,6 +18,7 @@ from datetime import datetime as dt, timedelta as td
 
 # Find and open files by filename (without ending!)
 def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=False, no_static=False):
+	tried = []
 	for path in c.datapath:
 		static = None
 
@@ -47,6 +48,7 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 				static.oro = np.zeros((static.ny, static.nx))
 			print 'Found '+path+'/'+filename+'.nc'
 		else:
+			tried.append(path)
 			continue
 		
 		if not no_dtype_conversion:
@@ -68,7 +70,7 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 
 		return f, dat, static
 	
-	raise RuntimeError, '%s.* not found in any data location.' % filename
+	raise RuntimeError, '%s.* not found in any data location. \nTried the following (in order):\n\t%s' % (filename, '\n\t'.join(tried))
 
 
 def get_static(cuts=slice(None), verbose=False, no_dtype_conversion=False):

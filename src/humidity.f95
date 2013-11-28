@@ -170,28 +170,4 @@ contains
     return
   end subroutine
   !
-
-!--------------------------------------------------------------------------------
-  subroutine sat_vapor_press_2D(tt_,es_)
-        !calculates saturation vapor pressure given temperature
-        double precision, intent(in)    ::  tt_(ny,nz)
-        double precision, intent(out)   ::  es_(ny,nz)
-	
-	!same equations as in WRF
-    do j=1,ny
-        do k=1,nz
-            if(tt_(j,k).gt.T0)then
-                 es_(j,k)=e0*exp(17.67*(tt_(j,k)-T0)/(tt_(j,k)-29.65))
-            else
-                 es_(j,k)=e0*exp(21.8745584*(tt_(j,k)-T0)/(tt_(j,k)-7.66))
-            endif
-        enddo
-    enddo
-
-    end subroutine sat_vapor_press_2D
-!--------------------------------------------------------------------------------
-
-
-
-
 end module

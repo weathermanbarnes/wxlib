@@ -390,6 +390,7 @@ contains
   subroutine jetaxis(ja,jaoff,nx,ny,nz,no,nf,u,v,dx,dy)
     use detect_fronts
     use utils, only: smooth_xy
+    use consts
     !
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), & 
                  &                dx(ny,nx), dy(ny,nx)
@@ -399,10 +400,11 @@ contains
     !f2py depend(nx,ny) dx, dy
     !f2py depend(nz) ja, jaoff
     !
-    real   (kind=nr), parameter :: NaN = -9999.9_nr
+    real   (kind=nr), parameter :: NaN = -9999.9_nr, ddang_max = pi/2.0_nr
     !
     real(kind=nr) :: us(nz,ny,nx), vs(nz,ny,nx), ddangdx(nz,ny,nx), ddangdy(nz,ny,nx), &
                  &   jetint(nz,ny,nx), jaloc(nz,ny,nx)
+    integer(kind=ni) :: i,j,k, ip1,im1
     ! -----------------------------------------------------------------
     !
     write(*,*) 'preparing'
@@ -413,14 +415,60 @@ contains
     call def_angle_nat(jaloc, nx,ny,nz, us, vs, dx,dy)
     call grad(ddangdx, ddangdy, nx,ny,nz, jaloc, dx,dy)
     !
-    jetint(:,:,:) = us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)
+    !write(*,*) maxval(jaloc), maxloc(jaloc), minval(jaloc), minloc(jaloc)
+    !write(*,*) maxval(ddangdx), maxloc(ddangdx),minval(ddangdx), minloc(ddangdx)
+    !write(*,*) maxval(ddangdy), maxloc(ddangdy),minval(ddangdy), minloc(ddangdy)
+    !write(*,*) ddang_max, ddang_max/dx(2_ni,2_ni), ddang_max/dy(2_ni,2_ni)
+    !
+    ! Taking periodicity of the deformation angle's codomain into account
+    do i = 1_ni,nx
+       do j = 1_ni,ny
+          do k = 1_ni,nz
+             ! x-direction
+             if ( ddangdx(k,j,i) > ddang_max/abs(dx(j,i)) ) & 
+                & ddangdx(k,j,i) = -2.0_nr*ddang_max/abs(dx(j,i)) + ddangdx(k,j,i)
+             if ( ddangdx(k,j,i) < -ddang_max/abs(dx(j,i)) ) & 
+                & ddangdx(k,j,i) = 2.0_nr*ddang_max/abs(dx(j,i)) + ddangdx(k,j,i)
+             ! y-direction
+             if ( ddangdy(k,j,i) > ddang_max/abs(dy(j,i)) ) & 
+                & ddangdy(k,j,i) = -2.0_nr*ddang_max/abs(dy(j,i)) + ddangdy(k,j,i)
+             if ( ddangdy(k,j,i) < -ddang_max/abs(dy(j,i)) ) & 
+                & ddangdy(k,j,i) = 2.0_nr*ddang_max/abs(dy(j,i)) + ddangdy(k,j,i)
+          end do
+       end do
+    end do 
+    !
+    !write(*,*) maxval(ddangdx), maxloc(ddangdx), minval(ddangdx), minloc(ddangdx)
+    !write(*,*) maxval(ddangdy), maxloc(ddangdy), minval(ddangdy), minloc(ddangdy)
+    !write(*,*) ddang_max, ddang_max/dx(2_ni,2_ni), ddang_max/dy(2_ni,2_ni)
+    !
+    jetint(:,:,:) = abs(us(:,:,:))*abs(ddangdy(:,:,:)) + abs(vs(:,:,:))*abs(ddangdx(:,:,:))
+    !jetint(:,:,:) = us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)
     !
     ! frint must be negative and below a configurable threshold for front
-    where(jetint > jetint_thres)
-       jaloc = NaN
-    end where
+    do i = 1_ni,nx
+       if ( i == 1_ni ) then
+          ip1 = 2_ni
+          im1 = nx
+       else if ( i == nx ) then
+          ip1 = 1_ni
+          im1 = nx-1_ni
+       else 
+          ip1 = i + 1_ni
+          im1 = i - 1_ni
+       end if
+       do j = 2_ni,ny-1_ni
+          do k = 1_ni,nz
+             if ( jetint(k,j,i) < jetint_thres .and. &
+                & jetint(k,j,ip1) < jetint_thres .and. jetint(k,j,im1) < jetint_thres .and. &
+                & jetint(k,j-1_ni,i) < jetint_thres .and. jetint(k,j+1_ni,i) < jetint_thres ) then 
+                jaloc(k,j,i) = NaN
+             end if 
+          end do
+       end do
+    end do
     !
-    call line_locate(ja,jaoff, nx,ny,nz,no,nf, jaloc,jetint,searchrad,minlen,NaN)
+    call line_locate(ja,jaoff, nx,ny,nz,no,nf, jaloc,jetint,searchrad,minlen,NaN, dx,dy)
     !
     return
   end subroutine
@@ -428,16 +476,17 @@ contains
   ! Front intensity function after G. Berry et al, based on the frontal detection
   ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
   ! temperature as dat
-  subroutine front_intensity_speed(frint,frspd,nx,ny,nz,dat,u,v,dx,dy)
+  subroutine front_intensity_speed(frint,frspd,frloc,nx,ny,nz,dat,u,v,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
                  &                dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: frint(nz,ny,nx), frspd(nz,ny,nx)
+    real(kind=nr), intent(out) :: frint(nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx)
     integer(kind=ni) :: nx,ny,nz
     !f2py depend(nx,ny,nz) frint, frspd, u, v
     !f2py depend(nx,ny) dx, dy
     !
     real(kind=nr) :: datx (nz,ny,nx), daty (nz,ny,nx), absgrad(nz,ny,nx), &
-                 &   absx (nz,ny,nx), absy (nz,ny,nx), abslap (nz,ny,nx)
+                 &   absx (nz,ny,nx), absy (nz,ny,nx), abslap (nz,ny,nx), &
+                 &   absxx(nz,ny,nx), absyy(nz,ny,nx)
     ! -----------------------------------------------------------------
     !
     call grad(datx,daty, nx,ny,nz, dat, dx,dy)
@@ -447,6 +496,11 @@ contains
     !
     frint(:,:,:) = (datx(:,:,:)*absx(:,:,:) + daty(:,:,:)*absy(:,:,:)) / absgrad(:,:,:)
     frspd(:,:,:) = (u(:,:,:)*absx(:,:,:) + v(:,:,:)*absy(:,:,:)) / abslap(:,:,:)
+    !
+    ! determine front line location type after Hewson 1998, eq. 5
+    call ddx(absxx, nx,ny,nz, absx, dx,dy)
+    call ddy(absyy, nx,ny,nz, absy, dx,dy)
+    frloc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
     !
     return
   end subroutine
@@ -472,10 +526,7 @@ contains
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
     integer(kind=ni), allocatable :: linelen(:)
     !
-    real(kind=nr) :: us     (nz,ny,nx), vs   (nz,ny,nx), &
-                 &   dats   (nz,ny,nx), datx (nz,ny,nx), daty (nz,ny,nx), &
-                 &   absgrad(nz,ny,nx), absx (nz,ny,nx), absy (nz,ny,nx), &
-                 &   abslap (nz,ny,nx), absxx(nz,ny,nx), absyy(nz,ny,nx), &
+    real(kind=nr) :: us     (nz,ny,nx), vs   (nz,ny,nx), dats (nz,ny,nx), &
                  &   frint  (nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx), &
                  &   frloc_cws(nz,ny,nx)
     integer(kind=ni) :: typ
@@ -487,12 +538,7 @@ contains
     call smooth_xy(us, nx,ny,nz, u, nsmooth)
     call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
-    call front_intensity_speed(frint,frspd,nx,ny,nz,dats,us,vs,dx,dy)
-    !
-    ! determine front line location type after Hewson 1998, eq. 5
-    call ddx(absxx, nx,ny,nz, absx, dx,dy)
-    call ddy(absyy, nx,ny,nz, absy, dx,dy)
-    frloc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
+    call front_intensity_speed(frint,frspd,frloc,nx,ny,nz,dats,us,vs,dx,dy)
     !
     ! frint must be negative and below a configurable threshold for front
     where(frint > frint_thres)
@@ -523,7 +569,7 @@ contains
           end where
        end if
        !
-       call line_locate(fr(:,typ,:,:),froff(:,typ,:), nx,ny,nz,no,nf, frloc_cws,frint,searchrad,minlen,NaN)
+       call line_locate(fr(:,typ,:,:),froff(:,typ,:), nx,ny,nz,no,nf, frloc_cws,frint,searchrad,minlen,NaN, dx,dy)
        !
     end do ! loop over front type
     !
@@ -550,27 +596,36 @@ contains
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
     integer(kind=ni), allocatable :: linelen(:)
     !
-    real(kind=nr) :: us(nz,ny,nx), vs(ny,ny,nx), frloc(nz,ny,nx), &
-                 &   absgrad(nz,ny,nx), absx (nz,ny,nx), absy (nz,ny,nx)
+    real(kind=nr) :: us(nz,ny,nx), vs(ny,ny,nx), &
+                 &   absgrad(nz,ny,nx), absx (nz,ny,nx), absy (nz,ny,nx), &
+                 &   absxx(nz,ny,nx), absyy(nz,ny,nx)
     ! -----------------------------------------------------------------
     !
     write(*,*) 'preparing'
     !
     ! In case of segfaults "double free" on return
-    ! comment out the calls to smooth_xy below
-    call smooth_xy(us, nx,ny,nz, u, nsmooth)
-    call smooth_xy(vs, nx,ny,nz, v, nsmooth)
+    ! comment out the calls to smooth_xy below and use u and v instead of us and vs 
+    !call smooth_xy(us, nx,ny,nz, u, nsmooth)
+    !call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
-    call div(absgrad, nx,ny,nz, us,vs, dx,dy)
+    call div(absgrad, nx,ny,nz, u,v, dx,dy)
     call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
-    frloc(:,:,:) = absx + absy
+    call ddx2(absxx, nx,ny,nz, absgrad, dx,dy)
+    call ddy2(absyy, nx,ny,nz, absgrad, dx,dy)
     !
     ! frint must be negative and below a configurable threshold for front
     where(absgrad > div_thres)
-       frloc = NaN
+       absx = NaN
+       absy = NaN
+    end where
+    ! Masking which criterion to use
+    where(absxx > absyy)
+       absx = NaN
+    else where
+       absy = NaN
     end where
     ! 
-    call line_locate(fr,froff, nx,ny,nz,no,nf, frloc,absgrad,searchrad,minlen,NaN)
+    call line_locate2(fr,froff, nx,ny,nz,no,nf, absx,absy,absgrad,searchrad,minlen,NaN, dx,dy)
     !
     return
   end subroutine
@@ -595,27 +650,36 @@ contains
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
     integer(kind=ni), allocatable :: linelen(:)
     !
-    real(kind=nr) :: us(nz,ny,nx), vs(ny,ny,nx), frloc(nz,ny,nx), &
-                 &   absgrad(nz,ny,nx), absx(nz,ny,nx), absy(nz,ny,nx)
+    real(kind=nr) :: us(nz,ny,nx), vs(ny,ny,nx), &
+                 &   absgrad(nz,ny,nx), absx(nz,ny,nx), absy(nz,ny,nx), &
+                 &   absxx(nz,ny,nx), absyy(nz,ny,nx)
     ! -----------------------------------------------------------------
     !
     write(*,*) 'preparing'
     !
     ! In case of segfaults "double free" on return
-    ! comment out the calls to smooth_xy below
-    call smooth_xy(us, nx,ny,nz, u, nsmooth)
-    call smooth_xy(vs, nx,ny,nz, v, nsmooth)
+    ! comment out the calls to smooth_xy below and use u and v instead of us and vs 
+    !call smooth_xy(us, nx,ny,nz, u, nsmooth)
+    !call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
-    call vor(absgrad, nx,ny,nz, us,vs, dx,dy)
+    call vor(absgrad, nx,ny,nz, u,v, dx,dy)
     call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
-    frloc(:,:,:) = absx + absy
+    call ddx2(absxx, nx,ny,nz, absgrad, dx,dy)
+    call ddy2(absyy, nx,ny,nz, absgrad, dx,dy)
     !
     ! frint must be negative and below a configurable threshold for front
     where(absgrad < vor_thres)
-       frloc = NaN
+       absx = NaN
+       absy = NaN
+    end where
+    ! Masking which criterion to use
+    where(absxx > absyy)
+       absx = NaN
+    else where
+       absy = NaN
     end where
     ! 
-    call line_locate(fr,froff, nx,ny,nz,no,nf, frloc,absgrad,searchrad,minlen,NaN)
+    call line_locate2(fr,froff, nx,ny,nz,no,nf, absx,absy,absgrad,searchrad,minlen,NaN, dx,dy)
     !
     return
   end subroutine
@@ -640,27 +704,34 @@ contains
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
     integer(kind=ni), allocatable :: linelen(:)
     !
-    real(kind=nr) :: us(nz,ny,nx), vs(ny,ny,nx), frloc(nz,ny,nx),  &
-                 &   absgrad(nz,ny,nx), absx(nz,ny,nx), absy(nz,ny,nx)
+    real(kind=nr) :: us(nz,ny,nx), vs(ny,ny,nx),  &
+                 &   absgrad(nz,ny,nx), absx(nz,ny,nx), absy(nz,ny,nx), &
+                 &   absxx(nz,ny,nx), absyy(nz,ny,nx)
     ! -----------------------------------------------------------------
     !
-    write(*,*) 'preparing'
-    !
     ! In case of segfaults "double free" on return
-    ! comment out the calls to smooth_xy below
-    call smooth_xy(us, nx,ny,nz, u, nsmooth)
-    call smooth_xy(vs, nx,ny,nz, v, nsmooth)
+    ! comment out the calls to smooth_xy below and use u and v instead of us and vs 
+    !call smooth_xy(us, nx,ny,nz, u, nsmooth)
+    !call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
-    call def_total(absgrad, nx,ny,nz, us,vs, dx,dy)
+    call def_total(absgrad, nx,ny,nz, u,v, dx,dy)
     call grad(absx,absy, nx,ny,nz, absgrad, dx,dy)
-    frloc(:,:,:) = absx + absy
+    call ddx2(absxx, nx,ny,nz, absgrad, dx,dy)
+    call ddy2(absyy, nx,ny,nz, absgrad, dx,dy)
     !
     ! frint must be negative and below a configurable threshold for front
     where(absgrad < def_thres)
-       frloc = NaN
+       absx = NaN
+       absy = NaN
+    end where
+    ! Masking which criterion to use
+    where(absxx > absyy)
+       absx = NaN
+    else where
+       absy = NaN
     end where
     ! 
-    call line_locate(fr,froff, nx,ny,nz,no,nf, frloc,absgrad,searchrad,minlen,NaN)
+    call line_locate2(fr,froff, nx,ny,nz,no,nf, absx,absy,absgrad,searchrad,minlen,NaN, dx,dy)
     !
     return
   end subroutine

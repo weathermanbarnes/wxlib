@@ -13,10 +13,10 @@ def wmap():
 	return Basemap(projection='robin',lon_0=0,resolution='c')
 # (b) Northern polar centered map
 def npmap():
-	return Basemap(projection='npstere',boundinglat=15,lon_0=-50,resolution='l')
+	return Basemap(projection='npstere',boundinglat=10,lon_0=-50,resolution='l')
 # (c) Southern polar centered map
 def spmap():
-	return Basemap(projection='spstere',boundinglat=-15,lon_0=0,resolution='l')
+	return Basemap(projection='spstere',boundinglat=-10,lon_0=0,resolution='l')
 # (d) North-Atlantic map
 def NAmap():
 	return Basemap(projection='lcc', lat_0=55, lat_ts=55, lon_0=-30, resolution='l', 

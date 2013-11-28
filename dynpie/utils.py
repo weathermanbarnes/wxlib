@@ -169,8 +169,9 @@ def mask_convline(convls, cloff, s=(361,720)):
 
 	for t in range(len(convls)):
 		for n in range(cloff[t].max()):
-			j = round(convls[t,n,1])
-			i = round(convls[t,n,0]) % s[1]
+			# python starts counting at zero, unlike fortran
+			j = round(convls[t,n,1] -1)
+			i = round(convls[t,n,0] -1) % s[1]
 			mask[t,j,i] = True
 
 	return mask
