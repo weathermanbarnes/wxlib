@@ -17,7 +17,7 @@ import dynlib.dynpie
 if os.path.isdir(dir_name) or os.path.islink(dir_name) or os.path.isfile(dir_name):
 	raise RuntimeError, '%s already exists'
 
-library_path = os.path.dirname(dynlib.dynpie.__file__)
+library_path = os.path.dirname(dynlib.__file__)
 default_proj = os.path.join(library_path, 'default')
 
 shutil.copytree(default_proj, dir_name)

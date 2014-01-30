@@ -19,31 +19,31 @@ plotname = 'dagmar'					# Prefix for the all filenames
 
 dates = [dt(2011,12,23,00)+i*td(0.25) for i in range(21)]  # 6-hourly plots for 5 days
 plevs = ['500', '700', '850', ] 			# (pressure) levels to plot
-proj  = NAmap 						# Use a predefined projection for the North Atlantic
+proj  = proj.NAmap 					# Use a predefined projection for the North Atlantic
 
 
 # 
 for plev in plevs:
 	# Retrieve the data
-	T = fig._get_instantaneous('T', dates, plevs=plev, tavg=False)
-	u = fig._get_instantaneous('u', dates, plevs=plev, tavg=False)
-	v = fig._get_instantaneous('v', dates, plevs=plev, tavg=False)
+	T, grid = get_instantaneous('t', dates, plevs=plev, tavg=False)
+	u, grid = get_instantaneous('u', dates, plevs=plev, tavg=False)
+	v, grid = get_instantaneous('v', dates, plevs=plev, tavg=False)
 	
 	# On potential temperature levels plot PV contours on top
 	if plev[:2] == 'pt':
-		con = fig._get_instantaneous('pv', dates, plevs=plev, tavg=False)
-		Z   = fig._get_instantaneous('Z', dates, plevs=plev, tavg=False)
+		con, grid = get_instantaneous('pv', dates, plevs=plev, tavg=False)
+		Z  , grid = get_instantaneous('z', dates, plevs=plev, tavg=False)
 		con_scale = np.array([-2,-1, 1,2])*1e-6
 
 	# On PV levels plot geopotential on top
 	elif plev[:2] == 'pv':
-		con = fig._get_instantaneous('Z', dates, plevs=plev, tavg=False)
-		Z   = con
+		con, grid = get_instantaneous('z', dates, plevs=plev, tavg=False)
+		Z  , grid = con
 		con_scale = np.arange(1000,100001,1000)
 	
 	# On presure levels plot geopotential on top
 	else:
-		con = fig._get_instantaneous('Z', dates, plevs=plev, tavg=False)
+		con, grid = get_instantaneous('z', dates, plevs=plev, tavg=False)
 		Z   = con
 		con_scale = np.arange(1000,100001,1000)
 	
@@ -55,9 +55,9 @@ for plev in plevs:
 
 		# Contours to put on top of the shading and barbs
 		overlays = [fig.map_overlay_dat(con[tidx,:,:], **conf.contour.merge('default', scale=con_scale) ), ]
-		plotconf = conf.contourf.merge('T', overlays=overlays, show=False, plev=plev, m=proj,
+		plotconf = conf.contourf.merge('t', overlays=overlays, show=False, plev=plev, m=proj,
 				save='%s/%s_Tbarb_%s_%s.png' % (conf.opath, plotname, plev, date.strftime('%Y%m%d%H')) )
-		fig.map_oro_barb(u[tidx,:,:], v[tidx,:,:], dat=T[tidx,:,:], **plotconf)
+		fig.map_oro_barb(u[tidx,:,:], v[tidx,:,:], grid, dat=T[tidx,:,:], **plotconf)
 
 	# Clean up
 	plt.close('all')

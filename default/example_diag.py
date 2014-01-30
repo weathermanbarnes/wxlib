@@ -25,11 +25,10 @@ for year in years:
 		print 'Processing year %d, plev %s' % (year, plev)
 
 		# Open nc file, check if wind data is present
-		fu, u  = metopen(conf.file_std % (year, plev, 'u'), 'u')
-		fv, v  = metopen(conf.file_std % (year, plev, 'v'), 'v')
+		fu, u, grid  = metopen(conf.file_std % (year, plev, 'u'), 'u')
+		fv, v, grid  = metopen(conf.file_std % (year, plev, 'v'), 'v')
 
 		# Extract grid information 
-		grid = gridlib.grid(fu)
 		dynlib.config.grid_cyclic_ew = grid.cyclic_ew
 		
 		# Consistency check

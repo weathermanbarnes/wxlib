@@ -25,8 +25,8 @@ deflevs = np.arange(4.5,27.1,1.5)
 # same as ysect_mean_deform but without any averaging; deformation sections for one point in time
 def map_Q(date_start, date_end, q='defabs', plev=700, cmap=None):
 	date_int = [date_start, date_end]
-	dat = f._get_instantaneous(q, date_int, plevs=plev, tavg=False)
-	daZ = f._get_instantaneous('Z', date_int, plevs=plev)
+	dat = get_instantaneous(q, date_int, plevs=plev, tavg=False)
+	daZ = get_instantaneous('Z', date_int, plevs=plev)
 
 	dat[:,daZ < oro] = np.nan
 
@@ -54,10 +54,10 @@ def map_Q(date_start, date_end, q='defabs', plev=700, cmap=None):
 # Contour map of averaged wind on top of a oro map.
 def map_barb(date_start, date_end, plev=700, quiver=False):
 	date_int = [date_start, date_end]
-	defabs = f._get_instantaneous('defabs', date_int, plevs=plev, tavg=False)
-	dau = f._get_instantaneous('u', date_int, plevs=plev, tavg=False)
-	dav = f._get_instantaneous('v', date_int, plevs=plev, tavg=False)
-	daZ = f._get_instantaneous('Z', date_int, plevs=plev)
+	defabs = get_instantaneous('defabs', date_int, plevs=plev, tavg=False)
+	dau = get_instantaneous('u', date_int, plevs=plev, tavg=False)
+	dav = get_instantaneous('v', date_int, plevs=plev, tavg=False)
+	daZ = get_instantaneous('Z', date_int, plevs=plev)
 
 	dau[:,daZ < oro] = np.nan
 	dav[:,daZ < oro] = np.nan
@@ -92,9 +92,9 @@ def map_barb(date_start, date_end, plev=700, quiver=False):
 # Contour map of averaged deformation vector on top of a oro map.
 def map_deform(date_start, date_end, plev=700, img_prefix='_tmp_da'):
 	date_int = [date_start, date_end]
-	defabs = f._get_instantaneous('defabs', date_int, plevs=plev, tavg=False)
-	defang = f._get_instantaneous('defang', date_int, plevs=plev, tavg=False)
-	daZ    = f._get_instantaneous('Z', date_int, plevs=plev)
+	defabs = get_instantaneous('defabs', date_int, plevs=plev, tavg=False)
+	defang = get_instantaneous('defang', date_int, plevs=plev, tavg=False)
+	daZ    = get_instantaneous('Z', date_int, plevs=plev)
 
 	daZ = daZ[::-1,:]
 	print defabs.shape, defang.shape, daZ.shape

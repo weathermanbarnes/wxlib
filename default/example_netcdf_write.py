@@ -17,21 +17,22 @@ from scipy.io import netcdf_file as ncf, netcdf_variable as ncv
 
 qs    = ['pv', 'u', 'v']
 years = conf.years
-plevs = conf.plevs  # for pressure levels
-#plevs = conf.ptlevs # for potential temperature levels
+#plevs = conf.plevs  # for pressure levels
+plevs = conf.ptlevs # for potential temperature levels
 #plevs = conf.pvlevs # for potential vorticity levels
 
 # Manual ipath instead of metopen to make sure we get the right nc-file
-ipath = '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY/'
+ipath = '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY'
 
+print conf.opath
 for year in years:
 	for plev in plevs:
 		for q in qs:
 			print 'Processing', year, plev, q
 			
 			# Make sure to have set the right ipath and conf.opath!
-			inf = ncf(     ipath+conf.file_std % (year, plev, q)+'.nc', 'r')
-			otf = ncf(conf.opath+conf.file_std % (year, plev, q)+'.nc', 'w')
+			inf = ncf(     ipath+'/'+conf.file_std % (year, plev, q)+'.nc', 'r')
+			otf = ncf(conf.opath+'/'+conf.file_std % (year, plev, q)+'.nc', 'w')
 			
 			# Copying over the basic information of the nc-file
 			otf._dims = inf._dims

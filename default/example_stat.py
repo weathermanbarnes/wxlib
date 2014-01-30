@@ -21,10 +21,11 @@ bench = True
 
 q = 'defang'
 years = conf.years
-plevs = conf.plevs  # for pressure levels
+plevs = ['300', '500', '800']
+#plevs = conf.plevs  # for pressure levels
 #plevs = conf.ptlevs # for potential temperature levels
 #plevs = conf.pvlevs # for potential vorticity levels
-
+s = (361,720) 	# shape of the array
 
 for plev in plevs:
 	# initialising multi-year statistics
