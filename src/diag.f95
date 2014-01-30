@@ -140,6 +140,85 @@ contains
     end where
   end subroutine
   !
+  ! Calculates the deformation tendencies due to the beta-effect
+  subroutine def_tend_beta(tendabs,tendang,nx,ny,nz,u,v,beta,dx,dy)
+    use consts
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), beta(ny,nx), &
+            &                     dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: tendabs(nz,ny,nx), tendang(nz,ny,nx)
+    real(kind=nr) :: sig_sh(nz,ny,nx), sig_st(nz,ny,nx), defabs2(ny,nx)
+    integer(kind=ni) :: nx,ny,nz, k
+    !f2py depend(nx,ny,nz) tendabs, tendang, v
+    !f2py depend(nx,ny) beta, dx, dy
+    ! -----------------------------------------------------------------
+    !
+    call def_shear(sig_sh,nx,ny,nz,u,v,dx,dy)
+    call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)    
+    !
+    do k = 1_ni,nz
+       defabs2(:,:) = sig_sh(k,:,:)**2_ni + sig_st(k,:,:)**2_ni
+       tendabs(k,:,:) = beta(:,:)*(sig_st(k,:,:)*u(k,:,:) + sig_sh(k,:,:)*v(k,:,:))/defabs2
+       tendang(k,:,:) = beta(:,:)*(sig_sh(k,:,:)*u(k,:,:) - sig_st(k,:,:)*v(k,:,:))/defabs2
+    end do
+  end subroutine
+  !
+  ! Calculates the deformation tendencies due to the pressure terms and Coriolis
+  subroutine def_tend_prescor(tendabs,tendang,nx,ny,nz,u,v,geop,fcor,dx,dy)
+    use consts
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), geop(nz,ny,nx), &
+                &                 fcor(ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: tendabs(nz,ny,nx), tendang(nz,ny,nx)
+    real(kind=nr) :: sig_sh(nz,ny,nx), sig_st(nz,ny,nx), defabs2(ny,nx), &
+                &    geop_xx(nz,ny,nx), geop_yy(nz,ny,nx), geop_xy(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz, k
+    !f2py depend(nx,ny,nz) tendabs, tendang, v, geop
+    !f2py depend(nx,ny) fcor, dx, dy
+    ! -----------------------------------------------------------------
+    !
+    call def_shear(sig_sh, nx,ny,nz, u,v, dx,dy)
+    call def_stretch(sig_st, nx,ny,nz, u,v, dx,dy)
+    call ddx2(geop_xx, nx,ny,nz, geop, dx,dy)
+    call ddy2(geop_yy, nx,ny,nz, geop, dx,dy)
+    call ddxy(geop_xy, nx,ny,nz, geop, dx,dy)
+    !
+    do k = 1_ni,nz
+       defabs2(:,:) = sig_sh(k,:,:)**2_ni + sig_st(k,:,:)**2_ni
+       tendabs(k,:,:) = -(sig_st(k,:,:)*(geop_xx(k,:,:) - geop_yy(k,:,:)) + &
+               &     2_ni*sig_sh(k,:,:)* geop_xy(k,:,:))/defabs2
+       tendang(k,:,:) = -(sig_sh(k,:,:)*(geop_xx(k,:,:) - geop_yy(k,:,:)) - &
+               &     2_ni*sig_st(k,:,:)* geop_xy(k,:,:))/defabs2 - fcor
+    end do
+  end subroutine
+  !
+  ! Calculates the deformation tendencies due to "tilting" 
+  subroutine def_tend_tilt(tendabs,tendang,nx,ny,nz,u,v,uz,vz,w,dx,dy)
+    use consts
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), &
+                &                 uz(nz,ny,nx), vz(nz,ny,nx), w(nz,ny,nx), &
+                &                 dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: tendabs(nz,ny,nx), tendang(nz,ny,nx)
+    real(kind=nr) :: sig_sh(nz,ny,nx), sig_st(nz,ny,nx), defabs2(nz,ny,nx), &
+                &    wx(nz,ny,nx), wy(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) tendabs, tendang, v, uz, vz, w
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    call def_shear(sig_sh, nx,ny,nz, u,v, dx,dy)
+    call def_stretch(sig_st, nx,ny,nz, u,v, dx,dy)
+    call ddx(wx, nx,ny,nz, w, dx,dy)
+    call ddy(wy, nx,ny,nz, w, dx,dy)
+    !
+    defabs2(:,:,:) = sig_sh(:,:,:)**2_ni + sig_st(:,:,:)**2_ni
+    tendabs(:,:,:) = (sig_st(:,:,:)*(uz(:,:,:)*wx(:,:,:) - vz(:,:,:)*wy(:,:,:)) + &
+            &         sig_sh(:,:,:)*(vz(:,:,:)*wx(:,:,:) + uz(:,:,:)*wy(:,:,:)) )/defabs2(:,:,:)
+    tendang(:,:,:) = (sig_sh(:,:,:)*(uz(:,:,:)*wx(:,:,:) - vz(:,:,:)*wy(:,:,:)) - &
+            &         sig_st(:,:,:)*(vz(:,:,:)*wx(:,:,:) + uz(:,:,:)*wy(:,:,:)) )/defabs2(:,:,:)
+  end subroutine
+  !
   ! Calculates 3d deformation 
   subroutine def_3d(res_eval,res_evec,nx,ny,nz,nt,u,v,w,rho,dx,dy,dz)
     use consts
