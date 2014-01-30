@@ -127,6 +127,15 @@ def def_angle(u_dat, v_dat, grid):
 
 	return deff
 
+#
+# Rotate an angle from relative to the x-axis to relative to the wind direction
+def rotate_natural(angle, u, v):
+	angle -= np.arctan2(v,u)
+	angle[angle < -np.pi/2] += np.pi
+	angle[angle >= np.pi/2] -= np.pi
+
+	return angle
+
 
 #
 # Unflatten a flattened front array, using the froff list; 
@@ -199,4 +208,5 @@ def cal_mfv(hist, bins):
 			bi = hist[:,j,i].argmax()
 			mfv[j,i] = (bins[bi+1]+bins[bi])/2.0
 	return mfv
+
 #

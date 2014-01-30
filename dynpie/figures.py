@@ -874,7 +874,7 @@ def __map_contourf_dat(m, x, y, dat, kwargs):
 def __map_decorate(m, x, y, mask, kwargs):
 	if not kwargs.pop('disable_cb'):
 		cb = plt.colorbar(ticks=kwargs.pop('ticks'), orientation=kwargs.pop('cb_orientation', 'vertical'), 
-				shrink=0.8, pad=0.02, fraction=0.08)
+				shrink=0.8, pad=0.02, fraction=0.08, spacing='proportional')
 		if kwargs.get('ticklabels'): 
 			cb.ax.set_yticklabels(kwargs.pop('ticklabels'))
 	

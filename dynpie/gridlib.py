@@ -69,6 +69,15 @@ class grid(object):
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type "%s"' % self.gridtype
 
+		if type(self.x) == np.ndarray: self.x = self.x[self.cut]
+		if type(self.y) == np.ndarray: self.y = self.y[self.cut]
+		if type(self.z) == np.ndarray: self.z = self.z[self.cut]
+
+		if type(self.dx) == np.ndarray: self.dx = self.dx[self.cut]
+		if type(self.dy) == np.ndarray: self.dy = self.dy[self.cut]
+
+		if type(self.oro) == np.ndarray: self.oro = self.oro[self.cut]
+
 		return
 
 
@@ -79,9 +88,11 @@ class grid_by_nc(grid):
 	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag']
 	T_NAMES = ['time', 'Time']
 
-	def __init__(self, ncfile, ncvar=None):
+	def __init__(self, ncfile, ncvar=None, cut=slice(None)):
 		self.f = ncfile
 		self.v = ncvar
+		self.cut = cut
+		self.oro = None
 
 		grid.__init__(self)
 		
@@ -201,8 +212,9 @@ class grid_by_nc(grid):
 
 # Construct the grid based on the information in a static.npz file
 class grid_by_static(grid):
-	def __init__(self, staticfile):
+	def __init__(self, staticfile, cut=slice(None)):
 		self.f = staticfile
+		self.cut = cut
 
 		grid.__init__(self)
 
@@ -213,6 +225,7 @@ class grid_by_static(grid):
 		if 'lat' in self.f.files and 'lon' in self.f.files:
 			self.gridtype = 'latlon'
 			self.cyclic_ew = True
+			self.oro = None
 			
 			self.nx = self.f['lon'].shape[0]
 			self.ny = self.f['lat'].shape[0]

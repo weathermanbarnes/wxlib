@@ -50,11 +50,14 @@ hooks['oro'] = _tmp
 #
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 
 		'T': 't', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
-		'fronts': 'fronts', 'convls': 'convls', 'defls': 'defls', 'vorls': 'vorls'}
+		'fronts': 'fronts', 'convls': 'convls', 'defls': 'defls', 'vorls': 'vorls', 
+		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv'}
 QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'u': 'u', 'v': 'v', 'q': 'q', 
 		't': 'T', 'thetae': 'the', 'z': 'Z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
 		'fronts': 'fronts', 'froff': 'fronts', 'convls': 'convls', 'cloff': 'convls', 
-		'defls': 'defls', 'dloff': 'defls', 'vorls': 'vorls', 'vloff': 'vorls'}
+		'defls': 'defls', 'dloff': 'defls', 'vorls': 'vorls', 'vloff': 'vorls', 
+		'jetaxis': 'jetaxis', 'jaoff': 'jetaxis', 'tcw': 'tw', 'tcwv': 'wv'}
+
 _rose = [17,]
 _rose.extend(range(-18,18))
 BINS_Q = {'defang': np.array(_rose)*math.pi/36.0+math.pi/72.0, }
@@ -107,6 +110,8 @@ DEFAULT_Q_CF['thetae']   = {'cmap': plt.cm.RdBu_r}
 DEFAULT_Q_CF['pv']  = {'hook': hooks['pv']}
 DEFAULT_Q_CF['oro'] = {'scale': scale_oro_cf, 'cmap': plt.cm.gist_earth, 'hook': hooks['oro']}
 DEFAULT_Q_CF['q'] = {'cmap': cm.q(), 'hook': hooks['q']}
+DEFAULT_Q_CF['tcw'] = {'cmap': cm.q()}
+DEFAULT_Q_CF['tcwv'] = {'cmap': cm.q()}
 
 
 # #############################################################################
