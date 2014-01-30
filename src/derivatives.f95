@@ -36,6 +36,36 @@ contains
     end if
   end subroutine
   !
+  ! Calculates partial x derivative: b = partial(a)/partial(x)
+  !  using a 4th-order accurate centered difference
+  subroutine ddx_o4(res,nx,ny,nz,dat,dx,dy)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni) :: i,j,k, nx,ny,nz
+    !f2py depend(nx,ny,nz) res
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    forall(k = 1_ni:nz, j = 1_ni:ny, i = 3_ni:nx-2_ni)
+       res(k,j,i) = (-dat(k,j,i+2_ni)+8_ni*dat(k,j,i+1_ni)-8_ni*dat(k,j,i-1_ni)+dat(k,j,i+2_ni))/(6_ni*dx(j,i))
+    end forall
+    if (grid_cyclic_ew) then
+       forall(k = 1_ni:nz, j = 1_ni:ny)
+          res(k,j,nx-1_ni) = (-dat(k,j,1_ni)+8_ni*dat(k,j,nx)-8_ni*dat(k,j,nx-2_ni)+dat(k,j,nx-3_ni))/(6_ni*dx(j,1_ni))
+          res(k,j,nx) = (-dat(k,j,2_ni)+8_ni*dat(k,j,1_ni)-8_ni*dat(k,j,nx-1_ni)+dat(k,j,nx-2_ni))/(6_ni*dx(j,1_ni))
+          res(k,j,1_ni) = (-dat(k,j,3_ni)+8_ni*dat(k,j,2_ni)-8_ni*dat(k,j,nx)+dat(k,j,nx-1_ni))/(6_ni*dx(j,1_ni))
+          res(k,j,2_ni) = (-dat(k,j,4_ni)+8_ni*dat(k,j,3_ni)-8_ni*dat(k,j,1_ni)+dat(k,j,nx))/(6_ni*dx(j,1_ni))
+       end forall
+    else 
+       forall(k = 1_ni:nz, j = 1_ni:ny)
+          res(k,j,1_ni) = 0._nr
+          res(k,j,2_ni) = 0._nr
+          res(k,j,nx-1_ni) = 0._nr
+          res(k,j,nx) = 0._nr
+       end forall
+    end if
+  end subroutine
+  !
   ! Calculates partial x derivative: b = partial^2(a)/partial(x)^2
   !  Returns 0 on first and last lon for non-cyclic grid
   subroutine ddx2(res,nx,ny,nz,dat,dx,dy)
@@ -77,6 +107,27 @@ contains
     end forall
     forall(k = 1_ni:nz, i = 1_ni:nx)
        res(k,1_ni,i)=0._nr
+       res(k,ny,i)=0._nr
+    end forall
+  end subroutine
+  !
+  ! Calculates partial y derivative: b = partial(a)/partial(y)
+  !  using a 4th-order centered difference
+  subroutine ddy_o4(res,nx,ny,nz,dat,dx,dy)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni) :: i,j,k, nx,ny,nz
+    !f2py depend(nx,ny,nz) res
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    forall(k = 1_ni:nz, j = 3_ni:ny-2_ni, i = 1_ni:nx)
+       res(k,j,i) = (-dat(k,j+2_ni,i)+8_ni*dat(k,j+1_ni,i)-8_ni*dat(k,j-1_ni,i)+dat(k,j-2_ni,i))/(6_ni*dy(j,i))
+    end forall
+    forall(k = 1_ni:nz, i = 1_ni:nx)
+       res(k,1_ni,i)=0._nr
+       res(k,2_ni,i)=0._nr
+       res(k,ny-1_ni,i)=0._nr
        res(k,ny,i)=0._nr
     end forall
   end subroutine

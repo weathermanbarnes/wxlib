@@ -403,7 +403,7 @@ contains
     real   (kind=nr), parameter :: NaN = -9999.9_nr, ddang_max = pi/2.0_nr
     !
     real(kind=nr) :: us(nz,ny,nx), vs(nz,ny,nx), ddangdx(nz,ny,nx), ddangdy(nz,ny,nx), &
-                 &   jetint(nz,ny,nx), jaloc(nz,ny,nx)
+                 &   jetint(nz,ny,nx), jetint_abs(nz,ny,nx), maxmask(nz,ny,nx), jaloc(nz,ny,nx)
     integer(kind=ni) :: i,j,k, ip1,im1
     ! -----------------------------------------------------------------
     !
@@ -413,60 +413,48 @@ contains
     call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
     call def_angle_nat(jaloc, nx,ny,nz, us, vs, dx,dy)
-    call grad(ddangdx, ddangdy, nx,ny,nz, jaloc, dx,dy)
+    call ddx_o4(ddangdx, nx,ny,nz, jaloc, dx,dy)
+    call ddy_o4(ddangdy, nx,ny,nz, jaloc, dx,dy)
     !
     !write(*,*) maxval(jaloc), maxloc(jaloc), minval(jaloc), minloc(jaloc)
     !write(*,*) maxval(ddangdx), maxloc(ddangdx),minval(ddangdx), minloc(ddangdx)
     !write(*,*) maxval(ddangdy), maxloc(ddangdy),minval(ddangdy), minloc(ddangdy)
     !write(*,*) ddang_max, ddang_max/dx(2_ni,2_ni), ddang_max/dy(2_ni,2_ni)
     !
+    ! Using different interpolation between grid point values: 
+    !   maxmask uses the raw gradients,
+    !   jetint minimises the gradients by re-interpreting large cyclonic gradients
+    !   as small anticyclonic gradients and vice-versa
+    maxmask(:,:,:) = us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)
+    !
     ! Taking periodicity of the deformation angle's codomain into account
-    do i = 1_ni,nx
-       do j = 1_ni,ny
-          do k = 1_ni,nz
-             ! x-direction
-             if ( ddangdx(k,j,i) > ddang_max/abs(dx(j,i)) ) & 
-                & ddangdx(k,j,i) = -2.0_nr*ddang_max/abs(dx(j,i)) + ddangdx(k,j,i)
-             if ( ddangdx(k,j,i) < -ddang_max/abs(dx(j,i)) ) & 
-                & ddangdx(k,j,i) = 2.0_nr*ddang_max/abs(dx(j,i)) + ddangdx(k,j,i)
-             ! y-direction
-             if ( ddangdy(k,j,i) > ddang_max/abs(dy(j,i)) ) & 
-                & ddangdy(k,j,i) = -2.0_nr*ddang_max/abs(dy(j,i)) + ddangdy(k,j,i)
-             if ( ddangdy(k,j,i) < -ddang_max/abs(dy(j,i)) ) & 
-                & ddangdy(k,j,i) = 2.0_nr*ddang_max/abs(dy(j,i)) + ddangdy(k,j,i)
-          end do
-       end do
-    end do 
+    !do i = 1_ni,nx
+    !   do j = 1_ni,ny
+    !      do k = 1_ni,nz
+    !         ! x-direction
+    !         if ( ddangdx(k,j,i) > ddang_max/abs(dx(j,i)) ) & 
+    !            & ddangdx(k,j,i) = -2.0_nr*ddang_max/abs(dx(j,i)) + ddangdx(k,j,i)
+    !         if ( ddangdx(k,j,i) < -ddang_max/abs(dx(j,i)) ) & 
+    !            & ddangdx(k,j,i) = 2.0_nr*ddang_max/abs(dx(j,i)) + ddangdx(k,j,i)
+    !         ! y-direction
+    !         if ( ddangdy(k,j,i) > ddang_max/abs(dy(j,i)) ) & 
+    !            & ddangdy(k,j,i) = -2.0_nr*ddang_max/abs(dy(j,i)) + ddangdy(k,j,i)
+    !         if ( ddangdy(k,j,i) < -ddang_max/abs(dy(j,i)) ) & 
+    !            & ddangdy(k,j,i) = 2.0_nr*ddang_max/abs(dy(j,i)) + ddangdy(k,j,i)
+    !      end do
+    !   end do
+    !end do 
     !
     !write(*,*) maxval(ddangdx), maxloc(ddangdx), minval(ddangdx), minloc(ddangdx)
     !write(*,*) maxval(ddangdy), maxloc(ddangdy), minval(ddangdy), minloc(ddangdy)
     !write(*,*) ddang_max, ddang_max/dx(2_ni,2_ni), ddang_max/dy(2_ni,2_ni)
     !
-    jetint(:,:,:) = abs(us(:,:,:))*abs(ddangdy(:,:,:)) + abs(vs(:,:,:))*abs(ddangdx(:,:,:))
-    !jetint(:,:,:) = us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)
+    jetint_abs(:,:,:) = abs(us(:,:,:))*abs(ddangdy(:,:,:)) + abs(vs(:,:,:))*abs(ddangdx(:,:,:))
+    jetint(:,:,:) = us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)
     !
-    ! frint must be negative and below a configurable threshold for front
-    do i = 1_ni,nx
-       if ( i == 1_ni ) then
-          ip1 = 2_ni
-          im1 = nx
-       else if ( i == nx ) then
-          ip1 = 1_ni
-          im1 = nx-1_ni
-       else 
-          ip1 = i + 1_ni
-          im1 = i - 1_ni
-       end if
-       do j = 2_ni,ny-1_ni
-          do k = 1_ni,nz
-             if ( jetint(k,j,i) < jetint_thres .and. &
-                & jetint(k,j,ip1) < jetint_thres .and. jetint(k,j,im1) < jetint_thres .and. &
-                & jetint(k,j-1_ni,i) < jetint_thres .and. jetint(k,j+1_ni,i) < jetint_thres ) then 
-                jaloc(k,j,i) = NaN
-             end if 
-          end do
-       end do
-    end do
+    where(jetint > -jetint_thres)
+       jaloc = NaN
+    end where
     !
     call line_locate(ja,jaoff, nx,ny,nz,no,nf, jaloc,jetint,searchrad,minlen,NaN, dx,dy)
     !
