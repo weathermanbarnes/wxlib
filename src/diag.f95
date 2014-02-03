@@ -140,6 +140,58 @@ contains
     end where
   end subroutine
   !
+  ! Calculates the deformation tendencies due to horizontal advection
+  subroutine def_tend_adv(tendabs,tendang,nx,ny,nz,u,v,dx,dy)
+    use consts
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: tendabs(nz,ny,nx), tendang(nz,ny,nx)
+    real(kind=nr) :: defabs(nz,ny,nx), defabsx(nz,ny,nx), defabsy(nz,ny,nx), &
+            &        defang(nz,ny,nx), defangx(nz,ny,nx), defangy(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) tendabs, tendang, v
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    call def_total(defabs, nx,ny,nz, u,v, dx,dy)
+    call def_angle(defang, nx,ny,nz, u,v, dx,dy)
+    !
+    call grad(defabsx,defabsy, nx,ny,nz, defabs, dx,dy)
+    call grad(defangx,defangy, nx,ny,nz, defang, dx,dy)
+    !
+    tendabs(:,:,:) = -(u(:,:,:)*defabsx(:,:,:) + v(:,:,:)*defabsy(:,:,:))/defabs(:,:,:)
+    tendang(:,:,:) = -(u(:,:,:)*defangx(:,:,:) + v(:,:,:)*defangy(:,:,:))/defabs(:,:,:)
+  end subroutine
+  !
+  ! Calculates the deformation tendencies due to advection
+  subroutine def_tend_adv3d(tendabs,tendang,nx,ny,nz,u,v,uz,vz,w,dx,dy)
+    use consts
+    !
+    real(kind=nr), intent(in)  :: u (nz,ny,nx), v (nz,ny,nx), w(nz,ny,nx), &
+            &                     uz(nz,ny,nx), vz(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: tendabs(nz,ny,nx), tendang(nz,ny,nx)
+    real(kind=nr) :: defabs(nz,ny,nx), defabsx(nz,ny,nx), defabsy(nz,ny,nx), defabsz(nz,ny,nx), &
+            &        defang(nz,ny,nx), defangx(nz,ny,nx), defangy(nz,ny,nx), defangz(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) tendabs, tendang, v, uz, vz, w
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    call def_total(defabs, nx,ny,nz, u,v, dx,dy)
+    call def_angle(defang, nx,ny,nz, u,v, dx,dy)
+    !
+    call def_total(defabsz, nx,ny,nz, uz,vz, dx,dy)
+    call def_angle(defangz, nx,ny,nz, uz,vz, dx,dy)
+    !
+    call grad(defabsx,defabsy, nx,ny,nz, defabs, dx,dy)
+    call grad(defangx,defangy, nx,ny,nz, defang, dx,dy)
+    !
+    tendabs(:,:,:) = -(u(:,:,:)*defabsx(:,:,:) + v(:,:,:)*defabsy(:,:,:) &
+             &       + w(:,:,:)*defabsz(:,:,:))/defabs(:,:,:)
+    tendang(:,:,:) = -(u(:,:,:)*defangx(:,:,:) + v(:,:,:)*defangy(:,:,:) & 
+             &       + w(:,:,:)*defangz(:,:,:))/defabs(:,:,:)
+  end subroutine
+  !
   ! Calculates the deformation tendencies due to the beta-effect
   subroutine def_tend_beta(tendabs,tendang,nx,ny,nz,u,v,beta,dx,dy)
     use consts
