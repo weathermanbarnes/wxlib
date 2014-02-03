@@ -93,12 +93,16 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, qu
 	elif not type(plevs) == np.ndarray and not type(plevs) == list:
 		plevs = [plevs,]
 	
-	if yidx == None:
+	if type(yidx) == np.ndarray:
+		yidxs = yidx
+	elif yidx == None:
 		yidxs = slice(None)
 	else:
 		yidxs = yidx
 	
-	if xidx == None:
+	if type(xidx) == np.ndarray:
+		xidxs = xidx
+	elif xidx == None:
 		xidxs = slice(None)
 	else:
 		xidxs = xidx
@@ -129,7 +133,7 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, qu
 		fst = fst.days*4 + fst.seconds/21600
 		lst = lst.days*4 + lst.seconds/21600 +1
 		# Leave out unnecessary indexes for better compatibility
-		if xidxs == slice(None): 
+		if not type(xidxs) == np.ndarray and xidxs == slice(None): 
 			if yidxs == slice(None):
 				cut = (slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst)), )
 			else:
