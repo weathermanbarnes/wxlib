@@ -632,9 +632,23 @@ def ts_wavelet(q='defabs', plev='800', pos='Greenland_TB', scale=25, cmap=None, 
 # #############################################################################
 # 4. Generalised data plotters
 # 
+def ysect_oro_dat(dat, static, **kwargs):
+	# 1. Prepare
+	kwargs = __prepare_config(kwargs)
+
+	# 2. Plot the actual data
+	__contourf_dat(plt, static.x, static.z, dat, kwargs)
+	plt.gca().invert_yaxis()
+
+	# 3. Finish off
+	__output(kwargs)
+
+	return
+
+
 def map_oro_dat(dat, static, **kwargs):
 	# 1. Prepare
-	kwargs = __map_prepare_config(kwargs)
+	kwargs = __prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
 
 	dat = __map_prepare_dat(dat, mask, static, kwargs)
@@ -642,18 +656,18 @@ def map_oro_dat(dat, static, **kwargs):
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
 	# 2. Plot the actual data
-	__map_contourf_dat(m, x, y, dat, kwargs)
+	__contourf_dat(m, x, y, dat, kwargs)
 
 	# 3. Finish off
 	__map_decorate(m, x, y, mask, kwargs)
-	__map_output(kwargs)
+	__output(kwargs)
 
 	return
 
 
 def map_oro_deform(defabs, defang, static, **kwargs):
 	# 1. Prepare
-	kwargs = __map_prepare_config(kwargs)
+	kwargs = __prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
 
 	defabs = __map_prepare_dat(defabs, mask, static, kwargs)
@@ -676,18 +690,18 @@ def map_oro_deform(defabs, defang, static, **kwargs):
 	m.quiver(xt, yt, ut, vt, zorder=4, scale=qscale, alpha=0.7)
 	m.quiver(xt, yt, -ut, -vt, zorder=4, scale=qscale, alpha=0.7)
 	
-	__map_contourf_dat(m, x, y, defabs, kwargs)
+	__contourf_dat(m, x, y, defabs, kwargs)
 	
 	# 3. Finish off
 	__map_decorate(m, x, y, mask, kwargs)
-	__map_output(kwargs)	
+	__output(kwargs)	
 
 	return
 
 
 def map_oro_barb(u, v, static, dat=None, **kwargs):
 	# 1. Prepare
-	kwargs = __map_prepare_config(kwargs)
+	kwargs = __prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
 
 	u = __map_prepare_dat(u, mask, static, c.contour.u)
@@ -698,7 +712,7 @@ def map_oro_barb(u, v, static, dat=None, **kwargs):
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
 	# 2. Plot the actual data
-	if not dat == None: __map_contourf_dat(m, x, y, dat, kwargs)
+	if not dat == None: __contourf_dat(m, x, y, dat, kwargs)
 
 	ut,vt,xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
 	if not kwargs.pop('quiver', False):
@@ -708,14 +722,14 @@ def map_oro_barb(u, v, static, dat=None, **kwargs):
 	
 	# 3. Finish off
 	__map_decorate(m, x, y, mask, kwargs)
-	__map_output(kwargs)
+	__output(kwargs)
 
 	return
 
 
 def map_oro_fronts(fronts, froff, static, dat=None, **kwargs):
 	# 1. Prepare
-	kwargs = __map_prepare_config(kwargs)
+	kwargs = __prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
 	
 	cfrs = __unflatten_fronts_t(fronts[0], froff[0], minlength=5)
@@ -728,7 +742,7 @@ def map_oro_fronts(fronts, froff, static, dat=None, **kwargs):
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
 	# 2. Plot the actual data
-	if not dat == None: __map_contourf_dat(m, x, y, dat, kwargs)
+	if not dat == None: __contourf_dat(m, x, y, dat, kwargs)
 
 	# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
 	for cfr in cfrs:
@@ -749,13 +763,13 @@ def map_oro_fronts(fronts, froff, static, dat=None, **kwargs):
 
 	# 3. Finish off
 	__map_decorate(m, x, y, mask, kwargs)
-	__map_output(kwargs)
+	__output(kwargs)
 
 	return
 
 def map_oro_fronts_nc(cfrs, wfrs, sfrs, static, dat=None, **kwargs):
 	# 1. Prepare
-	kwargs = __map_prepare_config(kwargs)
+	kwargs = __prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
 	
 	if not dat == None: 
@@ -764,7 +778,7 @@ def map_oro_fronts_nc(cfrs, wfrs, sfrs, static, dat=None, **kwargs):
 	m, x, y = __map_setup(mask, static, kwargs)
 	
 	# 2. Plot the actual data
-	if not dat == None: __map_contourf_dat(m, x, y, dat, kwargs)
+	if not dat == None: __contourf_dat(m, x, y, dat, kwargs)
 
 	for cfr in cfrs:
 		lenfr = sum(cfr[:,0] > -200)
@@ -781,13 +795,13 @@ def map_oro_fronts_nc(cfrs, wfrs, sfrs, static, dat=None, **kwargs):
 
 	# 3. Finish off
 	__map_decorate(m, x, y, mask, kwargs)
-	__map_output(kwargs)
+	__output(kwargs)
 
 	return
 
 
 # Helper functions
-def __map_prepare_config(kwargs):
+def __prepare_config(kwargs):
 	q = kwargs.pop('q', None)
 	if q:
 		kwargs = c.contourf.merge(q, **kwargs)
@@ -860,7 +874,7 @@ def __map_setup(mask, static, kwargs):
 	
 	return m, x, y, lon, lat
 
-def __map_contourf_dat(m, x, y, dat, kwargs):
+def __contourf_dat(m, x, y, dat, kwargs):
 	hatch = kwargs.pop('hatches')
 	scale = kwargs.pop('scale')
 	if scale == 'auto':
@@ -891,7 +905,7 @@ def __map_decorate(m, x, y, mask, kwargs):
 	
 	return
 
-def __map_output(kwargs):
+def __output(kwargs):
 	if kwargs.get('save'):
 		plt.savefig(kwargs.pop('save'), format='png')
 	if kwargs.pop('show'):
