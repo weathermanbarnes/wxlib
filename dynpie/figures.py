@@ -3,13 +3,14 @@
 
 import copy
 import numpy as np
+import scipy.interpolate as intp
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib as mpl
 from mpl_toolkits.basemap import Basemap, cm as bmcm
 from datetime import datetime as dt, timedelta as td
 from metopen import metopen
-from utils import concat1, concat1lonlat, igauss, __unflatten_fronts_t
+from utils import concat1, concat1lonlat, igauss, __unflatten_fronts_t, sect_gen_points
 import windrose as wr
 import streamplot as sp
 
@@ -632,12 +633,32 @@ def ts_wavelet(q='defabs', plev='800', pos='Greenland_TB', scale=25, cmap=None, 
 # #############################################################################
 # 4. Generalised data plotters
 # 
-def ysect_oro_dat(dat, static, **kwargs):
+def sect_oro_dat(dat, sect, static, datmap=None, **kwargs):
 	# 1. Prepare
 	kwargs = __prepare_config(kwargs)
+	kwargs_map = copy.copy(kwargs)
+	mask = __map_create_mask(static, kwargs)
+	
+	plt.subplot(212)
+	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 
-	# 2. Plot the actual data
-	__contourf_dat(plt, static.x, static.z, dat, kwargs)
+	xlon, xlat, xxy = sect_gen_points(sect, m, 100000.0)
+
+	dati = np.empty((dat.shape[0], len(xlon),))
+	for i in range(dat.shape[0]):
+		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[i,::-1,:].T)
+		dati[i] = interp.ev(xlat, xlon)
+	
+	# 2a. Plot the actual map
+	xx, xy = m(xlon, xlat)
+	if not datmap == None: 
+		datmap = __map_prepare_dat(datmap, mask, static, kwargs_map)
+		__contourf_dat(m, x, y, datmap, kwargs_map)
+	m.plot(xx, xy, 'g-', linewidth=2)
+
+	# 2b. Plot the actual cross section
+	plt.subplot(211)
+	__contourf_dat(plt, xxy, static.z, dati, kwargs)
 	plt.gca().invert_yaxis()
 
 	# 3. Finish off
@@ -879,6 +900,7 @@ def __contourf_dat(m, x, y, dat, kwargs):
 	scale = kwargs.pop('scale')
 	if scale == 'auto':
 		scale = autoscale(dat, **kwargs)
+	print m
 	cs = m.contourf(x, y, dat, scale, zorder=1, **kwargs)
 	if not type(scale) == int:
 		cs.set_clim(scale[0], scale[-1])

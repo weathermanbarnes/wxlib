@@ -209,4 +209,32 @@ def cal_mfv(hist, bins):
 			mfv[j,i] = (bins[bi+1]+bins[bi])/2.0
 	return mfv
 
+
+# Generate (interpolation) points for cross section
+def sect_gen_points(coords, m, dxy):
+	retlon = []
+	retlat = []
+	retxy  = []
+	prevxy = 0
+	for i, (lon1, lat1) in zip(range(len(coords)-1), coords[:-1]):
+		lon2, lat2 = coords[i+1]
+
+		(x1,x2), (y1,y2) = m((lon1,lon2), (lat1,lat2))
+		d12 = np.sqrt((x2-x1)**2 + (y2-y1)**2)
+		N = np.ceil(d12/dxy)
+
+		x  = [x2*alpha + x1*(1-alpha) for alpha in np.arange(0.0,(N+1)/N,1.0/N)]
+		y  = [y2*alpha + y1*(1-alpha) for alpha in np.arange(0.0,(N+1)/N,1.0/N)]
+		xy = [d12*alpha + prevxy for alpha in np.arange(0.0,(N+1)/N,1.0/N)]
+
+		prevxy = xy[-1]
+
+		lon, lat = m(x, y, inverse=True)
+		retlon.extend(lon)
+		retlat.extend(lat)
+		retxy.extend(xy)
+
+	return retlon, retlat, retxy
+
+
 #
