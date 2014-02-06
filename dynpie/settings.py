@@ -51,12 +51,13 @@ hooks['oro'] = _tmp
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 
 		'T': 't', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
 		'fronts': 'fronts', 'convls': 'convls', 'defls': 'defls', 'vorls': 'vorls', 
-		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv'}
+		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv', 'zeta': 'vo', 'div': 'div'}
 QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'u': 'u', 'v': 'v', 'q': 'q', 
 		't': 'T', 'thetae': 'the', 'z': 'Z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
 		'fronts': 'fronts', 'froff': 'fronts', 'convls': 'convls', 'cloff': 'convls', 
 		'defls': 'defls', 'dloff': 'defls', 'vorls': 'vorls', 'vloff': 'vorls', 
-		'jetaxis': 'jetaxis', 'jaoff': 'jetaxis', 'tcw': 'tw', 'tcwv': 'wv'}
+		'jetaxis': 'jetaxis', 'jaoff': 'jetaxis', 'tcw': 'tw', 'tcwv': 'wv', 'vo': 'zeta',
+		'div': 'div'}
 
 _rose = [17,]
 _rose.extend(range(-18,18))
@@ -79,12 +80,12 @@ if os.getenv('DYNLIB_PLOT_PRINT'):
 	DEFAULT_KWARGS = {'m': proj.wmap, 'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 'auto', 
 		'overlays': [], 'disable_cb': True, 'show': False, 'save': '', 'title': '', 'hook': None,
 		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro_c,
-		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [] }
+		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [], 'scale_symmetric_zero': False}
 else:
 	DEFAULT_KWARGS = {'m': proj.wmap, 'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 'auto', 
 		'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 'hook': None,
 		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro_c,
-		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [] }
+		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [], 'scale_symmetric_zero': False }
 DEFAULT_CONTOUR_KWARGS = {'colors': 'k', 'alpha': 1.0, 'cmap': None, 'norm': None, 
 	'vmin': None, 'vmax': None, 'levels': None, 'origin': None, 'extent': None, 
 	'extend': 'neither', 'linewidths': 2.0, 'linestyles': None, 'contour_labels': False}
@@ -286,7 +287,7 @@ class settings_contour(object):
 
 
 	def new(self, q, conf):
-		self._overrides[q] = settings_dict(conf, self)	
+		self._overrides[q] = settings_dict(conf, self)
 
 		return
 	
@@ -354,8 +355,8 @@ class settings(object):
 	
 
 	def new_variable(self, q, qlong, conf_cf={}, conf_c={}):
-		self.contourf.new(q, conf_cf)
-		self.contour.new(q, conf_c)
+		self.contourf.new(qlong, conf_cf)
+		self.contour.new(qlong, conf_c)
 		self.q[q] = qlong
 		self.qi[qlong] = q
 

@@ -900,7 +900,6 @@ def __contourf_dat(m, x, y, dat, kwargs):
 	scale = kwargs.pop('scale')
 	if scale == 'auto':
 		scale = autoscale(dat, **kwargs)
-	print m
 	cs = m.contourf(x, y, dat, scale, zorder=1, **kwargs)
 	if not type(scale) == int:
 		cs.set_clim(scale[0], scale[-1])
