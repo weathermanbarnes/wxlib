@@ -643,15 +643,15 @@ def sect_oro_dat(dat, ps, sect, static, datmap=None, **kwargs):
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
 	# 1b. Create and interpolate points of the cross section
-	xlon, xlat, xxy = sect_gen_points(sect, m, 100000.0)
+	xlon, xlat, xxy = sect_gen_points(sect, m, 25000.0)
 
 	dati = np.empty((dat.shape[0], len(xlon),))
 	for i in range(dat.shape[0]):
 		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[i,::-1,:].T)
-		dati[i] = interp.ev(xlat, xlon)
+		dati[i] = interp.ev(xlon, xlat)
 
 	interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], ps[::-1,:].T)
-	psi = interp.ev(xlat, xlon)
+	psi = interp.ev(xlon, xlat)
 	
 	# 2a. Plot the actual map
 	xx, xy = m(xlon, xlat)
@@ -663,10 +663,12 @@ def sect_oro_dat(dat, ps, sect, static, datmap=None, **kwargs):
 	# 2b. Plot the actual cross section
 	xxy = np.array(xxy)
 	plt.subplot(211)
+	if kwargs.get('hook'):
+		dati = kwargs.pop('hook')(dati)
 	__contourf_dat(plt, xxy/1e3, static.z, dati, kwargs)
-	#plt.gca().invert_yaxis()
+	plt.gca().invert_yaxis()
 	plt.fill_between(xxy/1e3, psi, 1100.0, color='k')
-	plt.ylim(static.z[-1], static.z[0])
+	#plt.ylim(static.z[-1], static.z[0])
 
 	# 3. Finish off
 	__output(kwargs)

@@ -51,13 +51,13 @@ hooks['oro'] = _tmp
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 
 		'T': 't', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
 		'fronts': 'fronts', 'convls': 'convls', 'defls': 'defls', 'vorls': 'vorls', 
-		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv', 'zeta': 'vo', 'div': 'div'}
+		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv', 'zeta': 'vo', 'div': 'div', 'ps': 'sp'}
 QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'u': 'u', 'v': 'v', 'q': 'q', 
 		't': 'T', 'thetae': 'the', 'z': 'Z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
 		'fronts': 'fronts', 'froff': 'fronts', 'convls': 'convls', 'cloff': 'convls', 
 		'defls': 'defls', 'dloff': 'defls', 'vorls': 'vorls', 'vloff': 'vorls', 
 		'jetaxis': 'jetaxis', 'jaoff': 'jetaxis', 'tcw': 'tw', 'tcwv': 'wv', 'vo': 'zeta',
-		'div': 'div'}
+		'div': 'div', 'sp': 'ps'}
 
 _rose = [17,]
 _rose.extend(range(-18,18))
