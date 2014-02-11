@@ -633,7 +633,7 @@ def ts_wavelet(q='defabs', plev='800', pos='Greenland_TB', scale=25, cmap=None, 
 # #############################################################################
 # 4. Generalised data plotters
 # 
-def sect_oro_dat(dat, ps, sect, static, datmap=None, **kwargs):
+def sect_oro_dat(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	# 1a. Prepare
 	kwargs = __prepare_config(kwargs)
 	kwargs_map = copy.copy(kwargs)
@@ -652,6 +652,9 @@ def sect_oro_dat(dat, ps, sect, static, datmap=None, **kwargs):
 
 	interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], ps[::-1,:].T)
 	psi = interp.ev(xlon, xlat)
+	if not type(p) == type(None):
+		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], p[::-1,:].T)
+		pi = interp.ev(xlon, xlat)
 	
 	# 2a. Plot the actual map
 	xx, xy = m(xlon, xlat)
@@ -666,11 +669,15 @@ def sect_oro_dat(dat, ps, sect, static, datmap=None, **kwargs):
 	if kwargs.get('hook'):
 		dati = kwargs.pop('hook')(dati)
 	__contourf_dat(plt, xxy/1e3, static.z, dati, kwargs)
-	plt.gca().invert_yaxis()
+	if not type(p) == type(None):
+		plt.plot(xxy/1e3, pi, 'g-', linewidth=2)
+	#plt.gca().invert_yaxis()
 	plt.fill_between(xxy/1e3, psi, 1100.0, color='k')
-	#plt.ylim(static.z[-1], static.z[0])
+	plt.ylim(float(static.z[-1]), float(static.z[0]))
 
 	# 3. Finish off
+	# TODO: How to meaningfully replace x,y? Currently the mark feature is broken for sections
+	__decorate(m, static, None, slice(None), kwargs)
 	__output(kwargs)
 
 	return
@@ -689,7 +696,7 @@ def map_oro_dat(dat, static, **kwargs):
 	__contourf_dat(m, x, y, dat, kwargs)
 
 	# 3. Finish off
-	__map_decorate(m, x, y, mask, kwargs)
+	__decorate(m, x, y, mask, kwargs)
 	__output(kwargs)
 
 	return
@@ -723,7 +730,7 @@ def map_oro_deform(defabs, defang, static, **kwargs):
 	__contourf_dat(m, x, y, defabs, kwargs)
 	
 	# 3. Finish off
-	__map_decorate(m, x, y, mask, kwargs)
+	__decorate(m, x, y, mask, kwargs)
 	__output(kwargs)	
 
 	return
@@ -751,7 +758,7 @@ def map_oro_barb(u, v, static, dat=None, **kwargs):
 		m.quiver(xt, yt, ut, vt, zorder=3)
 	
 	# 3. Finish off
-	__map_decorate(m, x, y, mask, kwargs)
+	__decorate(m, x, y, mask, kwargs)
 	__output(kwargs)
 
 	return
@@ -792,7 +799,7 @@ def map_oro_fronts(fronts, froff, static, dat=None, **kwargs):
 		m.plot(xfr, yfr, 'm-', linewidth=2)
 
 	# 3. Finish off
-	__map_decorate(m, x, y, mask, kwargs)
+	__decorate(m, x, y, mask, kwargs)
 	__output(kwargs)
 
 	return
@@ -824,7 +831,7 @@ def map_oro_fronts_nc(cfrs, wfrs, sfrs, static, dat=None, **kwargs):
 		m.plot(xfr, yfr, 'm-', linewidth=2)
 
 	# 3. Finish off
-	__map_decorate(m, x, y, mask, kwargs)
+	__decorate(m, x, y, mask, kwargs)
 	__output(kwargs)
 
 	return
@@ -915,7 +922,7 @@ def __contourf_dat(m, x, y, dat, kwargs):
 	
 	return
 
-def __map_decorate(m, x, y, mask, kwargs):
+def __decorate(m, x, y, mask, kwargs):
 	if not kwargs.pop('disable_cb'):
 		cb = plt.colorbar(ticks=kwargs.pop('ticks'), orientation=kwargs.pop('cb_orientation', 'vertical'), 
 				shrink=0.8, pad=0.02, fraction=0.08, spacing='proportional')
@@ -945,6 +952,34 @@ def __output(kwargs):
 
 
 # Overlays
+def sect_overlay_dat(dat, sect, **kwargs):  
+	kwargs = __line_prepare_config(kwargs)
+
+	def overlay(m, static, dump, zorder, mask=None):
+		xlon, xlat, xxy = sect_gen_points(sect, m, 25000.0)
+		xxy = np.array(xxy)
+
+		dati = np.empty((dat.shape[0], len(xlon),))
+		for i in range(dat.shape[0]):
+			interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[i,::-1,:].T)
+			dati[i] = interp.ev(xlon, xlat)
+	
+		if type(mask) == np.ndarray:
+			dati[mask] = np.nan
+		scale = kwargs.pop('scale')
+		if scale == 'auto':
+			scale = autoscale(dat, **kwargs)
+		cs =  plt.contour(xxy/1e3, static.z, dati, scale, **kwargs)
+
+		labels = kwargs.pop('contour_labels')
+		if labels:
+			plt.clabel(cs, fontsize=12, inline=True, inline_spacing=2)
+
+		return
+
+	return overlay
+
+
 def map_overlay_dat(dat, **kwargs):  
 	kwargs = __line_prepare_config(kwargs)
 

@@ -237,4 +237,40 @@ def sect_gen_points(coords, m, dxy):
 	return retlon, retlat, retxy
 
 
+def aggregate(dates, dat, agg):
+	# 1. Estimating length of output array
+	tslc = []
+	dates_out = []
+	if agg == 'cal_monthly':
+		outlen = 0
+		prev = (0,0)
+		previ = None
+		for i, date in zip(range(len(dates)), dates):
+			if not (date.year, date.month) == prev:
+				prev = (date.year, date.month)
+				if not previ: 
+					previ = i
+				else:
+					tslc.append(slice(previ,i))
+					dates_out.append(date)
+					outlen += 1
+					previ = i
+	else:
+		raise NotImplementedError, 'Unknown aggregation specifier `%s`' % str(agg)
+
+	#print tslc
+	
+	# 2. Initialising the output array
+	s = list(dat.shape)
+	s[0] = outlen
+	s = tuple(s)
+
+	dat_out = np.empty(s)
+	
+	# 3. Doing the actual calculations
+	for i in xrange(outlen):
+		dat_out[i,::] = dat[tslc[i],::].mean(axis=0)
+
+	return dates_out, dat_out
+
 #
