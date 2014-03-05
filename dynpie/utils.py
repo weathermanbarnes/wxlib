@@ -1,21 +1,23 @@
 #!/usr/bin/env python
 
 import math
-import datetime
+from datetime import datetime as dt, timedelta as td
 import numpy as np
 from scipy.special import erfinv
+
+from dynlib import dynlib 
 
 #
 # Automatic scaling according to netcdf attributes "scale_factor" and "add_offset"
 def scale(var, cut=(slice(None),slice(None),slice(None)), bench=False):
 	if hasattr(var, 'scale_factor') or hasattr(var, 'add_offset'):
 		if bench:
-			begin = datetime.datetime.now()
+			begin = dt.now()
 		# Python/numpy version is faster than Fortran function
 		var_dat = var[cut]*getattr(var, 'scale_factor', 1.0) + getattr(var, 'add_offset', 0.0)
 		#u_dat = dynlib.conv.scaleoff(u_dat, getattr(u, 'scale_factor', 1.0), getattr(u, 'add_offset', 0.0))
 		if bench:
-			print 'Python scaleoff', datetime.datetime.now()-begin
+			print 'Python scaleoff', dt.now()-begin
 	
 	else:
 		var_dat = var[cut]
@@ -83,10 +85,10 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 			
 		args.extend([grid.dx[cut[1:]], grid.dy[cut[1:]]])
 		if bench:
-			begin = datetime.datetime.now()
+			begin = dt.now()
 		res = func(*args) 
 		if bench:
-			print 'Calculation', datetime.datetime.now()-begin
+			print 'Calculation', dt.now()-begin
 	
 	elif not grid.nt or grid.nt == 1:
 		print '2D mode'
@@ -172,18 +174,37 @@ def mask_fronts(fronts, froff, s=(361,720)):
 	return masks
 
 #
-# return a 3d boolean array where convline points are True, elsewere False
-def mask_convline(convls, cloff, s=(361,720)):
-	mask = np.zeros((len(convls), s[0], s[1]), dtype='bool')
+# return a 3d boolean array where line points are True, elsewere False
+def mask_lines(lines, loff, s=(361,720)):
+	mask = np.zeros((len(lines), s[0], s[1]), dtype='bool')
 
-	for t in range(len(convls)):
-		for n in range(cloff[t].max()):
+	for t in range(len(lines)):
+		for n in range(loff[t].max()):
 			# python starts counting at zero, unlike fortran
-			j = round(convls[t,n,1] -1)
-			i = round(convls[t,n,0] -1) % s[1]
+			j = round(lines[t,n,1] -1)
+			i = round(lines[t,n,0] -1) % s[1]
 			mask[t,j,i] = True
 
 	return mask
+
+#
+# return a 3d boolean array where line points are smoothly masked
+def smear_lines(lines, loff, s=(361,720), cyclic_ew=True):
+	filtr_len = 5
+	filtr_func = mk_gauss(0, 1)
+	filtr = np.array(map(filtr_func, range(-filtr_len,filtr_len+1)))
+	filtr /= sum(filtr)
+
+	mask = np.zeros((len(lines), s[0], s[1]))
+	for t in range(len(lines)):
+		for n in range(loff[t].max()):
+			# python starts counting at zero, unlike fortran
+			j = round(lines[t,n,1] -1)
+			i = round(lines[t,n,0] -1) % s[1]
+			mask[t,j,i] = 1.0
+		
+	return dynlib.utils.filter_xy(mask, filtr)
+
 
 
 #
@@ -199,6 +220,11 @@ def mask_insignificant(dat, mean, sig, nsig):
 igauss = lambda p: np.sqrt(2)*erfinv(2*p-1.0)
 
 #
+# Return a function calculating a Gaussian with the given mean (x0) and standard deviation (stddev)
+def mk_gauss(x0,stddev):
+	return lambda x: np.exp(-0.5*(x-x0)**2/stddev**2)/(np.sqrt(2*np.pi)*stddev)
+
+#
 # Calculate the most frequent value from a given histogram and bins
 def cal_mfv(hist, bins):
 	s = hist.shape[1:]
@@ -209,7 +235,7 @@ def cal_mfv(hist, bins):
 			mfv[j,i] = (bins[bi+1]+bins[bi])/2.0
 	return mfv
 
-
+#
 # Generate (interpolation) points for cross section
 def sect_gen_points(coords, m, dxy):
 	retlon = []
@@ -236,30 +262,51 @@ def sect_gen_points(coords, m, dxy):
 
 	return retlon, retlat, retxy
 
-
+#
+# General temporal aggregation 
 def aggregate(dates, dat, agg):
-	# 1. Estimating length of output array
+	# We assume the time series to be equally spaced in time
+	dtd = dates[1] - dates[0]
+
+	# 1a. Defining aggregation types 
 	tslc = []
 	dates_out = []
 	if agg == 'cal_monthly':
-		outlen = 0
-		prev = (0,0)
-		previ = None
-		for i, date in zip(range(len(dates)), dates):
-			if not (date.year, date.month) == prev:
-				prev = (date.year, date.month)
-				if not previ: 
-					previ = i
-				else:
-					tslc.append(slice(previ,i))
-					dates_out.append(date)
-					outlen += 1
-					previ = i
+		first_func = lambda date: dt(date.year,date.month,1)
+		last_func = lambda date: dt(date.year+date.month/12, date.month % 12 + 1, 1) - dtd
+		agg = 'func'
+
+	elif agg == 'cal_weekly':
+		# date.isocalendar gives the a tuple (ISOWEEK_YEAR, ISOWEEK, ISOWEEK_DAY)
+		first_func = lambda date: date - (date.isocalendar()[2] - 1)*td(1,0) - td(0,3600*date.hour)
+		last_func = lambda date: date + (8 - date.isocalendar()[2])*td(1,0) - td(0,3600*date.hour) - dtd
+		agg = 'func'
 	else:
 		raise NotImplementedError, 'Unknown aggregation specifier `%s`' % str(agg)
-
-	#print tslc
 	
+	# 1b. Estimating length of output array
+	#     Aggegate by output of functions first_func and last_func; 
+	#     These functions give the first and the last time step for the interval `date` belongs to
+	if agg == 'func':
+		previ = -1
+		for i, date in zip(range(len(dates)), dates):
+			# Previous interval unfinished, yet we are in a new one.
+			# -> We apparently jumped over a range of dates and have to find a new start
+			if previ >= 0 and not first_func(date) == first_func(dates[previ]):
+				previ = -1
+			
+			# End of an interval -> save
+			if previ >= 0 and date == last_func(date):
+				tslc.append(slice(previ,i))
+				dates_out.append(dates[previ])
+				previ = -1
+			
+			# Start of an intercal -> remember 
+			if date == first_func(date):
+				previ = i
+	
+	outlen = len(tslc)
+
 	# 2. Initialising the output array
 	s = list(dat.shape)
 	s[0] = outlen
@@ -272,5 +319,6 @@ def aggregate(dates, dat, agg):
 		dat_out[i,::] = dat[tslc[i],::].mean(axis=0)
 
 	return dates_out, dat_out
+
 
 #
