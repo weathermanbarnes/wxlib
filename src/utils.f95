@@ -84,6 +84,58 @@ contains
     return
   end subroutine
   !
+  ! Filter in 2D. Applies the same filter for all (x,y)-slices in a 3D (Z/t,y,x) field
+  ! `filtr` must be a odd-length 1D array with entries normalised to 1
+  subroutine filter_xy(res,nx,ny,nz,nf,dat,filtr)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), filtr(nf)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz, nf
+    integer(kind=ni) :: i,j,k, n,m
+    !f2py depend(nx,ny,nz) res
+    !
+    real(kind=nr) :: tmp(nz,ny,nx) ! temporary helper array to avoid changing dat
+    ! -----------------------------------------------------------------
+    !
+    n = (nf - 1_ni)/2_ni
+    !
+    !res(:,:,:) = dat(:,:,:)
+    !
+    do i = 1_ni,nx
+       do j = 1_ni+n,ny-n
+          do k = 1_ni,nz
+             res(k,j,i) = sum(filtr(:) * dat(k,j-n:j+n,i))
+          end do
+       end do
+    end do
+    !
+    tmp(:,:,:) = res(:,:,:)
+    do i = 1_ni+n,nx-n
+       do j = 1_ni,ny
+          do k = 1_ni,nz
+             res(k,j,i) = sum(filtr(:) * tmp(k,j,i-n:i+n))
+          end do
+       end do
+    end do
+    if ( grid_cyclic_ew ) then
+       do j = 1_ni,ny
+          do k = 1_ni,nz
+             do i = 1_ni,n
+                m = n-i+1_ni
+                res(k,j,i) = sum(filtr(1_ni:m)*tmp(k,j,nx-m+1_ni:nx)) &
+                      &    + sum(filtr(m+1_ni:)*dat(k,j,:nf-m))
+             end do
+             do i = nx-n,nx
+                m = nf - (i-nx+n + 1_ni)
+                res(k,j,i) = sum(filtr(1_ni:m)*tmp(k,j,nx-m+1_ni:nx)) &
+                      &    + sum(filtr(m+1_ni:)*tmp(k,j,:nf-m))
+             end do
+          end do
+       end do
+    end if
+    !
+    return
+  end subroutine
+  !
   ! Scaling and offsetting data
   ! [frequently used on netCDF input, see attributes "add_offset" and "scale"]
   subroutine scaleoff(res,nx,ny,nz,dat,scale,offset)
