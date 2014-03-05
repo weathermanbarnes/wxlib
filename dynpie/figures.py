@@ -639,7 +639,10 @@ def sect_oro_dat(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	kwargs_map = copy.copy(kwargs)
 	mask = __map_create_mask(static, kwargs)
 	
-	plt.subplot(212)
+	if 'map_axes' in kwargs:
+		plt.sca(kwargs['map_axes'])
+	else:
+		plt.subplot(212)
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
 	# 1b. Create and interpolate points of the cross section
@@ -661,19 +664,26 @@ def sect_oro_dat(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	if not datmap == None: 
 		datmap = __map_prepare_dat(datmap, mask, static, kwargs_map)
 		__contourf_dat(m, x, y, datmap, kwargs_map)
-	m.plot(xx, xy, 'g-', linewidth=2)
+	m.plot(xx, xy, 'w-', linewidth=4)
+	m.plot(xx, xy, 'k--', linewidth=4)
 
 	# 2b. Plot the actual cross section
-	xxy = np.array(xxy)
-	plt.subplot(211)
+	if 'sect_axes' in kwargs:
+		plt.sca(kwargs['sect_axes'])
+	else:
+		plt.subplot(211)
+	
 	if kwargs.get('hook'):
 		dati = kwargs.pop('hook')(dati)
+	xxy = np.array(xxy)
 	__contourf_dat(plt, xxy/1e3, static.z, dati, kwargs)
 	if not type(p) == type(None):
 		plt.plot(xxy/1e3, pi, 'g-', linewidth=2)
 	#plt.gca().invert_yaxis()
 	plt.fill_between(xxy/1e3, psi, 1100.0, color='k')
 	plt.ylim(float(static.z[-1]), float(static.z[0]))
+	plt.ylabel('Pressure [hPa]')
+	plt.xlabel('Distance along section [km]')
 
 	# 3. Finish off
 	# TODO: How to meaningfully replace x,y? Currently the mark feature is broken for sections
@@ -861,7 +871,7 @@ def __map_create_mask(static, kwargs):
 	datZ = kwargs.pop('Zdata', None)
 
 	if plev and not type(datZ) == np.ndarray:
-		f,datZ = metopen(c.file_mstat % (plev, 'Z'), 'mean', cut=c.std_slice[1:], no_static=True)
+		f,datZ = metopen(c.file_mstat % {'plev': plev, 'q': 'Z'}, 'mean', cut=c.std_slice[1:], no_static=True)
 		if f: f.close()
 	if type(datZ) == np.ndarray:
 		datZ = concat1(datZ)
@@ -924,8 +934,15 @@ def __contourf_dat(m, x, y, dat, kwargs):
 
 def __decorate(m, x, y, mask, kwargs):
 	if not kwargs.pop('disable_cb'):
-		cb = plt.colorbar(ticks=kwargs.pop('ticks'), orientation=kwargs.pop('cb_orientation', 'vertical'), 
-				shrink=0.8, pad=0.02, fraction=0.08, spacing='proportional')
+		orient = kwargs.pop('cb_orientation', 'vertical')
+		if orient == 'vertical':
+			pad = 0.02
+			frac = 0.08
+		else:
+			pad = 0.05
+			frac = 0.10
+		cb = plt.colorbar(ticks=kwargs.pop('ticks'), orientation=orient, 
+				shrink=0.8, pad=pad, fraction=frac, spacing='proportional')
 		if kwargs.get('ticklabels'): 
 			cb.ax.set_yticklabels(kwargs.pop('ticklabels'))
 	
@@ -934,8 +951,8 @@ def __decorate(m, x, y, mask, kwargs):
 	
 	if kwargs.get('mark'):
 		yidx, xidx = kwargs.pop('mark')
-		m.scatter(x[yidx,xidx], y[yidx,xidx], 484, marker='o', facecolors=(0,0,0,0), 
-				edgecolors='k', linewidths=3, zorder=3)
+		m.scatter(x[yidx,xidx], y[yidx,xidx], 484, marker='o', facecolors=(1,1,1,0), 
+				edgecolors='0.65', linewidths=3, zorder=3)
 	
 	if kwargs.get('title'):
 		plt.title(kwargs.pop('title'))
@@ -944,7 +961,7 @@ def __decorate(m, x, y, mask, kwargs):
 
 def __output(kwargs):
 	if kwargs.get('save'):
-		plt.savefig(kwargs.pop('save'), format='png')
+		plt.savefig(kwargs.pop('save')) #, format='png')
 	if kwargs.pop('show'):
 		plt.show()
 	
@@ -980,10 +997,11 @@ def sect_overlay_dat(dat, sect, **kwargs):
 	return overlay
 
 
-def map_overlay_dat(dat, **kwargs):  
+def map_overlay_dat(dat, static, **kwargs):  
 	kwargs = __line_prepare_config(kwargs)
-
-	dat = concat1(dat)
+	
+	if static.cyclic_ew:
+		dat = concat1(dat)
 
 	def overlay(m, x, y, zorder, mask=None):
 		if type(mask) == np.ndarray:

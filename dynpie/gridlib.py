@@ -7,6 +7,7 @@
 #
 import math
 import numpy as np
+from datetime import datetime as dt, timedelta as td
 
 
 class grid(object):
@@ -206,6 +207,20 @@ class grid_by_nc(grid):
 				self.t = self.f.variables[self.t][::]
 			else:
 				self.t = np.arange(self.nt)
+			
+			# Try to parse the time axis into datetime objects
+			tusplit = self.t_unit.split()
+			if tusplit[1] == 'since':
+				facs = {'seconds': 1, 'minutes': 60, 'hours': 3600, 'days': 86400}
+				if tusplit[0] not in facs:
+					self.t_parsed = None
+				else:
+					fac = facs[tusplit[0]]
+					start_dt = dt.strptime(' '.join(tusplit[2:4]), '%Y-%m-%d %H:%M:0.0')
+					self.t_parsed = [start_dt + td(0, fac*int(ts)) for ts in self.t]
+
+			else:
+				self.t_parsed = None
 
 		return
 

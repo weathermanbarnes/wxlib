@@ -14,6 +14,13 @@ def greys():
 
 	return mpl.colors.LinearSegmentedColormap('my_grey',cdict,256)
 
+def greys_r():
+	cdict = {'red':   ((0.0, 0.1, 0.1), (1.0, 1.0, 1.0)),
+		 'green': ((0.0, 0.1, 0.1), (1.0, 1.0, 1.0)),
+		 'blue':  ((0.0, 0.1, 0.1), (1.0, 1.0, 1.0))  }
+
+	return mpl.colors.LinearSegmentedColormap('my_grey',cdict,256)
+
 def defabs():
 	cdict = {'red':   ((0.0, 1.0, 1.0), (0.33, 0.4, 0.4), (0.867, 1.0, 1.0), (1.0, 0.5, 0.5)),
 		 'green': ((0.0, 1.0, 1.0), (0.33, 0.5, 0.5), (0.867, 0.0, 0.0), (1.0, 0.2, 0.2)),

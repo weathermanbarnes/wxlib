@@ -123,7 +123,7 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, qu
 		if force:
 			print 'Warning: you requested %d time steps.' % (tsmax-tsmin)
 		else:
-			raise RuntimeError, 'Cowardly refusing to fetch %d > %d time steps.' % (tsmax-tsmin, maxtlen)
+			raise RuntimeError, 'Cowardly refusing to fetch %d > %d time steps.\nUse force=True to override.' % (tsmax-tsmin, maxtlen)
 	
 	dat = None
 	for year in years:
@@ -146,13 +146,13 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, qu
 		i = 0
 		for plev in plevs:
 			if not quiet:
-				print "Reading from "+c.file_std % (year, plev, c.qi[q])
+				print "Reading from "+c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}
 			if type(dat) == type(None):
-				f, d, static = metopen(c.file_std % (year, plev, c.qi[q]), q, cut=cut, **kwargs)
+				f, d, static = metopen(c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}, q, cut=cut, **kwargs)
 				s = tuple([1+tsmax-tsmin,len(plevs)] + list(d.shape)[1:])
 				dat = np.empty(s, dtype=d.dtype)
 			else:
-				f, d = metopen(c.file_std % (year, plev, c.qi[q]), q, cut=cut, no_static=True, **kwargs)
+				f, d = metopen(c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}, q, cut=cut, no_static=True, **kwargs)
 			dat[datcut,i,::] = d
 			i += 1
 
