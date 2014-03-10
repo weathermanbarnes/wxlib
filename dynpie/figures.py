@@ -990,7 +990,12 @@ def sect_overlay_dat(dat, sect, **kwargs):
 
 		labels = kwargs.pop('contour_labels')
 		if labels:
-			plt.clabel(cs, fontsize=12, inline=True, inline_spacing=2)
+			plt.clabel(cs, kwargs.pop('contour_labels_scale', scale),
+					fontsize=kwargs.pop('contour_labels_fontsize', 12), 
+					fmt=kwargs.pop('contour_labels_format', '%1.1f'),
+					inline=kwargs.pop('contour_labels_inline', True), 
+					inline_spacing=kwargs.pop('contour_labels_inline_spacing', 2)
+			)
 
 		return
 
@@ -1013,7 +1018,12 @@ def map_overlay_dat(dat, static, **kwargs):
 
 		labels = kwargs.pop('contour_labels')
 		if labels:
-			plt.clabel(cs, fontsize=12, inline=True, inline_spacing=2)
+			plt.clabel(cs, kwargs.pop('contour_labels_scale', scale),
+					fontsize=kwargs.pop('contour_labels_fontsize', 12), 
+					fmt=kwargs.pop('contour_labels_format', '%1.1f'),
+					inline=kwargs.pop('contour_labels_inline', True), 
+					inline_spacing=kwargs.pop('contour_labels_inline_spacing', 2)
+			)
 
 		return
 
