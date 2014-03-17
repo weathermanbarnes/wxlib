@@ -1,16 +1,24 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
-import os.path
+import os
+import sys
+# Add the parent directory to path to be able to import dynlib(.so)
+sys.path.insert(1,os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+
 import numpy as np
 import scipy.io.netcdf as nc
 import scipy.io.matlab as mat
+import pytz
+
 from settings import conf as c
 import utils
 from gridlib import grid_by_nc, grid_by_static
 
 from datetime import datetime as dt, timedelta as td
 
+import dynlib
+dynlib_version = (''.join(dynlib.consts.version)).strip()
 
 # #############################################################################
 # 1. Open all sorts of files
@@ -72,6 +80,99 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 	raise RuntimeError, '%s.* not found in any data location. \nTried the following (in order):\n\t%s' % (filename, '\n\t'.join(tried))
 
 
+# Save dat as a netCDF file, using the metadata in static. 
+def metsave(dat, static, time, plev, q, q_units=None, compress_to_short=True):
+	s = dat.shape
+	if not len(s) == 3 or not s[1:] == (361,720):
+		raise NotImplementedError, 'dat does not seem to be a ERA-Interim like (t,y,x)-array.'
+	
+	now = dt.now(pytz.timezone('Europe/Oslo'))
+	of = nc.netcdf_file(c.opath+'/'+(c.file_std % {'time': time, 'plev': plev, 'q': c.qi[q]})+'.nc', 'w')
+	of._attributes = {'Conventions': 'CF-1.0', 
+			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
+	}
+
+	of.createDimension('time', dat.shape[0])
+	of.createDimension('latitude', dat.shape[1])
+	of.createDimension('longitude', dat.shape[2])
+
+	ot = of.createVariable('time', 'i', ('time',))
+	ot._attributes = {'long_name': 'time', 'units': static.t_unit}
+	ot[:] = static.t
+	olat = of.createVariable('latitude', 'f', ('latitude',))
+	olat._attributes = {'long_name': 'latitude', 'units': static.y_unit}
+	olat[:] = static.y[:,0]
+	olon = of.createVariable('longitude', 'f', ('longitude',))
+	olon._attributes = {'long_name': 'longitude', 'units': static.x_unit}
+	olon[:] = static.x[0,:]
+	
+	if compress_to_short:
+		ovar = of.createVariable(q, 'h', ('time', 'latitude', 'longitude',))
+		dat, scale, off = utils.unscale(dat)
+		ovar._attributes = {'long_name': c.q_long[q], 'units': c.q_units[q],
+				'add_offset': off, 'scale_factor': scale}
+	else:
+		ovar = of.createVariable(q, 'f', ('time', 'latitude', 'longitude',))
+		ovar._attributes = {'long_name': c.q_long[q], 'units': c.q_units[q]}
+	ovar[::] = dat
+
+	of.close()
+
+	return
+
+
+# Save dat as a netCDF file, using the metadata in static. 
+def metsave_lines(dat, datoff, static, time, plev, q, qoff):
+	if not len(dat.shape) == 3 and len(datoff.shape) == 2:
+		raise RuntimeError, 'dat and/or datoff have the wrong number of dimensions'
+	if not dat.shape[0] == datoff.shape[0]:
+		raise RuntimeError, 'dat and datoff have different time axes'
+	if not dat.shape[2] == 3:
+		raise RuntimeError, 'dat does not have size 3 in the third dimension'
+
+	now = dt.now(pytz.timezone('Europe/Oslo'))
+	of = nc.netcdf_file(c.opath+'/'+(c.file_std % {'time': time, 'plev': plev, 'q': c.qi[q]})+'.nc', 'w')
+	of._attributes = {'Conventions': 'CF-1.0', 
+			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
+	}
+	
+	# The maximum amount of line points for all time steps
+	llen = int(datoff.max())
+	# The maxmimum amount of lines for all time steps
+	olen = int(np.max([datoff_t.argmin() for datoff_t in datoff[:,1:]]))
+
+	of.createDimension('time', dat.shape[0])
+	of.createDimension('pointindex', llen)
+	of.createDimension('infotype', 3)
+	of.createDimension('lineindex', olen)
+
+	ot = of.createVariable('time', 'i', ('time',))
+	ot._attributes = {'long_name': 'time', 'units': static.t_unit}
+	ot[:] = static.t
+	olidx = of.createVariable('pointindex', 'i', ('pointindex',))
+	olidx._attributes = {'long_name': 'Index of point along all lines', 'units': '1'}
+	olidx[:] = range(llen)
+	olity = of.createVariable('infotype', 'c', ('infotype',))
+	olity._attributes = {'long_name': 'Type of info stored for point', 'units': 'enum'}
+	olity[:] = ['X', 'Y', 'I']
+	ooidx = of.createVariable('lineindex', 'i', ('lineindex',))
+	ooidx._attributes = {'long_name': 'Index of line', 'units': '1'}
+	ooidx[:] = range(olen)
+	
+	oq = of.createVariable(q, 'f', ('time', 'pointindex', 'infotype',))
+	oq._attributes = {'long_name': c.q_long[q], 'units': 'mixed'}
+	oq[::] = dat[:,:llen,:]
+
+	oqoff = of.createVariable(qoff, 'i', ('time', 'lineindex',))
+	oqoff._attributes = {'long_name': 'Index of first point of line', 'units': '1'}
+	oqoff[::] = datoff[:,:olen]
+
+	of.close()
+
+	return
+
+
+# Get static information
 def get_static(cuts=slice(None), verbose=False, no_dtype_conversion=False):
 	fo, oro = metopen('static', 'oro', cuts, verbose, no_dtype_conversion, True)
 	static = grid_by_static(fo, cut=cuts)

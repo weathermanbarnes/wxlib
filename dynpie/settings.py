@@ -59,6 +59,12 @@ QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'u': 'u'
 		'jetaxis': 'jetaxis', 'jaoff': 'jetaxis', 'tcw': 'tw', 'tcwv': 'wv', 'vo': 'zeta',
 		'div': 'div', 'sp': 'ps'}
 
+UNITS = {'defabs': 's-1', 'defang': 'rad', 'defanr': 'rad', 'the': 'K', 'rsr': '1', 'ow': 's-2', 
+	'zeta': 's-1', 'div': 's-1'}
+LONG = {'defabs': 'Total deformation', 'defang': 'Deformation angle', 'defanr': 'Deformation angle in natural coordinates',
+		'the': 'Equivalent potential temperature', 'rsr': 'Rotation/Strain-ratio', 'ow': 'Okubo-Weiss criterion',
+		'zeta': 'Horizontal vorticity', 'div': 'Horizontal divergence', 'jetaxis': 'Jet axis lines'}
+
 _rose = [17,]
 _rose.extend(range(-18,18))
 BINS_Q = {'defang': np.array(_rose)*math.pi/36.0+math.pi/72.0, }
@@ -315,6 +321,8 @@ class settings(object):
 	__default = {
 		'q': Q,
 		'qi': QI,
+		'q_units': UNITS,
+		'q_long': LONG,
 		'bins': BINS_Q,
 		'datapath': DATAPATH,
 		'opath': OPATH,
@@ -378,7 +386,7 @@ conf = settings()
 # #############################################################################
 # 5. Clean-Up: Making the default settings only available through settings objects
 # 
-del Q, QI, BINS_Q, DATAPATH, OPATH, PPATH, FILE_STD, FILE_STAT, FILE_MSTAT, STD_SLICE, YEARS, PLEVS, PTLEVS, PVLEVS
+del Q, QI, BINS_Q, UNITS, LONG, DATAPATH, OPATH, PPATH, FILE_STD, FILE_STAT, FILE_MSTAT, STD_SLICE, YEARS, PLEVS, PTLEVS, PVLEVS
 del DEFAULT_KWARGS, DEFAULT_CONTOUR_KWARGS, DEFAULT_CONTOURF_KWARGS, DEFAULT_Q_C, DEFAULT_Q_CF
 
 

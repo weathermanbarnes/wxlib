@@ -17,6 +17,9 @@ import matplotlib.pyplot as plt
 
 from datetime import datetime as dt, timedelta as td
 
+
+dynlib_version = (''.join(dynlib.consts.version)).strip()
+
 # Clean up a bit
 default_conf = deepcopy(settings.conf)
 del deepcopy
