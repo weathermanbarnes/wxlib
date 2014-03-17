@@ -16,7 +16,8 @@ from gridlib import grid_by_nc, grid_by_static
 from datetime import datetime as dt, timedelta as td
 
 import imp
-dynlib = imp.load_dynamic('dynlib', '../dynlib.so')
+pth = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+dynlib = imp.load_dynamic('dynlib', '%s/dynlib.so' % pth)
 dynlib_version = (''.join(dynlib.consts.version)).strip()
 
 # #############################################################################
