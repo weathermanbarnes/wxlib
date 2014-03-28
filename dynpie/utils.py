@@ -2,8 +2,6 @@
 
 import os
 import sys
-# Add the parent directory to path to be able to import dynlib(.so)
-sys.path.insert(1,os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 
 import math
 from datetime import datetime as dt, timedelta as td
@@ -11,7 +9,9 @@ import calendar
 import numpy as np
 from scipy.special import erfinv
 
-import dynlib 
+import imp
+pth = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+dynlib = imp.load_dynamic('', '%s/dynlib.so' % pth)
 
 #
 # Automatic scaling according to netcdf attributes "scale_factor" and "add_offset"

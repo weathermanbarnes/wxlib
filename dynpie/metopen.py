@@ -17,7 +17,6 @@ from datetime import datetime as dt, timedelta as td
 
 import imp
 pth = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
-print pth
 dynlib = imp.load_dynamic('', '%s/dynlib.so' % pth)
 dynlib_version = (''.join(dynlib.consts.version)).strip()
 
