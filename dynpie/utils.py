@@ -1,11 +1,17 @@
 #!/usr/bin/env python
 
+import os
+import sys
+# Add the parent directory to path to be able to import dynlib(.so)
+sys.path.insert(1,os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+
 import math
 from datetime import datetime as dt, timedelta as td
+import calendar
 import numpy as np
 from scipy.special import erfinv
 
-from dynlib import dynlib 
+import dynlib 
 
 #
 # Automatic scaling according to netcdf attributes "scale_factor" and "add_offset"
@@ -176,7 +182,7 @@ def mask_fronts(fronts, froff, s=(361,720)):
 #
 # return a 3d boolean array where line points are True, elsewere False
 def mask_lines(lines, loff, s=(361,720)):
-	mask = np.zeros((len(lines), s[0], s[1]), dtype='bool')
+	mask = np.zeros((lines.shape[0], s[0], s[1]), dtype='bool')
 
 	for t in range(len(lines)):
 		for n in range(loff[t].max()):
@@ -195,7 +201,7 @@ def smear_lines(lines, loff, s=(361,720), cyclic_ew=True):
 	filtr = np.array(map(filtr_func, range(-filtr_len,filtr_len+1)))
 	filtr /= sum(filtr)
 
-	mask = np.zeros((len(lines), s[0], s[1]))
+	mask = np.zeros((lines.shape[0], s[0], s[1]))
 	for t in range(len(lines)):
 		for n in range(loff[t].max()):
 			# python starts counting at zero, unlike fortran
@@ -268,19 +274,95 @@ def aggregate(dates, dat, agg):
 	# We assume the time series to be equally spaced in time
 	dtd = dates[1] - dates[0]
 
+	# Helper functions generating functions :-)
+	def first_func_gen(tdays):
+		epoch = dt(1979,1,1)
+		return lambda date: epoch + td(((date - epoch).days / tdays)*tdays)
+	def last_func_gen(tdays):
+		epoch = dt(1979,1,1)
+		return lambda date: epoch + td(((date - epoch).days / tdays + 1)*tdays) - dtd
+
 	# 1a. Defining aggregation types 
 	tslc = []
 	dates_out = []
-	if agg == 'cal_monthly':
+	
+	# Aggregate everything
+	if agg == 'all':
+		first_func = lambda date: dates[0]
+		last_func = lambda date: dates[-1]
+		agg = 'func'
+	
+	# Aggregate by season
+	elif agg == 'cal_season':
+		# Defining some helpers
+		season_start = {1: 12, 2: 12, 3: 3, 4: 3, 5: 3, 6: 6, 7: 6, 8: 6, 9: 9, 10: 9, 11: 9, 12: 12}
+		first_year_offset = {1: -1, 2: -1, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0}
+		last_year_offset = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 1}
+
+		first_func = lambda date: dt(date.year + first_year_offset[date.month], season_start[date.month], 1)
+		last_func = lambda date: dt(date.year + last_year_offset[date.month], (season_start[date.month]+2) % 12 + 1, 1) - dtd
+		agg = 'func'
+	
+	# Aggregate by calendar months
+	elif agg == 'cal_monthly':
 		first_func = lambda date: dt(date.year,date.month,1)
 		last_func = lambda date: dt(date.year+date.month/12, date.month % 12 + 1, 1) - dtd
 		agg = 'func'
-
-	elif agg == 'cal_weekly':
+	
+	# Aggregate by ISO calendar weeks (which are aligned with 1979-1-1, so '7d' would be identical)
+	elif agg == 'cal_weekly' or agg == '7d' or agg == 'weekly':
 		# date.isocalendar gives the a tuple (ISOWEEK_YEAR, ISOWEEK, ISOWEEK_DAY)
 		first_func = lambda date: date - (date.isocalendar()[2] - 1)*td(1,0) - td(0,3600*date.hour)
 		last_func = lambda date: date + (8 - date.isocalendar()[2])*td(1,0) - td(0,3600*date.hour) - dtd
 		agg = 'func'
+	
+	# Aggegate by pendats, following the CPC definition that Pentad 12 is always 25 Feb -- 1 Mar, even for leap years
+	elif agg == 'pentad':
+		def pentad_off(date):
+			leap = 0
+			startleap = 0
+			if calendar.isleap(date.year) and date.timetuple().tm_yday >= 60:
+				leap = 1
+			pentad = ((date - dt(date.year, 1, 1)).days - leap)/ 5 
+			if leap > 0 and pentad > 11:
+				startleap = 1
+			return pentad, startleap, leap
+
+		def first_func(date):
+			pentad, startleap, endleap = pentad_off(date)
+			return dt(date.year, 1, 1) + pentad*td(5) + td(startleap)
+		def last_func(date):
+			pentad, startleap, endleap = pentad_off(date)
+			return dt(date.year, 1, 1) + (pentad+1)*td(5) + td(endleap) - dtd
+		agg = 'func'
+	
+	# Aggregate by 10-day periods, starting 1979-1-1
+	elif agg == '10d':
+		first_func = first_func_gen(10)
+		last_func = last_func_gen(10)
+		agg = 'func'
+	# Aggregate by 5-day periods, starting 1979-1-1
+	elif agg == '5d':
+		first_func = first_func_gen(5)
+		last_func = last_func_gen(5)
+		agg = 'func'
+	# Aggregate by 3-day periods, starting 1979-1-1
+	elif agg == '3d':
+		first_func = first_func_gen(3)
+		last_func = last_func_gen(3)
+		agg = 'func'
+	# Aggregate by 2-day periods, starting 1979-1-1
+	elif agg == '2d':
+		first_func = first_func_gen(2)
+		last_func = last_func_gen(2)
+		agg = 'func'
+	# Aggregate by 24h periods, starting 1979-1-1
+	elif agg == '1d' or agg == 'daily':
+		first_func = first_func_gen(1)
+		last_func = last_func_gen(1)
+		agg = 'func'
+	
+	# Unknown aggregation period
 	else:
 		raise NotImplementedError, 'Unknown aggregation specifier `%s`' % str(agg)
 	
@@ -305,6 +387,9 @@ def aggregate(dates, dat, agg):
 			if date == first_func(date):
 				previ = i
 	
+	else:
+		raise ValueError, 'Unknown agg value `%s`' % str(agg)
+	
 	outlen = len(tslc)
 
 	# 2. Initialising the output array
@@ -316,9 +401,60 @@ def aggregate(dates, dat, agg):
 	
 	# 3. Doing the actual calculations
 	for i in xrange(outlen):
-		dat_out[i,::] = dat[tslc[i],::].mean(axis=0)
+		dat_out[i] = dat[tslc[i]].mean(axis=0)
 
 	return dates_out, dat_out
 
+#
+# Time series smoothing (running mean)
+def t_smooth(ts, smooth):
+	sts = np.zeros(ts.shape)
+	
+	a = -(smooth-1)/2
+	z = (smooth-1)/2
+	sts[:z] = np.nan
+	sts[a:] = np.nan
+	for i in range(a, z+1):
+		tsslc = slice(z+i,a+i)
+		if a+i == 0:
+			tsslc = slice(z+i,None)
+		else:
+			tsslc = slice(z+i,a+i)
+
+		sts[z:a] += ts[tsslc]
+	
+	sts /= smooth
+
+	return sts
+
+
+#
+# Varimax rotation for EOFs as introduced in Kaiser (1958)
+#  -> if raw = False use normal varimax, otherwise raw varimax
+def varimax(phi, raw=False, gamma = 1.0, q = 20, tol = 1e-6):
+	if not raw:
+		norm = np.sqrt((phi**2).sum(axis=1))
+		phi /= norm[:,np.newaxis]
+
+	p, k = phi.shape
+	R = np.eye(k)
+	d = 0
+	for i in xrange(q):
+		d_old = d
+		Lambda = np.dot(phi, R)
+		u,s,vh = np.linalg.svd(np.dot(
+			phi.T, 
+			np.asarray(Lambda)**3 - (gamma/p) * np.dot(Lambda, np.diag(np.diag(np.dot(Lambda.T,Lambda))))
+		))
+		R = np.dot(u,vh)
+		d = np.sum(s)
+		if d/d_old < tol: break
+	
+	rphi = np.dot(phi, R)
+
+	if not raw:
+		rphi *= norm[:,np.newaxis]
+
+	return rphi, R
 
 #
