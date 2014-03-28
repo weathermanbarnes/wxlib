@@ -1081,7 +1081,7 @@ def map_overlay_lines(lines, loff, **kwargs):
 			lonfr = -180 + (ln[:,0]-1)*0.5
 			latfr = 90.0 - (ln[:,1]-1)*0.5
 			xfr, yfr = m(lonfr, latfr)
-			m.plot(xfr, yfr, kwargs['linecolor'], linewidth=2)
+			m.plot(xfr, yfr, kwargs['linecolor'], linewidth=kwargs.get('linewidth', 2))
 
 
 		return
@@ -1097,7 +1097,7 @@ def map_overlay_dots(xidxs, yidxs, **kwargs):
 		lonfr = -180 + (xidxs -1)*0.5
 		latfr = 90.0 - (yidxs -1)*0.5
 		xfr, yfr = m(lonfr, latfr)
-		m.scatter(xfr, yfr, 9, marker='.', edgecolors=kwargs['linecolor'])
+		m.scatter(xfr, yfr, kwargs.get('linewidth',9), marker='.', edgecolors=kwargs['linecolor'])
 
 
 		return
