@@ -184,7 +184,7 @@ def mask_fronts(fronts, froff, s=(361,720)):
 def mask_lines(lines, loff, s=(361,720)):
 	mask = np.zeros((lines.shape[0], s[0], s[1]), dtype='bool')
 
-	for t in range(len(lines)):
+	for t in range(lines.shape[0]):
 		for n in range(loff[t].max()):
 			# python starts counting at zero, unlike fortran
 			j = round(lines[t,n,1] -1)
@@ -202,7 +202,7 @@ def smear_lines(lines, loff, s=(361,720), cyclic_ew=True):
 	filtr /= sum(filtr)
 
 	mask = np.zeros((lines.shape[0], s[0], s[1]))
-	for t in range(len(lines)):
+	for t in range(lines.shape[0]):
 		for n in range(loff[t].max()):
 			# python starts counting at zero, unlike fortran
 			j = round(lines[t,n,1] -1)
