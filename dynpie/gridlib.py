@@ -14,9 +14,13 @@ class grid(object):
 	def __init__(self):
 		self.gridtype = 'unset'
 		self.x = None
+		self.x_name = None
 		self.y = None
+		self.y_name = None
 		self.z = None
+		self.z_name = None
 		self.t = None
+		self.t_name = None
 		self.nx = 0
 		self.ny = 0
 		self.nz = 0
@@ -109,25 +113,25 @@ class grid_by_nc(grid):
 			
 		for d in lookout.dimensions:
 			if d in self.X_NAMES:
-				if self.x:
+				if self.x_name:
 					raise ValueError, 'Found several possible x-axes (did you set a variable?)'
-				self.x = d
+				self.x_name = d
 			if d in self.Y_NAMES:
 				if self.y:
 					raise ValueError, 'Found several possible y-axes (did you set a variable?)'
-				self.y = d
+				self.y_name = d
 			if d in self.Z_NAMES:
-				if self.z:
+				if self.z_name:
 					raise ValueError, 'Found several possible z-axes (did you set a variable?)'
-				self.z = d
+				self.z_name = d
 			if d in self.T_NAMES:
-				if self.t:
+				if self.t_name:
 					raise ValueError, 'Found several possible t-axes (did you set a variable?)'
-				self.t = d
+				self.t_name = d
 		
-		if not self.x:
+		if not self.x_name:
 			raise ValueError, 'No x-axis found'
-		if not self.y:
+		if not self.y_name:
 			raise ValueError, 'No y-axis found'
 
 		# Part 2: Determining type of axis
@@ -136,41 +140,41 @@ class grid_by_nc(grid):
 		self.cyclic_ns = False
 		
 		try:
-			self.x_unit = self.f.variables[self.x].units
+			self.x_unit = self.f.variables[self.x_name].units
 		except KeyError:
 			self.x_unit = '1'
 		try: 
-			self.y_unit = self.f.variables[self.y].units
+			self.y_unit = self.f.variables[self.y_name].units
 		except KeyError: 
 			self.y_unit = '1'
-		if self.z:
+		if self.z_name:
 			try:
-				self.z_unit = self.f.variables[self.z].units
+				self.z_unit = self.f.variables[self.z_name].units
 			except KeyError:
 				self.z_unit = '1'
 		else:
 			self.z_unit = None
-		if self.t:
+		if self.t_name:
 			try:
-				self.t_unit = self.f.variables[self.t].units
+				self.t_unit = self.f.variables[self.t_name].units
 			except KeyError:
 				self.t_unit = '1'
 		else:
 			self.t_unit = None
 
-		self.nx = self.f.dimensions[self.x]
-		self.ny = self.f.dimensions[self.y]
+		self.nx = self.f.dimensions[self.x_name]
+		self.ny = self.f.dimensions[self.y_name]
 
 		if self.x_unit == 'degrees_E' and self.y_unit == 'degrees_N':
 			self.gridtype = 'latlon'
 			self.cyclic_ew = True
-			self.x = self.f.variables[self.x][::]
-			self.y = self.f.variables[self.y][::]
+			self.x = self.f.variables[self.x_name][::]
+			self.y = self.f.variables[self.y_name][::]
 		elif self.x_unit == 'degrees_east' and self.y_unit == 'degrees_north':
 			self.gridtype = 'latlon'
 			self.cyclic_ew = True
-			self.x = self.f.variables[self.x][::]
-			self.y = self.f.variables[self.y][::]
+			self.x = self.f.variables[self.x_name][::]
+			self.y = self.f.variables[self.y_name][::]
 		elif self.x_unit == '1' and self.y_unit == '1':
 			if 'TITLE' in self.f._attributes and 'OUTPUT FROM WRF' in self.f._attributes['TITLE']:
 				if self.f._attributes['GRIDTYPE'] == 'C':
@@ -190,21 +194,21 @@ class grid_by_nc(grid):
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type with units (%s/%s)' % (self.x_unit, self.y_unit)
 
-		if self.z:
-			self.nz = self.f.dimensions[self.z]
-			if self.z in self.f.variables:
-				self.z  = self.f.variables[self.z][::]
+		if self.z_name:
+			self.nz = self.f.dimensions[self.z_name]
+			if self.z_name in self.f.variables:
+				self.z  = self.f.variables[self.z_name][::]
 			else:
 				self.z = np.arange(self.nz)
-		if self.t:
-			self.nt = self.f.dimensions[self.t]
+		if self.t_name:
+			self.nt = self.f.dimensions[self.t_name]
 			if not self.nt and not self.v: 
 				raise RuntimeError, 'grid_by_nc needs one specific variable for extracing the length of the netcdf-unlimited time dimension'
 			elif not self.nt:
-				timedim = self.v.dimensions.index(self.t)
+				timedim = self.v.dimensions.index(self.t_name)
 				self.nt = self.v.shape[timedim]
-			if self.t in self.f.variables:
-				self.t = self.f.variables[self.t][::]
+			if self.t_name in self.f.variables:
+				self.t = self.f.variables[self.t_name][::]
 			else:
 				self.t = np.arange(self.nt)
 			

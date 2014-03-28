@@ -137,14 +137,26 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 	}
 	
 	# The maximum amount of line points for all time steps
-	llen = int(datoff.max())
+	#llen = int(datoff.max())
+	llen = dat.shape[1] # Having diffent dimensions for each file makes reading much harder
 	# The maxmimum amount of lines for all time steps
-	olen = int(np.max([datoff_t.argmin() for datoff_t in datoff[:,1:]]))
+	#olen = int(np.max([datoff_t.argmin() for datoff_t in datoff[:,1:]]))
+	olen = datoff.shape[1]
 
-	of.createDimension('time', dat.shape[0])
+	of.createDimension(static.t_name, dat.shape[0])
 	of.createDimension('pointindex', llen)
 	of.createDimension('infotype', 3)
 	of.createDimension('lineindex', olen)
+	
+	# Define helper dimensions; not explicitly used in any variable but useful to interpret the grid point indexes stored in dat
+	of.createDimension(static.x_name, static.x.shape[1])
+	of.createDimension(static.y_name, static.y.shape[0])
+	olon = of.createVariable(static.x_name, 'f', (static.x_name,))
+	olon._attributes = {'long_name': static.x_name, 'units': static.x_unit}
+	olon[:] = static.x[0,:]
+	olat = of.createVariable(static.y_name, 'f', (static.y_name,))
+	olat._attributes = {'long_name': static.y_name, 'units': static.y_unit}
+	olat[:] = static.y[:,0]
 
 	ot = of.createVariable('time', 'i', ('time',))
 	ot._attributes = {'long_name': 'time', 'units': static.t_unit}
@@ -249,11 +261,16 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, qu
 			if not quiet:
 				print "Reading from "+c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}
 			if type(dat) == type(None):
-				f, d, static = metopen(c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}, q, cut=cut, **kwargs)
+				if kwargs.get('no_static', False):
+					f, d = metopen(c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}, q, cut=cut, **kwargs)
+					static = None
+				else:
+					f, d, static = metopen(c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}, q, cut=cut, **kwargs)
+					kwargs['no_static'] = True
 				s = tuple([1+tsmax-tsmin,len(plevs)] + list(d.shape)[1:])
 				dat = np.empty(s, dtype=d.dtype)
 			else:
-				f, d = metopen(c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}, q, cut=cut, no_static=True, **kwargs)
+				f, d = metopen(c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}, q, cut=cut, **kwargs)
 			dat[datcut,i,::] = d
 			i += 1
 
