@@ -50,20 +50,24 @@ hooks['oro'] = _tmp
 #
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 
 		'T': 't', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
-		'fronts': 'fronts', 'convls': 'convls', 'defls': 'defls', 'vorls': 'vorls', 
+		'fronts': 'fronts', 'cold_fronts': 'cold_fronts', 'warm_fronts': 'warm_fronts', 'stat_fronts': 'stat_fronts',
+		'convls': 'convls', 'defls': 'defls', 'vorls': 'vorls', 
 		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv', 'zeta': 'vo', 'div': 'div', 'ps': 'sp'}
 QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'u': 'u', 'v': 'v', 'q': 'q', 
 		't': 'T', 'thetae': 'the', 'z': 'Z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
-		'fronts': 'fronts', 'froff': 'fronts', 'convls': 'convls', 'cloff': 'convls', 
+		'fronts': 'fronts', 'cold_fronts': 'cold_fronts', 'warm_fronts': 'warm_fronts', 'stat_fronts': 'stat_fronts',
+		'froff': 'fronts', 'convls': 'convls', 'cloff': 'convls', 
 		'defls': 'defls', 'dloff': 'defls', 'vorls': 'vorls', 'vloff': 'vorls', 
 		'jetaxis': 'jetaxis', 'jaoff': 'jetaxis', 'tcw': 'tw', 'tcwv': 'wv', 'vo': 'zeta',
 		'div': 'div', 'sp': 'ps'}
 
 UNITS = {'defabs': 's-1', 'defang': 'rad', 'defanr': 'rad', 'the': 'K', 'rsr': '1', 'ow': 's-2', 
-	'zeta': 's-1', 'div': 's-1'}
+		'zeta': 's-1', 'div': 's-1'}
 LONG = {'defabs': 'Total deformation', 'defang': 'Deformation angle', 'defanr': 'Deformation angle in natural coordinates',
 		'the': 'Equivalent potential temperature', 'rsr': 'Rotation/Strain-ratio', 'ow': 'Okubo-Weiss criterion',
-		'zeta': 'Horizontal vorticity', 'div': 'Horizontal divergence', 'jetaxis': 'Jet axis lines'}
+		'zeta': 'Horizontal vorticity', 'div': 'Horizontal divergence', 'jetaxis': 'Jet axis lines',
+		'cold_fronts': 'Cold front lines', 'warm_fronts': 'Warm front lines', 'stat_fronts': 'Stationary front lines',
+}
 
 _rose = [17,]
 _rose.extend(range(-18,18))
@@ -76,7 +80,7 @@ FILE_STD   = 'ei.ans.%(time)d.%(plev)s.%(q)s'
 FILE_STAT  = 'ei.ans.%(time)d.%(plev)s.%(q)s.stat'
 FILE_MSTAT = 'ei.ans.stat.%(plev)s.%(q)s'
 STD_SLICE  = (slice(None), slice(None), slice(None))
-YEARS  = range(1979,2013)
+YEARS  = range(1979,2014)
 PLEVS  = ['100', '200', '300', '400', '500', '550', '600', '650', '700', '750', '800', '850', '900', '950', '1000', ]
 PTLEVS = ['pt300', 'pt315', 'pt330', 'pt350', ]
 PVLEVS = ['pv2000', ]
