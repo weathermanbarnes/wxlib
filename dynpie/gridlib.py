@@ -235,7 +235,7 @@ class grid_by_nc(grid):
 						if not type(start_dt) == type(None):
 							break
 
-					if not type(start_dt) == type(None):
+					if type(start_dt) == type(None):
 						start_dt = dt(1,1,1,0,0)
 						
 					self.t_parsed = [start_dt + td(0, fac*int(ts)) for ts in self.t]
