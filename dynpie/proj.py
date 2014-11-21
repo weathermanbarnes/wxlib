@@ -10,13 +10,13 @@ from mpl_toolkits.basemap import Basemap
 
 # (a) World map
 def wmap():
-	return Basemap(projection='robin',lon_0=0,resolution='c')
+	return Basemap(projection='robin',lon_0=0,resolution='c', area_thresh=50000)
 # (b) Northern polar centered map
 def npmap():
-	return Basemap(projection='npstere',boundinglat=10,lon_0=-50,resolution='l')
+	return Basemap(projection='npstere',boundinglat=10,lon_0=-50,resolution='c', area_thresh=50000)
 # (c) Southern polar centered map
 def spmap():
-	return Basemap(projection='spstere',boundinglat=-10,lon_0=0,resolution='l')
+	return Basemap(projection='spstere',boundinglat=-10,lon_0=0,resolution='c', area_thresh=50000)
 # (d) North-Atlantic map
 def NAmap():
 	return Basemap(projection='lcc', lat_0=55, lat_ts=55, lon_0=-30, resolution='l', 
