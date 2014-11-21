@@ -45,15 +45,24 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 			f = None
 		elif os.path.exists(path+'/'+filename+'.npz'):
 			f   = np.load(path+'/'+filename+'.npz')
+			if q not in f.files:
+				tried.append(path+'/'+filename+'.npz')
+				continue
 			dat = f[q][cut]
 			print 'Found '+path+'/'+filename+'.npz'
 		elif os.path.exists(path+'/'+filename+'.mat'):
 			f   = mat.loadmat(path+'/'+filename+'.mat')
+			if q not in f:
+				tried.append(path+'/'+filename+'.mat')
+				continue
 			dat = f[q][cut]
 			print 'Found '+path+'/'+filename+'.mat'
 		elif os.path.exists(path+'/'+filename+'.nc'):
 			f   = nc.netcdf_file(path+'/'+filename+'.nc', 'r')
 			var = f.variables[q]
+			if q not in f.variables:
+				tried.append(path+'/'+filename+'.nc')
+				continue
 			dat = utils.scale(var, cut)
 			if not no_static:
 				static = grid_by_nc(f, var, cut=cuts)
@@ -199,6 +208,9 @@ def get_static(cuts=slice(None), verbose=False, no_dtype_conversion=False):
 # 
 
 # Generalised data fetcher for instantaneous or short-term averaged fields
+#
+# TODO: Generalize this function to work on any (constant) input data interval. 
+# Or possibly any input data, even with irregular time axis?
 def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, quiet=False, force=False, **kwargs):
 	# None means "take everything there is as pressure levels"
 	if not plevs:
