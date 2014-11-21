@@ -8,18 +8,41 @@ from matplotlib.cm import *
 
 
 def greys():
+	cdict = {'red':   ((0.0, 1.0, 1.0), (1.0, 0.3, 0.3)),
+		 'green': ((0.0, 1.0, 1.0), (1.0, 0.3, 0.3)),
+		 'blue':  ((0.0, 1.0, 1.0), (1.0, 0.3, 0.3))  }
+
+	return mpl.colors.LinearSegmentedColormap('my_grey',cdict,256)
+
+def greys_r():
+	cdict = {'red':   ((0.0, 0.3, 0.3), (1.0, 1.0, 1.0)),
+		 'green': ((0.0, 0.3, 0.3), (1.0, 1.0, 1.0)),
+		 'blue':  ((0.0, 0.3, 0.3), (1.0, 1.0, 1.0))  }
+
+	return mpl.colors.LinearSegmentedColormap('my_grey_r',cdict,256)
+
+def greys2():
 	cdict = {'red':   ((0.0, 1.0, 1.0), (1.0, 0.1, 0.1)),
 		 'green': ((0.0, 1.0, 1.0), (1.0, 0.1, 0.1)),
 		 'blue':  ((0.0, 1.0, 1.0), (1.0, 0.1, 0.1))  }
 
 	return mpl.colors.LinearSegmentedColormap('my_grey',cdict,256)
 
-def greys_r():
-	cdict = {'red':   ((0.0, 0.1, 0.1), (1.0, 1.0, 1.0)),
-		 'green': ((0.0, 0.1, 0.1), (1.0, 1.0, 1.0)),
-		 'blue':  ((0.0, 0.1, 0.1), (1.0, 1.0, 1.0))  }
 
-	return mpl.colors.LinearSegmentedColormap('my_grey',cdict,256)
+def div_bw():
+	cdict = {'red':   ((0.0, 0.6, 0.6), (0.5, 1.0, 1.0), (1.0, 0.2, 0.2)),
+		 'green': ((0.0, 0.6, 0.6), (0.5, 1.0, 1.0), (1.0, 0.2, 0.2)),
+		 'blue':  ((0.0, 0.6, 0.6), (0.5, 1.0, 1.0), (1.0, 0.2, 0.2))  }
+
+	return mpl.colors.LinearSegmentedColormap('my_div_grey',cdict,256)
+
+def div_bw_inv():
+	cdict = {'red':   ((0.0, 0.6, 0.6), (0.5, 0.2, 0.2), (1.0, 1.0, 1.0)),
+		 'green': ((0.0, 0.6, 0.6), (0.5, 0.2, 0.2), (1.0, 1.0, 1.0)),
+		 'blue':  ((0.0, 0.6, 0.6), (0.5, 0.2, 0.2), (1.0, 1.0, 1.0))  }
+
+	return mpl.colors.LinearSegmentedColormap('my_div_grey',cdict,256)
+
 
 def defabs():
 	cdict = {'red':   ((0.0, 1.0, 1.0), (0.33, 0.4, 0.4), (0.867, 1.0, 1.0), (1.0, 0.5, 0.5)),
