@@ -155,4 +155,167 @@ contains
     end do
   end subroutine
   !
+  ! Take line data and fuzzily mark line locations on the map
+  subroutine mask_lines(res,nx,ny,nz,np,nl,line,lineoff)
+    real(kind=nr), intent(in) :: line(nz,np,3_ni)
+    integer(kind=ni), intent(in) :: lineoff(nz,nl)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz,np,nl
+    !f2py depend(nz) res, lineoff
+    !
+    integer(kind=ni) :: i,j,k, n
+    ! -----------------------------------------------------------------
+    !
+    res(:,:,:) = 0.0_nr
+    !
+    do k = 1_ni,nz
+       do n = 1_ni,maxval(lineoff(k,:))
+          i = nint(line(k,n,1_ni), ni)
+          if (i > nx) i = i - nx
+          j = nint(line(k,n,2_ni), ni)
+          res(k,j,i) = 1.0_nr
+       end do
+    end do
+  end subroutine
+  !
+  ! Regression 
+  subroutine regress(res,ts,nx,nxp,nyp,ny,nz,nn,dat,datproj,pat,mask)
+    real(kind=nr),intent(in) :: dat(nz,ny,nx), datproj(nz,nyp,nxp), pat(nn,nyp,nxp)
+    real(kind=nr),intent(out) :: res(nn,ny,nx), ts(nn,nz)
+    logical, intent(in) :: mask(nz)
+    integer(kind=ni), intent(in) :: nx,nxp,ny,nyp,nz,nn
+    !f2py depend(nyp,nxp) pat
+    !f2py depend(nn,nz) ts
+    !f2py depend(nn,ny,nx) res
+    !f2py depend(nz) mask
+    !
+    integer(kind=ni) :: k,n
+    ! -----------------------------------------------------------------
+    !
+    do k = 1_ni,nz
+       if ( mask(k) ) then
+          do n = 1_ni,nn
+             ts(n,k) = sum(datproj(k,:,:)*pat(n,:,:))
+             res(n,:,:) = res(n,:,:) + ts(n,k)*dat(k,:,:)
+          end do
+       end if
+    end do
+    !
+  end subroutine
+  !
+  ! Make a 2d-histogram based on given linear ranges
+  subroutine hist2d(res, incnt,outcnt, nx,ny,nz, dat1,scale1,ns1, dat2,scale2,ns2)
+    real(kind=nr), intent(in) :: dat1(nz,ny,nx), dat2(nz,ny,nx), &
+            &                    scale1(ns1), scale2(ns2)
+    integer(kind=ni), intent(in) :: nx,ny,nz, ns1, ns2
+    integer(kind=ni), intent(out) :: res(ns2,ns1), incnt, outcnt
+    !f2py depend(nx,ny,nz) dat2
+    !f2py depend(ns1,ns2) res
+    !
+    real(kind=nr) :: lower1, lower2, step1, step2
+    integer(kind=ni) :: i,j,k, idx1, idx2
+    ! -----------------------------------------------------------------
+    !
+    res(:,:) = 0_ni
+    !
+    lower1 = scale1(1_ni)
+    lower2 = scale2(1_ni)
+    step1  = scale1(2_ni) - scale1(1_ni)
+    step2  = scale2(2_ni) - scale2(1_ni)
+    !
+    do k = 1_ni,nz
+       do j = 1_ni,ny
+          do i = 1_ni,nx
+             idx1 = int((dat1(k,j,i)-lower1)/step1,ni) + 1_ni
+             idx2 = int((dat2(k,j,i)-lower2)/step2,ni) + 1_ni
+             !
+             if ( idx1 < 1_ni .or. idx1 > ns1 .or. idx2 < 1_ni .or. idx2 > ns2 ) then
+                outcnt = outcnt + 1_ni
+             else 
+                incnt = incnt + 1_ni
+                res(idx2,idx1) = res(idx2,idx1) + 1_ni
+             end if
+          end do
+       end do
+    end do
+    !
+    return
+  end subroutine
+  !
+  ! Mask areas above given threshold and conntected to list of points
+  subroutine mask_minimum_connect(res, nx,ny, ns, dat, seeds,thres)
+    real(kind=nr), intent(in) :: dat(ny,nx), thres
+    integer(kind=ni), intent(in) :: seeds(ns, 2_ni), nx,ny,ns
+    logical, intent(out) :: res(ny,nx)
+    !f2py depend(nx,ny,nz) res
+    !
+    integer(kind=ni) :: n, i,j
+    ! -----------------------------------------------------------------
+    !
+    res(:,:) = .false.
+    do n = 1_ni,ns
+       j = seeds(n,1_ni)
+       i = seeds(n,2_ni)
+       if ( dat(j,i) < thres ) then
+          write(*,'(A18,I4,A24)') 'FATAL Error: seed ', n, ' itself below threshold.'
+          stop 1
+       end if
+       if ( .not. res(j,i) ) then
+          res(j,i) = .true.
+          call minimum_connect(res, nx,ny, dat, i,j, thres)
+       end if
+    end do
+  end subroutine
+  !
+  ! Mask areas above given threshold and conntected to list of points
+  recursive subroutine minimum_connect(res, nx,ny, dat, i,j, thres)
+    real(kind=nr), intent(in) :: dat(ny,nx), thres
+    integer(kind=ni), intent(in) :: nx,ny, i,j
+    logical, intent(inout) :: res(ny,nx)
+    !f2py depend(nx,ny,nz) res
+    ! -----------------------------------------------------------------
+    !
+    ! North
+    if ( j > 1_ni ) then
+       if ( dat(j-1_ni,i) >= thres .and. .not. res(j-1_ni,i) ) then
+          res(j-1_ni,i) = .true.
+          call minimum_connect(res, nx,ny, dat, i,j-1_ni, thres)
+       end if
+    end if
+    ! South
+    if ( j < ny ) then
+       if ( dat(j+1_ni,i) >= thres .and. .not. res(j+1_ni,i) ) then
+          res(j+1_ni,i) = .true.
+          call minimum_connect(res, nx,ny, dat, i,j+1_ni, thres)
+       end if
+    end if
+    ! West
+    if ( i > 1_ni ) then
+       if ( dat(j,i-1_ni) >= thres .and. .not. res(j,i-1_ni) ) then
+          res(j,i-1_ni) = .true.
+          call minimum_connect(res, nx,ny, dat, i-1_ni,j, thres)
+       end if
+    end if
+    ! East
+    if ( i < nx ) then
+       if ( dat(j,i+1_ni) >= thres .and. .not. res(j,i+1_ni) ) then
+          res(j,i+1_ni) = .true.
+          call minimum_connect(res, nx,ny, dat, i+1_ni,j, thres)
+       end if
+    end if
+    ! Periodic boundary West
+    if ( grid_cyclic_ew .and. i == 1_ni ) then
+       if ( dat(j,nx) >= thres .and. .not. res(j,nx) ) then
+          res(j,nx) = .true.
+          call minimum_connect(res, nx,ny, dat, nx,j, thres)
+       end if
+    end if
+    ! Periodic boundary East
+    if ( grid_cyclic_ew .and. i == nx ) then
+       if ( dat(j,1_ni) >= thres .and. .not. res(j,1_ni) ) then
+          res(j,1_ni) = .true.
+          call minimum_connect(res, nx,ny, dat, 1_ni,j, thres)
+       end if
+    end if
+  end subroutine
 end module
