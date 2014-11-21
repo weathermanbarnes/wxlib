@@ -55,13 +55,18 @@ def _find_thres(dat, mask, extend, exceed_percentiles, symmetric_zero):
 	dat = sorted(dat[mask][nanmask].flatten())
 	ldat = len(dat)
 
+	if len(dat) == 0:
+		return -0.5, 0.5
+	if min(dat) == max(dat):
+		return min(dat)-0.5, max(dat)+0.5
+
 	lower, upper = exceed_percentiles
 
-	if extend == 'both' or extend == 'lower':
+	if extend in ['both', 'lower', 'min']:
 		lthres = dat[int(np.floor(lower*ldat))]
 	else:
 		lthres = dat[0] 
-	if extend == 'both' or extend == 'upper':
+	if extend in ['both', 'upper', 'max']:
 		uthres = dat[int(np.floor(upper*ldat))]
 	else:
 		uthres = dat[-1]
