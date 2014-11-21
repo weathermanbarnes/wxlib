@@ -28,6 +28,10 @@ class grid(object):
 
 		self._init_grid()
 		self.__build_grid()
+		
+		# Basemap won't work with Fortran-aligned arrays
+		self.x = np.ascontiguousarray(self.x)
+		self.y = np.ascontiguousarray(self.y)
 
 		return
 	

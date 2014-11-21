@@ -64,9 +64,9 @@ def concat1(data):
 # Concatenate one latitude band in x-direction, taking over the values of 
 # the first latitude band to emulate a cyclic field in Basemap plots
 def concat1lonlat(x, y):
-	# Some map projections need the lon, lat array to be Fortran-aligned.
-	lon = np.asfortranarray(concat1(x))
-	lat = np.asfortranarray(concat1(y))
+	# Some map projections need the lon, lat array to be C-aligned.
+	lon = np.ascontiguousarray(concat1(x))
+	lat = np.ascontiguousarray(concat1(y))
 
 	lon[:,-1] += 360.0
 
@@ -181,6 +181,7 @@ def mask_fronts(fronts, froff, s=(361,720)):
 
 #
 # return a 3d boolean array where line points are True, elsewere False
+# OBS: Obsolete: use the Fortran version dynlib.utils.mask_lines instead
 def mask_lines(lines, loff, s=(361,720)):
 	mask = np.zeros((lines.shape[0], s[0], s[1]), dtype='bool')
 
@@ -195,19 +196,13 @@ def mask_lines(lines, loff, s=(361,720)):
 
 #
 # return a 3d boolean array where line points are smoothly masked
-def smear_lines(lines, loff, s=(361,720), cyclic_ew=True):
+def smear_lines(lines, loff, s=(361,720)):
 	filtr_len = 5
 	filtr_func = mk_gauss(0, 1)
 	filtr = np.array(map(filtr_func, range(-filtr_len,filtr_len+1)))
 	filtr /= sum(filtr)
 
-	mask = np.zeros((lines.shape[0], s[0], s[1]))
-	for t in range(lines.shape[0]):
-		for n in range(loff[t].max()):
-			# python starts counting at zero, unlike fortran
-			j = round(lines[t,n,1] -1)
-			i = round(lines[t,n,0] -1) % s[1]
-			mask[t,j,i] = 1.0
+	mask = dynlib.utils.mask_lines(s[1], s[0], lines, loff)
 		
 	return dynlib.utils.filter_xy(mask, filtr)
 
