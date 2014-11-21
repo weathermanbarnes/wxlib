@@ -34,10 +34,14 @@ scale_q = np.arange(0.0, 10.1, 1.0)
 # #############################################################################
 # 2. Default hooks for plotting
 #
+# TODO: These hooks should be taken into account for both contour and contourf plots automatically, 
+#       without the below repetition
 hooks = {}
-hooks['defabs'] = lambda defabs: defabs*1e5
-hooks['pv']     = lambda pv: pv*1e6
-hooks['q']     = lambda q: q*1e3
+hooks['defabs'] = lambda defabs: defabs*1e5 	# To get typical magnitudes of deformation to the order 1-10
+hooks['pv'] = lambda pv: pv*1e6 		# From SI units to PVU
+hooks['q'] = lambda q: q*1e3 			# From kg/kg to g/kg
+hooks['msl'] = lambda msl: msl/100.0 		# From Pa to hPa
+hooks['z'] = lambda msl: msl/98.1		# From m2s-2 to gpdm
 def _tmp(oro):
 	oro[oro <= 100] = -17000
 	return oro
@@ -48,22 +52,25 @@ hooks['oro'] = _tmp
 # #############################################################################
 # 3. Default settings
 #
-Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'u': 'u', 'v': 'v', 'q': 'q', 
-		'T': 't', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
+Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'msl': 'msl', 'u': 'u', 'v': 'v', 'w': 'w', 'q': 'q', 
+		'T': 't', 'th': 'pt', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
 		'fronts': 'fronts', 'convls': 'convls', 'defls': 'defls', 'vorls': 'vorls', 
-		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv', 'zeta': 'vo', 'div': 'div', 'ps': 'sp'}
-QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'u': 'u', 'v': 'v', 'q': 'q', 
-		't': 'T', 'thetae': 'the', 'z': 'Z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
+		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv', 'zeta': 'vo', 'div': 'div', 'ps': 'sp', 'ff': 'ff'}
+QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'msl': 'msl', 'u': 'u', 'v': 'v', 'w': 'w', 'q': 'q', 
+		't': 'T', 'pt': 'th', 'thetae': 'the', 'z': 'Z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
 		'fronts': 'fronts', 'froff': 'fronts', 'convls': 'convls', 'cloff': 'convls', 
 		'defls': 'defls', 'dloff': 'defls', 'vorls': 'vorls', 'vloff': 'vorls', 
 		'jetaxis': 'jetaxis', 'jaoff': 'jetaxis', 'tcw': 'tw', 'tcwv': 'wv', 'vo': 'zeta',
-		'div': 'div', 'sp': 'ps'}
+		'div': 'div', 'sp': 'ps', 'ff': 'ff'}
 
-UNITS = {'defabs': 's-1', 'defang': 'rad', 'defanr': 'rad', 'the': 'K', 'rsr': '1', 'ow': 's-2', 
-	'zeta': 's-1', 'div': 's-1'}
+UNITS = {'defabs': 's**-1', 'defang': 'rad', 'defanr': 'rad', 'the': 'K', 'rsr': '1', 'ow': 's**-2', 
+		'vo': 's**-1', 'div': 's**-1', 'ff': 'm s**-1', 'pv': 'K m**2 kg**-1 s**-1',
+		'msl': 'Pa', 'w': 'Pa s**-1'}
 LONG = {'defabs': 'Total deformation', 'defang': 'Deformation angle', 'defanr': 'Deformation angle in natural coordinates',
 		'the': 'Equivalent potential temperature', 'rsr': 'Rotation/Strain-ratio', 'ow': 'Okubo-Weiss criterion',
-		'zeta': 'Horizontal vorticity', 'div': 'Horizontal divergence', 'jetaxis': 'Jet axis lines'}
+		'vo': 'Horizontal vorticity', 'div': 'Horizontal divergence', 'jetaxis': 'Jet axis lines', 
+		'ff': 'wind speed', 'pv': 'Potential vorticity', 'msl': 'Mean sea level pressure', 
+		'w': 'Vertical velocity'}
 
 _rose = [17,]
 _rose.extend(range(-18,18))
@@ -76,7 +83,7 @@ FILE_STD   = 'ei.ans.%(time)d.%(plev)s.%(q)s'
 FILE_STAT  = 'ei.ans.%(time)d.%(plev)s.%(q)s.stat'
 FILE_MSTAT = 'ei.ans.stat.%(plev)s.%(q)s'
 STD_SLICE  = (slice(None), slice(None), slice(None))
-YEARS  = range(1979,2013)
+YEARS  = range(1979,2014)
 PLEVS  = ['100', '200', '300', '400', '500', '550', '600', '650', '700', '750', '800', '850', '900', '950', '1000', ]
 PTLEVS = ['pt300', 'pt315', 'pt330', 'pt350', ]
 PVLEVS = ['pv2000', ]
@@ -106,6 +113,8 @@ DEFAULT_Q_C = {}
 DEFAULT_Q_C['defabs'] = {'hook': hooks['defabs']}
 DEFAULT_Q_C['pv']  = {'hook': hooks['pv']}
 DEFAULT_Q_C['q'] = {'hook': hooks['q']}
+DEFAULT_Q_C['msl'] = {'hook': hooks['msl']}
+DEFAULT_Q_C['z'] = {'hook': hooks['z']}
 
 # DEFAULT settings per quantity Q on contourf plots
 DEFAULT_Q_CF = {}
@@ -113,12 +122,15 @@ DEFAULT_Q_CF['defabs'] = {'cmap': cm.defabs2(), 'hook': hooks['defabs']}
 DEFAULT_Q_CF['defang'] = {'cmap': cm.periodic3(), 'scale': scale_defang, 'ticks': ticks_defang, 
 	'ticklabels': labels_defang}
 DEFAULT_Q_CF['t']   = {'cmap': plt.cm.RdBu_r}
+DEFAULT_Q_CF['pt']   = {'cmap': plt.cm.RdBu_r}
 DEFAULT_Q_CF['thetae']   = {'cmap': plt.cm.RdBu_r}
 DEFAULT_Q_CF['pv']  = {'hook': hooks['pv']}
 DEFAULT_Q_CF['oro'] = {'scale': scale_oro_cf, 'cmap': plt.cm.gist_earth, 'hook': hooks['oro']}
 DEFAULT_Q_CF['q'] = {'cmap': cm.q(), 'hook': hooks['q']}
 DEFAULT_Q_CF['tcw'] = {'cmap': cm.q()}
 DEFAULT_Q_CF['tcwv'] = {'cmap': cm.q()}
+DEFAULT_Q_CF['msl'] = {'hook': hooks['msl']}
+DEFAULT_Q_CF['z'] = {'hook': hooks['z']}
 
 
 # #############################################################################
