@@ -92,9 +92,9 @@ class grid(object):
 
 # Construct the grid based on the grid information in a nc (netcdf) file
 class grid_by_nc(grid):
-	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag']
-	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag']
-	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag']
+	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x']
+	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y']
+	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z']
 	T_NAMES = ['time', 'Time']
 
 	def __init__(self, ncfile, ncvar=None, cut=slice(None)):
@@ -195,6 +195,11 @@ class grid_by_nc(grid):
 				self.gridtype = 'idx'
 				self.x = np.arange(self.nx)
 				self.y = np.arange(self.ny)
+		elif self.x_unit == 'm' and self.y_unit == 'm':
+			self.gridtype = 'cartesian'
+			self.x = self.f.variables[self.x_name][::]
+			self.y = self.f.variables[self.y_name][::]
+
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type with units (%s/%s)' % (self.x_unit, self.y_unit)
 
@@ -223,8 +228,20 @@ class grid_by_nc(grid):
 				if tusplit[0] not in facs:
 					self.t_parsed = None
 				else:
+					formats = ['%Y-%m-%d %H:%M:0.0', '%Y-%m-%d %H:%M:00', ]
 					fac = facs[tusplit[0]]
-					start_dt = dt.strptime(' '.join(tusplit[2:4]), '%Y-%m-%d %H:%M:0.0')
+					for fmt in formats:
+						try:
+							start_dt = dt.strptime(' '.join(tusplit[2:4]), fmt)
+						except ValueError:
+							start_dt = None
+
+						if not type(start_dt) == type(None):
+							break
+
+					if not type(start_dt) == type(None):
+						start_dt = dt(1,1,1,0,0)
+						
 					self.t_parsed = [start_dt + td(0, fac*int(ts)) for ts in self.t]
 
 			else:

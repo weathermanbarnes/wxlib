@@ -52,25 +52,28 @@ hooks['oro'] = _tmp
 # #############################################################################
 # 3. Default settings
 #
+
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'msl': 'msl', 'u': 'u', 'v': 'v', 'w': 'w', 'q': 'q', 
 		'T': 't', 'th': 'pt', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
-		'fronts': 'fronts', 'convls': 'convls', 'defls': 'defls', 'vorls': 'vorls', 
+		'fronts': 'fronts', 'cold_fronts': 'cold_fronts', 'warm_fronts': 'warm_fronts', 'stat_fronts': 'stat_fronts',
+		'convls': 'convls', 'defls': 'defls', 'vorls': 'vorls', 
 		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv', 'zeta': 'vo', 'div': 'div', 'ps': 'sp', 'ff': 'ff'}
 QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'msl': 'msl', 'u': 'u', 'v': 'v', 'w': 'w', 'q': 'q', 
 		't': 'T', 'pt': 'th', 'thetae': 'the', 'z': 'Z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
-		'fronts': 'fronts', 'froff': 'fronts', 'convls': 'convls', 'cloff': 'convls', 
+		'fronts': 'fronts', 'cold_fronts': 'cold_fronts', 'warm_fronts': 'warm_fronts', 'stat_fronts': 'stat_fronts',
+		'froff': 'fronts', 'convls': 'convls', 'cloff': 'convls', 
 		'defls': 'defls', 'dloff': 'defls', 'vorls': 'vorls', 'vloff': 'vorls', 
 		'jetaxis': 'jetaxis', 'jaoff': 'jetaxis', 'tcw': 'tw', 'tcwv': 'wv', 'vo': 'zeta',
 		'div': 'div', 'sp': 'ps', 'ff': 'ff'}
 
-UNITS = {'defabs': 's**-1', 'defang': 'rad', 'defanr': 'rad', 'the': 'K', 'rsr': '1', 'ow': 's**-2', 
-		'vo': 's**-1', 'div': 's**-1', 'ff': 'm s**-1', 'pv': 'K m**2 kg**-1 s**-1',
-		'msl': 'Pa', 'w': 'Pa s**-1'}
+UNITS = {'defabs': 's-1', 'defang': 'rad', 'defanr': 'rad', 'the': 'K', 'rsr': '1', 'ow': 's-2', 
+		'zeta': 's-1', 'div': 's-1'}
 LONG = {'defabs': 'Total deformation', 'defang': 'Deformation angle', 'defanr': 'Deformation angle in natural coordinates',
 		'the': 'Equivalent potential temperature', 'rsr': 'Rotation/Strain-ratio', 'ow': 'Okubo-Weiss criterion',
-		'vo': 'Horizontal vorticity', 'div': 'Horizontal divergence', 'jetaxis': 'Jet axis lines', 
-		'ff': 'wind speed', 'pv': 'Potential vorticity', 'msl': 'Mean sea level pressure', 
-		'w': 'Vertical velocity'}
+		'zeta': 'Horizontal vorticity', 'div': 'Horizontal divergence', 'jetaxis': 'Jet axis lines',
+		'ff': 'wind speed', 'pv': 'Potential vorticity', 'msl': 'Mean sea level pressure', 'w': 'Vertical velocity',
+		'cold_fronts': 'Cold front lines', 'warm_fronts': 'Warm front lines', 'stat_fronts': 'Stationary front lines',
+}
 
 _rose = [17,]
 _rose.extend(range(-18,18))
