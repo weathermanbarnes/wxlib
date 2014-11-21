@@ -86,6 +86,7 @@ contains
 ! zz is the table containing contours values (with ncon=21 or 41)
 ! For PV: from 0 pvu to 10 pvu with an interval of 0.5 pvu
 ! For VO (absolute vorticity): form -20e-5 to 20e-5 with an interval of 2e-5 s-1
+! For PT (potential temperature): from 280K to 380K with ncon=21
         nc1=int(ncon/2)+1
 !        print '(A4,I2)','nc1=',nc1
 !        print '(A3,I2)','ncon=',ncon
@@ -97,6 +98,10 @@ contains
 ! if the initial field studied is the absolute vorticity on the sphere
           if (grd.eq.'VO') then
             zz(pp)=2.0e-5*(real(pp-nc1))
+          endif
+! if the initial field studied is potential temperature on the sphere
+          if (grd.eq.'PT') then
+            zz(pp)=5.0*(real(pp-nc1)) + 330.0
           endif
         ENDDO
 !        print *,'MAXVAL(PV2d)=',MAXVAL(PV2d)

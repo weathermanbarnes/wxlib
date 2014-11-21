@@ -185,40 +185,33 @@ contains
     integer(kind=ni), intent(in) :: nx,ny, nn
     integer(kind=ni), intent(out) :: zerocnt 
     !
-    real   (kind=nr) :: latB, dist
-    integer(kind=ni) :: i,j, ip1,gotflag
+    integer(kind=ni) :: i,j, ip1
     ! -----------------------------------------------------------------
     !
     ! (1) scan along x
     zerocnt = 0_ni
     do i = 1_ni,nx-1_ni
-       do j = 1_ni,ny-1_ni
-          gotflag = 0_ni
+       ip1 = i+1_ni
+       do j = 1_ni,ny
           ! Zero line hits a grid point
           if (dat(j,i) == 0.0_nr) then
-             zerocnt = zerocnt + 1_ni
-             zeroloc(zerocnt,1_ni) = i
-             zeroloc(zerocnt,2_ni) = j
-             gotflag = 1_ni
+             if (dat(j,ip1) == 0.0_nr) then
+                zerocnt = zerocnt + 1_ni
+                zeroloc(zerocnt,2_ni) = j
+                zeroloc(zerocnt,1_ni) = i + 0.5_nr
+             else
+                zerocnt = zerocnt + 1_ni
+                zeroloc(zerocnt,1_ni) = i
+                zeroloc(zerocnt,2_ni) = j
+             end if
           ! interpolate to find line, i direction first
           else   
-             ip1 = i+1_ni
-             if (dat(j,ip1) /= NaN .and. gotflag == 0_ni .and. & 
-               &   dat(j,i) /= NaN) then
+             if (dat(j,ip1) /= NaN .and. dat(j,i) /= NaN) then
                 if ((dat(j,i) > 0.0_nr .and. dat(j,ip1) < 0.0_nr) .or. &
                   & (dat(j,i) < 0.0_nr .and. dat(j,ip1) > 0.0_nr)) then
-                   latB = dat(j,ip1)
-                   if (dat(j,i) /= latB) then 
-                      zerocnt = zerocnt + 1_ni
-                      zeroloc(zerocnt,2_ni) = j
-                      zeroloc(zerocnt,1_ni) = i + dat(j,i)/(dat(j,i) - dat(j,ip1))
-                   ! points same magn, diff sign
-                   else
-                      zerocnt = zerocnt + 1_ni
-                      zeroloc(zerocnt,2_ni) = j
-                      zeroloc(zerocnt,1_ni) = i + 0.5_nr
-                   end if    ! latB
-                   gotflag = 1_ni
+                   zerocnt = zerocnt + 1_ni
+                   zeroloc(zerocnt,2_ni) = j
+                   zeroloc(zerocnt,1_ni) = i + dat(j,i)/(dat(j,i) - dat(j,ip1))
                 end if    ! diff signs
              end if    ! Missin ip1
           end if    ! zero exactly at grid point
@@ -227,69 +220,58 @@ contains
     !
     ! take into account periodicity in x
     if ( grid_cyclic_ew ) then
-       do j = 1_ni,ny-1_ni
-          gotflag = 0_ni
+       i = nx
+       ip1 = 1_ni
+       do j = 1_ni,ny
           ! Zero line hits a grid point
-          if (dat(j,nx) == 0.0_nr) then
-             zerocnt = zerocnt + 1_ni
-             zeroloc(zerocnt,1_ni) = nx
-             zeroloc(zerocnt,2_ni) = j
-             gotflag = 1_ni
+          if (dat(j,i) == 0.0_nr) then
+             if (dat(j,ip1) == 0.0_nr) then
+                zerocnt = zerocnt + 1_ni
+                zeroloc(zerocnt,2_ni) = j
+                zeroloc(zerocnt,1_ni) = i + 0.5_nr
+             else
+                zerocnt = zerocnt + 1_ni
+                zeroloc(zerocnt,1_ni) = i
+                zeroloc(zerocnt,2_ni) = j
+             end if
           ! interpolate to find line, i direction first
           else   
-             ip1 = 1_ni
-             if (dat(j,ip1) /= NaN .and. gotflag == 0_ni .and. & 
-               &   dat(j,nx) /= NaN) then
-                if ((dat(j,nx) > 0.0_nr .and. dat(j,ip1) < 0.0_nr) .or. &
-                  & (dat(j,nx) < 0.0_nr .and. dat(j,ip1) > 0.0_nr)) then
-                   latB = dat(j,ip1)
-                   if (dat(j,nx) /= latB) then 
-                      zerocnt = zerocnt + 1_ni
-                      zeroloc(zerocnt,2_ni) = j
-                      zeroloc(zerocnt,1_ni) = nx + dat(j,nx)/(dat(j,nx) - dat(j,ip1))
-                   ! points same magn, diff sign
-                   else
-                      zerocnt = zerocnt + 1_ni
-                      zeroloc(zerocnt,2_ni) = j
-                      zeroloc(zerocnt,1_ni) = nx + 0.5_nr
-                   end if    ! latB
-                   gotflag = 1_ni
+             if (dat(j,ip1) /= NaN .and. dat(j,i) /= NaN) then
+                if ((dat(j,i) > 0.0_nr .and. dat(j,ip1) < 0.0_nr) .or. &
+                  & (dat(j,i) < 0.0_nr .and. dat(j,ip1) > 0.0_nr)) then
+                   zerocnt = zerocnt + 1_ni
+                   zeroloc(zerocnt,2_ni) = j
+                   zeroloc(zerocnt,1_ni) = i + dat(j,i)/(dat(j,i) - dat(j,ip1))
                 end if    ! diff signs
              end if    ! Missin ip1
-          end if     ! zero exactly at grid point
-       end do   
+          end if    ! zero exactly at grid point
+       end do
     end if
     ! 
     ! (2) scan along y
-    do i = 1_ni,nx-1_ni
+    do i = 1_ni,nx
        do j = 1_ni,ny-1_ni
-          gotflag = 0_ni
+          ip1 = j + 1_ni
           ! Zero line hits a grid point
           if (dat(j,i) == 0.0_nr) then
-             zerocnt = zerocnt + 1_ni
-             zeroloc(zerocnt,1_ni) = i
-             zeroloc(zerocnt,2_ni) = j
-             gotflag = 1_ni
+             if (dat(ip1,i) == 0.0_nr) then
+                zerocnt = zerocnt + 1_ni
+                zeroloc(zerocnt,2_ni) = j + 0.5_nr          
+                zeroloc(zerocnt,1_ni) = i
+             else
+                zerocnt = zerocnt + 1_ni
+                zeroloc(zerocnt,1_ni) = i
+                zeroloc(zerocnt,2_ni) = j
+             end if
           ! interpolate to find line, j direction first
           else   
-             ip1 = j + 1_ni
-             if (dat(ip1,i) /= NaN .and. gotflag == 0_ni .and. &
-               & dat(j,i) /= NaN) then
+             if (dat(ip1,i) /= NaN .and. dat(j,i) /= NaN) then
                 if ((dat(j,i) > 0.0_nr .and. dat(ip1,i) < 0.0_nr) .or. &
                   & (dat(j,i) < 0.0_nr .and. dat(ip1,i) > 0.0_nr)) then
-                   latB = dat(ip1,i)
-                   if (dat(j,i) /= latB) then
-                      zerocnt = zerocnt + 1_ni
-                      zeroloc(zerocnt,2_ni) = j + dat(j,i)/(dat(j,i) - dat(ip1,i))
-                      zeroloc(zerocnt,1_ni) = i
-                   ! points same magn, diff sign
-                   else
-                      zerocnt = zerocnt + 1_ni
-                      zeroloc(zerocnt,2_ni) = j + 0.5_nr          
-                      zeroloc(zerocnt,1_ni) = i
-                   end if    ! latB
-                   gotflag = 1_ni
-                end if    ! diff signs
+                   zerocnt = zerocnt + 1_ni
+                   zeroloc(zerocnt,2_ni) = j + dat(j,i)/(dat(j,i) - dat(ip1,i))
+                   zeroloc(zerocnt,1_ni) = i
+                end if
              end if    ! Missin ip1
           end if    ! zero exactly at grid point
        end do   

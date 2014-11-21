@@ -129,16 +129,15 @@ contains
   !        lonvalues(nx) : vector of longitudes
   !        latvalues(ny) : vector of latitudes
   !                 ncon : number of contours to test, normally 41 or 21
-  !                  lev : potential temperature of the level
   ! Outputs:
   !  beta_a_out(nz,ny,nx) : flag array, =1 if anticyclonic wave breaking 
   !  beta_c_out(nz,ny,nx) : flag array, =1 if cyclonic wave breaking 
-  subroutine rwb_by_contour(beta_a_out,beta_c_out,nx,ny,nz,pv_in,lonvalues,latvalues,ncon,lev,dx,dy)
+  subroutine rwb_by_contour(beta_a_out,beta_c_out,nx,ny,nz,pv_in,lonvalues,latvalues,ncon,dx,dy)
     use detect_rwb_contour
     !
     implicit none
     !
-    real(kind=nr), intent(in) :: pv_in(nz,ny,nx),lonvalues(nx),latvalues(ny),dx(ny,nx),dy(ny,nx),lev
+    real(kind=nr), intent(in) :: pv_in(nz,ny,nx),lonvalues(nx),latvalues(ny),dx(ny,nx),dy(ny,nx)
     integer(kind=ni), intent(in) :: ncon
     integer(kind=ni), intent(out) :: beta_a_out(nz,ny,nx), beta_c_out(nz,ny,nx)
     integer(kind=ni) :: beta_a_outint(nz,ny,nx), beta_c_outint(nz,ny,nx)
@@ -154,7 +153,6 @@ contains
     !
     real(kind=nr), dimension(:,:,:,:), allocatable :: pv,pvint
     real(kind=nr), dimension(:), allocatable :: rdate
-    real(kind=nr) :: plev(1)
     !
     character :: grandeur*2
     character :: cx*18,cy*18
@@ -177,7 +175,6 @@ contains
     nlat = ny
     ntime = nz
     nplev = 1
-    plev(1) = lev
     incr=lonvalues(2)-lonvalues(1)
     incrlat=latvalues(2)-latvalues(1)
     !
@@ -308,7 +305,9 @@ contains
     allocate(beta_c(nlon2,nlat2,nplev,ntime))
     beta_a=0
     beta_c=0
-    grandeur='PV'
+    !
+    ! TODO: Make this variable configurable!
+    grandeur='PT'
     !
     allocate(xvalf(8000,nlat2,ncon))
     allocate(yvalf(8000,nlat2,ncon))
@@ -384,6 +383,60 @@ contains
     deallocate(beta_cint) 
   end subroutine ! end of subroutine contour_rwb
   !
+  ! Blocking index by large-scale gradient reversals, for example of potential
+  ! temperature on the PV2-surface (following e.g. Masato et al. 2013)
+  subroutine block_by_grad_rev(res, nx,ny,nz, dat, dx,dy)
+    use consts
+    !
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz, no, nf
+    !f2py depend(nx,ny,nz) res
+    !f2py depend(nx,ny) dx, dy
+    !
+    real(kind=nr) :: tmp(nz,ny,nx)
+    integer(kind=ni) :: i,j,k, di,dj, j0,j1
+    ! -----------------------------------------------------------------
+    !
+    ! TODO: Move to constants / arguments
+    dj = 30  ! 15°latitude
+    di = 15  ! 7.5°longitude
+    j0 = 100 ! From 40°N
+    j1 = 40  ! To 70°N
+    !
+    res(:,:,:) = 0.0_nr
+    !
+    do k = 1_ni,nz
+       ! Local blocking index
+       do j = j0,j1,-1_ni
+          do i = 1_ni,nx
+             tmp(k,j,i) = (sum(dat(k,j-dj:j-1_ni,i)) - sum(dat(k,j+1_ni:j+dj,i))) / dj
+          end do
+       end do
+       ! Longitudinal smoothing by running mean
+       do j = j0,j1,-1_ni
+          do i = 1_ni+di,nx-di
+             res(k,j,i) = sum(tmp(k,j,i-di:i+di))/(2_ni*di+1_ni)
+          end do
+       end do
+    end do
+    !
+    ! Taking periodic grid into account for longitudinal smoothing by running mean
+    if (grid_cyclic_ew) then
+       do k = 1_ni,nz
+          do j = j0,j1,-1_ni
+             do i = 1_ni,di
+                res(k,j,i) = (sum(tmp(k,j,nx-(di-i):nx)) + sum(tmp(k,j,1_ni:i+di)) )/(2_ni*di+1_ni)
+             end do
+             do i = nx-di+1_ni,nx
+                res(k,j,i) = (sum(tmp(k,j,i-di:nx)) + sum(tmp(k,j,1_ni:i-(nx-di))) )/(2_ni*di+1_ni)
+             end do
+          end do
+       end do
+    end if
+    !
+  end subroutine
+  !
   ! Find jetaxis by deformation angle. Using zerolines of the deformation angle
   ! as locator and the quantity v cross grad(deformation angle) with the upper
   ! threshold jetint_thres as mask
@@ -403,58 +456,103 @@ contains
     real   (kind=nr), parameter :: NaN = -9999.9_nr, ddang_max = pi/2.0_nr
     !
     real(kind=nr) :: us(nz,ny,nx), vs(nz,ny,nx), ddangdx(nz,ny,nx), ddangdy(nz,ny,nx), &
-                 &   jetint(nz,ny,nx), jetint_abs(nz,ny,nx), maxmask(nz,ny,nx), jaloc(nz,ny,nx)
+                 &   jetint(nz,ny,nx), jaloc(nz,ny,nx), ones(ny,nx) !, ffs(nz,ny,nx)
     integer(kind=ni) :: i,j,k, ip1,im1
     ! -----------------------------------------------------------------
     !
     write(*,*) 'preparing'
     !
+    ! Would be interesting, if otherwise :-)
+    ones(:,:) = 1.0_nr
+    !
     call smooth_xy(us, nx,ny,nz, u, nsmooth)
     call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
-    call def_angle_nat(jaloc, nx,ny,nz, us, vs, dx,dy)
-    call ddx_o4(ddangdx, nx,ny,nz, jaloc, dx,dy)
-    call ddy_o4(ddangdy, nx,ny,nz, jaloc, dx,dy)
+    ! Based on shear in natural  coordinates
+    call shear_nat(jaloc, nx,ny,nz, us,vs, dx,dy)
+    call ddx(ddangdx, nx,ny,nz, jaloc, dx,dy)
+    call ddy(ddangdy, nx,ny,nz, jaloc, dx,dy)
     !
-    !write(*,*) maxval(jaloc), maxloc(jaloc), minval(jaloc), minloc(jaloc)
-    !write(*,*) maxval(ddangdx), maxloc(ddangdx),minval(ddangdx), minloc(ddangdx)
-    !write(*,*) maxval(ddangdy), maxloc(ddangdy),minval(ddangdy), minloc(ddangdy)
-    !write(*,*) ddang_max, ddang_max/dx(2_ni,2_ni), ddang_max/dy(2_ni,2_ni)
-    !
-    ! Using different interpolation between grid point values: 
-    !   maxmask uses the raw gradients,
-    !   jetint minimises the gradients by re-interpreting large cyclonic gradients
-    !   as small anticyclonic gradients and vice-versa
-    maxmask(:,:,:) = us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)
-    !
-    ! Taking periodicity of the deformation angle's codomain into account
-    !do i = 1_ni,nx
-    !   do j = 1_ni,ny
-    !      do k = 1_ni,nz
-    !         ! x-direction
-    !         if ( ddangdx(k,j,i) > ddang_max/abs(dx(j,i)) ) & 
-    !            & ddangdx(k,j,i) = -2.0_nr*ddang_max/abs(dx(j,i)) + ddangdx(k,j,i)
-    !         if ( ddangdx(k,j,i) < -ddang_max/abs(dx(j,i)) ) & 
-    !            & ddangdx(k,j,i) = 2.0_nr*ddang_max/abs(dx(j,i)) + ddangdx(k,j,i)
-    !         ! y-direction
-    !         if ( ddangdy(k,j,i) > ddang_max/abs(dy(j,i)) ) & 
-    !            & ddangdy(k,j,i) = -2.0_nr*ddang_max/abs(dy(j,i)) + ddangdy(k,j,i)
-    !         if ( ddangdy(k,j,i) < -ddang_max/abs(dy(j,i)) ) & 
-    !            & ddangdy(k,j,i) = 2.0_nr*ddang_max/abs(dy(j,i)) + ddangdy(k,j,i)
-    !      end do
-    !   end do
-    !end do 
-    !
-    !write(*,*) maxval(ddangdx), maxloc(ddangdx), minval(ddangdx), minloc(ddangdx)
-    !write(*,*) maxval(ddangdy), maxloc(ddangdy), minval(ddangdy), minloc(ddangdy)
-    !write(*,*) ddang_max, ddang_max/dx(2_ni,2_ni), ddang_max/dy(2_ni,2_ni)
-    !
-    jetint_abs(:,:,:) = abs(us(:,:,:))*abs(ddangdy(:,:,:)) + abs(vs(:,:,:))*abs(ddangdx(:,:,:))
     jetint(:,:,:) = us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)
     !
     where(jetint > -jetint_thres)
        jaloc = NaN
     end where
+    !
+    ! Save the wind speed along the jet axis in the third field along with the
+    ! jet axis position. 
+    !  (the original jetint is not needed anymore after the masking `where` block)
+    jetint(:,:,:) = sqrt(us(:,:,:)**2.0_nr + vs(:,:,:)**2.0_nr)
+    !
+    call line_locate(ja,jaoff, nx,ny,nz,no,nf, jaloc,jetint,searchrad,minlen,NaN, dx,dy)
+    !
+    return
+  end subroutine
+  !
+  ! Find jetaxis by deformation angle. Using zerolines of the deformation angle
+  ! as locator and the quantity v cross grad(deformation angle) with the upper
+  ! threshold jetint_thres as mask
+  subroutine jetaxis_gareth(ja,jaoff,nx,ny,nz,no,nf,u,v,dx,dy)
+    use detect_fronts
+    use utils, only: smooth_xy
+    use consts
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), & 
+                 &                dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: ja(nz,no,3_ni), jaoff(nz,nf)
+    integer(kind=ni) :: nx,ny,nz, no, nf
+    !f2py depend(nx,ny,nz) v
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(nz) ja, jaoff
+    !
+    real   (kind=nr), parameter :: NaN = -9999.9_nr, ddang_max = pi/2.0_nr
+    !
+    real(kind=nr) :: us(nz,ny,nx), vs(nz,ny,nx), ffs(nz,ny,nx), & 
+                 &   ddangdx(nz,ny,nx), ddangdy(nz,ny,nx), &
+                 &   jetint(nz,ny,nx), jaloc(nz,ny,nx), ones(ny,nx)
+    integer(kind=ni) :: i,j,k, ip1,im1
+    ! -----------------------------------------------------------------
+    !
+    write(*,*) 'preparing'
+    !
+    ! Would be interesting, if otherwise :-)
+    ones(:,:) = 1.0_nr
+    !
+    call smooth_xy(us, nx,ny,nz, u, nsmooth)
+    call smooth_xy(vs, nx,ny,nz, v, nsmooth)
+    !
+    ffs(:,:,:) = sqrt(us(:,:,:)**2_ni + vs(:,:,:)**2_ni)
+    !
+    ! Based on deformation angle in natural coordinates
+    !call def_angle_nat(jaloc, nx,ny,nz, us,vs, dx,dy)
+    !call ddx_periodic(ddangdx, nx,ny,nz, jaloc, pi, dx,dy)
+    !call ddy_periodic(ddangdy, nx,ny,nz, jaloc, pi, dx,dy)
+    !
+    ! Based on shear in natural  coordinates
+    call shear_nat(jaloc, nx,ny,nz, us,vs, dx,dy)
+    call ddx(ddangdx, nx,ny,nz, jaloc, dx,dy)
+    call ddy(ddangdy, nx,ny,nz, jaloc, dx,dy)
+    !
+    jetint(:,:,:) = us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)
+    !
+    ! Mask wind minima
+    where(jetint >= 0.0_nr)
+       jaloc = NaN
+    end where
+    ! Mask low wind zones
+    where(ffs < 30.0_nr)
+       jaloc = NaN
+    end where
+    !
+    ! Save the gradient of the angle perpendicular to the wind direction 
+    !   in the third field along with the coordinates.
+    !   This allows for a distinction between accelerating and decelerating jet axes
+    !   (the original jetint is not needed anymore after the `where` block
+    call ddx_periodic(ddangdx, nx,ny,nz, jaloc, pi, ones,ones)
+    call ddy_periodic(ddangdy, nx,ny,nz, jaloc, pi, ones,ones)
+    !
+    jetint(:,:,:) = (us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)) &
+            &     /  sqrt(us(:,:,:)**2.0_nr + vs(:,:,:)**2.0_nr)
     !
     call line_locate(ja,jaoff, nx,ny,nz,no,nf, jaloc,jetint,searchrad,minlen,NaN, dx,dy)
     !

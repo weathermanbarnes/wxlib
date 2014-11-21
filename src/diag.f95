@@ -140,6 +140,85 @@ contains
     end where
   end subroutine
   !
+  ! Calculates the local wind shear in natural coordinates
+  subroutine shear_nat(res,nx,ny,nz,u,v,dx,dy)
+    use consts
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    real(kind=nr) :: ff(nz,ny,nx), ffx(nz,ny,nx), ffy(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res, v
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    ff = sqrt(u(:,:,:)**2_ni + v(:,:,:)**2_ni)
+    call grad(ffx, ffy, nx,ny,nz, ff, dx,dy)
+    !
+    res(:,:,:) = (u(:,:,:)*ffy(:,:,:) - v(:,:,:)*ffx(:,:,:))/ff(:,:,:)
+  end subroutine
+  !
+  ! Calculates the local wind shear in natural coordinates
+  subroutine grad_shear_nat(res,nx,ny,nz,u,v,dx,dy)
+    use consts
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    real(kind=nr) :: shear(nz,ny,nx), shearx(nz,ny,nx), sheary(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res, v
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    call shear_nat(shear, nx,ny,nz, u,v, dx,dy)
+    call ddx(shearx, nx,ny,nz, shear, dx,dy)
+    call ddy(sheary, nx,ny,nz, shear, dx,dy)
+    !
+    res(:,:,:) = (u(:,:,:)*sheary(:,:,:) - v(:,:,:)*shearx(:,:,:)) &
+            &   /sqrt(u(:,:,:)**2_ni + v(:,:,:)**2_ni)
+  end subroutine
+  !
+  ! Calculate deformation with all shear removed
+  subroutine def_nat_shearless(resabs,resang,nx,ny,nz,u,v,dx,dy)
+    use consts
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: resabs(nz,ny,nx), resang(nz,ny,nx)
+    real(kind=nr) :: ff2(nz,ny,nx), shear(nz,ny,nx), ux(nz,ny,nx), uy(nz,ny,nx), &
+            &        vx(nz,ny,nx), vy(nz,ny,nx), def_sh(nz,ny,nx), def_st(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) resabs,resang, v
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    call shear_nat(shear, nx,ny,nz, u,v, dx,dy)
+    !
+    ff2(:,:,:) = u(:,:,:)**2_ni + v(:,:,:)**2_ni
+    !
+    call grad(ux,uy, nx,ny,nz, u, dx, dy)
+    call grad(vx,vy, nx,ny,nz, v, dx, dy)
+    !
+    ux(:,:,:) = ux(:,:,:) - shear(:,:,:)*(u(:,:,:)*v(:,:,:))/ff2(:,:,:)
+    uy(:,:,:) = uy(:,:,:) - shear(:,:,:)*(u(:,:,:)**2_ni)/ff2(:,:,:)
+    vx(:,:,:) = vx(:,:,:) - shear(:,:,:)*(v(:,:,:)**2_ni)/ff2(:,:,:)
+    vy(:,:,:) = vy(:,:,:) - shear(:,:,:)*(u(:,:,:)*v(:,:,:))/ff2(:,:,:)
+    !
+    def_sh(:,:,:) = uy(:,:,:) + vx(:,:,:)
+    def_st(:,:,:) = ux(:,:,:) - vy(:,:,:)
+    !
+    resabs = sqrt(def_sh**2_ni + def_st**2_ni)
+    resang = 0.5_nr * atan2(def_sh, def_st)
+    !
+    ! rotate along wind direction instead of x-axis
+    resang = resang - atan2(v,u)
+    where ( resang >= pi/2.0_nr )
+       resang = resang - pi
+    end where
+    where ( resang < -pi/2.0_nr )
+       resang = resang + pi
+    end where
+  end subroutine
+  !
   ! Calculates the deformation tendencies due to horizontal advection
   subroutine def_tend_adv(tendabs,tendang,nx,ny,nz,u,v,dx,dy)
     use consts
