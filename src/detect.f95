@@ -390,7 +390,7 @@ contains
     !
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
-    integer(kind=ni) :: nx,ny,nz, no, nf
+    integer(kind=ni), intent(in) :: nx,ny,nz
     !f2py depend(nx,ny,nz) res
     !f2py depend(nx,ny) dx, dy
     !
@@ -523,11 +523,6 @@ contains
     !
     ffs(:,:,:) = sqrt(us(:,:,:)**2_ni + vs(:,:,:)**2_ni)
     !
-    ! Based on deformation angle in natural coordinates
-    !call def_angle_nat(jaloc, nx,ny,nz, us,vs, dx,dy)
-    !call ddx_periodic(ddangdx, nx,ny,nz, jaloc, pi, dx,dy)
-    !call ddy_periodic(ddangdy, nx,ny,nz, jaloc, pi, dx,dy)
-    !
     ! Based on shear in natural  coordinates
     call shear_nat(jaloc, nx,ny,nz, us,vs, dx,dy)
     call ddx(ddangdx, nx,ny,nz, jaloc, dx,dy)
@@ -544,15 +539,10 @@ contains
        jaloc = NaN
     end where
     !
-    ! Save the gradient of the angle perpendicular to the wind direction 
-    !   in the third field along with the coordinates.
-    !   This allows for a distinction between accelerating and decelerating jet axes
-    !   (the original jetint is not needed anymore after the `where` block
-    call ddx_periodic(ddangdx, nx,ny,nz, jaloc, pi, ones,ones)
-    call ddy_periodic(ddangdy, nx,ny,nz, jaloc, pi, ones,ones)
-    !
-    jetint(:,:,:) = (us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)) &
-            &     /  sqrt(us(:,:,:)**2.0_nr + vs(:,:,:)**2.0_nr)
+    ! Save the wind speed along the jet axis in the third field along with the
+    ! jet axis position. 
+    !  (the original jetint is not needed anymore after the masking `where` block)
+    jetint(:,:,:) = sqrt(us(:,:,:)**2.0_nr + vs(:,:,:)**2.0_nr)
     !
     call line_locate(ja,jaoff, nx,ny,nz,no,nf, jaloc,jetint,searchrad,minlen,NaN, dx,dy)
     !

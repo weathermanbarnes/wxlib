@@ -11,7 +11,7 @@ from scipy.special import erfinv
 
 import imp
 pth = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
-dynlib = imp.load_dynamic('', '%s/dynlib.so' % pth)
+dynlib = imp.load_dynamic('dynlib', '%s/dynlib.so' % pth)
 
 #
 # Automatic scaling according to netcdf attributes "scale_factor" and "add_offset"
