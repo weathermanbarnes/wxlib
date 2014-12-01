@@ -271,6 +271,10 @@ class grid_by_static(grid):
 			self.ny = self.f['lat'].shape[0]
 			self.x  = self.f['lon'][:]
 			self.y  = self.f['lat'][:]
+			self.x_name = 'longitude'
+			self.y_name = 'latitude'
+			self.x_unit = 'degrees_east'
+			self.y_unit = 'degrees_north'
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type using the variables ' % str(self.f.files)
 

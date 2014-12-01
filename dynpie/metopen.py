@@ -167,8 +167,8 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 	olat._attributes = {'long_name': static.y_name, 'units': static.y_unit}
 	olat[:] = static.y[:,0]
 
-	ot = of.createVariable('time', 'i', ('time',))
-	ot._attributes = {'long_name': 'time', 'units': static.t_unit}
+	ot = of.createVariable(static.t_name, 'i', ('time',))
+	ot._attributes = {'long_name': static.t_name, 'units': static.t_unit}
 	ot[:] = static.t
 	olidx = of.createVariable('pointindex', 'i', ('pointindex',))
 	olidx._attributes = {'long_name': 'Index of point along all lines', 'units': '1'}
