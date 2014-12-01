@@ -55,24 +55,27 @@ hooks['oro'] = _tmp
 
 Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'msl': 'msl', 'u': 'u', 'v': 'v', 'w': 'w', 'q': 'q', 
 		'T': 't', 'th': 'pt', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
-		'fronts': 'fronts', 'cold_fronts': 'cold_fronts', 'warm_fronts': 'warm_fronts', 'stat_fronts': 'stat_fronts',
-		'convls': 'convls', 'defls': 'defls', 'vorls': 'vorls', 
-		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv', 'zeta': 'vo', 'div': 'div', 'ps': 'sp', 'ff': 'ff'}
+		'front': 'front', 'cold_front': 'cold_front', 'warm_front': 'warm_front', 'stat_front': 'stat_front',
+		'convl': 'convl', 'defl': 'defl', 'vorl': 'vorl', 
+		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv', 'zeta': 'vo', 'div': 'div', 'ps': 'sp', 'ff': 'ff',
+		'ttr': 'trr', 'SST': 'sst'}
 QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'msl': 'msl', 'u': 'u', 'v': 'v', 'w': 'w', 'q': 'q', 
 		't': 'T', 'pt': 'th', 'thetae': 'the', 'z': 'Z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
-		'fronts': 'fronts', 'cold_fronts': 'cold_fronts', 'warm_fronts': 'warm_fronts', 'stat_fronts': 'stat_fronts',
-		'froff': 'fronts', 'convls': 'convls', 'cloff': 'convls', 
-		'defls': 'defls', 'dloff': 'defls', 'vorls': 'vorls', 'vloff': 'vorls', 
+		'front': 'front', 'cold_front': 'cold_front', 'warm_front': 'warm_front', 'stat_front': 'stat_front',
+		'froff': 'front', 'convl': 'convl', 'cloff': 'convl', 
+		'defl': 'defl', 'dloff': 'defl', 'vorl': 'vorl', 'vloff': 'vorl', 
 		'jetaxis': 'jetaxis', 'jaoff': 'jetaxis', 'tcw': 'tw', 'tcwv': 'wv', 'vo': 'zeta',
-		'div': 'div', 'sp': 'ps', 'ff': 'ff'}
+		'div': 'div', 'sp': 'ps', 'ff': 'ff',
+		'ttr': 'ttr', 'sst': 'SST'}
 
 UNITS = {'defabs': 's-1', 'defang': 'rad', 'defanr': 'rad', 'the': 'K', 'rsr': '1', 'ow': 's-2', 
-		'zeta': 's-1', 'div': 's-1'}
+		'zeta': 's-1', 'div': 's-1', 'ttr': 'W m-2' }
 LONG = {'defabs': 'Total deformation', 'defang': 'Deformation angle', 'defanr': 'Deformation angle in natural coordinates',
 		'the': 'Equivalent potential temperature', 'rsr': 'Rotation/Strain-ratio', 'ow': 'Okubo-Weiss criterion',
 		'zeta': 'Horizontal vorticity', 'div': 'Horizontal divergence', 'jetaxis': 'Jet axis lines',
 		'ff': 'wind speed', 'pv': 'Potential vorticity', 'msl': 'Mean sea level pressure', 'w': 'Vertical velocity',
-		'cold_fronts': 'Cold front lines', 'warm_fronts': 'Warm front lines', 'stat_fronts': 'Stationary front lines',
+		'cold_front': 'Cold front lines', 'warm_front': 'Warm front lines', 'stat_front': 'Stationary front lines',
+		'ttr': 'Top net thermal radiation',
 }
 
 _rose = [17,]
