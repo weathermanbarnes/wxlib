@@ -969,7 +969,11 @@ def __contourf_dat(m, x, y, dat, kwargs):
 def __decorate(m, x, y, mask, kwargs):
 	if not kwargs.pop('disable_cb'):
 		orient = kwargs.pop('cb_orientation', 'vertical')
+<<<<<<< HEAD
 		spac = kwargs.pop('cb_tickspacing', 'proportional')
+=======
+		spacing = kwargs.pop('cb_tickspacing', 'proportional')
+>>>>>>> b5c76236c4233ae9bc96a2b09bb203e5061dc319
 		if orient == 'vertical':
 			pad = 0.02
 			frac = 0.08
@@ -979,7 +983,11 @@ def __decorate(m, x, y, mask, kwargs):
 			#pad = 0.02
 			#frac = 0.08
 		cb = plt.colorbar(ticks=kwargs.pop('ticks'), orientation=orient, 
+<<<<<<< HEAD
 				shrink=0.8, pad=pad, fraction=frac, spacing=spac)
+=======
+				shrink=0.8, pad=pad, fraction=frac, spacing=spacing)
+>>>>>>> b5c76236c4233ae9bc96a2b09bb203e5061dc319
 		if kwargs.get('ticklabels'): 
 			if not orient == 'vertical':
 				cb.ax.set_xticklabels(kwargs.pop('ticklabels'))
