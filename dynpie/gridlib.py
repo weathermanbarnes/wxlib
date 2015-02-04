@@ -110,28 +110,49 @@ class grid_by_nc(grid):
 	# Skims through the netcdf file looking for the type of the x and y axis
 	def _init_grid(self):
 		# Part 1: Looking for suitable axis
-		if not self.v:
-			lookout = self.f
-		else:
-			lookout = self.v
-			
-		for d in lookout.dimensions:
-			if d in self.X_NAMES:
-				if self.x_name:
-					raise ValueError, 'Found several possible x-axes (did you set a variable?)'
-				self.x_name = d
-			if d in self.Y_NAMES:
-				if self.y:
-					raise ValueError, 'Found several possible y-axes (did you set a variable?)'
-				self.y_name = d
-			if d in self.Z_NAMES:
-				if self.z_name:
-					raise ValueError, 'Found several possible z-axes (did you set a variable?)'
-				self.z_name = d
-			if d in self.T_NAMES:
-				if self.t_name:
-					raise ValueError, 'Found several possible t-axes (did you set a variable?)'
-				self.t_name = d
+		# 1. Using the given variable
+		if self.v:
+			for d in self.v.dimensions:
+				if d in self.X_NAMES:
+					if self.x_name:
+						raise ValueError, 'Found several possible x-axes (using variable)'
+					self.x_name = d
+				if d in self.Y_NAMES:
+					if self.y:
+						raise ValueError, 'Found several possible y-axes (using variable)'
+					self.y_name = d
+				if d in self.Z_NAMES:
+					if self.z_name:
+						raise ValueError, 'Found several possible z-axes (using variable)'
+					self.z_name = d
+				if d in self.T_NAMES:
+					if self.t_name:
+						raise ValueError, 'Found several possible t-axes (using variable)'
+					self.t_name = d
+
+		if not self.x_name or not self.y_name or not self.z_name or not self.t_name:
+			self.x_name = None
+			self.y_name = None
+			self.z_name = None
+			self.t_name = None
+
+			for d in self.f.dimensions:
+				if d in self.X_NAMES:
+					if self.x_name:
+						raise ValueError, 'Found several possible x-axes (using file)'
+					self.x_name = d
+				if d in self.Y_NAMES:
+					if self.y:
+						raise ValueError, 'Found several possible y-axes (using file)'
+					self.y_name = d
+				if d in self.Z_NAMES:
+					if self.z_name:
+						raise ValueError, 'Found several possible z-axes (using file)'
+					self.z_name = d
+				if d in self.T_NAMES:
+					if self.t_name:
+						raise ValueError, 'Found several possible t-axes (using file)'
+					self.t_name = d
 		
 		if not self.x_name:
 			raise ValueError, 'No x-axis found'
