@@ -7,7 +7,11 @@ import scipy.interpolate as intp
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib as mpl
-from mpl_toolkits.basemap import Basemap, cm as bmcm
+import mpl_toolkits.basemap
+import mpl_toolkits.basemap.cm as bmcm
+Basemap = mpl_toolkits.basemap.Basemap
+basemap_version = mpl_toolkits.basemap.__version__
+
 from datetime import datetime as dt, timedelta as td
 from metopen import metopen
 from utils import concat1, concat1lonlat, igauss, __unflatten_fronts_t, sect_gen_points
@@ -939,12 +943,20 @@ def __map_setup(mask, static, kwargs):
 
 		gridcolor = kwargs.pop('gridcolor')
 		if gridcolor:
-			m.drawmeridians(range(0,360,60), color=gridcolor, latmax=60, dashes=[10,15])
-			m.drawparallels(range(-60,61,30), color=gridcolor, latmax=60, dashes=[10,15])
+			meridians = kwargs.pop('meridians', range(0,360,30))
+			parallels = kwargs.pop('parallels', range(-60,61,30))
+			latmax = kwargs.pop('grid_latmax', parallels[-1])
+			alpha = kwargs.pop('grid_alpha', 0.6)
+			dashes = kwargs.pop('grid_dashes', [1000, 1])
+
+			m.drawmeridians(meridians, color=gridcolor, latmax=latmax, dashes=dashes, alpha=alpha)
+			m.drawparallels(parallels, color=gridcolor, latmax=latmax, dashes=dashes, alpha=alpha)
 			#m.drawmeridians(range(0,360,30), color=gridcolor, latmax=75)
 			#m.drawparallels(range(-75,76,15), color=gridcolor, latmax=75)
 	
-	x, y = lon, lat
+	# Before that the latlon-keyword had no effect :-(
+	if basemap_version >= '1.0.7':
+		x, y = lon, lat
 	
 	orocolor = kwargs.pop('orocolor')
 	if orocolor:
