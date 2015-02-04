@@ -939,20 +939,35 @@ def __map_setup(mask, static, kwargs):
 		m = m()
 		x, y = m(lon,lat)
 	
-		m.drawcoastlines(color=kwargs.pop('coastcolor'))
+		lines = m.drawcoastlines(color=kwargs.pop('coastcolor'))
+		alpha = kwargs.pop('coast_alpha', None)
+		if alpha:
+			lines.set_alpha(alpha)
 
 		gridcolor = kwargs.pop('gridcolor')
 		if gridcolor:
 			meridians = kwargs.pop('meridians', range(0,360,30))
-			parallels = kwargs.pop('parallels', range(-60,61,30))
+			parallels = kwargs.pop('parallels', range(-75,76,15))
 			latmax = kwargs.pop('grid_latmax', parallels[-1])
-			alpha = kwargs.pop('grid_alpha', 0.6)
-			dashes = kwargs.pop('grid_dashes', [1000, 1])
+			alpha = kwargs.pop('grid_alpha', None)
+			linestyle = kwargs.pop('grid_linestyle', None)
+			dashes = kwargs.pop('grid_dashes', [10, 15])
+			
+			items = m.drawmeridians(meridians, color=gridcolor, latmax=latmax, dashes=dashes)
+			for lines, text in items.values():
+				for line in lines:
+					if alpha:
+						line.set_alpha(alpha)
+					if linestyle:
+						line.set_linestyle(linestyle)
 
-			m.drawmeridians(meridians, color=gridcolor, latmax=latmax, dashes=dashes, alpha=alpha)
-			m.drawparallels(parallels, color=gridcolor, latmax=latmax, dashes=dashes, alpha=alpha)
-			#m.drawmeridians(range(0,360,30), color=gridcolor, latmax=75)
-			#m.drawparallels(range(-75,76,15), color=gridcolor, latmax=75)
+			items = m.drawparallels(parallels, color=gridcolor, latmax=latmax, dashes=dashes)
+			for lines, text in items.values():
+				for line in lines:
+					if alpha:
+						line.set_alpha(alpha)
+					if linestyle:
+						line.set_linestyle(linestyle)
 	
 	# Before that the latlon-keyword had no effect :-(
 	if basemap_version >= '1.0.7':
