@@ -1170,6 +1170,23 @@ def map_overlay_mask(dat, **kwargs):
 	return overlay
 
 
+def map_overlay_latlonbox(lon0, lon1, lat0, lat1, vertices=30, **kwargs):
+	def overlay(m, x, y, zorder, mask=None):
+		# Western boundary
+		m.plot(np.ones((vertices,))*lon0, np.linspace(lat0,lat1,vertices), latlon=True, **kwargs)
+		# Eastern boundary
+		m.plot(np.ones((vertices,))*lon1, np.linspace(lat0,lat1,vertices), latlon=True, **kwargs)
+
+		# Southern boundary
+		m.plot(np.linspace(lon0,lon1,vertices), np.ones((vertices,))*lat0, latlon=True, **kwargs)
+		# Northern boundary
+		m.plot(np.linspace(lon0,lon1,vertices), np.ones((vertices,))*lat1, latlon=True, **kwargs)
+
+		return
+
+	return overlay
+
+
 def phist_defang(defang, defabs=None):
 	pass
 
