@@ -195,6 +195,23 @@ def mask_lines(lines, loff, s=(361,720)):
 	return mask
 
 #
+# return a 3d boolean array where line points contain values, elsewere 0
+def mask_lines_saveinfo(lines, loff, dat=None, s=(361,720)):
+	mask = np.zeros((lines.shape[0], s[0], s[1]))
+
+	for t in range(lines.shape[0]):
+		for n in range(loff[t].max()):
+			# python starts counting at zero, unlike fortran
+			j = round(lines[t,n,1] -1)
+			i = round(lines[t,n,0] -1) % s[1]
+			if type(dat) == np.ndarray:
+				mask[t,j,i] = dat[t,j,i]
+			else:
+				mask[t,j,i] = lines[t,n,2]
+
+	return mask
+
+#
 # return a 3d boolean array where line points are smoothly masked
 def smear_lines(lines, loff, s=(361,720)):
 	filtr_len = 5
