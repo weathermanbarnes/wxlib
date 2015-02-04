@@ -108,6 +108,7 @@ def metsave(dat, static, time, plev, q, q_units=None, compress_to_short=True):
 	ot = of.createVariable('time', 'i', ('time',))
 	ot._attributes = {'long_name': 'time', 'units': static.t_unit}
 	ot[:] = static.t
+	# TODO: Prescribing the name but taking the units from static is inconsistent!
 	olat = of.createVariable('latitude', 'f', ('latitude',))
 	olat._attributes = {'long_name': 'latitude', 'units': static.y_unit}
 	olat[:] = static.y[:,0]
