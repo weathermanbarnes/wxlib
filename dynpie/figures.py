@@ -791,7 +791,7 @@ def map_oro_barb(u, v, static, dat=None, **kwargs):
 	if not kwargs.pop('quiver', False):
 		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5, zorder=3)
 	else:
-		m.quiver(xt, yt, ut, vt, zorder=3)
+		m.quiver(xt, yt, ut, vt, zorder=3, scale=kwargs.pop('quiver_length', None), scale_units='width')
 	
 	# 3. Finish off
 	__decorate(m, x, y, mask, kwargs)
