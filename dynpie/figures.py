@@ -779,13 +779,13 @@ def map_oro_barb(u, v, static, dat=None, **kwargs):
 
 	u = __map_prepare_dat(u, mask, static, c.contour.u)
 	v = __map_prepare_dat(v, mask, static, c.contour.v)
-	if not dat == None: 
+	if type(dat) == np.ndarray: 
 		dat = __map_prepare_dat(dat, mask, static, kwargs)
 	
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
 	# 2. Plot the actual data
-	if not dat == None: __contourf_dat(m, x, y, dat, kwargs)
+	if type(dat) == np.ndarray: __contourf_dat(m, x, y, dat, kwargs)
 
 	ut,vt,xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
 	if not kwargs.pop('quiver', False):
@@ -988,8 +988,19 @@ def __contourf_dat(m, x, y, dat, kwargs):
 	if scale == 'auto':
 		scale = autoscale(dat, **kwargs)
 	cs = m.contourf(x, y, dat, scale, latlon=True, zorder=1, **kwargs)
+
+	# Maximise contrast, by making sure that the last colors of the colorbar 
+	# actually are identical to the first/last color in the colormap
 	if not type(scale) == int:
-		cs.set_clim(scale[0], scale[-1])
+		extend = kwargs.get('extend')
+		if extend == 'both':
+			cs.set_clim(scale[0], scale[-1])
+		elif extend == 'max':
+			cs.set_clim((scale[0]+scale[1])/2.0, scale[-1])
+		elif extend == 'min':
+			cs.set_clim(scale[0], (scale[-2]+scale[-1])/2.0)
+		else:
+			cs.set_clim((scale[0]+scale[1])/2.0, (scale[-2]+scale[-1])/2.0)
 	
 	return
 
@@ -1012,6 +1023,10 @@ def __decorate(m, x, y, mask, kwargs):
 				cb.ax.set_xticklabels(kwargs.pop('ticklabels'))
 			else:
 				cb.ax.set_yticklabels(kwargs.pop('ticklabels'))
+	
+	#legend_labels = kwargs.pop('legend_labels', None)
+	#if legend_labels:
+	#	plt.legend([], legend_labels)
 	
 	for overlay in kwargs.pop('overlays'):
 		overlay(m,x,y, zorder=3, mask=mask)
