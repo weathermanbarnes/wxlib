@@ -5,7 +5,8 @@ import os
 import sys
 
 import numpy as np
-import scipy.io.netcdf as nc
+import scipy.io.netcdf as nc3
+import Scientific.IO.NetCDF as nc
 import scipy.io.matlab as mat
 import pytz
 
@@ -58,7 +59,8 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 			dat = f[q][cut]
 			print 'Found '+path+'/'+filename+'.mat'
 		elif os.path.exists(path+'/'+filename+'.nc'):
-			f   = nc.netcdf_file(path+'/'+filename+'.nc', 'r')
+			#f   = nc.netcdf_file(path+'/'+filename+'.nc', 'r')
+			f   = nc.NetCDFFile(path+'/'+filename+'.nc', 'r')
 			var = f.variables[q]
 			if q not in f.variables:
 				tried.append(path+'/'+filename+'.nc')
@@ -96,7 +98,7 @@ def metsave(dat, static, time, plev, q, q_units=None, compress_to_short=True):
 		raise NotImplementedError, 'dat does not seem to be a ERA-Interim like (t,y,x)-array.'
 	
 	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc.netcdf_file(c.opath+'/'+(c.file_std % {'time': time, 'plev': plev, 'q': c.qi[q]})+'.nc', 'w')
+	of = nc3.netcdf_file(c.opath+'/'+(c.file_std % {'time': time, 'plev': plev, 'q': c.qi[q]})+'.nc', 'w')
 	of._attributes = {'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	}

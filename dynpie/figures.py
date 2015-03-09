@@ -786,8 +786,15 @@ def map_oro_barb(u, v, static, dat=None, **kwargs):
 	
 	# 2. Plot the actual data
 	if type(dat) == np.ndarray: __contourf_dat(m, x, y, dat, kwargs)
-
-	ut,vt,xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
+	
+	# TODO: Generalise, and make the arrow density customisable
+	try:
+		ut,vt, xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
+	except ValueError:
+		interval = 15
+		slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
+		ut,vt, xt,yt = m.rotate_vector(u[slc], v[slc], lon[slc], lat[slc], returnxy=True)
+	
 	if not kwargs.pop('quiver', False):
 		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5, zorder=3)
 	else:
