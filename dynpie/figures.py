@@ -791,7 +791,7 @@ def map_oro_barb(u, v, static, dat=None, **kwargs):
 	try:
 		ut,vt, xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
 	except ValueError:
-		interval = 15
+		interval = kwargs.pop('vector_space_interval', 15)
 		slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
 		ut,vt, xt,yt = m.rotate_vector(u[slc], v[slc], lon[slc], lat[slc], returnxy=True)
 	
