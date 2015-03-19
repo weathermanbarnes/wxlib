@@ -3,6 +3,11 @@
 
 import dynlib
 
-dynlib.__doc__ = 'Let me see if I can get this on a webpage'
+dynlib.diag.__doc__ = 'test'
+dynlib.diag.__module__ = 'diag'
+dynlib.__doc__ = 'Library of Fortran functions'
+
+__doc__ = dynlib.__doc__
+diag = dynlib.diag
 
 # that's it

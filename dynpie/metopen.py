@@ -16,10 +16,12 @@ from gridlib import grid_by_nc, grid_by_static
 
 from datetime import datetime as dt, timedelta as td
 
-import imp
-pth = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
-dynlib = imp.load_dynamic('', '%s/dynlib.so' % pth)
+#import imp
+#pth = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+#dynlib = imp.load_dynamic('', '%s/dynlib.so' % pth)
+from ..dynlibdoc import dynlib
 dynlib_version = (''.join(dynlib.consts.version)).strip()
+
 
 # #############################################################################
 # 1. Open all sorts of files

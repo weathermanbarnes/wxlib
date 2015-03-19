@@ -1,9 +1,15 @@
 Test
 ====
 
-Let's see what this gives.
+Let's see what this gives. AE.
 
-.. automodule:: dynlib_dev.dynlib
-   :members: 
+.. automodule:: dynlib.dynlib
+   :members:
+
+   
 
 
+..
+   .. automodule:: dynlib.dynpie.utils
+   :members:
+   :undoc-members:
