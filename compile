@@ -7,10 +7,12 @@ src="$cur/src"
 precc="$src/precc"
 work="$cur/default"
 
+doc="$cur/src_doc"
+doc_extract=".compile_fortran_doc.py"
+
 files="config.f95 derivatives.f95 ellipse.f95 utils.f95 humidity.f95 diag.f95 detect_rwb_contour.f95 detect_fronts.f95 detect.f95 stat.f95"
 filec="const.f95"
 filek="kind.f95"
-filem=".dynlib_workdir_prepared"
 
 pysig="${precc}/dynlib.pyf"
 
@@ -61,21 +63,19 @@ echo "Stage 4: Compiling the python module (as a shared object)"
 DEBUG=' --debug-capi --debug --opt="-fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace -g -pedantic"'
 f2py -c $LIBS --fcompiler=gnu95 dynlib.pyf $files $filec $filek > /dev/null
 mv dynlib.so $cur
-cd $cur/..
 
 
-if [ -f $filem ];
-then
-	echo "Stage 5: skipped [`pwd` already prepared]"
-elif [ $1 == '--no-prepare' ];
-then
-	echo "Stage 5: skipped by instruction"
-else
-	echo "Stage 5: Preparing the work directory [`pwd`]"
-	cp -a $cur/default/example*.py .
-	cp -a $cur/default/settings.py .
-	touch $filem
-fi
+# 5. Compiling Fortran documentation
+echo "Stage 5: Compiling the pickled Fortran documentation"
+cd $src
+python ../$doc_extract $filek $filec $files
+
+
+# 6. Compiling Fortran documentation
+echo "Stage 6: Generating/Updating the common documentation"
+cd $doc
+make html &> /dev/null
+
 
 
 echo "Done compiling dynlib version $VERREVI"

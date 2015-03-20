@@ -2,6 +2,7 @@
 
 import os
 import sys
+import pickle
 
 import math
 from datetime import datetime as dt, timedelta as td
@@ -13,11 +14,48 @@ from scipy.special import erfinv
 #pth = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
 #dynlib = imp.load_dynamic('', '%s/dynlib.so' % pth)
 #dynlib = imp.load_dynamic('dynlib', '%s/dynlib.so' % pth)
-from ..dynlibdoc import dynlib
+from dynlibdoc import dynlib
 
-#
-# Automatic scaling according to netcdf attributes "scale_factor" and "add_offset"
+
+
+# Take over the contents of a fortran module
+pth = os.path.abspath(os.path.join(os.path.dirname(__file__), 'src/.dynlib_fortran_doc.pickle'))
+if os.path.isfile(pth):
+	f = open(pth, 'r')
+	fortran_doc = pickle.load(f)
+	f.close()
+else:
+	print 'Warning: Fortran documentation not found. Make sure you have dynlib.'
+	fortran_doc = {}
+
+for name, value in dynlib.utils.__dict__.items():
+	# Backup the f2py generated docstring
+	value.__f2pydoc__ = value.__doc__
+	# Set the doctring from the fortran_doc extracted documentation
+	value.__doc__ = fortran_doc.get('utils.%s' % name, None)
+	# Make available as a member of this python module
+	locals()[name] = value
+
+
+
 def scale(var, cut=(slice(None),slice(None),slice(None)), bench=False):
+	""" Automatic scaling according to netcdf attributes `scale_factor` and `add_offset`
+
+	Parameters
+	----------
+
+	var : nc.NetCDFVariable
+	    The variable to be scaled
+	cut : tuple of slice-objects
+	    *TODO*: Obsolete parameter to be removed
+	bench : bool
+	    *TODO*: Obsolete parameter to be removed
+	
+	Returns
+	-------
+	np.ndarray
+	    The scaled data contained in the nc.NetCDFVariable object `var`.
+	"""
 	if hasattr(var, 'scale_factor') or hasattr(var, 'add_offset'):
 		if bench:
 			begin = dt.now()
@@ -32,9 +70,23 @@ def scale(var, cut=(slice(None),slice(None),slice(None)), bench=False):
 	
 	return var_dat
 
-#
-# Reduce to i2 values with add_offset and scale_factor
+
 def unscale(var):
+	""" Inverse of the `scale` function. 
+
+	Compresses floating point data to 16-bit integers plus an 64-bit offset and scaling factor.
+
+	Parameters
+	----------
+
+	var : np.ndarray 
+	    The data to be compressed
+	
+	Returns
+	-------
+	tuple (np.ndarray with dtype int16, float, float)
+	    The compressed data, the scale factor and the offset
+	"""
 	maxv  = var.max()
 	minv  = var.min()
 	# divide in 2^16-2 intervals, values from -32766 -> 32767 ; reserve -32767 as missing value

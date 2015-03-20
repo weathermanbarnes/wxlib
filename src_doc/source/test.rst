@@ -1,15 +1,19 @@
-Test
-====
+dynlib.utils
+============
 
-Let's see what this gives. AE.
-
-.. automodule:: dynlib.dynlib
-   :members:
-
-   
+Let's see what this gives. BF.
 
 
-..
-   .. automodule:: dynlib.dynpie.utils
+.. automodule:: dynlib.utils
    :members:
    :undoc-members:
+   
+   Fortran subroutines
+   -------------------
+
+   .. autofunction:: dynlib.utils.mirror_y_domain
+
+   Python functions
+   ----------------
+
+

@@ -10,12 +10,31 @@ module utils
   implicit none
 contains
   !
-  ! Prepare global data for FFT: 
-  !
-  ! Returns the data extended along complementary meridians (for fft)
-  ! For each lon, the reflected (lon+180) is attached below
-  ! so that data is periodic in x and y.
-  ! NOTE: Input data must be lats -90 to 90!!! and nx must be even
+  !@ Mirror global data in meridional direction to prepare for a Fourier transform 
+  !@
+  !@ Returns the data extended along complementary meridians (for fft)
+  !@ For each lon, the reflected (lon+180) is attached below
+  !@ so that data is periodic in x and y.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The data to be mirrorred. 
+  !@     *Note*, the input data is expected to have a y-axis running from 90°S to 90°N,
+  !@     *not* following the ERA-Interim convention. Furthermore, the grid size in 
+  !@     x-direction (nx) must be even.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,2*ny-2,nx) and dtype float64
+  !@     The mirrored data.
   subroutine mirror_y_domain(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,2_ni*ny-2_ni,nx)

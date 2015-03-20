@@ -3,7 +3,7 @@
 
 from copy import deepcopy
 
-import dynlibdoc as dynlib
+import utils
 
 import dynpie.figures as fig
 import dynpie.gridlib as gridlib

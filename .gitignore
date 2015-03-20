@@ -8,6 +8,7 @@
 *.so
 *.x
 *.mod
+*.pickle
 precc
 # Python packaging and building
 build
@@ -19,6 +20,7 @@ MANIFEST
 *~
 *.old
 *.orig
+.DS_Store
 # Results (pictures, numpy, matlab, etc.)
 *.png
 *.npy
