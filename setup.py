@@ -17,7 +17,7 @@ version = version.strip()
 # Are there local uncommitted changes?
 changes = subprocess.check_output("git diff", shell=True)
 if len(changes) > 0:
-	warnings.warn('Installing a non-committed version! Be sure you know what you are doing!')
+	warnings.warn('Packaging/Installing a non-committed version! Be sure you know what you are doing!')
 	version += '+'
 
 # Override the build_py class to 
@@ -27,13 +27,12 @@ class build_py(_build_py):
 	def run(self):
 		subprocess.call("./compile", shell=True)
 		_build_py.run(self)
-		self.copy_file('dynlib.so', os.path.join(self.build_lib, 'dynlib.so'), preserve_mode=True)
+		self.copy_file('lib/dynfor.so', os.path.join(self.build_lib, 'dynlib/dynfor.so'), preserve_mode=True)
 
 		return
 
 	def finalize_options(self):
 		self.set_undefined_options('build', ('build_lib', 'build_lib'))
-		self.build_lib = os.path.join(self.build_lib, 'dynlib')
 		_build_py.finalize_options(self)
 
 		return
@@ -46,11 +45,10 @@ setup(cmdclass={'build_py': build_py},
 	author='Clemens Spensberger',
 	author_email='csp001@uib.no',
 	url='https://wikihost.uib.no/gfi/index.php/Dynlib',
-	packages=['dynpie', 'tests', ],
-	py_modules=['test', ],
-	package_dir={'dynpie': '.'},
-	package_data={'dynpie': ['default/*.py', ] },
-	scripts=['scripts/dynlib_init.py', ]
+	packages=['dynlib'],
+	package_dir={'dynlib': 'lib'},
+	#py_modules=['test', ],
+	scripts=['bin/dynlib_init.py', ]
 )
 
 # the end
