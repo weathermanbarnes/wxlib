@@ -57,7 +57,7 @@ def scale(var, cut=(slice(None),slice(None),slice(None)), bench=False):
 			begin = dt.now()
 		# Python/numpy version is faster than Fortran function
 		var_dat = var[cut]*getattr(var, 'scale_factor', 1.0) + getattr(var, 'add_offset', 0.0)
-		#u_dat = dynlib.conv.scaleoff(u_dat, getattr(u, 'scale_factor', 1.0), getattr(u, 'add_offset', 0.0))
+		#u_dat = dynfor.conv.scaleoff(u_dat, getattr(u, 'scale_factor', 1.0), getattr(u, 'add_offset', 0.0))
 		if bench:
 			print 'Python scaleoff', dt.now()-begin
 	
@@ -160,7 +160,7 @@ def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=Fals
 
 
 #
-# Reimplementation of the recpective function in dynlib.diag for benchmarking.
+# Reimplementation of the recpective function in dynfor.diag for benchmarking.
 def def_angle(u_dat, v_dat, grid):
 	deff = np.zeros(u_dat.shape)
 	for k in range(u_dat.shape[0]):
@@ -231,7 +231,7 @@ def mask_fronts(fronts, froff, s=(361,720)):
 
 #
 # return a 3d boolean array where line points are True, elsewere False
-# OBS: Obsolete: use the Fortran version dynlib.utils.mask_lines instead
+# OBS: Obsolete: use the Fortran version dynfor.utils.mask_lines instead
 def mask_lines(lines, loff, s=(361,720)):
 	mask = np.zeros((lines.shape[0], s[0], s[1]), dtype='bool')
 
@@ -269,9 +269,9 @@ def smear_lines(lines, loff, s=(361,720)):
 	filtr = np.array(map(filtr_func, range(-filtr_len,filtr_len+1)))
 	filtr /= sum(filtr)
 
-	mask = dynlib.utils.mask_lines(s[1], s[0], lines, loff)
+	mask = dynfor.utils.mask_lines(s[1], s[0], lines, loff)
 		
-	return dynlib.utils.filter_xy(mask, filtr)
+	return dynfor.utils.filter_xy(mask, filtr)
 
 
 
