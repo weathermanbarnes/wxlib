@@ -28,6 +28,7 @@ class build_py(_build_py):
 		subprocess.call("./compile", shell=True)
 		_build_py.run(self)
 		self.copy_file('lib/dynfor.so', os.path.join(self.build_lib, 'dynlib/dynfor.so'), preserve_mode=True)
+		self.copy_file('lib/.dynfor_doc.pickle', os.path.join(self.build_lib, 'dynlib/.dynfor_doc.pickle'), preserve_mode=True)
 
 		return
 
