@@ -25,7 +25,7 @@ if len(changes) > 0:
 #  (2) make python module at . the root module called dynlib
 class build_py(_build_py):
 	def run(self):
-		subprocess.call("./compile --no-prepare", shell=True)
+		subprocess.call("./compile", shell=True)
 		_build_py.run(self)
 		self.copy_file('dynlib.so', os.path.join(self.build_lib, 'dynlib.so'), preserve_mode=True)
 

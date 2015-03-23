@@ -42,4 +42,4 @@ If you are having issues, please let us know: dynlib@gfi.uib.no.
 License
 -------
 
-The project is undetermined yet.
+The project license is not determined yet.
