@@ -401,7 +401,7 @@ contains
        do n = startidx,endidx
           do m = startidx,endidx
              do l = startidx,endidx
-                if ( dists(n,m) > 0.0_nr .and. dists(n,l) > 0.0_nr ) then
+                if ( dists(n,m) >= 0.0_nr .and. dists(n,l) >= 0.0_nr ) then
                    if ( dists(n,m) + dists(n,l) < dists(m,l) .or. dists(m,l) < 0.0_nr ) then
                       dists(m,l) = dists(n,m) + dists(n,l)
                       inter(m,l) = n
