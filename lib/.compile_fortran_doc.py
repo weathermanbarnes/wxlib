@@ -99,7 +99,7 @@ for arg in sys.argv[1:]:
 			inmodule = extract_name(line[6:])
 
 
-f = open('.dynlib_fortran_doc.pickle', 'w')
+f = open('../.dynfor_doc.pickle', 'w')
 pickle.dump(fortran_doc, f)
 f.close()
 

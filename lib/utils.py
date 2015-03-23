@@ -10,25 +10,21 @@ import calendar
 import numpy as np
 from scipy.special import erfinv
 
-#import imp
-#pth = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
-#dynlib = imp.load_dynamic('', '%s/dynlib.so' % pth)
-#dynlib = imp.load_dynamic('dynlib', '%s/dynlib.so' % pth)
-from dynlibdoc import dynlib
+import dynfor
 
 
 
 # Take over the contents of a fortran module
-pth = os.path.abspath(os.path.join(os.path.dirname(__file__), 'src/.dynlib_fortran_doc.pickle'))
+pth = os.path.abspath(os.path.join(os.path.dirname(__file__), '.dynfor_doc.pickle'))
 if os.path.isfile(pth):
 	f = open(pth, 'r')
 	fortran_doc = pickle.load(f)
 	f.close()
 else:
-	print 'Warning: Fortran documentation not found. Make sure you have dynlib.'
+	print 'Warning: Fortran documentation not found. Make sure you have compiled dynlib.'
 	fortran_doc = {}
 
-for name, value in dynlib.utils.__dict__.items():
+for name, value in dynfor.utils.__dict__.items():
 	# Backup the f2py generated docstring
 	value.__f2pydoc__ = value.__doc__
 	# Set the doctring from the fortran_doc extracted documentation

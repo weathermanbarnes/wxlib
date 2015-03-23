@@ -2,19 +2,21 @@
 # Compile scrip for dynlib
 
 # Obs: The order of the files in $files has to reflect the interdepencies!
-cur=`pwd`
-src="$cur/src"
-precc="$src/precc"
-work="$cur/default"
+base=`pwd`
+baselib="$base/lib"
+src="$baselib/fortran"
+precc="$src/.precc"
+work="$base/examples"
 
-doc="$cur/src_doc"
+doc="$base/doc"
 doc_extract=".compile_fortran_doc.py"
 
 files="config.f95 derivatives.f95 ellipse.f95 utils.f95 humidity.f95 diag.f95 detect_rwb_contour.f95 detect_fronts.f95 detect.f95 stat.f95"
 filec="const.f95"
 filek="kind.f95"
 
-pysig="${precc}/dynlib.pyf"
+fortran_library="dynfor"
+pysig="${precc}/$fortran_library.pyf"
 
 LIBS='-llapack'
 
@@ -47,7 +49,7 @@ echo "Stage 2: Creating python signature file"
 
 cd $precc
 
-f2py -m dynlib -h $pysig $filec $files > /dev/null
+f2py -m $fortran_library -h $pysig $filec $files > /dev/null
 sed "s/kind=nr/kind=8/g" $pysig | sed "s/_nr//g" |
 sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" > ${pysig}_tmp
 mv ${pysig}_tmp $pysig
@@ -61,20 +63,20 @@ gfortran $LIBS -c $filek $filec $files
 # 4. Compiling the shared object usable from within python
 echo "Stage 4: Compiling the python module (as a shared object)"
 DEBUG=' --debug-capi --debug --opt="-fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace -g -pedantic"'
-f2py -c $LIBS --fcompiler=gnu95 dynlib.pyf $files $filec $filek > /dev/null
-mv dynlib.so $cur
+f2py -c $LIBS --fcompiler=gnu95 $pysig $files $filec $filek > /dev/null
+mv $fortran_library.so $baselib
 
 
 # 5. Compiling Fortran documentation
 echo "Stage 5: Compiling the pickled Fortran documentation"
 cd $src
-python ../$doc_extract $filek $filec $files
+python $baselib/$doc_extract $filek $filec $files
 
 
 # 6. Compiling Fortran documentation
 echo "Stage 6: Generating/Updating the common documentation"
 cd $doc
-make html &> /dev/null
+PYTHONPATH="$doc:$PYTHONPATH" make html &> /dev/null
 
 
 

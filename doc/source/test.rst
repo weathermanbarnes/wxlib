@@ -1,7 +1,7 @@
 dynlib.utils
 ============
 
-Let's see what this gives. BF.
+Let's see what this gives. BG.
 
 
 .. automodule:: dynlib.utils
