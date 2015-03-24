@@ -22,7 +22,7 @@ for name, value in dynfor.stat.__dict__.items():
 	# Backup the f2py generated docstring
 	value.__f2pydoc__ = value.__doc__
 	# Set the doctring from the fortran_doc extracted documentation
-	value.__doc__ = fortran_doc.get('utils.%s' % name, None)
+	value.__doc__ = fortran_doc.get('stats.%s' % name, None)
 	# Make available as a member of this python module
 	locals()[name] = value
 

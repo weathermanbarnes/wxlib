@@ -11,7 +11,38 @@ module diag
   implicit none
 contains
   !
-  ! Calculates vorticity vor=dxv-dyu
+  !@ Calculate vorticity
+  !@
+  !@     vor = dv/dx - du/dy 
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The u-wind velocity field.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The v-wind velocity field.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated vorticity.
   subroutine vor(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -19,12 +50,45 @@ contains
     integer(kind=ni) :: nx,ny,nz
     !f2py depend(nx,ny,nz) res, v
     !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
     call ddx(dxv,nx,ny,nz,v,dx,dy)
     call ddy(dyu,nx,ny,nz,u,dx,dy)
-    res=dxv-dyu
+    res = dxv - dyu
   end subroutine
   !
-  ! Calculates divergence div=dxu+dyv
+  !@ Calculate divergence
+  !@
+  !@     div = du/dx + dv/dy 
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The u-wind velocity field.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The v-wind velocity field.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated divergence.
   subroutine div(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -32,12 +96,45 @@ contains
     integer(kind=ni) :: nx,ny,nz
     !f2py depend(nx,ny,nz) res, v
     !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
     call ddx(dxu,nx,ny,nz,u,dx,dy)
     call ddy(dyv,nx,ny,nz,v,dx,dy)
-    res=dxu+dyv
+    res = dxu + dyv
   end subroutine
   !
-  ! Calculates shear deformation def_shear = dyu+dxv
+  !@ Calculate shear deformation
+  !@
+  !@     def_shear = du/dy + dv/dx
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The u-wind velocity field.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The v-wind velocity field.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated shear deformation.
   subroutine def_shear(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -47,10 +144,41 @@ contains
     !f2py depend(nx,ny) dx, dy
     call ddx(dxv,nx,ny,nz,v,dx,dy)
     call ddy(dyu,nx,ny,nz,u,dx,dy)
-    res=dyu+dxv
+    res = dyu + dxv
   end subroutine
   !
-  ! Calculates stretch deformation def_stretch =  dxu-dyv
+  !@ Calculate stretch deformation
+  !@
+  !@    def_stretch =  du/dx - dv/dy
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The u-wind velocity field.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The v-wind velocity field.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated stretching deformation.
   subroutine def_stretch(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -58,13 +186,47 @@ contains
     integer(kind=ni) :: nx,ny,nz
     !f2py depend(nx,ny,nz) res, v
     !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
     call ddx(dxu,nx,ny,nz,u,dx,dy)
     call ddy(dyv,nx,ny,nz,v,dx,dy)
-    res=dxu-dyv
+    res = dxu - dyv
   end subroutine
   !
-  ! Calculates total [coordinate independent] deformation 
-  ! def_total = sqrt(def_stretch^2+def_shear^2)
+  !@ Calculate total deformation
+  !@
+  !@ Total deformation is a coordinate-system independent measure for the
+  !@ strength of deformation.
+  !@    def_total = sqrt(def_stretch^2+def_shear^2)
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The u-wind velocity field.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The v-wind velocity field.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated total deformation.
   subroutine def_total(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -72,31 +234,100 @@ contains
     integer(kind=ni) :: nx,ny,nz
     !f2py depend(nx,ny,nz) res, v
     !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
     call def_shear(sig_sh,nx,ny,nz,u,v,dx,dy)
     call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)
-    res=sqrt(sig_sh**2+sig_st**2)
+    res = sqrt(sig_sh**2_ni + sig_st**2_ni)
   end subroutine
   !
-  ! Calculates total [coordinate independent] deformation tendency due to
-  ! pressure
-  subroutine tend_def_total_pres(res,nx,ny,nz,u,v,z,dx,dy)
+  !@ Calculate total deformation tendency due the pressure term
+  !@
+  !@ TODO: Should the deformation tendencies be in the general library?
+  !@ TODO: There seems to be a duplication with def_tend_prescor
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ z : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Geopotential on a pressure surface or equivalent potentials on other
+  !@     surfaces.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated total deformation tendency.
+  subroutine def_total_tend_pres(res,nx,ny,nz,u,v,z,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), z(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     real(kind=nr) :: sig_sh(nz,ny,nx), sig_st(nz,ny,nx), zxxyy(nz,ny,nx), z2xy(nz,ny,nx)
     integer(kind=ni) :: nx,ny,nz
     !f2py depend(nx,ny,nz) res, v, z
     !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
     call def_shear(sig_sh,nx,ny,nz,u,v,dx,dy)
     call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)
     call antilap2(zxxyy,nx,ny,nz,z,dx,dy)
     call crosslap2(z2xy,nx,ny,nz,z,dx,dy)
-    res = - (sig_st*zxxyy + sig_sh*z2xy)/sqrt(sig_sh**2+sig_st**2)
+    res = - (sig_st*zxxyy + sig_sh*z2xy)/sqrt(sig_sh**2_ni + sig_st**2_ni)
   end subroutine
   !
-  ! Calculates angle from x-axis to axis of dilatation :
-  !   = delta (Keyser Reeder Reed)
-  !   =   (Lapeyre Klein Hua) 
-  !   = alpha (Markowski Richardson)
+  !@ Calculate the angle between the x-axis and the axis of dilatation
+  !@ 
+  !@ This angle goes by many different symbols:
+  !@  * Spensberger and Spengler (2014): gamma
+  !@  * Markowski and Richardson (2011): alpha
+  !@  * Keyser, Reeder and Reed (1988), Lapeyre, Klein and Hua (1999): gamma
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated deformation angle.
   subroutine def_angle(res,nx,ny,nz,u,v,dx,dy)
     use consts
     !
@@ -113,8 +344,38 @@ contains
     res = 0.5_nr * atan2(sig_sh,sig_st)
   end subroutine
   !
-  ! Calculates angle from wind direction to axis of dilatation 
-  ! = the same as def_angle, but in natural coordinates
+  !@ Calculate the angle between the wind direction and the axis of dilatation
+  !@ 
+  !@ Yields the equivalent of def_angle in natural coordinates.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated deformation angle.
   subroutine def_angle_nat(res,nx,ny,nz,u,v,dx,dy)
     use consts
     !
@@ -140,7 +401,36 @@ contains
     end where
   end subroutine
   !
-  ! Calculates the local wind shear in natural coordinates
+  !@ Calculate the local wind shear in natural coordinates
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated wind shear.
   subroutine shear_nat(res,nx,ny,nz,u,v,dx,dy)
     use consts
     !
@@ -158,7 +448,36 @@ contains
     res(:,:,:) = (u(:,:,:)*ffy(:,:,:) - v(:,:,:)*ffx(:,:,:))/ff(:,:,:)
   end subroutine
   !
-  ! Calculates the local wind shear in natural coordinates
+  !@ Calculate the local wind shear gradient in natural coordinates
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated wind shear gradient.
   subroutine grad_shear_nat(res,nx,ny,nz,u,v,dx,dy)
     use consts
     !
@@ -178,7 +497,39 @@ contains
             &   /sqrt(u(:,:,:)**2_ni + v(:,:,:)**2_ni)
   end subroutine
   !
-  ! Calculate deformation with all shear removed
+  !@ Calculate total deformation and the deformation angle with all shear removed
+  !@
+  !@ Wind shear is both reflected in vorticity and deformation. This function
+  !@ calculates the part of deformation that cannot be interpreted as vorticity.
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated total deformation and deformation angle.
   subroutine def_nat_shearless(resabs,resang,nx,ny,nz,u,v,dx,dy)
     use consts
     !
@@ -219,7 +570,38 @@ contains
     end where
   end subroutine
   !
-  ! Calculates the deformation tendencies due to horizontal advection
+  !@ Calculate the deformation tendencies due to horizontal advection
+  !@ 
+  !@ TODO: Should the deformation tendencies be in the general library?
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated tendencies of total deformation and deformation angle.
   subroutine def_tend_adv(tendabs,tendang,nx,ny,nz,u,v,dx,dy)
     use consts
     !
@@ -242,7 +624,44 @@ contains
     tendang(:,:,:) = -(u(:,:,:)*defangx(:,:,:) + v(:,:,:)*defangy(:,:,:))/defabs(:,:,:)
   end subroutine
   !
-  ! Calculates the deformation tendencies due to advection
+  !@ Calculate the deformation tendencies due to full 3d advection
+  !@ 
+  !@ TODO: Should the deformation tendencies be in the general library?
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ uz : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Vertical shear of the u-wind velocity.
+  !@ vz : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Vertical shear of the v-wind velocity.
+  !@ w : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Vertical wind velocity.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated tendencies of total deformation and deformation angle.
   subroutine def_tend_adv3d(tendabs,tendang,nx,ny,nz,u,v,uz,vz,w,dx,dy)
     use consts
     !
@@ -271,7 +690,40 @@ contains
              &       + w(:,:,:)*defangz(:,:,:))/defabs(:,:,:)
   end subroutine
   !
-  ! Calculates the deformation tendencies due to the beta-effect
+  !@ Calculate the deformation tendencies due to the beta-effect
+  !@ 
+  !@ TODO: Should the deformation tendencies be in the general library?
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ beta : np.ndarray with shape (ny,nx) and dtype float64
+  !@     Locally varying beta parameter.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated tendencies of total deformation and deformation angle.
   subroutine def_tend_beta(tendabs,tendang,nx,ny,nz,u,v,beta,dx,dy)
     use consts
     !
@@ -294,7 +746,40 @@ contains
     end do
   end subroutine
   !
-  ! Calculates the deformation tendencies due to the pressure terms and Coriolis
+  !@ Calculate the deformation tendencies due to the pressure terms and Coriolis
+  !@ 
+  !@ TODO: Should the deformation tendencies be in the general library?
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ beta : np.ndarray with shape (ny,nx) and dtype float64
+  !@     Locally varying beta parameter.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated tendencies of total deformation and deformation angle.
   subroutine def_tend_prescor(tendabs,tendang,nx,ny,nz,u,v,geop,fcor,dx,dy)
     use consts
     !
@@ -323,7 +808,44 @@ contains
     end do
   end subroutine
   !
-  ! Calculates the deformation tendencies due to "tilting" 
+  !@ Calculate the deformation tendencies due to "tilting" 
+  !@ 
+  !@ TODO: Should the deformation tendencies be in the general library?
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ uz : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Vertical shear of the u-wind velocity.
+  !@ vz : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Vertical shear of the v-wind velocity.
+  !@ w : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Vertical wind velocity.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated tendencies of total deformation and deformation angle.
   subroutine def_tend_tilt(tendabs,tendang,nx,ny,nz,u,v,uz,vz,w,dx,dy)
     use consts
     !
@@ -350,7 +872,53 @@ contains
             &         sig_st(:,:,:)*(vz(:,:,:)*wx(:,:,:) + uz(:,:,:)*wy(:,:,:)) )/defabs2(:,:,:)
   end subroutine
   !
-  ! Calculates 3d deformation 
+  !@ Calculate 3d deformation
+  !@ 
+  !@ *Note*: This subroutine is work-in-progress and likely to change in the
+  !@ future. The generalisation of deformation to 3 dimensions is done using the
+  !@ analogy to Lyapunov exponents.
+  !@
+  !@ TODO: Should work-in-progress routines live in a different name space?
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ w : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Pressure vertical wind velocity.
+  !@ rho : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Density of air, used to convert the pressure vertical velocity to a cartensian 
+  !@     vertical velocity.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@ dz : np.ndarray with shape (nz-2,ny,nx) and dtype float64
+  !@     The double grid spacing in z-direction to be directly for centered differences.
+  !@     dy(k,j,i) is expected to contain the z-distance between (k+1,j,i) and (k-1,j,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z-direction.
+  !@ nt : int
+  !@     Grid size in t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 2-tuple of np.ndarray with shapes (nt,nz-2,ny,nx), (nt,nz-2,ny,nx,3) and dtype float64
+  !@     Calculated 3D eigenvalues and eigenvectors showing the strength and
+  !@     orientation of deformation in 3D.
   subroutine def_3d(res_eval,res_evec,nx,ny,nz,nt,u,v,w,rho,dx,dy,dz)
     use consts
     !
@@ -435,8 +1003,38 @@ contains
     return
   end subroutine
   !
-  ! Calculates angle from x-axis to isolines of the input field dat (direction k X grad(dat))
-  !   = alpha (Keyser Reeder Reed)
+  !@ Calculate angle between the x-axis and isolines of a given field
+  !@ 
+  !@ The direction of isolines is calculated by:
+  !@     k \times grad(dat)
+  !@ Keyser, Reeder and Reed (1988) call this angle "alpha".
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Input field for the isolines.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated isoline angle.
   subroutine isoline_angle(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -448,13 +1046,45 @@ contains
     !
     call ddx(gradx,nx,ny,nz,dat,dx,dy)
     call ddy(grady,nx,ny,nz,dat,dx,dy)  
-    res=atan2(-gradx,grady)
+    res = atan2(-gradx,grady)
   end subroutine
   !
-  ! Calculates beta = angle between dilatation axis (u,v) and iso-lines of the input field dat
-  !   = beta (Keyser Reeder Reed)
-  !   = beta (Markowski Richardson)
-  !   = theta + phi + pi/4 (Lapeyre Klein Hua)
+  !@ Calculate angle between the axis of dilatation and isolines of a given field
+  !@ 
+  !@ This angle goes by different names in the literature:
+  !@  * Keyser, Reeder and Reed (1988), Markowski and Richardson (2011): beta
+  !@  * Lapeyre, Klein and Hua (1999): theta + phi + pi/4
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Input field for the isolines.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated isoline angle.
   subroutine isoline_to_deformation_angle(res,nx,ny,nz,u,v,dat,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -469,19 +1099,56 @@ contains
     !  delta = angle between x axis and dilatation axis (dynlib: def_angle)
     call isoline_angle(alpha,nx,ny,nz,dat,dx,dy)
     call def_angle(delta,nx,ny,nz,u,v,dx,dy)
-    res=delta-alpha
+    res = delta - alpha
   end subroutine
   !
-  ! FRONTOGENESIS: STRETCHING AND STIRRING RATES:
-  ! Calculates (stretch, stir) where:
-  ! stretch= fractional dat gradient stretching rate = 1/|grad(dat)| * d/dt(|grad(dat)|)
-  !        = gamma, 'stretching rate' (Lapeyre Klein Hua)
-  !        = -1/|grad(dat=PV)| * Fn (Keyser Reeder Reed)
-  !        =  1/|grad(dat=PV)| * F  (Markowski Richardson)
-  !   stir = angular rotation rate of grad(dat) (stirring rate)
-  !        = d(theta)/dt      (Lapeyre Klein Hua)
-  !        = 1/|grad(dat=PV)| * Fs  (Keyser Reeder Reed)
-  subroutine stretch_stir(resstretch,resstir,nx,ny,nz,u,v,dat,dx,dy)
+  !@ Calculate the frontogenesis function
+  !@
+  !@ Calculates both the streching and stirring rates of gradients in a given field.
+  !@ The stretching rate is defined as 
+  !@      1/|grad(dat)| * d/dt(|grad(dat)|) ,
+  !@ and called gamma in Lapeyre, Klein and Hua (1999). This quantity alone is often
+  !@ referred to as the [Petterssen] frontogenesis function 
+  !@ (e.g. in Markowski and Richardson 2011). 
+  !@ 
+  !@ Keyser, Reeder and Reed (1988) generalise the Petterssen frontogenesis function to
+  !@ its vector form, introducing the stirring rate of the gradient as its second component.
+  !@ The stirring rate is defined as 
+  !@      grad(dat)/|grad(dat)|² * (k \times d/dt(grad(dat))) .
+  !@ In the nomenclature of Lapeyre, Klein and Hua, this quantity is simply  
+  !@      d(theta)/dt .
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Input field for the isolines.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The streching and stirring component of the generalised frontogenesis function.
+  subroutine frontogenesis(resstretch,resstir,nx,ny,nz,u,v,dat,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: resstretch(nz,ny,nx),resstir(nz,ny,nx)
     real(kind=nr) :: bet(nz,ny,nx),totdef(nz,ny,nx),divergence(nz,ny,nx),vorticity(nz,ny,nx)
@@ -489,6 +1156,7 @@ contains
     !f2py depend(nx,ny,nz) resstretch,resstir,v,dat
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
+    !
     ! (Lapeyre Klein Hua):
     !  stretch = gamma = 1/rho * d(rho)/dt (rho=|gradPV|) = -sigma/2 * sin(2(theta+phi))
     ! (Keyser Reeder Reed):
@@ -501,12 +1169,45 @@ contains
     call def_total(totdef,nx,ny,nz,u,v,dx,dy)
     call div(divergence,nx,ny,nz,u,v,dx,dy)
     call vor(vorticity,nx,ny,nz,u,v,dx,dy)
-    resstretch=-0.5_nr*(divergence-totdef*cos(2_nr*bet))
-    resstir=0.5_nr*(vorticity+totdef*sin(2_nr*bet))
+    !
+    resstretch = -0.5_nr * (divergence - totdef*cos(2_nr*bet))
+    resstir = 0.5_nr * (vorticity + totdef*sin(2_nr*bet))
   end subroutine
   !
-  ! Calculates Okubo-Weiss criterion lambda_0=1/4 (sigma^2-omega^2)= 1/4 W
-  ! This is the square of the eigenvalues in Okubo's paper (assumes small divergence)
+  !@ Calculate the Okubo-Weiss parameter
+  !@ 
+  !@ The parameter is defined as 
+  !@     1/4 (total deformation^2 - vorticity^2) ,
+  !@ the square of the eigenvalues in Okubo's paper (assuming small divergence).
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated Okubo-Weiss parameter.
   subroutine okuboweiss(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),dx(ny,nx),dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -518,31 +1219,106 @@ contains
     !
     call def_total(sig,nx,ny,nz,u,v,dx,dy)
     call vor(omega,nx,ny,nz,u,v,dx,dy)
-    res=0.25*(sig**2-omega**2)
+    res = 0.25 * (sig**2 - omega**2)
   end subroutine
   !
-  ! Calculates Lagrangian acceleration on the isentropic surface
-  subroutine dot_uv(resx,resy,nx,ny,nz,u,v,mont,lat,dx,dy)
+  !@ Calculate the wind acceleration due to Coriolis and pressure gradient forces
+  !@ 
+  !@ Assuming frictionless flow, and either
+  !@ * z being the geopotential on a pressure surface   or
+  !@ * z being the Montgomery potential on an isentropic surface 
+  !@ the result is the Lagrangian acceleration of fluid parcels.
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ z : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Geopotential on a pressure surface or equivalent potentials on other
+  !@     surfaces.
+  !@ lat : np.ndarray with shape (ny,nx) and dtype float64
+  !@     Latitude of the grid point.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The acceleration of the u and v velocity components.
+  subroutine uv_tend_prescor(resx,resy,nx,ny,nz,u,v,z,lat,dx,dy)
     use consts!, only: pi, omega
-    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
+    !
+    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),z(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
     real(kind=nr), intent(out) :: resx(nz,ny,nx),resy(nz,ny,nx)
     real(kind=nr) :: a_pressx(nz,ny,nx), a_pressy(nz,ny,nx), f(nz,ny,nx)
     integer(kind=ni) :: i,k,nx,ny,nz
-    !f2py depend(nx,ny,nz) resx,resy,v,mont
+    !f2py depend(nx,ny,nz) resx,resy,v,z
     !f2py depend(nx,ny) dx, dy
     !f2py depend(ny) lat
     ! -----------------------------------------------------------------
     !
     forall(k = 1_ni:nz, i = 1_ni:nx)
-       f(k,:,i) = 2.*omega*sin(lat*pi/180._nr)
+       f(k,:,i) = 2.0_nr * omega * sin(lat*pi/180._nr)
     end forall
-    call grad(a_pressx,a_pressy,nx,ny,nz,mont,dx,dy)
-    resx=-a_pressx+f*v ! pressure force + coriolis force
-    resy=-a_pressy-f*u ! pressure force + coriolis force
+    !
+    call grad(a_pressx,a_pressy,nx,ny,nz,z,dx,dy)
+    resx = -a_pressx + f*v ! pressure force + coriolis force
+    resy = -a_pressy - f*u ! pressure force + coriolis force
   end subroutine
   !
-  ! Calculates lagrangian acceleration gradient tensor eigenvalues
-  ! ref: Hua and Klein (1998)
+  !@ Calculate Lagrangian acceleration gradient tensor eigenvalues
+  !@ 
+  !@ For informaiton on this diagnostic refer to Hua and Klein (1998)
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ mont : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Montgomery potential on an isentropic surface.
+  !@ lat : np.ndarray with shape (ny,nx) and dtype float64
+  !@     Latitude of the grid point.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 4-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The real and imaginary components of the two eigenvalues.
   subroutine accgrad_eigs(respr,respi,resmr,resmi,nx,ny,nz,u,v,mont,lat,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx)
     real(kind=nr), intent(in)  :: lat(ny),dx(ny,nx),dy(ny,nx)
@@ -564,7 +1340,7 @@ contains
     !f2py depend(ny) lat
     ! -----------------------------------------------------------------
     !
-    call dot_uv(accelx,accely,nx,ny,nz,u,v,mont,lat,dx,dy)
+    call uv_tend_prescor(accelx,accely,nx,ny,nz,u,v,mont,lat,dx,dy)
     call grad(dxaccelx,dyaccelx,nx,ny,nz,accelx,dx,dy)
     call grad(dxaccely,dyaccely,nx,ny,nz,accely,dx,dy)
     forall(k = 1_ni:nz, j = 1_ni:ny, i = 1_ni:nx)
@@ -597,11 +1373,44 @@ contains
     !resmi(:,:,(/1,nx/))=0._nr
   end subroutine
   !
-  ! Calculates Lagrangian time derivative of compression axis angle
-  !  d(gamma)/dt (ref Spensberger and Spengler 2013)
-  ! -d(phi)/dt (ref Lapeyre et al 1999)
-  subroutine dot_def_angle(res,nx,ny,nz,u,v,mont,lat,dx,dy)
-    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
+  !@ Calculate deformation angle tendency due the pressure and Coriolis terms
+  !@
+  !@ TODO: Should the deformation tendencies be in the general library?
+  !@ TODO: There seems to be a duplication with def_tend_prescor
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ z : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Geopotential on a pressure surface or equivalent potentials on other
+  !@     surfaces.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated deformation angle tendency.
+  subroutine def_angle_tend_prescor(res,nx,ny,nz,u,v,z,lat,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),z(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     real(kind=nr) :: sig_st(nz,ny,nx),sig_sh(nz,ny,nx)
     real(kind=nr) :: accelx(nz,ny,nx),accely(nz,ny,nx)
@@ -609,28 +1418,65 @@ contains
     real(kind=nr) :: dxaccely(nz,ny,nx),dyaccely(nz,ny,nx)
     real(kind=nr) :: ddtsig_st(nz,ny,nx),ddtsig_sh(nz,ny,nx)
     integer(kind=ni) :: nx,ny,nz
-    !f2py depend(nx,ny,nz) res,v,mont
+    !f2py depend(nx,ny,nz) res,v,z
     !f2py depend(nx,ny) dx, dy
     !f2py depend(ny) lat
     ! -----------------------------------------------------------------
     !
     call def_shear(sig_sh,nx,ny,nz,u,v,dx,dy)
     call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)
-    call dot_uv(accelx,accely,nx,ny,nz,u,v,mont,lat,dx,dy)
+    call uv_tend_prescor(accelx,accely,nx,ny,nz,u,v,z,lat,dx,dy)
     ! calculate the lagrangian acceleration gradient tensor:
     call grad(dxaccelx,dyaccelx,nx,ny,nz,accelx,dx,dy)
     call grad(dxaccely,dyaccely,nx,ny,nz,accely,dx,dy)
     ! 1. Calculate d/dt(sig_st)
-    ddtsig_st=-(dxaccelx-dyaccely)
+    ddtsig_st = -(dxaccelx - dyaccely)
     ! 2. calculate d/dt(sig_sh)
-    ddtsig_sh=-(dyaccelx+dxaccely)
+    ddtsig_sh = -(dyaccelx + dxaccely)
     ! 3. Calculate d/dt(phi)
-    res=0.5*(sig_st*ddtsig_sh-sig_sh*ddtsig_st)/(sig_sh**2+sig_st**2)
+    res = 0.5 * (sig_st*ddtsig_sh - sig_sh*ddtsig_st) / (sig_sh**2 + sig_st**2)
   end subroutine
   !
-  !Calculates the r diagnostic of Lapeyre et al (1999)
-  ! r is the ratio of effective rotation to strain rate
-  ! where effective rotation comprises both vorticity and strain-axes rotation
+  !@ Calculate the ratio between effective rotation and strain rate
+  !@ 
+  !@ This ratio is the main result of Lapeyre, Klein and Hua (1999). They denote it "r".
+  !@ Their effective rotation takes into account both vorticity and rotation of the axis 
+  !@ of dilatation.
+  !@ 
+  !@ TODO: Do you need to assume z=mont, or does the same routine work also on pressure levels?
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ mont : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Montgomery potential on an isentropic surface.
+  !@ lat : np.ndarray with shape (ny,nx) and dtype float64
+  !@     Latitude of the grid point.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated effective-rotation-to-strain ratio.
   subroutine rotation_strain_ratio(res,nx,ny,nz,u,v,mont,lat,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -641,41 +1487,104 @@ contains
     !f2py depend(ny) lat
     ! -----------------------------------------------------------------
     !
-    call dot_def_angle(ddtphi,nx,ny,nz,u,v,mont,lat,dx,dy)
+    call def_angle_tend_prescor(ddtphi,nx,ny,nz,u,v,mont,lat,dx,dy)
     call vor(omega,nx,ny,nz,u,v,dx,dy)
     call def_total(sig,nx,ny,nz,u,v,dx,dy)
     !
     ! dot_def_angle is - dot(phi)
-    res=(omega-2.*ddtphi)/sig
+    res = (omega-2.*ddtphi)/sig
   end subroutine
   !
-  ! Calculates geostrophic velocity [ug,vg] = v_g(mont,lat)
-  subroutine v_geo_from_montgp(resx,resy,nx,ny,nz,mont,lat,dx,dy)
+  !@ Calculate geostrophic velocity
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ z : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Geopotential on a pressure surface or equivalent potentials on other
+  !@     surfaces.
+  !@ lat : np.ndarray with shape (ny,nx) and dtype float64
+  !@     Latitude of the grid point.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated geostrophic U- and V-velocity components.
+  subroutine uv_geo_from_pot(resx,resy,nx,ny,nz,z,lat,dx,dy)
     use consts!, only: pi, omega
-    real(kind=nr), intent(in)  :: mont(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
+    !
+    real(kind=nr), intent(in)  :: z(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
     real(kind=nr), intent(out) :: resx(nz,ny,nx), resy(nz,ny,nx)
-    real(kind=nr) :: montx(nz,ny,nx), monty(nz,ny,nx),f(nz,ny,nx)
+    real(kind=nr) :: zx(nz,ny,nx), zy(nz,ny,nx),f(nz,ny,nx)
     integer(kind=ni) :: i,j,k, nx,ny,nz
     !f2py depend(nx,ny,nz) resx, resy
     !f2py depend(nx,ny) dx, dy
     !f2py depend(ny) lat
     ! -----------------------------------------------------------------
     !
-    call grad(montx,monty,nx,ny,nz,mont,dx,dy)
+    call grad(zx,zy,nx,ny,nz,z,dx,dy)
+    !
     forall(k = 1_ni:nz, i = 1_ni:nx)
-       f(k,:,i) = 2*omega*sin(lat*pi/180._nr)
+       f(k,:,i) = 2.0_nr * omega * sin(lat*pi/180._nr)
     end forall
-    where (f==0._nr) f=9.E99_nr !avoid singularity calculating v_g at equator
-    resx=-monty/f
-    resy=montx/f
+    where (f == 0._nr) f = 9.E99_nr !avoid singularity calculating v_g at equator
+    !
+    resx = -zy/f
+    resy =  zx/f
   end subroutine
   !
-  ! Calculates the geopotential (res) from montgomery potential (m), potential
-  ! temperature (theta) and pressure (p)
-  subroutine geop_from_montgp(res,nx,ny,nz,m,theta,p,dx,dy)
+  !@ Calculate the geopotential from montgomery potential, potential temperature and pressure
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ mont : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Montgomery potential on an isentropic surface.
+  !@ theta : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Potential temperature.
+  !@ p : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Pressure on the isentropic surface.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@
+  !@ Magic parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated geopotential.
+  subroutine geop_from_montgp(res,nx,ny,nz,mont,theta,p,dx,dy)
     use consts!, only: cp, Rl, p0
     !
-    real(kind=nr), intent(in)  :: m(nz,ny,nx), theta(nz,ny,nx), p(nz,ny,nx), &
+    real(kind=nr), intent(in)  :: mont(nz,ny,nx), theta(nz,ny,nx), p(nz,ny,nx), &
                                 & dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     integer(kind=ni) :: i,j,k, nx,ny,nz
@@ -686,7 +1595,7 @@ contains
     do i=1_ni,nx
        do j=1_ni,ny
           do k=1_ni,nz
-             res(k,j,i) = m(k,j,i) - cp*theta(k,j,i)*(p(k,j,i)/p0)**(Rl/cp)
+             res(k,j,i) = mont(k,j,i) - cp*theta(k,j,i)*(p(k,j,i)/p0)**(Rl/cp)
           end do
        end do
     end do
