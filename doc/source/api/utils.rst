@@ -1,9 +1,6 @@
 dynlib.utils
 ============
 
-Let's see what this gives. BG.
-
-
 .. automodule:: dynlib.utils
    :members:
    :undoc-members:

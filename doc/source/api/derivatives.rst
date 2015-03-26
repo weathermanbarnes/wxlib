@@ -1,8 +1,6 @@
 dynlib.derivatives
 ==================
 
-Discretised approximations to derivatives appearing in the diagnostic and detection functions.
-
 .. automodule:: dynlib.derivatives
    :members:
    :undoc-members:

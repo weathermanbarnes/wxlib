@@ -16,12 +16,55 @@ Functions
    api/utils
 
 
-Configuration and constants
----------------------------
+Function configuration and constants
+------------------------------------
 
 .. toctree::
    :maxdepth: 2
 
    api/config
    api/const
+
+
+IO and plotting 
+---------------
+
+.. toctree::
+   :maxdepth: 2   
+   
+   api/autoscale
+   api/gridlib
+   api/metio
+   api/figures
+   api/streamplot
+   api/windrose
+
+
+Plot configuration and constants
+--------------------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   api/cm
+   api/proj
+   api/settings
+
+
+Documentation helpers
+---------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   api/docutil
+
+
+Shorthands
+----------
+
+.. toctree::
+   :maxdepth: 3
+
+   api/shorthands
 

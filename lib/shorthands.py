@@ -9,7 +9,7 @@ import figures as fig
 import gridlib as gridlib
 import utils as utils
 import settings as settings
-from metopen import metopen, metsave, metsave_lines, get_instantaneous, get_static
+from metio import metopen, metsave, metsave_lines, get_instantaneous, get_static
 
 import numpy as np
 import scipy as sp

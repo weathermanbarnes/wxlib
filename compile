@@ -74,8 +74,9 @@ python $baselib/$doc_extract $filek $filec $files
 
 
 # 6. Compiling Fortran documentation
-echo "Stage 6: Generating/Updating the common documentation"
+echo "Stage 6: Generating the common documentation"
 cd $doc
+make clean &> /dev/null
 PYTHONPATH="$doc:$PYTHONPATH" make html &> /dev/null
 
 

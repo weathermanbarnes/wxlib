@@ -2,7 +2,11 @@
 ! 		DynLib -- diagnostical functions
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
-! Module maintained by Clemens Spensberger (csp001@uib.no)
+!@ Diagnostic functions for dynamic variables. 
+!@ 
+!@ This module contains diagnostic functions useful for analysing the wind
+!@ field. For diagnostics relating to thermodynamic variables, refer to the
+!@ :mod:`dynlib.humidity` module.
 module diag
   use kind
   use config
@@ -11,7 +15,7 @@ module diag
   implicit none
 contains
   !
-  !@ Calculate vorticity
+  !@ Calculate vorticity::
   !@
   !@     vor = dv/dx - du/dy 
   !@
@@ -24,12 +28,12 @@ contains
   !@     The v-wind velocity field.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -43,6 +47,10 @@ contains
   !@ -------
   !@ np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated vorticity.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`div`, :meth:`def_shear`, :meth:`def_stretch`
   subroutine vor(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -57,7 +65,7 @@ contains
     res = dxv - dyu
   end subroutine
   !
-  !@ Calculate divergence
+  !@ Calculate divergence::
   !@
   !@     div = du/dx + dv/dy 
   !@
@@ -70,12 +78,12 @@ contains
   !@     The v-wind velocity field.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -89,6 +97,10 @@ contains
   !@ -------
   !@ np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated divergence.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`vor`, :meth:`def_shear`, :meth:`def_stretch`
   subroutine div(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -103,7 +115,7 @@ contains
     res = dxu + dyv
   end subroutine
   !
-  !@ Calculate shear deformation
+  !@ Calculate shear deformation::
   !@
   !@     def_shear = du/dy + dv/dx
   !@
@@ -116,12 +128,12 @@ contains
   !@     The v-wind velocity field.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -135,6 +147,10 @@ contains
   !@ -------
   !@ np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated shear deformation.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`def_stretch`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
   subroutine def_shear(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -147,7 +163,7 @@ contains
     res = dyu + dxv
   end subroutine
   !
-  !@ Calculate stretch deformation
+  !@ Calculate stretch deformation::
   !@
   !@    def_stretch =  du/dx - dv/dy
   !@
@@ -160,12 +176,12 @@ contains
   !@     The v-wind velocity field.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -179,6 +195,10 @@ contains
   !@ -------
   !@ np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated stretching deformation.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`def_shear`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
   subroutine def_stretch(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -196,8 +216,9 @@ contains
   !@ Calculate total deformation
   !@
   !@ Total deformation is a coordinate-system independent measure for the
-  !@ strength of deformation.
-  !@    def_total = sqrt(def_stretch^2+def_shear^2)
+  !@ strength of deformation::
+  !@
+  !@    def_total = sqrt(def_stretch^2 + def_shear^2)
   !@
   !@ Parameters
   !@ ----------
@@ -208,12 +229,12 @@ contains
   !@     The v-wind velocity field.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -227,6 +248,10 @@ contains
   !@ -------
   !@ np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated total deformation.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`def_angle`, :meth:`def_angle_nat`
   subroutine def_total(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -258,12 +283,12 @@ contains
   !@     surfaces.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -296,9 +321,10 @@ contains
   !@ Calculate the angle between the x-axis and the axis of dilatation
   !@ 
   !@ This angle goes by many different symbols:
-  !@  * Spensberger and Spengler (2014): gamma
-  !@  * Markowski and Richardson (2011): alpha
-  !@  * Keyser, Reeder and Reed (1988), Lapeyre, Klein and Hua (1999): gamma
+  !@
+  !@  * Spensberger and Spengler (2014): ``gamma``
+  !@  * Markowski and Richardson (2011): ``alpha``
+  !@  * Keyser, Reeder and Reed (1988), Lapeyre, Klein and Hua (1999): ``gamma``
   !@
   !@ Parameters
   !@ ----------
@@ -309,12 +335,12 @@ contains
   !@     V-wind velocity.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -328,6 +354,10 @@ contains
   !@ -------
   !@ np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated deformation angle.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`def_angle_nat`, :meth:`def_total`
   subroutine def_angle(res,nx,ny,nz,u,v,dx,dy)
     use consts
     !
@@ -350,21 +380,19 @@ contains
   !@
   !@ Parameters
   !@ ----------
-  !@
   !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     U-wind velocity.
   !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     V-wind velocity.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
-  !@
   !@ nx : int
   !@     Grid size in x-direction.
   !@ ny : int
@@ -376,6 +404,10 @@ contains
   !@ -------
   !@ np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated deformation angle.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`def_angle`, :meth:`def_total`
   subroutine def_angle_nat(res,nx,ny,nz,u,v,dx,dy)
     use consts
     !
@@ -412,12 +444,12 @@ contains
   !@     V-wind velocity.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -459,12 +491,12 @@ contains
   !@     V-wind velocity.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -511,12 +543,12 @@ contains
   !@     V-wind velocity.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -583,12 +615,12 @@ contains
   !@     V-wind velocity.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -643,12 +675,12 @@ contains
   !@     Vertical wind velocity.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -705,12 +737,12 @@ contains
   !@     Locally varying beta parameter.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -761,12 +793,12 @@ contains
   !@     Locally varying beta parameter.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -827,12 +859,12 @@ contains
   !@     Vertical wind velocity.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -874,7 +906,7 @@ contains
   !
   !@ Calculate 3d deformation
   !@ 
-  !@ *Note*: This subroutine is work-in-progress and likely to change in the
+  !@ **Note**: This subroutine is work-in-progress and likely to change in the
   !@ future. The generalisation of deformation to 3 dimensions is done using the
   !@ analogy to Lyapunov exponents.
   !@
@@ -894,15 +926,15 @@ contains
   !@     vertical velocity.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@ dz : np.ndarray with shape (nz-2,ny,nx) and dtype float64
   !@     The double grid spacing in z-direction to be directly for centered differences.
-  !@     dy(k,j,i) is expected to contain the z-distance between (k+1,j,i) and (k-1,j,i).
+  !@     ``dy(k,j,i)`` is expected to contain the z-distance between ``(k+1,j,i)`` and ``(k-1,j,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -1005,8 +1037,10 @@ contains
   !
   !@ Calculate angle between the x-axis and isolines of a given field
   !@ 
-  !@ The direction of isolines is calculated by:
-  !@     k \times grad(dat)
+  !@ The direction of isolines is calculated by::
+  !@
+  !@     k times grad(dat)
+  !@
   !@ Keyser, Reeder and Reed (1988) call this angle "alpha".
   !@ 
   !@ Parameters
@@ -1016,12 +1050,12 @@ contains
   !@     Input field for the isolines.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -1052,8 +1086,9 @@ contains
   !@ Calculate angle between the axis of dilatation and isolines of a given field
   !@ 
   !@ This angle goes by different names in the literature:
-  !@  * Keyser, Reeder and Reed (1988), Markowski and Richardson (2011): beta
-  !@  * Lapeyre, Klein and Hua (1999): theta + phi + pi/4
+  !@
+  !@  * Keyser, Reeder and Reed (1988), Markowski and Richardson (2011): ``beta``
+  !@  * Lapeyre, Klein and Hua (1999): ``theta + phi + pi/4``
   !@ 
   !@ Parameters
   !@ ----------
@@ -1066,12 +1101,12 @@ contains
   !@     Input field for the isolines.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -1105,18 +1140,23 @@ contains
   !@ Calculate the frontogenesis function
   !@
   !@ Calculates both the streching and stirring rates of gradients in a given field.
-  !@ The stretching rate is defined as 
-  !@      1/|grad(dat)| * d/dt(|grad(dat)|) ,
+  !@ The stretching rate is defined as::
+  !@
+  !@      1/|grad(dat)| * d/dt(|grad(dat)|)
+  !@
   !@ and called gamma in Lapeyre, Klein and Hua (1999). This quantity alone is often
   !@ referred to as the [Petterssen] frontogenesis function 
   !@ (e.g. in Markowski and Richardson 2011). 
   !@ 
   !@ Keyser, Reeder and Reed (1988) generalise the Petterssen frontogenesis function to
   !@ its vector form, introducing the stirring rate of the gradient as its second component.
-  !@ The stirring rate is defined as 
-  !@      grad(dat)/|grad(dat)|² * (k \times d/dt(grad(dat))) .
-  !@ In the nomenclature of Lapeyre, Klein and Hua, this quantity is simply  
-  !@      d(theta)/dt .
+  !@ The stirring rate is defined as::
+  !@
+  !@      grad(dat)/|grad(dat)|² * (k \times d/dt(grad(dat)))
+  !@ 
+  !@ In the nomenclature of Lapeyre, Klein and Hua, this quantity is simply::
+  !@
+  !@      d(theta)/dt
   !@ 
   !@ Parameters
   !@ ----------
@@ -1129,12 +1169,12 @@ contains
   !@     Input field for the isolines.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -1176,8 +1216,10 @@ contains
   !
   !@ Calculate the Okubo-Weiss parameter
   !@ 
-  !@ The parameter is defined as 
-  !@     1/4 (total deformation^2 - vorticity^2) ,
+  !@ The parameter is defined as::
+  !@
+  !@     1/4 (total deformation^2 - vorticity^2)
+  !@
   !@ the square of the eigenvalues in Okubo's paper (assuming small divergence).
   !@ 
   !@ Parameters
@@ -1189,12 +1231,12 @@ contains
   !@     V-wind velocity.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -1225,8 +1267,10 @@ contains
   !@ Calculate the wind acceleration due to Coriolis and pressure gradient forces
   !@ 
   !@ Assuming frictionless flow, and either
-  !@ * z being the geopotential on a pressure surface   or
-  !@ * z being the Montgomery potential on an isentropic surface 
+  !@
+  !@  * z being the geopotential on a pressure surface, or
+  !@  * z being the Montgomery potential on an isentropic surface, 
+  !@
   !@ the result is the Lagrangian acceleration of fluid parcels.
   !@ 
   !@ Parameters
@@ -1243,12 +1287,12 @@ contains
   !@     Latitude of the grid point.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -1285,7 +1329,7 @@ contains
   !
   !@ Calculate Lagrangian acceleration gradient tensor eigenvalues
   !@ 
-  !@ For informaiton on this diagnostic refer to Hua and Klein (1998)
+  !@ For information on this diagnostic refer to Hua and Klein (1998).
   !@ 
   !@ Parameters
   !@ ----------
@@ -1300,12 +1344,12 @@ contains
   !@     Latitude of the grid point.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -1390,12 +1434,12 @@ contains
   !@     surfaces.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -1458,12 +1502,12 @@ contains
   !@     Latitude of the grid point.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -1507,12 +1551,12 @@ contains
   !@     Latitude of the grid point.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
@@ -1562,12 +1606,12 @@ contains
   !@     Pressure on the isentropic surface.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     dx(j,i) is expected to contain the x-distance between (j,i+1) and (j,i-1).
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     dy(j,i) is expected to contain the y-distance between (j+1,i) and (j-1,i).
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
   !@
-  !@ Magic parameters
+  !@ Other parameters
   !@ ----------------
   !@
   !@ nx : int
