@@ -1,7 +1,7 @@
 dynlib.diag
 ===========
 
-The diag module contains a set of diagnostic functions.
+The diag module contains a set of diagnostic functions. A
 
 .. automodule:: dynlib.diag
    :members:

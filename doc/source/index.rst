@@ -11,8 +11,12 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   diag
-   utils
+   intro
+   basic
+   use
+   plot
+   devel
+   apidoc
 
 
 
