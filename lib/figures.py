@@ -18,6 +18,18 @@ from autoscale import autoscale
 
 
 
+''' A collection of general plotting functions
+
+These functions have two main aims:
+
+ 1. Work around some of the peculiarities and sharp edges of matplotlib
+    This includes making some often-used plot customisation items more easily available 
+    by keyword argument, and the automatic concatenation of the 180°E-Meridian to represent
+    the periodicity of the data in global contour(f) plots.
+ 2. Take into account a large repository of default plot configuration, such that
+    for example temperatures are by default plotted in a consistent an meaningful way
+'''
+
 def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	''' Plot a vertical cross section with pressure or log-pressure as the vertical axis
 
@@ -530,7 +542,7 @@ def __output(kwargs):
 # Overlays
 
 # TODO: Should this one take the static object as an argument? If only for consistency in the API.
-def sect_overlay_dat(dat, sect, **kwargs):
+def section_overlay_dat(dat, sect, **kwargs):
 	''' Overlay contours onto a section
 	
 	Parameters

@@ -10,7 +10,19 @@ import numpy as np
 from datetime import datetime as dt, timedelta as td
 
 
+
+''' Obtain meta information about data
+
+The meta-information currently mainly concerns the grid information that is 
+required for plotting.
+
+This information is either extracted from a netCDF file object, or taken from
+a "static.npz" file that contains the pertinent information for a given data set.
+'''
+
 class grid(object):
+	''' Underlying object defining the grid API and basic grid types '''
+
 	def __init__(self):
 		self.gridtype = 'unset'
 		self.x = None
@@ -92,6 +104,8 @@ class grid(object):
 
 # Construct the grid based on the grid information in a nc (netcdf) file
 class grid_by_nc(grid):
+	''' Extract the relevant information from a given netCDF file object '''
+
 	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x']
 	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y']
 	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z']
@@ -273,6 +287,8 @@ class grid_by_nc(grid):
 
 # Construct the grid based on the information in a static.npz file
 class grid_by_static(grid):
+	''' Read relevant information from a static file, usually called "static.npz" '''
+
 	def __init__(self, staticfile, cut=slice(None)):
 		self.f = staticfile
 		self.cut = cut
