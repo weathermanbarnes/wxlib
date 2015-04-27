@@ -124,8 +124,8 @@ DEFAULT_Q_C['z'] = {'hook': hooks['z']}
 
 # DEFAULT settings per quantity Q on contourf plots
 DEFAULT_Q_CF = {}
-DEFAULT_Q_CF['defabs'] = {'cmap': cm.defabs2(), 'hook': hooks['defabs']}
-DEFAULT_Q_CF['defang'] = {'cmap': cm.periodic3(), 'scale': scale_defang, 'ticks': ticks_defang, 
+DEFAULT_Q_CF['defabs'] = {'cmap': cm.defabs(), 'hook': hooks['defabs']}
+DEFAULT_Q_CF['defang'] = {'cmap': cm.periodic(), 'scale': scale_defang, 'ticks': ticks_defang, 
 	'ticklabels': labels_defang}
 DEFAULT_Q_CF['t']   = {'cmap': plt.cm.RdBu_r}
 DEFAULT_Q_CF['pt']   = {'cmap': plt.cm.RdBu_r}

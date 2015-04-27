@@ -7,6 +7,8 @@ Basic concepts
 To be written.
 
 
+.. _plot configuration:
+
 Plot configuration
 ------------------
 

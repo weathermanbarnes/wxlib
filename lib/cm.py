@@ -55,7 +55,7 @@ def greys2():
 		 'green': ((0.0, 1.0, 1.0), (1.0, 0.1, 0.1)),
 		 'blue':  ((0.0, 1.0, 1.0), (1.0, 0.1, 0.1))  }
 
-	return mpl.colors.LinearSegmentedColormap('my_grey',cdict,256)
+	return mpl.colors.LinearSegmentedColormap('my_darkgrey',cdict,256)
 
 
 def div_bw():
@@ -78,7 +78,7 @@ def div_bw():
 
 	return mpl.colors.LinearSegmentedColormap('my_div_grey',cdict,256)
 
-def div_bw_inv():
+def div_bw_r():
 	''' Colorbar from 60% grey to 20% grey to white
 
 	Divergent colorbar for black-white figures.
@@ -96,7 +96,7 @@ def div_bw_inv():
 		 'green': ((0.0, 0.6, 0.6), (0.5, 0.2, 0.2), (1.0, 1.0, 1.0)),
 		 'blue':  ((0.0, 0.6, 0.6), (0.5, 0.2, 0.2), (1.0, 1.0, 1.0))  }
 
-	return mpl.colors.LinearSegmentedColormap('my_div_grey',cdict,256)
+	return mpl.colors.LinearSegmentedColormap('my_div_grey_r',cdict,256)
 
 
 def defabs():
@@ -109,40 +109,43 @@ def defabs():
 	mpl.colors.LinearSegmentedColormap
 	    Colormap
 	'''
-
 	cdict = {'red':   ((0.0, 1.0, 1.0), (0.75, 0.15, 0.15), (1.0, 1.0, 1.0)),
 		 'green': ((0.0, 1.0, 1.0), (0.75, 0.15, 0.15), (1.0, 0.0, 0.0)),
 		 'blue':  ((0.0, 1.0, 1.0), (0.75, 0.15, 0.15), (1.0, 0.0, 0.0))  }
 
 	return mpl.colors.LinearSegmentedColormap('my_defabs',cdict,256)
 
+
 def q():
+	''' Colorbar from white to dark blue to violet
+
+	Often used for humidity, rain measures, etc.
+
+	Returns
+	-------
+	mpl.colors.LinearSegmentedColormap
+	    Colormap
+	'''
 	cdict = {'red':   ((0.0, 1.0, 1.0), (0.33, 0.30, 0.30),  (0.867, 0.1, 0.1), (1.0, 0.5, 0.5)),
 		 'green': ((0.0, 1.0, 1.0), (0.33, 0.65, 0.65),  (0.867, 0.2, 0.2), (1.0, 0.2, 0.2)),
 		 'blue':  ((0.0, 1.0, 1.0), (0.33, 0.80, 0.80),  (0.867, 0.6, 0.6), (1.0, 0.8, 0.8))  }
 
-	return mpl.colors.LinearSegmentedColormap('my_defabs',cdict,256)
+	return mpl.colors.LinearSegmentedColormap('my_q',cdict,256)
 
 def periodic():
-	cdict = {'red':   ((0.0, 0.0, 0.0), (0.25, 0.8, 0.8), (0.5, 1.0, 1.0), (0.75, 0.0, 0.0), (1.0, 0.0, 0.0)),
-		 'green': ((0.0, 0.0, 0.0), (0.25, 0.0, 0.0), (0.5, 1.0, 1.0), (0.75, 0.9, 0.9), (1.0, 0.0, 0.0)),
-		 'blue':  ((0.0, 0.6, 0.6), (0.25, 0.0, 0.0), (0.5, 0.2, 0.2), (0.75, 0.0, 0.0), (1.0, 0.6, 0.6))  }
+	''' Colorbar from white to blue to 50% grey to yellow back to white
+
+	Useful for periodic variablies like the deformation angle or the wind direction.
+
+	Returns
+	-------
+	mpl.colors.LinearSegmentedColormap
+	    Colormap
+	'''
+	cdict = {'red':   ((0.0, 1.0, 1.0), (0.25, 0.3, 0.2), (0.5, 0.5, 0.5), (0.75, 0.65, 0.7), (1.0, 1.0, 1.0)),
+		 'green': ((0.0, 1.0, 1.0), (0.25, 0.3, 0.2), (0.5, 0.5, 0.5), (0.75, 0.65, 0.7), (1.0, 1.0, 1.0)),
+		 'blue':  ((0.0, 1.0, 1.0), (0.25, 0.7, 0.7), (0.5, 0.5, 0.5), (0.75, 0.20, 0.3), (1.0, 1.0, 1.0)) }
 
 	return mpl.colors.LinearSegmentedColormap('my_periodic',cdict,256)
-
-def periodic2():
-	cdict = {'red':   ((0.0, 0.3, 0.3), (0.25, 0.4, 0.4), (0.5, 0.6, 0.6), (0.75, 0.8, 0.8), (1.0, 0.3, 0.3)),
-		 'green': ((0.0, 0.2, 0.2), (0.25, 0.8, 0.8), (0.5, 0.6, 0.6), (0.75, 0.4, 0.4), (1.0, 0.2, 0.2)),
-		 'blue':  ((0.0, 0.5, 0.5), (0.25, 0.0, 0.0), (0.5, 1.0, 1.0), (0.75, 0.0, 0.0), (1.0, 0.5, 0.5))  }
-
-	return mpl.colors.LinearSegmentedColormap('my_periodic2',cdict,256)
-
-
-def periodic3():
-	cdict = {'red':   ((0.0, 1.0, 1.0), (0.03, 0.9, 0.9), (0.27, 0.3, 0.2), (0.515, 0.5, 0.5), (0.76, 0.65, 0.7), (1.0, 1.0, 1.0)),
-		 'green': ((0.0, 1.0, 1.0), (0.03, 0.9, 0.9), (0.27, 0.3, 0.2), (0.515, 0.5, 0.5), (0.76, 0.65, 0.7), (1.0, 1.0, 1.0)),
-		 'blue':  ((0.0, 1.0, 1.0), (0.03, 1.0, 1.0), (0.27, 0.7, 0.7), (0.515, 0.5, 0.5), (0.76, 0.20, 0.3), (1.0, 0.9, 1.0)) }
-
-	return mpl.colors.LinearSegmentedColormap('my_periodic3',cdict,256)
 
 # that's it
