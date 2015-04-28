@@ -1,6 +1,15 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
+
+''' Defines default settings and convenient ways to change them
+
+
+
+
+'''
+
+
 from copy import copy, deepcopy
 import os
 import math
@@ -13,10 +22,6 @@ import proj
 import cm
 
 
-
-'''
-
-'''
 
 
 # #############################################################################
@@ -102,12 +107,12 @@ PVLEVS = ['pv2000', ]
 
 # DEFAULT contour settings
 if os.getenv('DYNLIB_PLOT_PRINT'):
-	DEFAULT_KWARGS = {'m': proj.wmap, 'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 'auto', 
+	DEFAULT_KWARGS = {'m': proj.world, 'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 'auto', 
 		'overlays': [], 'disable_cb': True, 'show': False, 'save': '', 'title': '', 'hook': None,
 		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro_c,
 		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [], 'scale_symmetric_zero': False}
 else:
-	DEFAULT_KWARGS = {'m': proj.wmap, 'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 'auto', 
+	DEFAULT_KWARGS = {'m': proj.world, 'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 'auto', 
 		'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 'hook': None,
 		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro_c,
 		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [], 'scale_symmetric_zero': False }
@@ -340,6 +345,10 @@ class settings_contourf(settings_contour):
 	_overrides = {}
 	
 
+
+# TODO: Should this derive from settings_dict? Or should it be a settings_dict instance?
+# - Would prohibit (accientally but also volutarily) setting new config keys
+# - Would potentially avoid some code duplication: __special_funcs__() and reset()
 
 class settings(object):
 	__default = {

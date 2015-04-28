@@ -2,9 +2,6 @@
 # -*- encoding: utf-8
 
 
-import numpy as np
-
-
 ''' A more intelligent and configurable autoscaling
 
 The standard autoscaling by matplotlib has several deficiencies.
@@ -19,6 +16,10 @@ This module provides an alternative mechanism to automatically determine
 appropriate scales that alleviates all these deficiencies. The autoscaling
 is configurable through several configuration keys in the plotconfig.
 '''
+
+
+import numpy as np
+
 
 DEFAULT_STEPS = 7
 DEFAULT_INTERVALS = np.array([1,2,3,5,10])

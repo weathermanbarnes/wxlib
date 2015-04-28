@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
-from mpl_toolkits.basemap import Basemap
-
-
 ''' A collection of useful map projections
 
 Much of the research focusses on specific regions. These map projections are intended as 
 standard projections covering these regions.
 '''
+
+
+from mpl_toolkits.basemap import Basemap
+
+
 
 # (a) World map
 def world():

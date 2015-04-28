@@ -1,14 +1,5 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
-#
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#  		DynLib -- Grid definitions
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#
-import math
-import numpy as np
-from datetime import datetime as dt, timedelta as td
-
 
 
 ''' Obtain meta information about data
@@ -19,6 +10,13 @@ required for plotting.
 This information is either extracted from a netCDF file object, or taken from
 a "static.npz" file that contains the pertinent information for a given data set.
 '''
+
+
+import math
+import numpy as np
+from datetime import datetime as dt, timedelta as td
+
+
 
 class grid(object):
 	''' Underlying object defining the grid API and basic grid types '''

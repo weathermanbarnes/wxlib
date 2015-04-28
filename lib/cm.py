@@ -1,17 +1,22 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
+
+''' A collection of useful color maps
+
+These color maps have been devised for some special meteorological applications, 
+where they fit better than the matplotlib standard color maps. Some of these
+color maps were originally devised for iveret.gfi.uib.no.
+
+The standard matplotlib color maps are also available through this module.
+'''
+
+
 import matplotlib as mpl
 
 # Make the standard matplotlib colorbars available in the same name space
 from matplotlib.cm import *
 
-''' A collection of useful color maps
-
-These color maps have been devised for some special meteorological applications, 
-where they fit better than the matplotlib standard colormaps. Some of these
-color maps were originally devised for iveret.gfi.uib.no.
-'''
 
 
 def greys():

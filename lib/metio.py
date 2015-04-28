@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
+''' Input/Output library for meteorological data
+
+Provides convenient access to met-data stored in numpy, netCDF and Matlab formats,
+and provides functions to save meteorological fields and lines in netCDF files.
+'''
+
 import os
 import sys
 
@@ -20,11 +26,6 @@ import dynfor
 dynlib_version = (''.join(dynfor.consts.version)).strip()
 
 
-''' Input/Output library for meteorological data
-
-Provides convenient access to met-data stored in numpy, netCDF and Matlab formats,
-and provides functions to save meteorological fields and lines in netCDF files.
-'''
 
 
 # #############################################################################

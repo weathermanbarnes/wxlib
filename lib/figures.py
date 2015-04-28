@@ -1,6 +1,19 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
+''' A collection of general plotting functions
+
+These functions have two main aims:
+
+ 1. Work around some of the peculiarities and sharp edges of matplotlib.
+    This includes making some often-used plot customisation items more easily available 
+    by keyword argument, and the automatic concatenation of the 180°E-Meridian to represent
+    the periodicity of the data in global contour(f) plots.
+ 2. Take into account a large repository of default plot configuration, such that
+    for example temperatures are by default plotted in a consistent an meaningful way.
+'''
+
+
 import copy
 
 import numpy as np
@@ -16,19 +29,6 @@ from metopen import metopen
 from utils import concat1, concat1lonlat, __unflatten_fronts_t, sect_gen_points
 from autoscale import autoscale
 
-
-
-''' A collection of general plotting functions
-
-These functions have two main aims:
-
- 1. Work around some of the peculiarities and sharp edges of matplotlib
-    This includes making some often-used plot customisation items more easily available 
-    by keyword argument, and the automatic concatenation of the 180°E-Meridian to represent
-    the periodicity of the data in global contour(f) plots.
- 2. Take into account a large repository of default plot configuration, such that
-    for example temperatures are by default plotted in a consistent an meaningful way
-'''
 
 def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	''' Plot a vertical cross section with pressure or log-pressure as the vertical axis
