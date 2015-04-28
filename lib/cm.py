@@ -6,6 +6,13 @@ import matplotlib as mpl
 # Make the standard matplotlib colorbars available in the same name space
 from matplotlib.cm import *
 
+''' A collection of useful color maps
+
+These color maps have been devised for some special meteorological applications, 
+where they fit better than the matplotlib standard colormaps. Some of these
+color maps were originally devised for iveret.gfi.uib.no.
+'''
+
 
 def greys():
 	''' Colorbar from white to 30% grey 

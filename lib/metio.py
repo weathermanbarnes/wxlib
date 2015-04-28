@@ -20,12 +20,57 @@ import dynfor
 dynlib_version = (''.join(dynfor.consts.version)).strip()
 
 
+''' Input/Output library for meteorological data
+
+Provides convenient access to met-data stored in numpy, netCDF and Matlab formats,
+and provides functions to save meteorological fields and lines in netCDF files.
+'''
+
+
 # #############################################################################
 # 1. Open all sorts of files
 # 
 
-# Find and open files by filename (without ending!)
+# TODO: Restrict the expected file types by providing a file name extension
+# TODO: Allow usage without directly requesting a variable, making q optional.
 def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=False, no_static=False):
+	''' Find and open files by name
+	
+	Uses the conf.datapath list to locale files in a variety of different locations.
+	The located files might either be numpy-files, netCDF-files or matlab mat-files. 
+	For each of the file types, metopen returns the requested variable and some meta-
+	information about the variable, if not suppressed.
+
+	Parameters
+	----------
+	filename : str
+		The name of the file, excluding the file ending.
+	q : str
+		The requested variable within the file.
+	cut : slice
+		Obsolete and to be removed
+	verbose : bool
+		*Optional*, default ``False``. Print debug information on which files are 
+		being looked for.
+	no_dtype_conversion : bool
+		*Optional*, default ``False``. By default, ``metopen`` uncompresses data in the 
+		file and converts all data to float64. This behaviour can be suppressed by 
+		setting this option to ``True``.
+	no_static : 
+		*Optional*, default ``False``. By default, ``metopen`` does its best to 
+		provide meta-information about the requested file, using 
+		:module:`grid.gridlib`, and returns the meta-information as a third value. 
+		This behaviour can be suppressed by setting this parameter to ``True``.
+	
+	Returns
+	-------
+	data file object
+		python data, netCDF or Matlab file object.
+	np.ndarray
+		Requested data.
+	grid.gridlib
+		If ``no_static=False`` meta-information about the requested data.
+	'''
 	if type(cut) == tuple and len(cut) > 1:
 		cuts = tuple(list(cut)[1:])
 	else: 
@@ -92,6 +137,29 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 
 # Save dat as a netCDF file, using the metadata in static. 
 def metsave(dat, static, time, plev, q, q_units=None, compress_to_short=True):
+	''' Save data in a netCDF file
+
+	Parameters
+	----------
+	dat : np.ndarray
+		Data to be saved.
+	static : gridlib.grid
+		Some meta information about the data, like the grid information.
+	time : str
+		String representation of the time period covered by the data, e.g. ``'2005'`` for the year
+		2005 or ``'20050317'`` for 17 March 2005.
+	plev : str
+		String representation of the vertical level on which the data is defined, e.g. ``'700'`` 
+		for 700 hPa or ``'pv2000'`` for the PV2-surface.
+	q : str
+		The variable name identifier, following the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
+	q_units : str
+		Obsolete.
+	compress_to_short : bool
+		*Optional*, default ``True``. By default, ``metsave`` compresses the data by converting
+		the data field into int16, using the float64 ``add_offset`` and ``scale_factor`` attributes 
+		to represent the data.
+	'''
 	s = dat.shape
 	if not len(s) == 3 or not s[1:] == (361,720):
 		raise NotImplementedError, 'dat does not seem to be a ERA-Interim like (t,y,x)-array.'
@@ -134,6 +202,33 @@ def metsave(dat, static, time, plev, q, q_units=None, compress_to_short=True):
 
 # Save dat as a netCDF file, using the metadata in static. 
 def metsave_lines(dat, datoff, static, time, plev, q, qoff):
+	''' Save line data in a netCDF file
+
+	A disk-space-effective way to store collections of lines (e.g. front lines, jet axes, ...)
+	in a netCDF file. The coordinates of all points belonging to a line are stored in a long
+	list in ``dat``. The beginnings and endings of lines are defined by ``datoff``, which lists
+	the starting point indexes of all lines in the collection. 
+
+	Parameters
+	----------
+	dat : np.ndarray with dimensions (time,pointindex,infotype)
+		Coordinates and an additional piece of information about each point belonging to 
+		a line.
+	datoff : np.ndarray with dimensions (time,lineindex)
+		Starting point indexes for each line.
+	static : gridlib.grid
+		Some meta information about the data, like the grid information.
+	time : str
+		String representation of the time period covered by the data, e.g. ``'2005'`` for the year
+		2005 or ``'20050317'`` for 17 March 2005.
+	plev : str
+		String representation of the vertical level on which the data is defined, e.g. ``'700'`` 
+		for 700 hPa or ``'pv2000'`` for the PV2-surface.
+	q : str
+		The variable name identifier, e.g. ``'jetaxis'``.
+	qoff : str
+		The variable name identifier for the list of offsets, e.g. ``'jaoff'``. 
+	'''
 	if not len(dat.shape) == 3 and len(datoff.shape) == 2:
 		raise RuntimeError, 'dat and/or datoff have the wrong number of dimensions'
 	if not dat.shape[0] == datoff.shape[0]:
@@ -197,6 +292,23 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 
 # Get static information
 def get_static(cuts=slice(None), verbose=False, no_dtype_conversion=False):
+	''' Get standard meta-information (for ERA-Interim)
+
+	Parameters
+	----------
+	cut : slice
+		Obsolete and to be removed
+	verbose : bool
+		*Optional*, default ``False``. Print debug information on where the static
+		file is being looked for.
+	no_dtype_conversion : bool
+		*Optional*, default ``False``. By default, ``metopen`` uncompresses data in the 
+		file and converts all data to float64. This behaviour can be suppressed by 
+		setting this option to ``True``.
+
+	Returns
+	-------
+	'''
 	fo, oro = metopen('static', 'oro', cuts, verbose, no_dtype_conversion, True)
 	static = grid_by_static(fo, cut=cuts)
 	static.oro = oro[::]
@@ -209,11 +321,48 @@ def get_static(cuts=slice(None), verbose=False, no_dtype_conversion=False):
 # 2. Generalised data fetchers
 # 
 
-# Generalised data fetcher for instantaneous or short-term averaged fields
-#
 # TODO: Generalize this function to work on any (constant) input data interval. 
 # Or possibly any input data, even with irregular time axis?
 def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, quiet=False, force=False, **kwargs):
+	''' Data fetcher for instantaneous or short-term averaged fields
+
+	Allows general data requests in the configured data base, e.g. ERA-Interim. The request
+	can span several files, e.g. by including several vertical levels or by covering several
+	years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
+	However, length-1 dimensions are removed, so the returned array can have fewer 
+	dimensions.
+
+	Parameters
+	----------
+	q : str
+		Variable name identifier, following the ECMWF conventions as far as appicable, 
+		e.g. ``'u'`` or ``'msl'``.
+	dates : list of datetime
+		The minimum and maxmimum dates in this list define the requested time interval.
+	plevs : list of str or str
+		*Optional*, defaults to all available pressure levels. The string representation
+		of the requested vertical level(s), e.g. ``'700'`` for 700 hPa or ``'pv2000'`` 
+		for the PV2-surface.
+	yidx : np.ndarray or slice
+		*Optional*. Restrict the output to the given set or range of y-indexes.
+	xidx : np.ndarray or slice
+		*Optional*. Restrict the output to the given set or range of x-indexes.
+	tavg : bool
+		*Optional*, default ``False``. Instead of returning a time-dimension, return
+		the temporal average of the requested data.
+	quiet : bool
+		*Optional*, default ``False``. Suppress any output from this function.
+	force : bool
+		*Optional*, default ``False``. Turn off the error, if large amounts of data are
+		requested at once. **Be sure you know what you are doing, when setting this to 
+		``True``! Your request might make your script occupy a large fraction of the 
+		system memory**.
+	
+	Keyword arguments
+	-----------------
+	metopen arguments : all optional
+		Optional arguments passed on to calls of metopen within this function.
+	'''
 	# None means "take everything there is as pressure levels"
 	if not plevs:
 		plevs = c.plevs
@@ -299,6 +448,10 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, qu
 
 # Get aggregated (average, standard deviation, etc.) fields
 def get_aggregate(q, year=None, plev=None, yidx=None, xidx=None):
+	''' Request aggregate data 
+	
+	This function is not implemented yet. It is only included to define the future API.
+	'''
 	raise NotImplementedError, 'If you need it, implement it!'
 
 	return dat

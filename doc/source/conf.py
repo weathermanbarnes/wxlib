@@ -44,7 +44,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'dynlib'
-copyright = u'2014, Clemens Spensberger'
+copyright = u'2014&mdash;2015, Clemens Spensberger'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

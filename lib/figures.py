@@ -35,8 +35,8 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 
 	The plot is highly customisable. It features an inset map showing the location 
 	of the cross section on a map. The cross section follows a straight line in the 
-	given map projection. Using different map projections can hence cross sections 
-	along the following special lines:
+	given map projection. Using different map projections one can hence construct cross 
+	sections along the following special lines:
 
 	 * Great circle: Use the gnomic projection
 	 * Latitude circle: Use a cylindrical projection or plain latlon coordinates
