@@ -4,9 +4,33 @@
 
 ''' Defines default settings and convenient ways to change them
 
+Dynlib settings are in essence a set of key-value pairs, which could be well
+represented by the python built-in ``dict`` object. However, the pure ``dict`` object
+has some drawbacks in this context:
 
+1. ``dict`` objects cannot represent default values for keys. Whenever a key in
+   ``dict`` is overwritten, the original content is lost.
+2. ``dict`` cannot represent interdependencies between different keys.
+3. ``dict`` cannot represent several variants of itself. As an example, the 
+   plot configuration for different variables will be largely identical, but only
+   differ in a few configuration keys. When represented by pure ``dict`` objects, 
+   the plot configuration for each variable would need to be full independent 
+   from each other. This indepence complicates would makes it tedious and 
+   error-prone to apply a customised configuration to all variables.
 
+For these reasons, this module introduces a settings_dict object, which is 
+subsequently used to define first the default plot configuration for all plots, 
+and second some adapted configurarion for specific variables.
 
+Furthermore, this module defines a settings object which contains configuraton
+keys as attributes, including the plot configuration objects.
+
+To Do: Potential changes
+------------------------
+
+The settings object might be converted into an instance of settings_dict in the 
+future. This would allow to use the advantages 1.-3. also for non-plot
+configuration.
 '''
 
 
@@ -154,9 +178,34 @@ DEFAULT_Q_CF['z'] = {'hook': hooks['z']}
 # 4. Making the settings easily available
 #
 class settings_dict(mutmap):
+	''' An extended dictionary object to be used for configuration
+	
+	It handles default values:
+
+	 * They are readable through the ``default`` attribute.
+	 * They can be restored by using the ``reset`` function.
+	
+	It handles interdependencies between keys:
+	
+	 * Mutually exclusive keys can be defined by filling the
+	   ``_mutex_group`` attribute during the initialisation.
+	
+	Furthermore, it provides convenience functions for working with the 
+	configuration and defines the neccessary magic functions to appear 
+	largely like a pure python ``dict``.
+	'''
 	_mutexes = {}
 
 	def __init__(self, init={}, contourobj=None):
+		''' Initialisation
+		
+		Parameters
+		----------
+		init : dict
+			Optional initial overrides to the default configuration
+		contourobj : settings_dict
+			Optional. Take default values from this configuration object. 
+		'''
 		for mutex_group in MUTEX_GROUPS:
 			for key in mutex_group:
 				self._mutexes[key] = copy(mutex_group)
@@ -175,6 +224,7 @@ class settings_dict(mutmap):
 
 	
 	def __getitem__(self, key):
+		''' Implements access through ``conf['key']`` '''
 		if key not in self._ and self.default:
 			return self.default[key]
 		else: 	
@@ -182,6 +232,7 @@ class settings_dict(mutmap):
 	
 
 	def __setitem__(self, key, value):
+		''' Implements setting overrides through ``conf['key'] = value`` '''
 		if self.default and key not in self.default:
 			raise KeyError, 'Cannot add new keys to the configuration'
 		#elif key not in self:
@@ -196,16 +247,19 @@ class settings_dict(mutmap):
 
 
 	def __delitem__(self, key):
+		''' Implements deleting overrides by ``del conf['key']`` '''
 		self.reset(key)
 
 		return
 	
 
 	def __contains__(self, key):
+		''' Implements checks with the syntax ``if key in conf`` '''
 		return key in self.keys()
 
 
 	def __iter__(self):
+		''' Implements loops over the configuration keys, syntax ``for key in conf`` '''
 		if self.default:
 			for key in self.default:
 				yield key
@@ -220,11 +274,13 @@ class settings_dict(mutmap):
 
 
 	def __eq__(self, other):
+		''' Check if two objects are equal '''
         	return sorted(self.iteritems()) == sorted(other.iteritems())
 
 
 
 	def __len__(self):
+		''' Return a length of the object, here number of defined configuration keys '''
 		if self.default:
 			return len(self.default)
 		else:
@@ -232,10 +288,12 @@ class settings_dict(mutmap):
 	
 
 	def __repr__(self):
+		''' Give a string-representation of the object '''
 		return dict(self.iteritems()).__repr__()
 
 	
 	def __reset_key(self, key):
+		''' Reset a single key to its defaults '''
 		if key in self.default_q:
 			self._[key] = self.default_q[key]
 		else:
@@ -245,6 +303,7 @@ class settings_dict(mutmap):
 
 
 	def iteritems(self):
+		''' Implements loops over the configuration keys, syntax ``for key, value in conf.iteritems()`` '''
 		for key in self.iterkeys():
 			yield key, self[key]
 	
@@ -255,6 +314,11 @@ class settings_dict(mutmap):
 
 
 	def values(self):
+		''' Stub method to implements loops over the configuration keys, syntax ``for value in conf.values()`` 
+		
+		This method is not implemented, but only present for consistency 
+		with the API of pure python ``dict`` objects.
+		'''
 		raise NotImplementedError, 'If you need it, implement it!'
 	itervalues = values
 	viewitems = values
@@ -268,6 +332,19 @@ class settings_dict(mutmap):
 	#		return default
 	
 	def merge(self, **kwargs):
+		''' Merge the given keyword arguments with the configuration in this object
+
+		Keyword arguments
+		-----------------
+		Anything
+
+		Returns
+		-------
+		dict
+		    A dictionary containing the configuration in this object, potentially overriden
+		    and extended by the given keyword arguments.
+		'''
+
 		rkwargs = dict(self)
 		for kwarg, argv in kwargs.items():
 			rkwargs[kwarg] = argv
@@ -275,6 +352,13 @@ class settings_dict(mutmap):
 		return rkwargs
 
 	def reset(self, key=None):
+		''' Reset the configuration to its defaults (optional for a specific key)
+
+		Parameters
+		----------
+		key : any valid dict key
+		    Optional: Key to be reset to the defaults.
+		'''
 		if not self.default:
 			raise TypeError, 'Reset not possible for default object!'
 
@@ -291,6 +375,12 @@ class settings_dict(mutmap):
 
 
 class settings_contour(object):
+	''' Container object for contour plot settings
+
+	The object contains pointers to the respective settings for each
+	registered variable, available through attributes of this object.
+	''' 
+
 	default = settings_dict(DEFAULT_CONTOUR_KWARGS)
 	default.update(DEFAULT_KWARGS)
 	default_q = DEFAULT_Q_C
@@ -305,6 +395,8 @@ class settings_contour(object):
 
 
 	def __getattribute__(self, q):
+		''' Implement configuration access through the syntax ``conf.key`` '''
+
 		if q[0] == '_':
 			return object.__getattribute__(self, q)
 		elif q not in self._overrides:
@@ -314,6 +406,8 @@ class settings_contour(object):
 
 
 	def __setattr__(self, q, value):
+		''' Implement configuration cjamhes through the syntax ``conf.key = value`` '''
+
 		if q in self._overrides or q == 'default':
 			raise AttributeError, 'The attributes cannot be overwritten'
 		object.__setattr__(self, q, value)
@@ -322,16 +416,44 @@ class settings_contour(object):
 
 
 	def new(self, q, conf):
+		''' Register new variable 
+
+		Parameters
+		----------
+		q : str
+		    Abbreviated variable name, as it would appear in as a netCDF variable name
+		conf : dict-like
+		    Initial overrides for the plot configuration of the new variable
+		'''
 		self._overrides[q] = settings_dict(conf, self)
 
 		return
 	
 
 	def merge(self, q, **kwargs):
+		''' Proxy for ``settings_dict.merge`` 
+		
+		Parameters
+		----------
+		q : str
+		    Abbreviated variable name, as it would appear in as a netCDF variable name
+
+		Keyword Arguments
+		-----------------
+		Anything
+		'''
+
 		return self.__getattribute__(q).merge(**kwargs)
 
 
 	def reset(self, q, key=None):
+		''' Reset the configuration to its defaults (optional for a specific key)
+
+		Parameters
+		----------
+		key : any valid dict key
+		    Optional: Key to be reset to the defaults.
+		'''
 		self.__getattribute__(q).reset(key)
 
 		return
@@ -339,6 +461,12 @@ class settings_contour(object):
 
 
 class settings_contourf(settings_contour):
+	''' Container object for filled contour plot settings
+
+	The object contains pointers to the respective settings for each
+	registered variable, available through attributes of this object.
+	''' 
+
 	default = settings_dict(DEFAULT_CONTOURF_KWARGS)
 	default.update(DEFAULT_KWARGS)
 	default_q = DEFAULT_Q_CF
@@ -351,6 +479,16 @@ class settings_contourf(settings_contour):
 # - Would potentially avoid some code duplication: __special_funcs__() and reset()
 
 class settings(object):
+	''' Container object for all settings
+
+	Note: This object might become a settings_dict instance in the future!
+	
+	The object is yet another interface to a dictionary, including default values.
+	In contrast to the ``settings_dict`` object, here the configuration keys are
+	made accessible through attributes, with the syntax being ``conf.key`` 
+	instead of the dictionary lookup ``conf['key']``.
+	'''
+
 	__default = {
 		'q': Q,
 		'qi': QI,
@@ -379,6 +517,8 @@ class settings(object):
 
 
 	def __getattribute__(self, key):
+		''' Implement configuration access through the syntax ``conf.key`` '''
+
 		if key[0] == '_' or key in ['reset', 'new_variable', ]:
 			return object.__getattribute__(self, key)
 
@@ -386,6 +526,8 @@ class settings(object):
 
 
 	def __setattr__(self, key, value):
+		''' Implement configuration cjamhes through the syntax ``conf.key = value`` '''
+
 		if key in ['_settings__default', '__setattr__']:
 			raise AttributeError, 'The default values cannot be overwritten'
 		elif key[0] == '_' or key in ['reset', ]:
@@ -396,6 +538,19 @@ class settings(object):
 	
 
 	def new_variable(self, q, qlong, conf_cf={}, conf_c={}):
+		''' Register a new variable in the plot and metadata configuration
+
+		Parameters
+		----------
+		q : str
+		    Abbreviated variable name, as it would appear in as a netCDF variable name
+		qlong: str
+		    Full variable name, as it would appear in the long_name attribute of netCDF variables
+		conf_cf : dict-like
+		    Optional. Standard configuration overrides for filled-contour plots of the new variable
+		conf_c : dict-like
+		    Optional. Standard configuration overrides for contour plots of the new variable
+		'''
 		self.contourf.new(qlong, conf_cf)
 		self.contour.new(qlong, conf_c)
 		self.q[q] = qlong
@@ -405,6 +560,13 @@ class settings(object):
 
 
 	def reset(self, key=None):
+		''' Reset the configuration to its defaults (optional for a specific key)
+
+		Parameters
+		----------
+		key : any valid dict key
+		    Optional: Key to be reset to the defaults.
+		'''
 		if key and key in self.__current:
 			self.__current[key] = copy(self.__default[key])
 		else:

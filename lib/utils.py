@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+''' Utilities that don't fit elsewhere '''
+
 import sys
 
 import dynfor
@@ -77,10 +79,25 @@ def unscale(var):
 
 	return res.astype('>i2'), scale, off
 
-#
-# Concatenate one latitude band in x-direction, taking over the values of 
-# the first latitude band to emulate a cyclic field in Basemap plots
+
 def concat1(data):
+	''' Concatenate one latitude band in x-direction to a data array
+
+	To be able to plot circumpolar plots without a data gap, the sphericity of the data
+	must explicitly be demonstrated by contatenating the data from lon=180E to appear 
+	also as data for lon=180W.
+
+	Parameters
+	----------
+	data : np.ndarray with 1-4 dimensions
+	    Data to be extended
+	
+	Returns
+	-------
+	np.ndarray
+	    Extended data
+	'''
+	
 	if len(data.shape) == 1:
 		data = np.concatenate((data, np.reshape(data[0], (1,)) ), axis=0)
 	elif len(data.shape) == 2:
@@ -94,10 +111,27 @@ def concat1(data):
 	
 	return data
 
-#
-# Concatenate one latitude band in x-direction, taking over the values of 
-# the first latitude band to emulate a cyclic field in Basemap plots
+
 def concat1lonlat(x, y):
+	''' Concatenate one latitude band in x-direction to coordinate arrays
+
+	To be able to plot circumpolar plots without a data gap, the sphericity of the data
+	must explicitly be demonstrated by contatenating the data from lon=180E to appear 
+	also as data for lon=180W.
+
+	Parameters
+	----------
+	x : np.ndarray with dimensions (y,x)
+	    Longitudes for each grid point
+	y : np.ndarray with dimensions (y,x)
+	    Latitudes for each grid point
+	
+	Returns
+	-------
+	2-tuple of np.ndarray
+	    Extended coordinate arrays
+	'''
+	
 	# Some map projections need the lon, lat array to be C-aligned.
 	lon = np.ascontiguousarray(concat1(x))
 	lat = np.ascontiguousarray(concat1(y))
@@ -106,83 +140,12 @@ def concat1lonlat(x, y):
 
 	return lon, lat
 
-#
-# Generic calculation preparations and the actual call of the Fortran function
-def call(func, vars, grid, cut=(slice(None),slice(None),slice(None)), bench=False):
-	if not grid.nz or grid.nz == 1:
-		print '3D mode'
-		if len(vars[0].shape) == 4:
-			raise NotImplementedError
-		args = []
-		for var in vars:
-			if len(var.shape) == 3:
-				if getattr(var, 'dtype', None) in ('i2','>i2','<i2'):
-					args.append(scale(var, cut, bench=bench))
-				else:
-					args.append(var[cut])
-			else:
-				args.append(var) 
-			
-		args.extend([grid.dx[cut[1:]], grid.dy[cut[1:]]])
-		if bench:
-			begin = dt.now()
-		res = func(*args) 
-		if bench:
-			print 'Calculation', dt.now()-begin
-	
-	elif not grid.nt or grid.nt == 1:
-		print '2D mode'
-		raise NotImplementedError
-	
-	else:
-		print '4D mode'
-		raise NotImplementedError
-		#for t in len(u.shape[0]):
-		#	dylib.diag.def(u[t,:,:,:], v[t,:,:,:], grid.dx, grid.dy)
-	
-	return res
 
-
-#
-# Reimplementation of the recpective function in dynfor.diag for benchmarking.
-def def_angle(u_dat, v_dat, grid):
-	deff = np.zeros(u_dat.shape)
-	for k in range(u_dat.shape[0]):
-		for j in range(1,grid.ny-1):
-			for i in range(1,grid.nx-1):
-				def_shear   = (u[k,j+1,i]-u[k,j-1,i])/grid.dy[j,i] \
-					    + (v[k,j,i+1]-v[k,j,i-1])/grid.dx[j,i]
-				def_stretch = (u[k,j,i+1]-u[k,j,i-1])/grid.dx[j,i] \
-					    - (v[k,j+1,i]-v[k,j-1,i])/grid.dy[j,i]
-				deff[k,j,i] = 0.5*math.atan2(def_shear, def_stretch)
-			if grid.cyclic_ew:
-				def_shear   = (u[k,j+1,i]-u[k,j-1,i])/grid.dy[j,1] \
-					    + (v[k,j,  1]-u[k,j, -1])/grid.dx[j,1]
-				def_stretch = (u[k,j,  1]-u[k,j, -1])/grid.dx[j,1] \
-					    - (v[k,j+1,i]-v[k,j-1,i])/grid.dy[j,1]
-				deff[k,j,1] = 0.5*math.atan2(def_shear, def_stretch)
-				def_shear   = (u[k,j+1,i]-u[k,j-1,i])/grid.dy[j,1] \
-					    + (v[k,j,  0]-u[k,j, -2])/grid.dx[j,1]
-				def_stretch = (u[k,j,  0]-u[k,j, -2])/grid.dx[j,1] \
-					    - (v[k,j+1,i]-v[k,j-1,i])/grid.dy[j,1]
-				deff[k,j,-1] = 0.5*math.atan2(def_shear, def_stretch)
-
-	return deff
-
-#
-# Rotate an angle from relative to the x-axis to relative to the wind direction
-def rotate_natural(angle, u, v):
-	angle -= np.arctan2(v,u)
-	angle[angle < -np.pi/2] += np.pi
-	angle[angle >= np.pi/2] -= np.pi
-
-	return angle
-
-
-#
 # Unflatten a flattened front array, using the froff list; 
 #  separately for cold/warm and stationary fronts
 def unflatten_fronts(fronts, froff, minlength=1):
+	''' To be made obsolete by saving cold/warm/stat fronts separately as lines in the standard-dynlib way '''
+
 	cold = [__unflatten_fronts_t(fronts[t,0,:,:], froff[t,0,:], minlength) for t in range(fronts.shape[0])]
 	warm = [__unflatten_fronts_t(fronts[t,1,:,:], froff[t,1,:], minlength) for t in range(fronts.shape[0])]
 	stat = [__unflatten_fronts_t(fronts[t,2,:,:], froff[t,2,:], minlength) for t in range(fronts.shape[0])]
@@ -191,6 +154,8 @@ def unflatten_fronts(fronts, froff, minlength=1):
 
 # unflatten one time step and front type
 def __unflatten_fronts_t(fronts, froff, minlength):
+	''' To be made obsolete by saving cold/warm/stat fronts separately as lines in the standard-dynlib way '''
+
 	fronts = [fronts[froff[i]:froff[i+1],:] for i in range(froff.shape[0]-1)]
 	fronts = filter(lambda lst: len(lst) >= minlength, fronts)
 
@@ -199,6 +164,12 @@ def __unflatten_fronts_t(fronts, froff, minlength):
 #
 # return a 3d boolean array where frontal points are True, elsewere False
 def mask_fronts(fronts, froff, s=(361,720)):
+	''' To be made obsolete by saving cold/warm/stat fronts separately as lines in the standard-dynlib way 
+	
+	See also
+	--------
+	``mask_lines``, ``smear_lines``.
+	'''
 	masks = [np.zeros((len(fronts), s[0], s[1]), dtype='bool'),
 		 np.zeros((len(fronts), s[0], s[1]), dtype='bool'),
 		 np.zeros((len(fronts), s[0], s[1]), dtype='bool') ]
@@ -213,24 +184,37 @@ def mask_fronts(fronts, froff, s=(361,720)):
 
 	return masks
 
-#
-# return a 3d boolean array where line points are True, elsewere False
-# OBS: Obsolete: use the Fortran version dynfor.utils.mask_lines instead
-def mask_lines(lines, loff, s=(361,720)):
-	mask = np.zeros((lines.shape[0], s[0], s[1]), dtype='bool')
 
-	for t in range(lines.shape[0]):
-		for n in range(loff[t].max()):
-			# python starts counting at zero, unlike fortran
-			j = round(lines[t,n,1] -1)
-			i = round(lines[t,n,0] -1) % s[1]
-			mask[t,j,i] = True
+def mask_lines_with_data(lines, loff, dat=None, s=(361,720)):
+	''' Mask lines in a gridded map
 
-	return mask
+	Instead of returning the value ``1`` for grid points containing a line, 
+	this function sets the value to either the additional info in the 
+	line data or to the value of a given data array.
 
-#
-# return a 3d boolean array where line points contain values, elsewere 0
-def mask_lines_saveinfo(lines, loff, dat=None, s=(361,720)):
+	Notes
+	-----
+	
+	 * Reimplement in fortran, along with hte mask_lines function there.
+	 * Grid size should become a parameter in the configuration
+
+	Parameters
+	----------
+	lines : np.narray with dimensions (pointindex,infotype)
+	    Lines to be marked on the map
+	loff : np.array with dimensions (lineindex)
+	    List of point indexes for the first points of each line
+	dat : np.ndarray with dimensions (y,x)
+	    Optional: Data to be used for marking on the map
+	s : 2-tuple of int
+	    Optional: Grid dimensions
+	
+	Returns
+	-------
+	np.ndarray
+	    Gridded map of lines
+	'''
+
 	mask = np.zeros((lines.shape[0], s[0], s[1]))
 
 	for t in range(lines.shape[0]):
@@ -245,9 +229,34 @@ def mask_lines_saveinfo(lines, loff, dat=None, s=(361,720)):
 
 	return mask
 
-#
-# return a 3d boolean array where line points are smoothly masked
+
 def smear_lines(lines, loff, s=(361,720)):
+	''' Mask lines in a gridded map and then smooth slightly
+
+	Grid points containing a line will be marked with the value ``1``,
+	otherwise the retuned map contains zeros.
+
+	Notes
+	-----
+	
+	 * Grid size should become a parameter in the configuration
+	 * Make the filter configurable
+
+	Parameters
+	----------
+	lines : np.narray with dimensions (pointindex,infotype)
+	    Lines to be marked on the map
+	loff : np.array with dimensions (lineindex)
+	    List of point indexes for the first points of each line
+	s : 2-tuple of int
+	    Optional: Grid dimensions
+	
+	Returns
+	-------
+	np.ndarray
+	    Gridded map of lines
+	'''
+	
 	filtr_len = 5
 	filtr_func = mk_gauss(0, 1)
 	filtr = np.array(map(filtr_func, range(-filtr_len,filtr_len+1)))
@@ -258,38 +267,69 @@ def smear_lines(lines, loff, s=(361,720)):
 	return dynfor.utils.filter_xy(mask, filtr)
 
 
-
-#
-# mask parts of the field that are insignificant at the chosen level
 def mask_insignificant(dat, mean, sig, nsig):
+	''' Mask parts of a composite that are insignificant at the chosen level
+
+	Parameters
+	----------
+	dat : np.ndarray
+	    Composite field
+	mean : np.ndarray
+	    Corresponding field of mean values
+	sig : np.ndarray
+	    Corresponding field of standard deviation values
+	nsig : scalar number
+	    Statistical significance level, expressed normalised to the standard-derivation
+	
+	Returns
+	-------
+	np.ndarray
+	    Mask where the composite is significant
+	'''
 	dat[np.logical_and(dat < mean + nsig*sig, dat > mean - nsig*sig)] = np.nan
 
 	return dat
 
 
-# 
-# Inverse of the CDF of the Gaussian distribution
 igauss = lambda p: np.sqrt(2)*erfinv(2*p-1.0)
+''' Inverse of the cumulative distribution function (CDF) of the Gaussian distribution 
+
+Parameters
+----------
+p : scalar number
+    Probability of occurrence in the range 0 - 1.
+
+Returns
+-------
+float
+    Threshold value in the CDF to exceed the given probability
+'''
+
 
 #
-# Return a function calculating a Gaussian with the given mean (x0) and standard deviation (stddev)
-def mk_gauss(x0,stddev):
-	return lambda x: np.exp(-0.5*(x-x0)**2/stddev**2)/(np.sqrt(2*np.pi)*stddev)
-
-#
-# Calculate the most frequent value from a given histogram and bins
-def cal_mfv(hist, bins):
-	s = hist.shape[1:]
-	mfv = np.zeros(s)
-	for j in range(s[0]):
-		for i in range(s[1]):
-			bi = hist[:,j,i].argmax()
-			mfv[j,i] = (bins[bi+1]+bins[bi])/2.0
-	return mfv
-
-#
-# Generate (interpolation) points for cross section
+# 
 def sect_gen_points(coords, m, dxy):
+	''' Generate (interpolation) points along a cross section
+	
+	Parameters
+	----------
+	coords : list of 2-tuples
+	    List of coordinates describing the section
+	m : Basemap instance
+	    Map projection underlying the section
+	dxy : scalar number
+	    Maximum distance between interpolation points along the section
+	
+	Returns
+	-------
+	list
+	    Longitudes of the interpolation points
+	list 
+	    Latitudes of the interpolation points
+	list
+	    Distances along section from the section origin
+	'''
+
 	retlon = []
 	retlat = []
 	retxy  = []
@@ -314,10 +354,43 @@ def sect_gen_points(coords, m, dxy):
 
 	return retlon, retlat, retxy
 
-#
-# General temporal aggregation 
 def aggregate(dates, dat, agg):
-	# We assume the time series to be equally spaced in time
+	''' General temporal aggregation of data
+
+	The function assumes that the data is be equally spaced in time. This
+	requirement might be relaxed in the future.
+
+	Parameters
+	----------
+	dates : list of datetime
+	    Dates at with the data is defined
+	dat : np.ndarray
+	    Data to be aggregated
+	agg : str
+	    Identifier for the aggregation period. Currently the following identifers are
+	    implemented: 
+
+	    * ``all``: Temporal average everything
+	    * ``met_season``: Seasons after their standard meteorological definition
+	    * ``cal_monthly``: Months following the calendar definition
+	    * ``10d``: 10-day intervals starting from the first given date
+	    * ``cal_weekly``: Weeks following the calendar definition
+	    * ``7d`` or ``weekly``: 7-day intervals starting from the first given date, 
+	      irrespective of the day of the week
+	    * ``pendad``: Pentads according to their definition
+	    * ``5d``: 5-day intervals starting from the first given date
+	    * ``3d``: 3-day intervals starting from the first given date
+	    * ``2d``: 2-day intervals starting from the first given date
+	    * ``1d`` or ``daily``: 1-day intervals starting from the first given date
+	
+	Returns
+	-------
+	list of datetime
+	    Dates at with the aggregation periods start
+	np.ndarray
+	    Aggregated data
+	'''
+
 	dtd = dates[1] - dates[0]
 
 	# Helper functions generating functions :-)
@@ -339,7 +412,7 @@ def aggregate(dates, dat, agg):
 		agg = 'func'
 	
 	# Aggregate by season
-	elif agg == 'cal_season':
+	elif agg == 'met_season':
 		# Defining some helpers
 		season_start = {1: 12, 2: 12, 3: 3, 4: 3, 5: 3, 6: 6, 7: 6, 8: 6, 9: 9, 10: 9, 11: 9, 12: 12}
 		first_year_offset = {1: -1, 2: -1, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0}
@@ -451,33 +524,37 @@ def aggregate(dates, dat, agg):
 
 	return dates_out, dat_out
 
-#
-# Time series smoothing (running mean)
-def t_smooth(ts, smooth):
-	sts = np.zeros(ts.shape)
-	
-	a = -(smooth-1)/2
-	z = (smooth-1)/2
-	sts[:z] = np.nan
-	sts[a:] = np.nan
-	for i in range(a, z+1):
-		tsslc = slice(z+i,a+i)
-		if a+i == 0:
-			tsslc = slice(z+i,None)
-		else:
-			tsslc = slice(z+i,a+i)
-
-		sts[z:a] += ts[tsslc]
-	
-	sts /= smooth
-
-	return sts
 
 
 #
 # Varimax rotation for EOFs as introduced in Kaiser (1958)
 #  -> if raw = False use normal varimax, otherwise raw varimax
-def varimax(phi, raw=False, gamma = 1.0, q = 20, tol = 1e-6):
+def varimax(phi, raw=False, gamma = 1.0, max_iter = 20, tol = 1e-6):
+	''' Varimax rotation for EOFs
+
+	As introduced by Kaiser (1958).
+
+	Parameters
+	----------
+	phi : np.ndarray
+	    EOF loadings
+	raw : bool
+	    Optional, default ``False``. If ``True`` use the "raw varimax" rotation instead of the "normal varimax".
+	gamma : float
+	    Optional, default ``1``. Iteration parameter.
+	max_iter : int
+	    Optional, default ``20``. Maximum number of iterations to find the optimal rotation.
+	tol : float
+	    Optional, default ``1.0e-6``. Numerical tolerance to consider the iteration converged.
+	    
+	Returns
+	-------
+	np.ndarray
+	    Rotated EOF loadings
+	np.ndarray
+	    Rotation matrix
+	'''
+
 	if not raw:
 		norm = np.sqrt((phi**2).sum(axis=1))
 		phi /= norm[:,np.newaxis]
@@ -485,7 +562,7 @@ def varimax(phi, raw=False, gamma = 1.0, q = 20, tol = 1e-6):
 	p, k = phi.shape
 	R = np.eye(k)
 	d = 0
-	for i in xrange(q):
+	for i in xrange(max_iter):
 		d_old = d
 		Lambda = np.dot(phi, R)
 		u,s,vh = np.linalg.svd(np.dot(
