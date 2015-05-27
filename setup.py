@@ -20,6 +20,11 @@ if len(changes) > 0:
 	warnings.warn('Packaging/Installing a non-committed version! Be sure you know what you are doing!')
 	version += '+'
 
+precc = 'lib/fortran/.precc'
+fortran_modules = ['kind', 'config', 'consts', 'derivatives', 'detect', 'detect_fronts', 'detect_rwb_contour',
+		   'diag', 'ellipse', 'humidity', 'stat', 'utils']
+fortran_modules = ['%s/%s.mod' % (precc, mod) for mod in fortran_modules]
+
 # Override the build_py class to 
 #  (1) make it also compile the f2py shared object 
 #  (2) make python module at . the root module called dynlib
@@ -49,7 +54,11 @@ setup(cmdclass={'build_py': build_py},
 	packages=['dynlib'],
 	package_dir={'dynlib': 'lib'},
 	#py_modules=['test', ],
-	scripts=['bin/dynlib_init.py', ]
+	scripts=['bin/dynlib_init.py', ],
+	data_files=[
+		('lib', ['lib/libdynfor.so']),
+		('include', fortran_modules),
+	]
 )
 
 # the end

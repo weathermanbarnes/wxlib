@@ -11,18 +11,27 @@ work="$base/examples"
 doc="$base/doc"
 doc_extract=".compile_fortran_doc.py"
 
-files="config.f95 derivatives.f95 ellipse.f95 utils.f95 humidity.f95 diag.f95 detect_rwb_contour.f95 detect_fronts.f95 detect.f95 stat.f95"
-filec="const.f95"
-filek="kind.f95"
+files="config.f90 derivatives.f90 ellipse.f90 utils.f90 humidity.f90 diag.f90 detect_rwb_contour.f90 detect_fronts.f90 detect.f90 stat.f90"
+filec="const.f90"
+filek="kind.f90"
 
-fortran_library="dynfor"
-pysig="${precc}/$fortran_library.pyf"
+python_library="dynfor"
+fortran_library="libdynfor"
+pysig="${precc}/$python_library.pyf"
 
 LIBS='-llapack'
 
 # Empty precompiler directory
 mkdir -p $precc
 rm -rf ${precc}/*
+
+# Anticipate compiled object file names
+fileso=""
+for file in $files
+	do fileso="$fileso ${file%.*}.o"
+done
+fileco="${filec%.*}.o"
+fileko="${filek%.*}.o"
 
 
 # 1. Simple sed precompiler
@@ -49,22 +58,24 @@ echo "Stage 2: Creating python signature file"
 
 cd $precc
 
-f2py -m $fortran_library -h $pysig $filec $files > /dev/null
+f2py -m $python_library -h $pysig $filec $files > /dev/null
 sed "s/kind=nr/kind=8/g" $pysig | sed "s/_nr//g" |
 sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" > ${pysig}_tmp
 mv ${pysig}_tmp $pysig
 
 
 # 3. Compiling the fortran modules 
-echo "Stage 3: Creating Fortran *.mod files"
-gfortran $LIBS -c $filek $filec $files 
+echo "Stage 3: Compiling Fortran shared object"
+gfortran $LIBS -fPIC -c $filek $filec $files 
+gfortran -shared $fileko $fileco $fileso $LIBS -o $fortran_library.so 
+mv $fortran_library.so $baselib
 
 
 # 4. Compiling the shared object usable from within python
-echo "Stage 4: Compiling the python module (as a shared object)"
+echo "Stage 4: Compiling the python module"
 DEBUG=' --debug-capi --debug --opt="-fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace -g -pedantic"'
 f2py -c $LIBS --fcompiler=gnu95 $pysig $files $filec $filek > /dev/null
-mv $fortran_library.so $baselib
+mv $python_library.so $baselib
 
 
 # 5. Compiling Fortran documentation
