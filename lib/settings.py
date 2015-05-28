@@ -93,7 +93,7 @@ Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'msl': 'm
 		'front': 'front', 'cold_front': 'cold_front', 'warm_front': 'warm_front', 'stat_front': 'stat_front',
 		'convl': 'convl', 'defl': 'defl', 'vorl': 'vorl', 
 		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv', 'zeta': 'vo', 'div': 'div', 'ps': 'sp', 'ff': 'ff',
-		'ttr': 'trr', 'SST': 'sst'}
+		'ttr': 'ttr', 'SST': 'sst'}
 QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'msl': 'msl', 'u': 'u', 'v': 'v', 'w': 'w', 'q': 'q', 
 		't': 'T', 'pt': 'th', 'thetae': 'the', 'z': 'Z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
 		'front': 'front', 'cold_front': 'cold_front', 'warm_front': 'warm_front', 'stat_front': 'stat_front',
