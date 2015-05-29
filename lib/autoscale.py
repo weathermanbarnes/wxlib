@@ -139,6 +139,7 @@ def autoscale(dat, **conf):
 	    Scale
 	''' 
 	
+	mask   = conf.get('mask', slice(None))
 	extend = conf.get('extend')
 	exceed = conf.get('scale_exceed_percentiles', DEFAULT_PERCENTILES)
 	symzer = conf.get('scale_symmetric_zero', False)
