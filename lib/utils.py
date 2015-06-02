@@ -230,6 +230,25 @@ def mask_lines_with_data(lines, loff, dat=None, s=(361,720)):
 	return mask
 
 
+def mk_gauss(x0,stddev):
+	''' Create a Gaussian distribution function
+
+	Parameters
+	----------
+	x0 : float
+		Center of the distribution
+	stddev : float
+		Standard deviation of the distribution
+	
+	Returns
+	-------
+	callable
+	    Function evaluating the Gaussian distribution function based on the given parameters
+	'''
+
+	return lambda x: np.exp(-0.5*(x-x0)**2/stddev**2)/(np.sqrt(2*np.pi)*stddev)
+
+
 def smear_lines(lines, loff, s=(361,720)):
 	''' Mask lines in a gridded map and then smooth slightly
 
