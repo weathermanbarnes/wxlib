@@ -1,0 +1,67 @@
+
+
+#######################################################################
+# Syntax for personal settings, differentiating between settings applying to different contexts
+
+if in_context('erainterim', 'era40'):
+	conf.datapath.insert(1, '/bla/fasel')
+
+
+#######################################################################
+# Syntax for changing plot settings within a context, depending on
+# (plottype='area'|'line', variable, level)
+
+conf.plot._set('cmap', cm.greys, plev='pv2000', q='u') 		# single key
+conf.plot._set('scale', np.arange(15,76,15), q='u') 		# for all levels
+conf.plot._set('cmap', cm.jet) 					# for all variables and levels
+conf.plot.pv2000.u.cmap = cm.greys 				# single key
+conf.plot._all.u.scale = np.arange(15,76,15) 		?	# for all levels
+conf.plot._all._all.colors = None 			?	# for all variables and levels
+
+conf.plot._get('pv2000', 'u') 					# Access plotconf
+conf.plot.pv2000.u 						# as above
+conf.plot._get_default('pv2000', 'u') 				# Access default plotconf
+
+conf.plot._reset('cmap', plev='pv2000', q='u') 			# single key
+conf.plot._reset('scale', q='u') 				# for all levels
+conf.plot._reset('cmap') 					# for all variables and levels
+
+<- Problem: "conf.plot.300.u.cmap" is a SyntaxError in python
+   Potential solution: call it "conf.plot.p300.u.cmap"
+   Aternative: disregard the getattr syntax
+all = slice(None)
+conf.plot[all, 'u', 'cmap']
+
+# Advantages: 
+#  * Implies an array structure, whereas the getattr syntax implies a tree structure
+#  * More consistent with typical uses in scripts like for
+#    >>> fig.map(dat, grid, **conf.plot[plev,q])
+# Disadvantages:
+#  * Methods like reset and merge need different syntax 
+#    >>> conf.plot.reset(all, 'u', 'cmap')
+#    or is slightly misleading
+#    >>> del conf.plot[all, 'u', 'cmap']
+#    or need to be stand-alone
+#    >>> plotconf = merge(conf.plot[all, 'u'], **kwargs)
+#  * Needs quite a few hard-to-type string literals (e.g. 'u', 'cmap') in the configuration
+    
+
+# same principle for conf.plotf
+
+#######################################################################
+# Plot something based on ERA-Interim data, with some personal settings
+
+import context.erainterim
+import context.plot.color
+import my_settings
+
+
+#######################################################################
+# Plotting ECMWF and AROME forecasts based only on standard settings
+
+import context.ecmwf_fc
+import context.metno_fc
+import context.plot.color
+
+
+
