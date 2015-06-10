@@ -11,7 +11,7 @@ work="$base/examples"
 doc="$base/doc"
 doc_extract=".compile_fortran_doc.py"
 
-files="config.f90 derivatives.f90 ellipse.f90 utils.f90 humidity.f90 diag.f90 detect_rwb_contour.f90 detect_fronts.f90 detect.f90 stat.f90"
+files="config.f90 derivatives.f90 ellipse.f90 utils.f90 humidity.f90 diag.f90 detect_rwb_contour.f90 detect_fronts.f90 detect.f90 sphere.f90 stat.f90"
 filec="const.f90"
 filek="kind.f90"
 
@@ -19,7 +19,7 @@ python_library="dynfor"
 fortran_library="libdynfor"
 pysig="${precc}/$python_library.pyf"
 
-LIBS='-llapack'
+LIBS='-L/Data/gfi/users/local/lib -llapack -lspherepack'
 
 # Empty precompiler directory
 mkdir -p $precc
@@ -59,7 +59,8 @@ echo "Stage 2: Creating python signature file"
 cd $precc
 
 f2py -m $python_library -h $pysig $filec $files > /dev/null
-sed "s/kind=nr/kind=8/g" $pysig | sed "s/_nr//g" |
+sed "s/kind=nc/kind=16/g" $pysig | sed "s/_nc//g" |
+sed "s/kind=nr/kind=8/g" | sed "s/_nr//g" |
 sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" > ${pysig}_tmp
 mv ${pysig}_tmp $pysig
 

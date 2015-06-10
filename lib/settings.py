@@ -124,7 +124,7 @@ FILE_STD   = 'ei.ans.%(time)d.%(plev)s.%(q)s'
 FILE_STAT  = 'ei.ans.%(time)d.%(plev)s.%(q)s.stat'
 FILE_MSTAT = 'ei.ans.stat.%(plev)s.%(q)s'
 STD_SLICE  = (slice(None), slice(None), slice(None))
-YEARS  = range(1979,2014)
+YEARS  = range(1979,2015)
 PLEVS  = ['100', '200', '300', '400', '500', '550', '600', '650', '700', '750', '800', '850', '900', '950', '1000', ]
 PTLEVS = ['pt300', 'pt315', 'pt330', 'pt350', ]
 PVLEVS = ['pv2000', ]
@@ -486,7 +486,7 @@ class settings(object):
 	The object is yet another interface to a dictionary, including default values.
 	In contrast to the ``settings_dict`` object, here the configuration keys are
 	made accessible through attributes, with the syntax being ``conf.key`` 
-	instead of the dictionary lookup ``conf['key']``.
+	instead of the dictionary lookup syntax ``conf['key']``.
 	'''
 
 	__default = {

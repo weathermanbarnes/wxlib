@@ -5,6 +5,8 @@ import sys
 import re
 import pickle
 
+import numpy as np
+
 
 ''' Utilities for auto-creating documentation for dynlib
 
@@ -184,6 +186,8 @@ def takeover(f2pymodule, name, module):
 
 	# Setting documentation for the functions within the module
 	for funcname, value in f2pymodule.__dict__.items():
+		if type(value) == np.ndarray:
+			continue
 		# Backup the f2py generated docstring
 		value.__f2pydoc__ = value.__doc__
 		# Set the doctring from the fortran_doc extracted documentation

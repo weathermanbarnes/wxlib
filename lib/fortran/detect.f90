@@ -437,9 +437,7 @@ contains
     !
   end subroutine
   !
-  ! Find jetaxis by deformation angle. Using zerolines of the deformation angle
-  ! as locator and the quantity v cross grad(deformation angle) with the upper
-  ! threshold jetint_thres as mask
+  ! Find jetaxes by zero-shear condition and a mask for well-defined wind maxima.
   subroutine jetaxis(ja,jaoff,nx,ny,nz,no,nf,u,v,dx,dy)
     use detect_fronts
     use utils, only: smooth_xy
@@ -455,8 +453,9 @@ contains
     !
     real   (kind=nr), parameter :: NaN = -9999.9_nr, ddang_max = pi/2.0_nr
     !
-    real(kind=nr) :: us(nz,ny,nx), vs(nz,ny,nx), ddangdx(nz,ny,nx), ddangdy(nz,ny,nx), &
-                 &   jetint(nz,ny,nx), jaloc(nz,ny,nx), ones(ny,nx) !, ffs(nz,ny,nx)
+    !real(kind=nr) :: us(nz,ny,nx), vs(nz,ny,nx)
+    real(kind=nr) :: dsheardx(nz,ny,nx), dsheardy(nz,ny,nx), &
+                 &   jetint(nz,ny,nx), shear(nz,ny,nx), ones(ny,nx), ff(nz,ny,nx)
     integer(kind=ni) :: i,j,k, ip1,im1
     ! -----------------------------------------------------------------
     !
@@ -465,33 +464,30 @@ contains
     ! Would be interesting, if otherwise :-)
     ones(:,:) = 1.0_nr
     !
-    call smooth_xy(us, nx,ny,nz, u, nsmooth)
-    call smooth_xy(vs, nx,ny,nz, v, nsmooth)
+    ff = sqrt( u(:,:,:)**2_ni + v(:,:,:)**2_ni )
     !
     ! Based on shear in natural  coordinates
-    call shear_nat(jaloc, nx,ny,nz, us,vs, dx,dy)
-    call ddx(ddangdx, nx,ny,nz, jaloc, dx,dy)
-    call ddy(ddangdy, nx,ny,nz, jaloc, dx,dy)
-    !
-    jetint(:,:,:) = us(:,:,:)*ddangdy(:,:,:) - vs(:,:,:)*ddangdx(:,:,:)
+    call shear_nat(shear, nx,ny,nz, u,v, dx,dy)
+    call ddx(dsheardx, nx,ny,nz, shear*ff, dx,dy)
+    call ddy(dsheardy, nx,ny,nz, shear*ff, dx,dy)
+    jetint(:,:,:) = (u(:,:,:)*dsheardy(:,:,:) - v(:,:,:)*dsheardx(:,:,:))/ff(:,:,:)
     !
     where(jetint > -jetint_thres)
-       jaloc = NaN
+       shear = NaN
     end where
     !
     ! Save the wind speed along the jet axis in the third field along with the
     ! jet axis position. 
     !  (the original jetint is not needed anymore after the masking `where` block)
-    jetint(:,:,:) = sqrt(us(:,:,:)**2.0_nr + vs(:,:,:)**2.0_nr)
+    jetint(:,:,:) = ff(:,:,:)
     !
-    call line_locate(ja,jaoff, nx,ny,nz,no,nf, jaloc,jetint,searchrad,minlen,NaN, dx,dy)
+    call line_locate(ja,jaoff, nx,ny,nz,no,nf, shear,jetint,searchrad,minlen,NaN, dx,dy)
     !
     return
   end subroutine
   !
-  ! Find jetaxis by deformation angle. Using zerolines of the deformation angle
-  ! as locator and the quantity v cross grad(deformation angle) with the upper
-  ! threshold jetint_thres as mask
+  ! Find jetaxes by zero-shear condition and a mask for wind maxima above a
+  ! certain wind speed.
   subroutine jetaxis_gareth(ja,jaoff,nx,ny,nz,no,nf,u,v,dx,dy)
     use detect_fronts
     use utils, only: smooth_xy
