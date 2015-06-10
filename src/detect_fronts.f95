@@ -401,7 +401,10 @@ contains
        do n = startidx,endidx
           do m = startidx,endidx
              do l = startidx,endidx
-                if ( dists(n,m) > 0.0_nr .and. dists(n,l) > 0.0_nr ) then
+                ! If l and m are connected via n
+                if ( dists(n,m) >= 0.0_nr .and. dists(n,l) >= 0.0_nr ) then
+                   ! Check if the connection via n is shorter than the
+                   ! previously known connection (if any)
                    if ( dists(n,m) + dists(n,l) < dists(m,l) .or. dists(m,l) < 0.0_nr ) then
                       dists(m,l) = dists(n,m) + dists(n,l)
                       inter(m,l) = n
@@ -417,8 +420,6 @@ contains
        longestdist = maxval(dists(startidx:endidx,startidx:endidx))
        startpos = longestpath(1_ni) + startidx - 1_ni
        endpos   = longestpath(2_ni) + startidx - 1_ni
-       !write(*,*) 'Debug struct ', nn, startidx, endidx, longestdist
-       !write(*,*) 'Debug struct ', nn, jidx(startpos), iidx(startpos), jidx(endpos), iidx(endpos)
        !
        if ( longestdist >= minlen ) then
           ! Initialise and record start position

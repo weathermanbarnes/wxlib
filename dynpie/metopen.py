@@ -143,7 +143,7 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 		raise RuntimeError, 'dat does not have size 3 in the third dimension'
 
 	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc.netcdf_file(c.opath+'/'+(c.file_std % {'time': time, 'plev': plev, 'q': c.qi[q]})+'.nc', 'w')
+	of = nc3.netcdf_file(c.opath+'/'+(c.file_std % {'time': time, 'plev': plev, 'q': c.qi[q]})+'.nc', 'w')
 	of._attributes = {'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	}

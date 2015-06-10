@@ -247,7 +247,7 @@ contains
     real(kind=nr), intent(in) :: dat(ny,nx), thres
     integer(kind=ni), intent(in) :: seeds(ns, 2_ni), nx,ny,ns
     logical, intent(out) :: res(ny,nx)
-    !f2py depend(nx,ny,nz) res
+    !f2py depend(nx,ny) res
     !
     integer(kind=ni) :: n, i,j
     ! -----------------------------------------------------------------
@@ -272,7 +272,7 @@ contains
     real(kind=nr), intent(in) :: dat(ny,nx), thres
     integer(kind=ni), intent(in) :: nx,ny, i,j
     logical, intent(inout) :: res(ny,nx)
-    !f2py depend(nx,ny,nz) res
+    !f2py depend(nx,ny) res
     ! -----------------------------------------------------------------
     !
     ! North
@@ -317,5 +317,41 @@ contains
           call minimum_connect(res, nx,ny, dat, 1_ni,j, thres)
        end if
     end if
+  end subroutine
+  !
+  ! Mask areas above given threshold and conntected to list of points
+  subroutine mask_grow(res, nx,ny,nz, mask, nn)
+    logical, intent(in) :: mask(nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz, nn
+    logical, intent(out) :: res(nz,ny,nx)
+    !f2py depend(nx,ny,nz) res
+    !
+    logical :: tmp(nz,ny,nx)
+    integer(kind=ni) :: n, i,j,k
+    ! -----------------------------------------------------------------
+    !
+    ! Temporary copy to avoid overwriting mask
+    tmp(:,:,:) = mask(:,:,:)
+    res(:,:,:) = mask(:,:,:)
+    !
+    ! Grow the mask, one layer at a time
+    do n = 1_ni,nn
+       do k = 1_ni,nz
+          do j = 1_ni,ny
+             do i = 1_ni,nx
+                if ( .not. res(k,j,i) ) then
+                   res(k,j,i) = tmp(k,min(j+1_ni,ny),i) .or. tmp(k,max(j-1_ni,1_ni),i) .or. &
+                              & tmp(k,j,min(i+1_ni,nx)) .or. tmp(k,j,max(i-1_ni,1_ni))
+                end if
+             end do
+             ! Respect periodic boundaries in West and East
+             if ( grid_cyclic_ew ) then
+                res(k,j,1_ni) = res(k,j,1_ni) .or. tmp(k,j,nx)
+                res(k,j,nx) = res(k,j,nx) .or. tmp(k,j,1_ni)
+             end if
+          end do
+       end do
+       tmp(:,:,:) = res(:,:,:)
+    end do
   end subroutine
 end module

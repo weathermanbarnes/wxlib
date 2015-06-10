@@ -401,7 +401,7 @@ contains
     ! TODO: Move to constants / arguments
     dj = 30  ! 15°latitude
     di = 15  ! 7.5°longitude
-    j0 = 100 ! From 40°N
+    j0 = 120 ! From 30°N
     j1 = 40  ! To 70°N
     !
     res(:,:,:) = 0.0_nr

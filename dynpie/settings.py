@@ -58,7 +58,9 @@ Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'msl': 'm
 		'front': 'front', 'cold_front': 'cold_front', 'warm_front': 'warm_front', 'stat_front': 'stat_front',
 		'convl': 'convl', 'defl': 'defl', 'vorl': 'vorl', 
 		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv', 'zeta': 'vo', 'div': 'div', 'ps': 'sp', 'ff': 'ff',
-		'ttr': 'trr', 'SST': 'sst'}
+		'ttr': 'trr', 'SST': 'sst',
+		'blockint': 'blockint', 
+}
 QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'msl': 'msl', 'u': 'u', 'v': 'v', 'w': 'w', 'q': 'q', 
 		't': 'T', 'pt': 'th', 'thetae': 'the', 'z': 'Z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
 		'front': 'front', 'cold_front': 'cold_front', 'warm_front': 'warm_front', 'stat_front': 'stat_front',
@@ -66,16 +68,20 @@ QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'msl': '
 		'defl': 'defl', 'dloff': 'defl', 'vorl': 'vorl', 'vloff': 'vorl', 
 		'jetaxis': 'jetaxis', 'jaoff': 'jetaxis', 'tcw': 'tw', 'tcwv': 'wv', 'vo': 'zeta',
 		'div': 'div', 'sp': 'ps', 'ff': 'ff',
-		'ttr': 'ttr', 'sst': 'SST'}
+		'ttr': 'ttr', 'sst': 'SST',
+		'blockint': 'blockint', 
+}
 
 UNITS = {'defabs': 's-1', 'defang': 'rad', 'defanr': 'rad', 'the': 'K', 'rsr': '1', 'ow': 's-2', 
-		'zeta': 's-1', 'div': 's-1', 'ttr': 'W m-2' }
+		'zeta': 's-1', 'div': 's-1', 'ttr': 'W m-2', 'blockint': 'varying', 'u': 'm s-1', 'v': 'm s-1', 'w': 'Pa s-1',
+}
 LONG = {'defabs': 'Total deformation', 'defang': 'Deformation angle', 'defanr': 'Deformation angle in natural coordinates',
 		'the': 'Equivalent potential temperature', 'rsr': 'Rotation/Strain-ratio', 'ow': 'Okubo-Weiss criterion',
 		'zeta': 'Horizontal vorticity', 'div': 'Horizontal divergence', 'jetaxis': 'Jet axis lines',
 		'ff': 'wind speed', 'pv': 'Potential vorticity', 'msl': 'Mean sea level pressure', 'w': 'Vertical velocity',
 		'cold_front': 'Cold front lines', 'warm_front': 'Warm front lines', 'stat_front': 'Stationary front lines',
-		'ttr': 'Top net thermal radiation',
+		'ttr': 'Top net thermal radiation', 'blockint': 'Blocking intensity indicator', 
+		'u': 'U velocity', 'v': 'V velocity',
 }
 
 _rose = [17,]

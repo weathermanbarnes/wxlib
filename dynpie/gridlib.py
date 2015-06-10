@@ -89,6 +89,8 @@ class grid(object):
 
 		return
 
+	rebuild_grid = __build_grid
+
 
 # Construct the grid based on the grid information in a nc (netcdf) file
 class grid_by_nc(grid):
