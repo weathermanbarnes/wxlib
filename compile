@@ -2,23 +2,36 @@
 # Compile scrip for dynlib
 
 # Obs: The order of the files in $files has to reflect the interdepencies!
-cur=`pwd`
-src="$cur/src"
-precc="$src/precc"
-work="$cur/default"
+base=`pwd`
+baselib="$base/lib"
+src="$baselib/fortran"
+precc="$src/.precc"
+work="$base/examples"
 
-files="config.f95 derivatives.f95 ellipse.f95 utils.f95 humidity.f95 diag.f95 detect_rwb_contour.f95 detect_fronts.f95 detect.f95 stat.f95"
-filec="const.f95"
-filek="kind.f95"
-filem=".dynlib_workdir_prepared"
+doc="$base/doc"
+doc_extract=".compile_fortran_doc.py"
 
-pysig="${precc}/dynlib.pyf"
+files="config.f90 derivatives.f90 ellipse.f90 utils.f90 humidity.f90 diag.f90 detect_rwb_contour.f90 detect_fronts.f90 detect.f90 sphere.f90 stat.f90"
+filec="const.f90"
+filek="kind.f90"
 
-LIBS='-llapack'
+python_library="dynfor"
+fortran_library="libdynfor"
+pysig="${precc}/$python_library.pyf"
+
+LIBS='-L/Data/gfi/users/local/lib -llapack -lspherepack'
 
 # Empty precompiler directory
 mkdir -p $precc
 rm -rf ${precc}/*
+
+# Anticipate compiled object file names
+fileso=""
+for file in $files
+	do fileso="$fileso ${file%.*}.o"
+done
+fileco="${filec%.*}.o"
+fileko="${filek%.*}.o"
 
 
 # 1. Simple sed precompiler
@@ -45,37 +58,39 @@ echo "Stage 2: Creating python signature file"
 
 cd $precc
 
-f2py -m dynlib -h $pysig $filec $files > /dev/null
-sed "s/kind=nr/kind=8/g" $pysig | sed "s/_nr//g" |
+f2py -m $python_library -h $pysig $filec $files > /dev/null
+sed "s/kind=nc/kind=16/g" $pysig | sed "s/_nc//g" |
+sed "s/kind=nr/kind=8/g" | sed "s/_nr//g" |
 sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" > ${pysig}_tmp
 mv ${pysig}_tmp $pysig
 
 
 # 3. Compiling the fortran modules 
-echo "Stage 3: Creating Fortran *.mod files"
-gfortran $LIBS -c $filek $filec $files 
+echo "Stage 3: Compiling Fortran shared object"
+gfortran $LIBS -fPIC -c $filek $filec $files 
+gfortran -shared $fileko $fileco $fileso $LIBS -o $fortran_library.so 
+mv $fortran_library.so $baselib
 
 
 # 4. Compiling the shared object usable from within python
-echo "Stage 4: Compiling the python module (as a shared object)"
+echo "Stage 4: Compiling the python module"
 DEBUG=' --debug-capi --debug --opt="-fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace -g -pedantic"'
-f2py -c $LIBS --fcompiler=gnu95 dynlib.pyf $files $filec $filek > /dev/null
-mv dynlib.so $cur
-cd $cur/..
+f2py -c $LIBS --fcompiler=gnu95 $pysig $files $filec $filek > /dev/null
+mv $python_library.so $baselib
 
 
-if [ -f $filem ];
-then
-	echo "Stage 5: skipped [`pwd` already prepared]"
-elif [ $1 == '--no-prepare' ];
-then
-	echo "Stage 5: skipped by instruction"
-else
-	echo "Stage 5: Preparing the work directory [`pwd`]"
-	cp -a $cur/default/example*.py .
-	cp -a $cur/default/settings.py .
-	touch $filem
-fi
+# 5. Compiling Fortran documentation
+echo "Stage 5: Compiling the pickled Fortran documentation"
+cd $src
+python $baselib/$doc_extract $filek $filec $files
+
+
+# 6. Compiling Fortran documentation
+echo "Stage 6: Generating the common documentation"
+cd $doc
+make clean &> /dev/null
+PYTHONPATH="$doc:$PYTHONPATH" make html &> /dev/null
+
 
 
 echo "Done compiling dynlib version $VERREVI"

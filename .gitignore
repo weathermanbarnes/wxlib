@@ -1,14 +1,11 @@
-# Bedymo log files
-*.log
-# Bedymo output
-*.nc
 # (Pre-)Compiled stuff
 *.pyc
 *.o
 *.so
 *.x
 *.mod
-precc
+*.pickle
+.precc
 # Python packaging and building
 build
 dist
@@ -19,6 +16,7 @@ MANIFEST
 *~
 *.old
 *.orig
+.DS_Store
 # Results (pictures, numpy, matlab, etc.)
 *.png
 *.npy

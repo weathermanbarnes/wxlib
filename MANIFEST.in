@@ -1,2 +1,7 @@
 include compile
-include src/*.f95
+include lib/fortran/*.f90
+include test/tests
+include examples/*.py
+include doc/Makefile
+include doc/source/conf.py
+include doc/source/*.rst
