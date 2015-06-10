@@ -810,8 +810,7 @@ def map_overlay_shading(dat, static, **kwargs):
 
 	def overlay(m, x, y, zorder, mask=None):
 		# TODO: What about an additional colorbar for this data?
-		# TODO: Why not reuse __contourf_data() for the actual plotting?
-		cs =  m.contourf(x, y, dat, latlon=True, **kwargs)
+		__contourf_dat(m, x, y, dat, kwargs)
 
 		return
 
