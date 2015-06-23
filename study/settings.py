@@ -69,25 +69,43 @@ class default_dict(mutmap):
 
 class nd_default_dict(default_dict):
 	""" n-dimensional dictionary with default values for valid keys in the last dimension
+
+	The default value is independent from any dimension but the last, here called "first 
+	dimensions".
+
+	Valid combinations of keys for the first dimensions are specified using "tables". Each
+	table is a list of sets containing valid keys for each of the first dimensions. Every 
+	combination between these valid keys is assumed to be meaningful. As an example, an 
+	array could contain a set of all available pressure levels and a set of all variables 
+	available on pressure levels. If a variable is only available on one of the pressure
+	levels, it would require an additional table, if one wants to avoid that configuration
+	for that variable are available on all pressure levels.
 	
-	The set of allowed keys for each dimension is limited, and mainly set during 
-	initialisation. Valid keys can only be introduced later through the ``add_default()``
-	and ``add_in_dimension()`` functions.
+	The set of allowed keys for each dimension is limited. Valid keys can be introduced 
+	through the ``add_default()`` and ``add_table()`` functions.
 	"""
-	def __init__(self, first_dimensions, defaults):
-		self._fdims = first_dimensions 		# List of sets containing valid keys for each dimension
-		self._ndims = len(self._fdims) + 1
+	def __init__(self, first_table, defaults):
+		self._fdims = [first_table, ] 	# List of tableSpecs, where each tableSpec is list of sets containing valid keys for each dimension
+		self._ndims = len(first_table) + 1
 		default_dict.__init__(self, defaults) 	# dictionary of valid keys in the last dimension and their default values
 	
 	def __getitem__(self, key):
 		if len(key) < self._ndims - 1:
-			raise KeyError, 'Key must contain at least %d dimensions' % len(self._fdims)
+			raise KeyError, 'Key must contain at least %d dimensions' % self._ndims-1
 		elif len(key) > self._ndims:
-			raise KeyError, 'Key can at most contain %d dimensions' % (len(self._fdims) + 1)
+			raise KeyError, 'Key can at most contain %d dimensions' % self._ndims
 		
-		for i, valid_skeys in zip(range(len(self._fdims)), self._fdims):
-			if not key[i] in valid_skeys:
-				raise KeyError, key
+		found = False
+		for table in self._fdims:
+			for i, valid_skeys in zip(range(self._ndims-1), table):
+				if not key[i] in valid_skeys:
+					break
+				elif i == self._ndims - 2:
+					found = True
+			if found == True:
+				break
+		if not found:
+			raise KeyError, key
 		
 		if len(key) == self._ndims:
 			if key in self._: 
@@ -103,6 +121,21 @@ class nd_default_dict(default_dict):
 				ret[skey] = self[tuple(fkey)]
 
 			return ret
+	
+	def __setitem__(self, key, value):
+		pass
+
+	def __delitem__(self, key):
+		pass
+
+	def add_table(self, table):
+		if not len(table) == self._ndims -1:
+			raise ValueError, 'Table needs to have %d dimensions, got %d instead.' % (
+					self._ndims -1, len(table))
+		self._fdims.append(table)
+
+	def add_default(self, key, value):
+		pass
 
 
 class hierarchical_default_dict(default_dict):

@@ -27,7 +27,7 @@ conf.plot._reset('scale', q='u') 				# for all levels
 conf.plot._reset('cmap') 					# for all variables and levels
 
 <- Problem: "conf.plot.300.u.cmap" is a SyntaxError in python
-   Potential solution: call it "conf.plot.p300.u.cmap"
+   Potential solution: call it "conf.plot.p300.u.cmap" or "conf.plot._300.u.cmap"
    Aternative: disregard the getattr syntax
 all = slice(None)
 conf.plot[all, 'u', 'cmap']
@@ -44,7 +44,7 @@ conf.plot[all, 'u', 'cmap']
 #    or need to be stand-alone
 #    >>> plotconf = merge(conf.plot[all, 'u'], **kwargs)
 #  * Needs quite a few hard-to-type string literals (e.g. 'u', 'cmap') in the configuration
-    
+#  * The array is not complete as not all variables exist on all levels
 
 # same principle for conf.plotf
 
