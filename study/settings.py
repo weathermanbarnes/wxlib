@@ -32,6 +32,16 @@ def def_context(context):
 
 
 class default_dict(mutmap):
+	''' Dictionary with a predefined set of valid keys and default values for each 
+
+	Non-default values are stored in ``self._``, the defaults in ``self._defaults``.
+	
+	Parameters
+	----------
+	defaults : dict
+	    Definition of valid keys and their default values
+	'''
+
 	def __init__(self, defaults):
 		self._ = {}
 		self._defaults = defaults
@@ -39,6 +49,8 @@ class default_dict(mutmap):
 		mutmap.__init__(self)
 		
 	def __getitem__(self, key):
+		''' Implements the access syntax ``dat[key]`` '''
+
 		if key in self._:
 			return self._[key]
 		elif key in self._defaults:
@@ -47,12 +59,16 @@ class default_dict(mutmap):
 			raise KeyError, key
 
 	def __setitem__(self, key, value):
+		''' Implements the assignment syntax ``dat[key] = value`` '''
+
 		if key in self._defaults:
 			self._[key] = value
 		else:
 			raise KeyError, key
 
 	def __delitem__(self, key):
+		''' Implements the reset syntax ``del dat[key]`` '''
+
 		if key in self._:
 			del self._[key]
 		elif key in self._defaults:
@@ -61,17 +77,21 @@ class default_dict(mutmap):
 			raise KeyError, key
 
 	def __iter__(self):
+		''' Implement interation over the dictionary, e.g. the syntax ``for key in dat:`` '''
+
 		return self._defaults.__iter__()
 
 	def __len__(self):
+		''' Implements the length query, allowing among others to use ``len(dat)`` '''
+
 		return len(self._defaults)
 
 
 class nd_default_dict(default_dict):
-	""" n-dimensional dictionary with default values for valid keys in the last dimension
+	''' n-dimensional dictionary with default values for valid keys in the last dimension
 
-	The default value is independent from any dimension but the last, here called "first 
-	dimensions".
+	The default value is independent from any dimension but the last. All dimensions 
+	before the last are subsequently called "first dimensions".
 
 	Valid combinations of keys for the first dimensions are specified using "tables". Each
 	table is a list of sets containing valid keys for each of the first dimensions. Every 
@@ -83,10 +103,17 @@ class nd_default_dict(default_dict):
 	
 	The set of allowed keys for each dimension is limited. Valid keys can be introduced 
 	through the ``add_default()`` and ``add_table()`` functions.
-	"""
+
+	Parameters
+	----------
+	first_table : list of sets
+	    Sets of valid keys for each of the first dimensions
+	defaults : dict
+	    Definition of valid keys and their default values
+	'''
 
 	def __init__(self, first_table, defaults):
-		self._fdims = [first_table, ] 	# List of tableSpecs, where each tableSpec is list of sets containing valid keys for each dimension
+		self._fdims = [first_table, ]
 		self._ndims = len(first_table) + 1
 		default_dict.__init__(self, defaults) 	# dictionary of valid keys in the last dimension and their default values
 	
@@ -245,13 +272,19 @@ class nd_default_dict(default_dict):
 #	pass
 
 class plot_settings_dict(nd_default_dict):
-	""" A version of the nd_default_dict, where the number of dimensions is fixed to three
+	''' A version of the nd_default_dict, where the number of dimensions is fixed to 3
 
-	The three dimensions are, in order: vertical level, variable and plot configuration key.
+	The dimensions are, in order: vertical level, variable and plot configuration key.
+
 	In contrast to the nd_default_dict, plot_settings_dict does not take an initial table as
 	an argument, as the dimensions are prescribed and no (plev,q)-table is more equal than
 	the others.
-	"""
+
+	Parameters
+	----------
+	defaults : dict
+	    Definition of valid keys and their default values
+	'''
 	def __init__(self, defaults):
 		nd_default_dict.__init__(self, [], defaults)
 		self._ndims = 3
@@ -259,7 +292,25 @@ class plot_settings_dict(nd_default_dict):
 
 
 class settings_obj(default_dict):
-	""" Another interface to a dict using the attribute syntax for access """
+	''' Another interface to a dict using the attribute syntax for access 
+
+	The object provides the primary access to dynlib configuration via its 
+	attributes, e.g. ``conf.datapath``. As the configuration keys must be 
+	valid attribute names, keys are restricted to strings containing valid
+	python variable names. They can for example not begin with a number.
+
+	Even though access through attributes is the prefered way of accessing
+	configuration, the dictionary syntax ``conf['datapath']`` is not 
+	disabled and provided identical functionality.
+
+	It also provides a mechanism to define new variables/vertical levels 
+	through the ``register_variable`` method.
+
+	Parameters
+	----------
+	defaults : dict
+	    Definition of valid keys and their default values
+	'''
 	
 	# Configuration keys that have a special meaning for the functionality of this class:
 	# They are required for registering variables
@@ -273,6 +324,8 @@ class settings_obj(default_dict):
 	_PLOTF = 'plotf'
 
 	def _get(self, *keys):
+		''' A third way to get a configuration item, using the syntax ``conf._get('datapath')`` '''
+
 		if len(keys) > 1:
 			return self[keys[0]]._get(keys[1:])
 		elif len(keys) == 1:
@@ -281,29 +334,39 @@ class settings_obj(default_dict):
 			raise TypeError, '_get() requires at least one key'
 	
 	def _add_default(self, key, value):
+		''' Add a new configuration item and its default value '''
+
 		if key in self._defaults:
 			raise KeyError, str(key) + ' already set'
 		self._defaults[key] = value
 	
 	def __getattribute__(self, key):
+		''' Implement the attribute access syntax ``conf.datapath`` '''
+
 		if key[0] == '_' or key == 'register_variable':
 			return default_dict.__getattribute__(self, key)
 
 		return self[key]
 
 	def __setattr__(self, key, value):
+		''' Implement the attribute assignment syntax ``conf.datapath = value`` '''
+
 		if key[0] == '_' or key == 'register_variable':
 			return default_dict.__setattr__(self, key, value)
 		
 		self[key] = value
 	
 	def __delattr__(self, key):
+		''' Implement attribute reset using the syntax ``del conf.datapath`` '''
+
 		if key[0] == '_' or key == 'register_variable':
 			return default_dict.__delattr__(self, key)
 		
 		del self[key]
 	
 	def _add_single_variable(self, q, q_file, q_long, q_units, q_bins):
+		''' Add a single variable to the configurarion '''
+
 		if q_file:
 			self[self._Q_FILE][q] = q_file
 			self[self._Q][q_file] = q
@@ -315,6 +378,8 @@ class settings_obj(default_dict):
 			self[self._Q_BINS][q] = q_bins
 	
 	def _unpack_q(self, q_item):
+		''' Unpack a tuple holding pertinent information about a variable '''
+
 		if len(q_item) == 2:
 			q, q_file = q_item
 			qlong = None; q_units = None; q_bins = None
@@ -333,7 +398,23 @@ class settings_obj(default_dict):
 
 
 	def register_variable(self, qs, plevs):
-		''' Register (a) new variable(s) '''
+		''' Register (a) new variable(s) 
+		
+		Parameters
+		----------
+		qs : (list of) 2-,3-,4- or 5-tuple(s)
+		    Tuple(s) describing the variable, including the entries 
+
+		        1. Variable name as it appears in the netCDF file
+			2. File name segment for files containing the variable
+			3. (Optional) Long name for the variable
+			4. (Optional) Units of the variale
+			5. (Optional) Binning information for the variable
+
+		plevs : list
+		    Vertical levels on which the given variables are available. Might be an empty 
+		    list if the variable is only to be registered in the non-plot configuration.
+		'''
 
 		if type(qs) == list:
 			for q in qs:
