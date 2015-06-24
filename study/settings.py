@@ -344,10 +344,11 @@ class settings_obj(default_dict):
 			q, q_file, q_long, q_units, q_bins = self._unpack_q(qs)
 			self._add_single_variable(q, q_file, q_long, q_units, q_bins)
 			qs = set([qs[0],])
-
-		plevs = set(plevs)
-		self[self._PLOT].add_table([plevs, qs])
-		self[self._PLOTF].add_table([plevs, qs])
+		
+		if len(plevs) > 0:
+			plevs = set(plevs)
+			self[self._PLOT].add_table([plevs, qs])
+			self[self._PLOTF].add_table([plevs, qs])
 
 
 
