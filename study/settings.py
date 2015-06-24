@@ -84,12 +84,15 @@ class nd_default_dict(default_dict):
 	The set of allowed keys for each dimension is limited. Valid keys can be introduced 
 	through the ``add_default()`` and ``add_table()`` functions.
 	"""
+
 	def __init__(self, first_table, defaults):
 		self._fdims = [first_table, ] 	# List of tableSpecs, where each tableSpec is list of sets containing valid keys for each dimension
 		self._ndims = len(first_table) + 1
 		default_dict.__init__(self, defaults) 	# dictionary of valid keys in the last dimension and their default values
 	
-	def __check_key(self, key):
+	def __check_key(self, key, allow_blank=False):
+		''' Check if a given query key is valid '''
+
 		if len(key) < self._ndims - 1:
 			raise KeyError, 'Key must contain at least %d dimensions' % self._ndims-1
 		elif len(key) > self._ndims:
@@ -98,7 +101,13 @@ class nd_default_dict(default_dict):
 		found = False
 		for table in self._fdims:
 			for i, valid_skeys in zip(range(self._ndims-1), table):
-				if not key[i] in valid_skeys:
+				if key[i] == slice(None):
+					if allow_blank:
+						if i == self._ndims - 2:
+							found = True
+					else:
+						raise KeyError, 'Only multiple assignment supported.'
+				elif not key[i] in valid_skeys:
 					break
 				elif i == self._ndims - 2:
 					found = True
@@ -109,8 +118,58 @@ class nd_default_dict(default_dict):
 		
 		return
 
+	def __resolve_keys(self, key):
+		''' Find all keys that match a given query key for the first dimensions
+
+		If the query key does not contain blanks, ``__resolve_keys`` will return
+		a list with only that one key.
+		'''
+
+		# If key itself is not valid, return empty list
+		try:
+			self.__check_key(key, allow_blank=True)
+		except KeyError:
+			return []
+		
+		# Solve blank dimensions in the key
+		keys = []
+		blank_dim = False
+		for n, dim in zip(range(self._ndims-1), key):
+			if dim == slice(None):
+				blank_dim = True
+				
+				# Find key fragments to substitute the blank
+				valid_skeys = []
+				for fdim in self._fdims:
+					nofit = False
+					for m in range(n):
+						if key[m] == slice(None):
+							continue
+						elif not key[m] in fdim[m]:
+							nofit = True
+							break
+					if not nofit:
+						valid_skeys.extend(fdim[n])
+				
+				# Recursively solve for later dimensions
+				for skey in valid_skeys:
+					_key = key[:n] + (skey,) + key[n+1:]
+					keys.extend(self.__resolve_keys(_key))
+				
+				# If there are more blank dimensions, 
+				# they will be resolved in the recursive calls, not here!
+				break
+		
+		# Alternatively, if there is no blank dimension, return the given key itself
+		if not blank_dim:
+			keys.append(key)
+
+		return keys
+
 	
 	def __getitem__(self, key):
+		''' Implement access via the ``dat[key1,key2,...,keyN]`` syntax '''
+
                 self.__check_key(key)
 		
 		if len(key) == self._ndims:
@@ -123,27 +182,36 @@ class nd_default_dict(default_dict):
 		else: 
 			ret = {}
 			for skey in self._defaults:
-				fkey = list(key) + [skey, ]
-				ret[skey] = self[tuple(fkey)]
+				fkey = key + (skey, )
+				ret[skey] = self[fkey]
 
 			return ret
 	
 	def __setitem__(self, key, value):
-		self.__check_key(key)
-		
+		''' Implement assignment via the ``dat[key1,key2,...,keyN] = value`` syntax '''
+
+		self.__check_key(key, allow_blank=True)
+		keys = self.__resolve_keys(key[:self._ndims-1])
+
 		if len(key) == self._ndims:
-			self._[key] = value
-		else: 
-			if not type(value) == dict:
-				for lkey, lvalue in dict.items:
-					fullkey = tuple(list(key)+[lkey,])
-					if not lkey in self._defaults:
-						raise KeyError, fullkey
-					self._[fullkey] = lvalue
-			else:
-				raise ValueError, 'Dict required for multiple assignment.'
+			keys = [_key+(key[-1],) for _key in keys]
+		
+		for key in keys:
+			if len(key) == self._ndims:
+				self._[key] = value
+			else: 
+				if not type(value) == dict:
+					for lkey, lvalue in dict.items:
+						fullkey = key + (lkey,)
+						if not lkey in self._defaults:
+							raise KeyError, fullkey
+						self._[fullkey] = lvalue
+				else:
+					raise TypeError, 'Dict required for multiple assignment.'
 
 	def __delitem__(self, key):
+		''' Implement reset via the ``del dat[key1,key2,...,keyN]`` syntax '''
+
 		self.__check_key(key)
 		
 		if len(key) == self._ndims:
@@ -151,17 +219,21 @@ class nd_default_dict(default_dict):
 				del self._[key]
 		else:
 			for lkey in self._defaults:
-				fullkey = tuple(list(key)+[lkey,])
+				fullkey = key + (lkey,)
 				if fullkey in self._:
 					del self._[fullkey]
 
 	def add_table(self, table):
+		''' Add new combinations for the first dimensions '''
+
 		if not len(table) == self._ndims - 1:
 			raise ValueError, 'Table needs to have %d dimensions, got %d instead.' % (
 					self._ndims - 1, len(table))
 		self._fdims.append(table)
 
 	def add_default(self, key, value):
+		''' Add a new key and its default value for the last dimension '''
+
 		if key in self._defaults:
 			raise KeyError, 'Default value for %s exists already' % str(key)
 
@@ -173,6 +245,13 @@ class nd_default_dict(default_dict):
 #	pass
 
 class plot_settings_dict(nd_default_dict):
+	""" A version of the nd_default_dict, where the number of dimensions is fixed to three
+
+	The three dimensions are, in order: vertical level, variable and plot configuration key.
+	In contrast to the nd_default_dict, plot_settings_dict does not take an initial table as
+	an argument, as the dimensions are prescribed and no (plev,q)-table is more equal than
+	the others.
+	"""
 	def __init__(self, defaults):
 		nd_default_dict.__init__(self, [], defaults)
 		self._ndims = 3
@@ -180,6 +259,19 @@ class plot_settings_dict(nd_default_dict):
 
 
 class settings_obj(default_dict):
+	""" Another interface to a dict using the attribute syntax for access """
+	
+	# Configuration keys that have a special meaning for the functionality of this class:
+	# They are required for registering variables
+	_Q = 'q'
+	_Q_FILE = 'qf'
+	_Q_LONG = 'q_long'
+	_Q_UNITS = 'q_units'
+	_Q_BINS = 'q_bins'
+	
+	_PLOT = 'plot'
+	_PLOTF = 'plotf'
+
 	def _get(self, *keys):
 		if len(keys) > 1:
 			return self[keys[0]]._get(keys[1:])
@@ -194,28 +286,68 @@ class settings_obj(default_dict):
 		self._defaults[key] = value
 	
 	def __getattribute__(self, key):
-		if key[0] == '_':
+		if key[0] == '_' or key == 'register_variable':
 			return default_dict.__getattribute__(self, key)
 
 		return self[key]
 
 	def __setattr__(self, key, value):
-		if key[0] == '_':
+		if key[0] == '_' or key == 'register_variable':
 			return default_dict.__setattr__(self, key, value)
 		
 		self[key] = value
 	
 	def __delattr__(self, key):
-		if key[0] == '_':
+		if key[0] == '_' or key == 'register_variable':
 			return default_dict.__delattr__(self, key)
 		
 		del self[key]
+	
+	def _add_single_variable(self, q, q_file, q_long, q_units, q_bins):
+		if q_file:
+			self[self._Q_FILE][q] = q_file
+			self[self._Q][q_file] = q
+		if q_long:
+			self[self._Q_LONG][q] = q_long
+		if q_units:
+			self[self._Q_UNITS][q] = q_units
+		if q_bins:
+			self[self._Q_BINS][q] = q_bins
+	
+	def _unpack_q(self, q_item):
+		if len(q_item) == 2:
+			q, q_file = q_item
+			qlong = None; q_units = None; q_bins = None
+		elif len(q_item) == 3:
+			q, q_file, q_long = q_item
+			q_units = None; q_bins = None
+		elif len(q_item) == 4:
+			q, q_file, q_long, q_units = q_item
+			q_bins = None
+		elif len(q_item) == 5:
+			q, q_file, q_long, q_units, q_bins = q_item
+		else:
+			raise ValueError, 'q_item must be length 2--5, got %d instead.' % len(q_item)
 
-	def register_variable(q, q_file=None, q_long='', q_unit=''):
-		pass
+		return q, q_file, q_long, q_units, q_bins
 
-	def register_level(plev):
-		pass
+
+	def register_variable(self, qs, plevs):
+		''' Register (a) new variable(s) '''
+
+		if type(qs) == list:
+			for q in qs:
+				q, q_file, q_long, q_units, q_bins = self._unpack_q(q)
+				self._add_single_variable(q, q_file, q_long, q_units, q_bins)
+			qs = set([q[0] for q in qs])
+		else:
+			q, q_file, q_long, q_units, q_bins = self._unpack_q(qs)
+			self._add_single_variable(q, q_file, q_long, q_units, q_bins)
+			qs = set([qs[0],])
+
+		plevs = set(plevs)
+		self[self._PLOT].add_table([plevs, qs])
+		self[self._PLOTF].add_table([plevs, qs])
 
 
 
@@ -280,23 +412,26 @@ PLOTF_DEFAULTS.update({
 
 
 conf = settings_obj({
-	'q': [],
-	'qi': [],
-	'q_units': [],
-	'q_long': [],
-	'bins': [],
+	'q': {}, 		# Given a file name segment, which variable to we expect to find there?
+	'qf': {}, 		# Given a variable name, in which file do we find it?
+	'q_units': {},
+	'q_long': {},
+	'q_bins': {},
 	'datapath': ['.', ],
 	'opath': '.',
 	'plotpath': '.',
 	'file_std': '',
-	'file_stat': '',
-	'file_mstat': '',
+	'file_stat': '', 	# Are these general enough to be included? In this case: Would need routines to write those files.
+	'file_mstat': '', 	# -"-
+	'file_static': None,
 	'years': [],
+	'times': [],
 	'plevs': [],
 	'ptlevs': [],
 	'pvlevs': [],
 	'zlevs': [],
 	'mlevs': [],
+	'sfclevs': [],
 	'plot': plot_settings_dict(PLOT_DEFAULTS),
 	'plotf': plot_settings_dict(PLOTF_DEFAULTS),
 })
