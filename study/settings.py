@@ -7,6 +7,12 @@
 To be coded and written.
 '''
 
+import numpy as np
+from copy import copy 
+
+import lib.proj as proj
+import lib.cm as cm
+
 from collections import MutableMapping as mutmap
 
 
@@ -23,12 +29,6 @@ def def_context(context):
 	__context__.add(context)
 
 
-
-def register_variable(q, q_file=None, q_long='', q_unit=''):
-	pass
-
-def register_level(plev):
-	pass
 
 
 class default_dict(mutmap):
@@ -89,7 +89,7 @@ class nd_default_dict(default_dict):
 		self._ndims = len(first_table) + 1
 		default_dict.__init__(self, defaults) 	# dictionary of valid keys in the last dimension and their default values
 	
-	def __getitem__(self, key):
+	def __check_key(self, key):
 		if len(key) < self._ndims - 1:
 			raise KeyError, 'Key must contain at least %d dimensions' % self._ndims-1
 		elif len(key) > self._ndims:
@@ -107,6 +107,12 @@ class nd_default_dict(default_dict):
 		if not found:
 			raise KeyError, key
 		
+		return
+
+	
+	def __getitem__(self, key):
+                self.__check_key(key)
+		
 		if len(key) == self._ndims:
 			if key in self._: 
 				return self._[key]
@@ -123,22 +129,57 @@ class nd_default_dict(default_dict):
 			return ret
 	
 	def __setitem__(self, key, value):
-		pass
+		self.__check_key(key)
+		
+		if len(key) == self._ndims:
+			self._[key] = value
+		else: 
+			if not type(value) == dict:
+				for lkey, lvalue in dict.items:
+					fullkey = tuple(list(key)+[lkey,])
+					if not lkey in self._defaults:
+						raise KeyError, fullkey
+					self._[fullkey] = lvalue
+			else:
+				raise ValueError, 'Dict required for multiple assignment.'
 
 	def __delitem__(self, key):
-		pass
+		self.__check_key(key)
+		
+		if len(key) == self._ndims:
+			if key in self._:
+				del self._[key]
+		else:
+			for lkey in self._defaults:
+				fullkey = tuple(list(key)+[lkey,])
+				if fullkey in self._:
+					del self._[fullkey]
 
 	def add_table(self, table):
-		if not len(table) == self._ndims -1:
+		if not len(table) == self._ndims - 1:
 			raise ValueError, 'Table needs to have %d dimensions, got %d instead.' % (
-					self._ndims -1, len(table))
+					self._ndims - 1, len(table))
 		self._fdims.append(table)
 
 	def add_default(self, key, value):
-		pass
+		if key in self._defaults:
+			raise KeyError, 'Default value for %s exists already' % str(key)
+
+		self._defaults[key] = value
 
 
-class hierarchical_default_dict(default_dict):
+
+#class settings_dict(default_dict):
+#	pass
+
+class plot_settings_dict(nd_default_dict):
+	def __init__(self, defaults):
+		nd_default_dict.__init__(self, [], defaults)
+		self._ndims = 3
+		self._fdims = []
+
+
+class settings_obj(default_dict):
 	def _get(self, *keys):
 		if len(keys) > 1:
 			return self[keys[0]]._get(keys[1:])
@@ -169,5 +210,95 @@ class hierarchical_default_dict(default_dict):
 			return default_dict.__delattr__(self, key)
 		
 		del self[key]
+
+	def register_variable(q, q_file=None, q_long='', q_unit=''):
+		pass
+
+	def register_level(plev):
+		pass
+
+
+
+PLOT_DEFAULTS = {
+	'coastcolor': 'k', 
+	'disable_cb': False, 
+	'gridcolor': 'k',
+	'hook': None,
+	'm': proj.world, 
+	'maskcolor': '0.25',
+	'mark': None, 
+	'oroalpha': 0.4, 
+	'orocolor': 'k', 
+	'oroscale': np.arange(1000,9000,1000),
+	'overlays': [], 
+	'plev': None, 
+	'save': '', 
+	'scale': 'auto', 
+	'scale_exceed_percentiles': (0.01, 0.99),
+	'scale_intervals': [1,2,3,5,10,],
+	'scale_intervals_periodic': True,
+	'scale_target_steps': 7,
+	'scale_symmetric_zero': False,
+	'show': True, 
+	'ticks': None, 
+	'ticklabels': [], 
+	'title': '', 
+	'Zdata': None,
+
+	'lon': None, 
+	'lat': None, 
+	'alpha': 1.0, 
+	'norm': None, 
+	'vmin': None,
+	'vmax': None, 
+	'levels': None, 
+	'origin': None, 
+	'extent': None, 
+}
+PLOTF_DEFAULTS = copy(PLOT_DEFAULTS) 
+
+PLOT_DEFAULTS.update({
+	'cmap': None, 
+	'colors': 'k', 
+	'contour_labels': False,
+	'contour_labels_fontsize': 12,
+	'contour_labels_inline': True,
+	'contour_labels_inline_spacing': 2,
+	'contour_labels_format': '%1.1f',
+	'extend': 'neither', 
+	'linestyles': None, 
+	'linewidths': 2.0, 
+})
+PLOTF_DEFAULTS.update({
+	'cb_orientation': 'horizontal',
+	'cmap': cm.gist_ncar, 
+	'colors': None, 
+	'extend': 'both', 
+
+	'hatches': None 
+})
+
+
+conf = settings_obj({
+	'q': [],
+	'qi': [],
+	'q_units': [],
+	'q_long': [],
+	'bins': [],
+	'datapath': ['.', ],
+	'opath': '.',
+	'plotpath': '.',
+	'file_std': '',
+	'file_stat': '',
+	'file_mstat': '',
+	'years': [],
+	'plevs': [],
+	'ptlevs': [],
+	'pvlevs': [],
+	'zlevs': [],
+	'mlevs': [],
+	'plot': plot_settings_dict(PLOT_DEFAULTS),
+	'plotf': plot_settings_dict(PLOTF_DEFAULTS),
+})
 
 # that's it
