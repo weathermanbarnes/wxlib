@@ -8,39 +8,39 @@ Dynlib settings are in essence a (rather large) set of key-value pairs, which
 could be well represented by the python built-in ``dict`` object. However, the 
 pure ``dict`` object has some drawbacks in this context:
 
-1. ``dict`` objects cannot represent default values for keys. Whenever a key in
-   ``dict`` is overwritten, the original content is lost.
-2. ``dict`` cannot represent interdependencies between different keys.
-3. ``dict`` cannot represent several variants of itself. As an example, the 
-   plot configuration for different variables will be largely identical, but only
-   differ in a few configuration keys. When represented by pure ``dict`` objects, 
-   the plot configuration for each variable would need to be full independent 
-   from each other. This indepence complicates would makes it tedious and 
-   error-prone to apply a customised configuration to all variables.
+ #. ``dict`` objects cannot represent default values for keys. Whenever a key in
+    ``dict`` is overwritten, the original content is lost.
+ #. ``dict`` cannot represent interdependencies between different keys.
+ #. ``dict`` cannot represent several variants of itself. As an example, the 
+    plot configuration for different variables will be largely identical, but only
+    differ in a few configuration keys. When represented by pure ``dict`` objects, 
+    the plot configuration for each variable would need to be full independent 
+    from each other. This indepence complicates would makes it tedious and 
+    error-prone to apply a customised configuration to all variables.
 
 For these reasons, this module introduces:
 
-1. ``default_dict`` objects: A variant of ``dict`` with a pre-defined set of keys 
-   and default values for each.
-2. ``nd_default_dict`` objects: Derived from ``default_dict``, it adds an abitrary
-   number of dimensions, accessible by ``dat[key1,key2,...,keyN]``. Valid keys for
-   each dimension are prescribed, and default values must be provided for each key
-   in the last dimesion. Default values are identical for all ``dat[::,keyN]``, 
-   and hence independent from anything but the last dimension.
-3. ``plot_settings_dict``: A variant of the ``nd_default_dict`` used for storing
-   plot configuration. The number of dimensions is fixed to three. They are, in order: 
-   vertical level, variable and plot configuration key. 
-4. ``settings_obj``: A variant of the ``default_dict`` where access is also possible
-   through the attribute syntax dat.key. This class is the basis for the conf 
-   object, the configuration root. Within, ``conf.plot`` and ``conf.plotf`` are 
-   ``plot_settings_dict`` objects.
+ #. ``default_dict`` objects: A variant of ``dict`` with a pre-defined set of keys 
+    and default values for each.
+ #. ``nd_default_dict`` objects: Derived from ``default_dict``, it adds an abitrary
+    number of dimensions, accessible by ``dat[key1,key2,...,keyN]``. Valid keys for
+    each dimension are prescribed, and default values must be provided for each key
+    in the last dimesion. Default values are identical for all ``dat[::,keyN]``, 
+    and hence independent from anything but the last dimension.
+ #. ``plot_settings_dict``: A variant of the ``nd_default_dict`` used for storing
+    plot configuration. The number of dimensions is fixed to three. They are, in order: 
+    vertical level, variable and plot configuration key. 
+ #. ``settings_obj``: A variant of the ``default_dict`` where access is also possible
+    through the attribute syntax dat.key. This class is the basis for the conf 
+    object, the configuration root. Within, ``conf.plot`` and ``conf.plotf`` are 
+    ``plot_settings_dict`` objects.
 '''
 
 import numpy as np
 from copy import copy 
 
-import lib.proj as proj
-import lib.cm as cm
+import proj
+import cm
 
 from collections import MutableMapping as mutmap
 
@@ -50,15 +50,15 @@ __context__ = set([])
 def in_context(*contexts):
 	''' Check if any of the given contexts is active
 	
-	Parameter
-	---------
-	context1 -- contextN : str
+	Parameters
+	----------
+	context1 - contextN : str
 	    Contexts to be checked
 	
 	Returns
 	-------
 	bool
-	    True if any of the given contexts are active.
+	    ``True`` if any of the given contexts are active.
 	'''
 
 	for c in contexts:
@@ -70,8 +70,8 @@ def in_context(*contexts):
 def def_context(context):
 	''' Define a new context
 
-	Parameter
-	---------
+	Parameters
+	----------
 	context : str
 	    Name of the context to be defined
 	'''
@@ -88,6 +88,10 @@ class default_dict(mutmap):
 	----------
 	defaults : dict
 	    Definition of valid keys and their default values
+	
+	Notes
+	-----
+	 #. ToDo: Re-Implement mutex groups
 	'''
 
 	def __init__(self, defaults):
@@ -158,6 +162,10 @@ class nd_default_dict(default_dict):
 	    Sets of valid keys for each of the first dimensions
 	defaults : dict
 	    Definition of valid keys and their default values
+	
+	Notes
+	----
+	 #. ToDo: Implement mutex groups
 	'''
 
 	def __init__(self, first_table, defaults):

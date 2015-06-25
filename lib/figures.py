@@ -360,6 +360,7 @@ def __prepare_config(kwargs):
 def __line_prepare_config(kwargs):
 	''' Make sure kwargs contains a complete contour plot configuration, 
 	filling undefined keys from the dynlib configuration.'''
+
 	q = kwargs.pop('q', None)
 	if q:
 		kwargs = conf.contour.merge(q, **kwargs)
@@ -375,6 +376,7 @@ def __map_create_mask(static, kwargs):
 	 2. Orography using instantaneous z
 	 3. Orography using climatological z
 	'''
+
 	# Potential override by kwarg
 	mask = kwargs.pop('mask', None)
 	if type(mask) == np.ndarray:
@@ -384,7 +386,7 @@ def __map_create_mask(static, kwargs):
 	datZ = kwargs.pop('Zdata', None)
 	
 	if plev and not type(datZ) == np.ndarray:
-		f,datZ = metopen(conf.file_mstat % {'plev': plev, 'q': 'Z'}, 'mean', cut=conf.std_slice[1:], no_static=True)
+		f,datZ = metopen(conf.file_mstat % {'plev': plev, 'q': 'Z'}, 'mean', no_static=True)
 		if f: f.close()
 	if type(datZ) == np.ndarray:
 		datZ = concat1(datZ)
@@ -529,7 +531,7 @@ def __decorate(m, x, y, mask, kwargs):
 	return
 
 def __output(kwargs):
-	''' Save and or show the plot '''
+	''' Save and/or show the plot '''
 	if kwargs.get('save'):
 		plt.savefig(kwargs.pop('save'))
 	if kwargs.pop('show'):
