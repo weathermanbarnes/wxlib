@@ -2,7 +2,10 @@
 ! 		DynLib -- Feature detection algorithms
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
-! Module maintained by Clemens Spensberger (csp001@uib.no)
+!@ Detection routines for various atmospheric features.
+!@ 
+!@ Instead of just calculation a diagnostic, these routines detect features
+!@ in the atmosphere as objects.
 module detect
   use kind
   use config
@@ -11,41 +14,69 @@ module detect
   !
   implicit none
 contains
-  ! Gradient reversal: At each (i,j,k) grid point, finds the reversals of pv y-gradient. 
-  !                    and classes them as:
-  !                      c (cyclonic)
-  !                      a (anticyclonic) 
   !
-  ! Arguments:         pv: Potential vorticity pv(k,j,i) on (time, lat, lon) grid.
-  !            highenough: array of flags, highenough(k,j,i) = {0 or 1} (type int*1)
-  !                        denoting whether to test the point for reversal. This is
-  !                        typically the output of highenough() funtion, which returns
-  !                        1 where the surface is sufficiently above ground level and
-  !             .          0 elsewhere.
-  !             latitudes: vector of latitudes of the pv array
-  !              ddythres: Cutoff y-gradient for pv. The magnitude of (negative) 
-  !                        d(pv)/dy must be above ddythres for reversal to be detected.
-  !             
-  !
-  ! Returns: int*1:: revc,   reva   (reversal flag) (threshold test applied)
-  !          real::  revci,  revai  (reversal absolute gradient) 
-  !                                 (threshold test applied)		
-  !          real::  revciy, revaiy (reversal absolute y-gradient) 
-  !                                 (no threshold test applied)
-  !          int*1:: tested (flag to 1 all tested points: where highenough==1 
-  !                          and not on edge of grid)
-  !
+  !@ Identify Rossby wave breaking by local gradient reversals
+  !@
+  !@ At each (i,j,k) grid point, finds the reversals of pv y-gradient and classes them as
+  !@ either cyclonic (c) or anticyclonic (a).
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ pv : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     PV (or any other suitable field) to be used to detect gradient reversals.
+  !@ mask : np.ndarray with shape (nz,ny,nx) and dtype int8
+  !@     Whether or not to test for a gradient reveral at a given point. Only points 
+  !@     where mask == 1 are tested.
+  !@ latitudes : np.ndarray with shape (ny) and dtype float64
+  !@     Latitudes describing the ``pv`` array.
+  !@ ddythres : float
+  !@     Cutoff y-gradient for pv. The magnitude of (negative) d(pv)/dy must be above 
+  !@     ddythres for reversal to be detected.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype int8
+  !@     Flag for anticyclonic reversals (threshold test applied).
+  !@ np.ndarray with shape (nz,ny,nx) and dtype int8
+  !@     Flag for cyclonic reversals (threshold test applied).
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Absolute gradient anticyclonic reversals (threshold test applied).
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Absolute gradient cyclonic reversals (threshold test applied).
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Absolute y-gradient anticyclonic reversals (no threshold test applied).
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Absolute y-gradient cyclonic reversals (no threshold test applied).
+  !@ np.ndarray with shape (nz,ny,nx) and dtype int8
+  !@     Flag for points testes for reversals.
   subroutine rwb_by_grad_rev(resa,resc,resai,resci,resaiy,resciy,tested,nx,ny,nz, &
-       pv,highenough,latitudes,ddythres,dx,dy)
+       pv,mask,latitudes,ddythres,dx,dy)
     real(kind=nr), intent(in)  :: pv(nz,ny,nx), latitudes(ny), ddythres, dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: resai(nz,ny,nx), resci(nz,ny,nx), & 
        resaiy(nz,ny,nx), resciy(nz,ny,nx)
     integer(kind=1), intent(out) :: resa(nz,ny,nx), resc(nz,ny,nx), tested(nz,ny,nx)
-    integer(kind=1), intent(in) :: highenough(nz,ny,nx)
+    integer(kind=1), intent(in) :: mask(nz,ny,nx)
     real(kind=nr) :: gradx, grady, gradmag, gradang, hemi, sig, neg, tempval,edge
     real(kind=nr) :: xgradient(nz,ny,nx), ygradient(nz,ny,nx)
     integer(kind=ni) :: i,j,k, nx,ny,nz
-    !f2py depend(nx,ny,nz) resa,resc,resai,resci,resaiy,resciy,tested, highenough,xgradient,ygradient
+    !f2py depend(nx,ny,nz) resa,resc,resai,resci,resaiy,resciy,tested, mask,xgradient,ygradient
     !f2py depend(nx,ny) dx, dy
     !f2py depend(ny) latitudes
     ! -----------------------------------------------------------------
@@ -77,7 +108,7 @@ contains
              resc(k,j,i)   = 0
              resci(k,j,i)  = 0._nr
              resciy(k,j,i) = 0._nr
-             if ((edge==0._nr).AND.(highenough(k,j,i)==1)) then ! not on grid edge, and high enough: test it
+             if ((edge==0._nr).AND.(mask(k,j,i)==1)) then ! not on grid edge, and high enough: test it
                 tested(k,j,i) = 1
                 gradx=xgradient(k,j,i)
                 grady=ygradient(k,j,i)
@@ -111,27 +142,36 @@ contains
     end do !i
   end subroutine
   !
-  ! RWB detection, adapted from algorithm by Riviere
-  !
-  ! Detects the occurrence of anticyclonic and cyclonic wave-breaking 
-  ! events from a PV field on isentropic coordinates.
-  !
-  ! Reference: Rivière (2009, hereafter R09): Effect of latitudinal 
-  ! variations in low-level baroclinicity on eddy life cycles and upper-
-  ! tropospheric wave-breaking processes. J. Atmos. Sci., 66, 1569–1592.
-  ! See the appendix C.
-  !
-  ! Inputs: 
-  !      pv_in(nz,ny,nx) : isentropic pv. Should be on a regular lat-lon grid 
-  !                         and 180W must be the first longitude. 
-  !                        (If 180W is not the first longitude, the outputs
-  !                        will have 180W as the first, so must be rearranged) 
-  !        lonvalues(nx) : vector of longitudes
-  !        latvalues(ny) : vector of latitudes
-  !                 ncon : number of contours to test, normally 41 or 21
-  ! Outputs:
-  !  beta_a_out(nz,ny,nx) : flag array, =1 if anticyclonic wave breaking 
-  !  beta_c_out(nz,ny,nx) : flag array, =1 if cyclonic wave breaking 
+  !@ RWB detection by contour tracking, adapted from algorithm by Gwendal Riviere
+  !@
+  !@ Detects the occurrence of anticyclonic and cyclonic wave-breaking 
+  !@ events from a PV field on isentropic coordinates.
+  !@
+  !@ Reference: Rivière (2009, hereafter R09): Effect of latitudinal 
+  !@ variations in low-level baroclinicity on eddy life cycles and upper-
+  !@ tropospheric wave-breaking processes. J. Atmos. Sci., 66, 1569–1592.
+  !@ See the appendix C.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@ 
+  !@ pv_in : np.ndarray with shape (nz,ny,nx) and float64
+  !@     Isentropic PV. Should be on a regular lat-lon grid and 180W must be the 
+  !@     first longitude (If 180W is not the first longitude, the outputs will have 
+  !@     180W as the first, so must be rearranged).
+  !@ lonvalues : np.ndarray with shape (nx) and dtype float64
+  !@     Longitudes describing ``pv_in``.
+  !@ latvalues : np.ndarray with shape (ny) and dtype float64
+  !@     Latitudes describing ``pv_in``.
+  !@ ncon : int 
+  !@     Number of contours to test, normally 41 or 21.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype int32 
+  !@     Flag array, the value 1 indicates anticyclonic wave breaking 
+  !@ np.ndarray with shape (nz,ny,nx) and dtype int32 
+  !@     Flag array, the value 1 indicates cyclonic wave breaking 
   subroutine rwb_by_contour(beta_a_out,beta_c_out,nx,ny,nz,pv_in,lonvalues,latvalues,ncon,dx,dy)
     use detect_rwb_contour
     !
@@ -383,8 +423,39 @@ contains
     deallocate(beta_cint) 
   end subroutine ! end of subroutine contour_rwb
   !
-  ! Blocking index by large-scale gradient reversals, for example of potential
-  ! temperature on the PV2-surface (following e.g. Masato et al. 2013)
+  !@ Blocking indicator using large-scale gradient reversals
+  !@
+  !@ Base data can for example be potential temperature on the PV2-surface (following 
+  !@ e.g. Masato et al. 2013).
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     PV (or any other suitable field) to be used to detect gradient reversals.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Local block intensity indicator field. Maxima in this field are blocking centers 
+  !@     that can be tracked in time and space to verify the minimum persistence and 
+  !@     stationarity requirements.
   subroutine block_by_grad_rev(res, nx,ny,nz, dat, dx,dy)
     use consts
     !
@@ -437,7 +508,46 @@ contains
     !
   end subroutine
   !
-  ! Find jetaxes by zero-shear condition and a mask for well-defined wind maxima.
+  !@ Find jetaxes by zero-shear condition and a mask for well-defined wind maxima
+  !@
+  !@ The mask for well-defined maxima is defined by d/dn(U * dU/dn) < K. The
+  !@ threshold K is to be defined in config module of dynfor.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ no : int
+  !@     Maximum number of points along jet axes
+  !@ nf : int
+  !@     Maximum number of jet axis lines
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     u wind velocity component, typically filtered to T42 resolution.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     v wind velocity component, typically filtered to T42 resolution.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,no,3) and dtype float64
+  !@     List of points points belonging to jet axes for each time step. For each point, 
+  !@     (0) the j-index, (1) the i-index and (2) the wind speed is saved.
+  !@ np.ndarray with shape (nz,nf) and dtype float64
+  !@     List of point indexes marking the beginning of jet axes within the ``ja`` array.
   subroutine jetaxis(ja,jaoff,nx,ny,nz,no,nf,u,v,dx,dy)
     use detect_fronts
     use utils, only: smooth_xy
@@ -486,9 +596,48 @@ contains
     return
   end subroutine
   !
-  ! Find jetaxes by zero-shear condition and a mask for wind maxima above a
-  ! certain wind speed.
-  subroutine jetaxis_gareth(ja,jaoff,nx,ny,nz,no,nf,u,v,dx,dy)
+  !@ Find jetaxes by zero-shear condition and masks selecting wind maxima above a 
+  !@ certain wind speed threshold.
+  !@
+  !@ The mask for wind maxima is defined by d²U/dn < 0. The wind speed threshold
+  !@ is currently fixed at 30 m/s.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ no : int
+  !@     Maximum number of points along jet axes
+  !@ nf : int
+  !@     Maximum number of jet axis lines
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     u wind velocity component, typically filtered to T42 resolution.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     v wind velocity component, typically filtered to T42 resolution.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,no,3) and dtype float64
+  !@     List of points points belonging to jet axes for each time step. For each point, 
+  !@     (0) the j-index, (1) the i-index and (2) the wind speed is saved.
+  !@ np.ndarray with shape (nz,nf) and dtype float64
+  !@     List of point indexes marking the beginning of jet axes within the ``ja`` array.
+  subroutine jetaxis_ff_thres(ja,jaoff,nx,ny,nz,no,nf,u,v,dx,dy)
     use detect_fronts
     use utils, only: smooth_xy
     use consts
@@ -545,9 +694,12 @@ contains
     return
   end subroutine
   !
-  ! Front intensity function after G. Berry et al, based on the frontal detection
-  ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
-  ! temperature as dat
+  !@ Front intensity function after G. Berry et al, based on the frontal detection
+  !@ algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
+  !@ temperature as dat
+  !@ 
+  !@ *Note*: Routine not sufficiently tested for general applicability! More thorough 
+  !@ documentation will be added once properly tested.
   subroutine front_intensity_speed(frint,frspd,frloc,nx,ny,nz,dat,u,v,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
                  &                dx(ny,nx), dy(ny,nx)
@@ -577,9 +729,12 @@ contains
     return
   end subroutine
   !
-  ! Front detection after G. Berry et al, based on the frontal detection
-  ! algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
-  ! temperature as dat
+  !@ Front detection after G. Berry et al, based on the frontal detection
+  !@ algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
+  !@ temperature as dat
+  !@ 
+  !@ *Note*: Routine not sufficiently tested for general applicability! More thorough 
+  !@ documentation will be added once properly tested.
   subroutine front(fr,froff,nx,ny,nz,no,nf,dat,u,v,dx,dy)
     use config
     use detect_fronts
@@ -648,8 +803,11 @@ contains
     return
   end subroutine
   !
-  ! Convergence line detection based on the front detection algorithm, using
-  ! convergence instead of grad(dat)
+  !@ Convergence line detection based on the front detection algorithm, using
+  !@ convergence instead of grad(dat)
+  !@ 
+  !@ *Note*: Routine not sufficiently tested for general applicability! More thorough 
+  !@ documentation will be added once properly tested.
   subroutine convline(fr,froff,nx,ny,nz,no,nf,u,v,dx,dy)
     use config
     use detect_fronts
@@ -704,8 +862,11 @@ contains
     return
   end subroutine
   !
-  ! Convergence line detection based on the front detection algorithm, using
-  ! convergence instead of grad(dat)
+  !@ Vorticity line detection based on the front detection algorithm, using
+  !@ vorticity instead of grad(dat)
+  !@ 
+  !@ *Note*: Routine not sufficiently tested for general applicability! More thorough 
+  !@ documentation will be added once properly tested.
   subroutine vorline(fr,froff,nx,ny,nz,no,nf,u,v,dx,dy)
     use config
     use detect_fronts
@@ -757,9 +918,12 @@ contains
     !
     return
   end subroutine
-   !
-  ! Convergence line detection based on the front detection algorithm, using
-  ! convergence instead of grad(dat)
+  !
+  !@ Deformation line detection based on the front detection algorithm, using
+  !@ deformation instead of grad(dat)
+  !@ 
+  !@ *Note*: Routine not sufficiently tested for general applicability! More thorough 
+  !@ documentation will be added once properly tested.
   subroutine defline(fr,froff,nx,ny,nz,no,nf,u,v,dx,dy)
     use config
     use detect_fronts

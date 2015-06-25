@@ -314,7 +314,8 @@ contains
     call def_shear(sig_sh,nx,ny,nz,u,v,dx,dy)
     call def_stretch(sig_st,nx,ny,nz,u,v,dx,dy)
     call antilap2(zxxyy,nx,ny,nz,z,dx,dy)
-    call crosslap2(z2xy,nx,ny,nz,z,dx,dy)
+    call ddxy(z2xy,nx,ny,nz,z,dx,dy)
+    z2xy = 2.0_nr*z2xy
     res = - (sig_st*zxxyy + sig_sh*z2xy)/sqrt(sig_sh**2_ni + sig_st**2_ni)
   end subroutine
   !

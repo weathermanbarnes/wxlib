@@ -2,7 +2,10 @@
 ! 		DynLib -- partial derivatives
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
-! Module maintained by Clemens Spensberger (csp001@uib.no)
+!@ Discretised partial derivatives 
+!@ 
+!@ To be used in all dynlib routines that require the calculation of
+!@ derivatives.
 module derivatives
   use kind
   use config
@@ -10,8 +13,41 @@ module derivatives
   implicit none
 contains
   !
-  ! Calculates partial x derivative: b = partial(a)/partial(x)
-  !  Returns 0 on first and last lon for non-cyclic grid
+  !@ Calculates partial x derivative: ddatdx = partial(dat)/partial(x)
+  !@
+  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ longitude for non-cyclic grids.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     x-derivative of ``dat``.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`ddx_o4`
   subroutine ddx(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -36,8 +72,41 @@ contains
     end if
   end subroutine
   !
-  ! Calculates partial x derivative: b = partial(a)/partial(x)
-  !  using a 4th-order accurate centered difference
+  !@ Calculates partial x derivative: ddatdx = partial(dat)/partial(x)
+  !@
+  !@ The routine uses 4th-order centered differences. Returns 0 on first and last 
+  !@ longitude for non-cyclic grids.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     x-derivative of ``dat``.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`ddx`
   subroutine ddx_o4(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -66,8 +135,37 @@ contains
     end if
   end subroutine
   !
-  ! Calculates partial x derivative: b = partial^2(a)/partial(x)^2
-  !  Returns 0 on first and last lon for non-cyclic grid
+  !@ Calculates the second partial x derivative: b = partial^2(dat)/partial(x)^2
+  !@
+  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ longitude for non-cyclic grids.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Second x-derivative of ``dat``.
   subroutine ddx2(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -92,8 +190,41 @@ contains
     end if
   end subroutine
   !
-  ! Calculates partial y derivative: b = partial(a)/partial(y)
-  !  Returns 0 on first and last lat
+  !@ Calculates partial y derivative: ddatdy = partial(dat)/partial(y)
+  !@
+  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ latitude.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     y-derivative of ``dat``.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`ddy_o4`
   subroutine ddy(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -111,8 +242,41 @@ contains
     end forall
   end subroutine
   !
-  ! Calculates partial y derivative: b = partial(a)/partial(y)
-  !  using a 4th-order centered difference
+  !@ Calculates partial y derivative: ddatdy = partial(dat)/partial(y)
+  !@
+  !@ The routine uses 4nd-order centered differences. Returns 0 on first and last 
+  !@ latitude.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     y-derivative of ``dat``.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`ddy`
   subroutine ddy_o4(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -132,8 +296,37 @@ contains
     end forall
   end subroutine
   !
-  ! Calculates partial y derivative: b = partial^2(a)/partial(y)^2
-  !  Returns 0 on first and last lat
+  !@ Calculates second partial y derivative: b = partial^2(dat)/partial(y)^2
+  !@
+  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ latitude.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Second y-derivative of ``dat``.
   subroutine ddy2(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -151,8 +344,39 @@ contains
     end forall
   end subroutine
   !
-  ! Calculates partial y derivative: b = partial^2(a)/(partial(y)*partial(x)
-  !  Returns 0 on first and last lat
+  !@ Calculates second partial derivative in x and y directions::
+  !@
+  !@     b = partial^2(dat)/(partial(y)*partial(x)
+  !@
+  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ latitude and longitude for non-cyclic grids.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     x- and y-derivative of ``dat``.
   subroutine ddxy(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -182,9 +406,36 @@ contains
        res(k,1_ni,i) = 0._nr
        res(k,ny  ,i) = 0._nr
     end forall
-  end subroutine  !
-  ! Calculates partial y derivative: b = partial(a)/partial(y)
-  !  Returns 0 on first and last lat
+  end subroutine
+  !
+  !@ Calculates partial derivative in z direction ddatdz = partial(dat)/partial(z)
+  !@
+  !@ The routine uses 2nd-order centered differences. Returns 0 on top and
+  !@ bottom level.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ dz : np.ndarray with shape (nz-2,ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(k,j,i)`` is expected to contain the x-distance between ``(k+1,j,i)`` and ``(k-1,j,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     z-derivative of ``dat``.
   subroutine ddz(res,nx,ny,nz,dat,dz)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dz(2_ni:nz-1_ni,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -202,8 +453,45 @@ contains
     end forall
   end subroutine
   !
-  ! Calculates gradient [bx,by] = grad(a)
-  !  Returns 0 on edges
+  !@ Calculates second partial derivative in x and y directions::
+  !@
+  !@     bx, by = grad(dat)
+  !@
+  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ latitude and longitude for non-cyclic grids.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     x-derivative of ``dat``.
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     y-derivative of ``dat``.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`grad_3d`
   subroutine grad(resx,resy,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: resx(nz,ny,nx), resy(nz,ny,nx)
@@ -228,8 +516,50 @@ contains
     end if
   end subroutine
   !
-  ! Calculates gradient [bx,by,bz] = grad(a)
-  !  Returns 0 on edges
+  !@ Calculates second partial derivative in x and y directions::
+  !@
+  !@     bx, by, bz = grad3(dat)
+  !@
+  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ latitude, longitude for non-cyclic grids and bottom and top levels.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@ dz : np.ndarray with shape (nz-2,ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(k,j,i)`` is expected to contain the x-distance between ``(k+1,j,i)`` and ``(k-1,j,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     x-derivative of ``dat``.
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     y-derivative of ``dat``.
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     z-derivative of ``dat``.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`grad`
   subroutine grad_3d(resx,resy,resz,nx,ny,nz,nt,dat,dx,dy,dz)
     real(kind=nr), intent(in)  :: dat(nt,nz,ny,nx), dx(ny,nx), dy(ny,nx), dz(nt,2_ni:nz-1_ni,ny,nx)
     real(kind=nr), intent(out) :: resx(nt,nz,ny,nx), resy(nt,nz,ny,nx), resz(nt,nz,ny,nx)
@@ -247,9 +577,41 @@ contains
     end do
   end subroutine
   !
-  ! TODO: use ddx2 + ddy2 instead
-  ! Calculates  2-D laplacian lap2(a)
-  !  returns 0 on edges
+  !@ Calculates 2d Laplacian ldat = lap2(dat)
+  !@
+  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ latitude and longitude for non-cyclic grids.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Laplacian of ``dat``.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`antilap2`
   subroutine lap2(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -258,6 +620,7 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
+    ! TODO: use ddx2 + ddy2 instead
     forall(k = 1_ni:nz, j = 2_ni:ny-1_ni, i = 2_ni:nx-1_ni)
        res(k,j,i) = (dat(k,j,i+1_ni)+dat(k,j,i-1_ni)-2_ni*dat(k,j,i))/dx(j,i)**2_ni + &
                     (dat(k,j+1_ni,i)+dat(k,j-1_ni,i)-2_ni*dat(k,j,i))/dy(j,i)**2_ni
@@ -281,9 +644,43 @@ contains
     end forall
   end subroutine
   !
-  ! TODO: use ddx2 - ddy2 instead
-  ! Calculates  the antisymmetric second derivatives  a_xx - a_yy
-  !  returns 0 on edges
+  !@ Calculates 2d antisymmetric analogue of the Laplacian::
+  !@ 
+  !@    ldat = partial^2(dat)/partial(x)^2 - partial^2(dat)/partial(y)^2
+  !@
+  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ latitude and longitude for non-cyclic grids.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Antisymmetric Laplacian of ``dat``.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`lap2`
   subroutine antilap2(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -292,6 +689,7 @@ contains
     !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
+    ! TODO: use ddx2 - ddy2 instead
     forall(k = 1_ni:nz, j = 2_ni:ny-1_ni, i = 2_ni:nx-1_ni)
        res(k,j,i) = (dat(k,j,i+1_ni)+dat(k,j,i-1_ni)-2_ni*dat(k,j,i))/dx(j,i)**2_ni - &
                     (dat(k,j+1_ni,i)+dat(k,j-1_ni,i)-2_ni*dat(k,j,i))/dy(j,i)**2_ni
@@ -302,39 +700,6 @@ contains
               (dat(k,j+1_ni,1_ni)+dat(k,j-1_ni,1_ni)-2_ni*dat(k,j,1_ni))/dy(j,1_ni)**2_ni
           res(k,j,nx) = (dat(k,j,1_ni)+dat(k,j,nx-1_ni)-2_ni*dat(k,j,nx))/dx(j,nx)**2_ni - &
                      (dat(k,j+1_ni,nx)+dat(k,j-1_ni,nx)-2_ni*dat(k,j,nx))/dy(j,nx)**2_ni
-       end forall
-    else
-       forall(k = 1_ni:nz, j = 2_ni:ny-1_ni)
-          res(k,j,1_ni) = 0._nr
-          res(k,j,nx) = 0._nr
-       end forall
-    end if
-    forall(k = 1_ni:nz, i = 1_ni:nx)
-       res(k,1_ni,i) = 0._nr
-       res(k,ny  ,i) = 0._nr
-    end forall
-  end subroutine
-  !
-  ! Calculates  the cross second derivatives  a_xy + a_yx = 2*a_xy
-  !  returns 0 on edges
-  subroutine crosslap2(res,nx,ny,nz,dat,dx,dy)
-    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: res(nz,ny,nx)
-    integer(kind=ni) :: i,j,k, nx,ny,nz
-    !f2py depend(nx,ny,nz) res
-    !f2py depend(nx,ny) dx, dy
-    ! -----------------------------------------------------------------
-    !
-    forall(k = 1_ni:nz, j = 2_ni:ny-1_ni, i = 2_ni:nx-1_ni)
-       res(k,j,i) = 2_ni * (dat(k,j+1_ni,i+1_ni)-dat(k,j+1_ni,i-1_ni) - &
-            &              (dat(k,j-1_ni,i+1_ni)-dat(k,j-1_ni,i-1_ni)) )/(dx(j,i)*dy(j,i))
-    end forall
-    if (grid_cyclic_ew) then
-       forall(k = 1_ni:nz, j = 2_ni:ny-1_ni)
-          res(k,j,1_ni) = 2_ni * (dat(k,j+1_ni,2_ni)-dat(k,j+1_ni,nx) - &
-               &                 (dat(k,j-1_ni,2_ni)-dat(k,j-1_ni,nx)) )/(dx(j,1_ni)*dy(j,1_ni))
-          res(k,j,nx)   = 2_ni * (dat(k,j+1_ni,1_ni)-dat(k,j+1_ni,nx-1_ni) - &
-               &                 (dat(k,j-1_ni,1_ni)-dat(k,j-1_ni,nx-1_ni)) )/(dx(j,nx)*dy(j,nx))
        end forall
     else
        forall(k = 1_ni:nz, j = 2_ni:ny-1_ni)

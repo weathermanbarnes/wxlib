@@ -2,17 +2,41 @@
 ! 	 DynLib -- highly efficient solvers for elliptical PDEs
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
-! Module maintained by Clemens Spensberger (csp001@uib.no)
+!@ Highly efficient solvers for elliptical PDEs, using sparse matrix inversion algorithms
+!@
+!@ The discretised PDEs are expressed as an operator applying the homogenous
+!@ part of the equation to a given input field.
 module ellipse
   use kind
   use config
   !
   implicit none
 contains
-  ! Generic routine for inverting a 3d operator op, solving the equation 
-  !             op(res) = b 
-  ! for res using the best available method. Currently, this is the FMG method.
-  ! The default is not likely to change anytime soon.
+  !
+  !@ Generic routine for inverting a 3d operator op
+  !@
+  !@ The routine solves the equation::
+  !@
+  !@             op(res) = b 
+  !@
+  !@ for ``res`` using the best available method. Currently, this is the Full MultiGrid 
+  !@ (FMG) method. This default is not likely to change anytime soon.
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@ 
+  !@ op : function
+  !@      A function or subroutine that implements the operator to be inverted, calculating
+  !@      ``op(res)`` from ``res``.
+  !@ b : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Inhomogeneous part of the discretised PDE ``op(res) = b``.
+  !@ 
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Approximated solution of the PDE.
+  !@ float64
+  !@     Squared residual of the approximation
   subroutine invert_3d(x, ressq, nx,ny,nz, op, b)
     real(kind=nr), intent(in)  :: b(nz,ny,nx)
     real(kind=nr), intent(out) :: x(nz,ny,nx), ressq
@@ -29,10 +53,44 @@ contains
     end interface
     ! -----------------------------------------------------------------
     !
+    call fmg(x, ressq, nx,ny,nz, op, b, 3_ni, 2_ni, 1_ni)
     !
- end subroutine
+  end subroutine
   !
-  ! Full multigrid method
+  !@ Full multigrid method for inverting a 3d operator op
+  !@
+  !@ The routine solves the equation::
+  !@
+  !@             op(res) = b 
+  !@
+  !@ for ``res``. BiCGstab is used as the smoother function, linear interpolation is 
+  !@ used for restriction and prolongation.
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@ 
+  !@ op : function
+  !@      A function or subroutine that implements the operator to be inverted, calculating
+  !@      ``op(res)`` from ``res``.
+  !@ b : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Inhomogeneous part of the discretised PDE ``op(res) = b``.
+  !@ niter_pre : int
+  !@     Number of iterations of the smoother routine before restricting.
+  !@ niter_post : int
+  !@     Number of iterations of the smoother routine after prolongation.
+  !@ nrec : int 
+  !@     Number of recursions.
+  !@ 
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Approximated solution of the PDE.
+  !@ float64
+  !@     Squared residual of the approximation
+  !@ 
+  !@ See Also
+  !@ --------
+  !@ :meth:`bicgstab`, :meth:`cg`
   subroutine fmg(x, ressq, nx,ny,nz, op, b, niter_pre, niter_post, nrec)
     real(kind=nr), intent(in)  :: b(nz,ny,nx)
     real(kind=nr), intent(out) :: x(nz,ny,nx), ressq
@@ -111,7 +169,9 @@ contains
     return
   end subroutine
   !
-  ! One multigrid step
+  !@ One multigrid step
+  !@
+  !@ The routine is used by FMG, and is not intended to be called directly.
   recursive subroutine mg(x, ressq, nx,ny,nz, op, b, x0, niter_pre, niter_post, nrec)
     real(kind=nr), intent(in)  :: b(nz,ny,nx), x0(nz,ny,nx)
     real(kind=nr), intent(out) :: x(nz,ny,nx), ressq
@@ -173,8 +233,10 @@ contains
     !
   end subroutine
   !
-  ! Interpolation helper function for interpolating between the different grids
-  ! in the fmg / mg methods
+  !@ Interpolation helper function for interpolating between the different grids
+  !@ in the fmg / mg methods.
+  !@
+  !@ The routine is used by FMG/MG, and is not intended to be called directly.
   subroutine interpolate(xo, nxo,nyo,nzo, xi, nxi,nyi,nzi)
     real(kind=nr), intent(in)  :: xi(nzi,nyi,nxi)
     real(kind=nr), intent(out) :: xo(nzo,nyo,nxo)
@@ -210,10 +272,12 @@ contains
     return
   end subroutine
   !
-  ! Interpolation of one plane
-  !
   ! The three 1d interpolation functions below are actually one and the same
   ! function, but Fortran makes it impossible to avoid the duplication
+  !
+  !@ Interpolation of one plane
+  !@
+  !@ The routine is used by FMG/MG, and is not intended to be called directly.
   subroutine interpolate_3d_2d(res, nx,ny,nz, dat, z0, z1)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), z0, z1
     real(kind=nr), intent(out) :: res(ny,nx)
@@ -238,7 +302,9 @@ contains
     return
   end subroutine
   !
-  ! Interpolation of one row
+  !@ Interpolation of one row
+  !@
+  !@ The routine is used by FMG/MG, and is not intended to be called directly.
   subroutine interpolate_2d_1d(res, nx,ny, dat, y0, y1)
     real(kind=nr), intent(in)  :: dat(ny,nx), y0, y1
     real(kind=nr), intent(out) :: res(nx)
@@ -263,7 +329,9 @@ contains
     return
   end subroutine
   !
-  ! Interpolation of one value
+  !@ Interpolation of one value
+  !@
+  !@ The routine is used by FMG/MG, and is not intended to be called directly.
   subroutine interpolate_1d_0d(res, nx, dat, x0, x1)
     real(kind=nr), intent(in)  :: dat(nx), x0, x1
     real(kind=nr), intent(out) :: res
@@ -287,10 +355,41 @@ contains
     return
   end subroutine
   !
-  ! The BI-Conqugate Gradient STABilized (BICGSTAB) method
-  !  [Van der Vorst, H. A. (1992). "Bi-CGSTAB: A Fast and Smoothly Converging Variant of Bi-CG for the Solution
-  !   of Nonsymmetric Linear Systems". SIAM Journal on Scientific and Statistical Computing 13: 631–644.]
-  ! Use as a standalone-inverter or as "smoother" for the multigrid inversion
+  !@ The BI-Conqugate Gradient STABilized (BICGSTAB) method for inverting a 3d operator op
+  !@
+  !@ The routine solves the equation::
+  !@
+  !@             op(res) = b 
+  !@
+  !@ for ``res``. 
+  !@
+  !@ Reference: Van der Vorst, H. A. (1992). "Bi-CGSTAB: A Fast and Smoothly Converging Variant 
+  !@ of Bi-CG for the Solution of Nonsymmetric Linear Systems". SIAM Journal on Scientific and 
+  !@ Statistical Computing 13: 631–644.
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@ 
+  !@ op : function
+  !@      A function or subroutine that implements the operator to be inverted, calculating
+  !@      ``op(res)`` from ``res``.
+  !@ b : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Inhomogeneous part of the discretised PDE ``op(res) = b``.
+  !@ x0 : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     First guess for the iteration, might be just zeros.
+  !@ niter : int
+  !@     Number of iterations.
+  !@ 
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Approximated solution of the PDE.
+  !@ float64
+  !@     Squared residual of the approximation
+  !@ 
+  !@ See Also
+  !@ --------
+  !@ :meth:`fmg`, :meth:`cg`
   subroutine bicgstab(x, ressq, nx,ny,nz, op, b, x0, niter)
     real(kind=nr), intent(in)  :: b(nz,ny,nx), x0(nz,ny,nx)
     real(kind=nr), intent(out) :: x(nz,ny,nx), ressq
@@ -346,8 +445,37 @@ contains
     !
   end subroutine
   !
-  ! The Conqugate Gradient (CG) method
-  ! Use as a standalone-inverter or as "smoother" for the multigrid inversion
+  !@ The Conqugate Gradient (CG) method for inverting a 3d operator op
+  !@
+  !@ The routine solves the equation::
+  !@
+  !@             op(res) = b 
+  !@
+  !@ for ``res``. 
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@ 
+  !@ op : function
+  !@      A function or subroutine that implements the operator to be inverted, calculating
+  !@      ``op(res)`` from ``res``.
+  !@ b : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Inhomogeneous part of the discretised PDE ``op(res) = b``.
+  !@ x0 : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     First guess for the iteration, might be just zeros.
+  !@ niter : int
+  !@     Number of iterations.
+  !@ 
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Approximated solution of the PDE.
+  !@ float64
+  !@     Squared residual of the approximation
+  !@ 
+  !@ See Also
+  !@ --------
+  !@ :meth:`fmg`, :meth:`cg`
   subroutine cg(x, ressq, nx,ny,nz, op, b, x0, niter)
     real(kind=nr), intent(in)  :: b(nz,ny,nx), x0(nz,ny,nx)
     real(kind=nr), intent(out) :: x(nz,ny,nx), ressq
