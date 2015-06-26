@@ -12,6 +12,7 @@ Functions
    api/diag
    api/ellipse
    api/humidity
+   api/sphere
    api/stats
    api/utils
 

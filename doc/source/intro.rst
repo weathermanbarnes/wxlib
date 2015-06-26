@@ -14,8 +14,9 @@ Aims with dynlib
 What dynlib is
 --------------
 
- * A large set of meaninful defaults for using standard data sets and plotting
  * A place to collect general-purpose scripts that are/will be useful to a larger group
+ * A large set of meaninful defaults for using standard data sets and plotting
+ * A plotting library built on top of matplotlib, padding most of matplotlib's sharp edges
 
 What dynlib is not
 ------------------

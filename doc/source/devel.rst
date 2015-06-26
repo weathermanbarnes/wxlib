@@ -4,6 +4,12 @@ Extending dynlib
 Which language to choose?
 -------------------------
 
+Fortran code formatting conventions
+-----------------------------------
+
+python code formatting conventions
+----------------------------------
+
 Adding a Fortran subroutine
 ---------------------------
 
