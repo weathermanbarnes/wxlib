@@ -42,7 +42,7 @@ from copy import copy
 import proj
 import cm
 
-from collections import MutableMapping as mutmap
+import collections
 
 
 __context__ = set([])
@@ -79,7 +79,7 @@ def def_context(context):
 	__context__.add(context)
 
 
-class default_dict(mutmap):
+class default_dict(collections.MutableMapping):
 	''' Dictionary with a predefined set of valid keys and default values for each 
 
 	Non-default values are stored in ``self._``, the defaults in ``self._defaults``.
@@ -98,7 +98,13 @@ class default_dict(mutmap):
 		self._ = {}
 		self._defaults = defaults
 
-		mutmap.__init__(self)
+		# Mutable (approximated by "non-hashable") types can be changed in place. 
+		# Hence, they must be copied over to the overrides dict to avoid overriding defaults
+		for key, value in defaults.items():
+			if not isinstance(value, collections.Hashable):
+				self._[key] = copy(value)
+
+		collections.MutableMapping.__init__(self)
 		
 	def __getitem__(self, key):
 		''' Implements the access syntax ``dat[key]`` '''
@@ -122,7 +128,12 @@ class default_dict(mutmap):
 		''' Implements the reset syntax ``del dat[key]`` '''
 
 		if key in self._:
-			del self._[key]
+			# Mutable (approximated by "non-hashable") types can be changed in place. 
+			# Hence, they must be copied over to the overrides dict to avoid overriding defaults
+			if not isinstance(self._defaults[key], collections.Hashable):
+				self._[key] = copy(self._defaults[key])
+			else:
+				del self._[key]
 		elif key in self._defaults:
 			pass
 		else:
@@ -147,11 +158,11 @@ class nd_default_dict(default_dict):
 
 	Valid combinations of keys for the first dimensions are specified using "tables". Each
 	table is a list of sets containing valid keys for each of the first dimensions. Every 
-	combination between these valid keys is assumed to be meaningful. As an example, an 
-	array could contain a set of all available pressure levels and a set of all variables 
+	combination between these valid keys is assumed to be meaningful. As an example, a 
+	table could contain a set of all available pressure levels and a set of all variables 
 	available on pressure levels. If a variable is only available on one of the pressure
-	levels, it would require an additional table, if one wants to avoid that configuration
-	for that variable are available on all pressure levels.
+	levels, it would require an additional table, if one wants to avoid the configuration
+	for that variable to be available on all pressure levels.
 	
 	The set of allowed keys for each dimension is limited. Valid keys can be introduced 
 	through the ``add_default()`` and ``add_table()`` functions.
@@ -164,11 +175,14 @@ class nd_default_dict(default_dict):
 	    Definition of valid keys and their default values
 	
 	Notes
-	----
+	-----
 	 #. ToDo: Implement mutex groups
 	'''
 
 	def __init__(self, first_table, defaults):
+		for default in defaults.values():
+			if not isinstance(default, collections.Hashable):
+				raise ValueError, 'Defaults for plotconf must be immutable, but got variable of type %s, value: %s' % (type(default), str(default))
 		self._fdims = [first_table, ]
 		self._ndims = len(first_table) + 1
 		default_dict.__init__(self, defaults) 	# dictionary of valid keys in the last dimension and their default values
@@ -201,51 +215,25 @@ class nd_default_dict(default_dict):
 		
 		return
 
-	def __resolve_keys(self, key):
-		''' Find all keys that match a given query key for the first dimensions
 
-		If the query key does not contain blanks, ``__resolve_keys`` will return
-		a list with only that one key.
-		'''
+	def __default_walk(self, key, recur=None):
+		''' Return a list of keys to be checked for generic overrides'''
 
-		# If key itself is not valid, return empty list
-		try:
-			self.__check_key(key, allow_blank=True)
-		except KeyError:
-			return []
-		
-		# Solve blank dimensions in the key
-		keys = []
-		blank_dim = False
-		for n, dim in zip(range(self._ndims-1), key):
-			if dim == slice(None):
-				blank_dim = True
-				
-				# Find key fragments to substitute the blank
-				valid_skeys = []
-				for fdim in self._fdims:
-					nofit = False
-					for m in range(n):
-						if key[m] == slice(None):
-							continue
-						elif not key[m] in fdim[m]:
-							nofit = True
-							break
-					if not nofit:
-						valid_skeys.extend(fdim[n])
-				
-				# Recursively solve for later dimensions
-				for skey in valid_skeys:
-					_key = key[:n] + (skey,) + key[n+1:]
-					keys.extend(self.__resolve_keys(_key))
-				
-				# If there are more blank dimensions, 
-				# they will be resolved in the recursive calls, not here!
-				break
-		
-		# Alternatively, if there is no blank dimension, return the given key itself
-		if not blank_dim:
-			keys.append(key)
+		if recur == None:
+			recur = self._ndims-2
+
+		if recur > 0:
+			keys = []
+			keys.extend(self.__default_walk(key, recur-1))
+			if not key[recur] == None:
+				nkey = key[:recur] + (None, ) + key[recur+1:]
+				keys.extend(self.__default_walk(nkey, recur-1)) 
+		else:
+			if key[0] == None:
+				keys = [key, ]
+			else:
+				nkey = (None, ) + key[1:]
+				keys = [key, nkey]
 
 		return keys
 
@@ -256,9 +244,11 @@ class nd_default_dict(default_dict):
                 self.__check_key(key)
 		
 		if len(key) == self._ndims:
-			if key in self._: 
-				return self._[key]
-			elif key[-1] in self._defaults:
+			for key in self.__default_walk(key):
+				if key in self._:
+					return self._[key]
+			
+			if key[-1] in self._defaults:
 				return self._defaults[key[-1]]
 			else:
 				raise KeyError, key
@@ -274,28 +264,38 @@ class nd_default_dict(default_dict):
 		''' Implement assignment via the ``dat[key1,key2,...,keyN] = value`` syntax '''
 
 		self.__check_key(key, allow_blank=True)
-		keys = self.__resolve_keys(key[:self._ndims-1])
 
-		if len(key) == self._ndims:
-			keys = [_key+(key[-1],) for _key in keys]
+		# Replace slice(None) by None for multiple assignment
+		for n, skey in zip(range(len(key)), copy(key)):
+			if skey == slice(None):
+				key = key[:n] + (None,) + key[n+1:]
+
+		#keys = self.__resolve_keys(key[:self._ndims-1])
+
+		#if len(key) == self._ndims:
+		#	keys = [_key+(key[-1],) for _key in keys]
 		
-		for key in keys:
-			if len(key) == self._ndims:
-				self._[key] = value
-			else: 
-				if not type(value) == dict:
-					for lkey, lvalue in dict.items:
-						fullkey = key + (lkey,)
-						if not lkey in self._defaults:
-							raise KeyError, fullkey
-						self._[fullkey] = lvalue
-				else:
-					raise TypeError, 'Dict required for multiple assignment.'
+		#for key in keys:
+		if len(key) == self._ndims:
+			self._[key] = value
+		else: 
+			if not type(value) == dict:
+				for lkey, lvalue in dict.items:
+					fullkey = key + (lkey,)
+					if not lkey in self._defaults:
+						raise KeyError, fullkey
+					self._[fullkey] = lvalue
+			else:
+				raise TypeError, 'Dict required for multiple assignment.'
 
 	def __delitem__(self, key):
 		''' Implement reset via the ``del dat[key1,key2,...,keyN]`` syntax '''
 
-		self.__check_key(key)
+		self.__check_key(key, allow_blank=True)
+
+		for n, skey in zip(range(len(key)), copy(key)):
+			if skey == slice(None):
+				key = key[:n] + (None,) + key[n+1:]
 		
 		if len(key) == self._ndims:
 			if key in self._:
@@ -312,6 +312,11 @@ class nd_default_dict(default_dict):
 		if not len(table) == self._ndims - 1:
 			raise ValueError, 'Table needs to have %d dimensions, got %d instead.' % (
 					self._ndims - 1, len(table))
+		for dim in table:
+			if None in dim:
+				print dim
+				raise ValueError, 'None is reserved for internal use and cannot be used in tables'
+			dim.add(None)
 		self._fdims.append(table)
 
 	def add_default(self, key, value):
@@ -322,10 +327,6 @@ class nd_default_dict(default_dict):
 
 		self._defaults[key] = value
 
-
-
-#class settings_dict(default_dict):
-#	pass
 
 class plot_settings_dict(nd_default_dict):
 	''' A version of the nd_default_dict, where the number of dimensions is fixed to 3
@@ -341,10 +342,38 @@ class plot_settings_dict(nd_default_dict):
 	defaults : dict
 	    Definition of valid keys and their default values
 	'''
+
 	def __init__(self, defaults):
 		nd_default_dict.__init__(self, [], defaults)
 		self._ndims = 3
 		self._fdims = []
+	
+	def merge(self, plev, q, **kwargs):
+		''' Merge given plot settings with the stored plot settings for (plev,q)
+
+		Parameters
+		----------
+		plev : str
+		    Vertical level name.
+		q : str
+		    Variable name.
+
+		Keyword arguments
+		-----------------
+		plot arguments : all
+			For a list of valid arguments refer to :ref:`plot configuration`. Keyword 
+			arguments are applied both to the inset map and the main cross section.
+
+		Returns
+		-------
+		dict
+		    Merged plotconf parameters.
+		'''
+
+		merged = self[plev,q]
+		merged.update(kwargs)
+		
+		return merged
 
 
 class settings_obj(default_dict):
@@ -438,7 +467,7 @@ class settings_obj(default_dict):
 
 		if len(q_item) == 2:
 			q, q_file = q_item
-			qlong = None; q_units = None; q_bins = None
+			q_long = None; q_units = None; q_bins = None
 		elif len(q_item) == 3:
 			q, q_file, q_long = q_item
 			q_units = None; q_bins = None
@@ -484,11 +513,12 @@ class settings_obj(default_dict):
 		
 		if len(plevs) > 0:
 			plevs = set(plevs)
-			self[self._PLOT].add_table([plevs, qs])
-			self[self._PLOTF].add_table([plevs, qs])
+			self[self._PLOT].add_table([copy(plevs), copy(qs)])
+			self[self._PLOTF].add_table([copy(plevs), copy(qs)])
 
 
-
+# Make sure that the plot defaults are immutable, 
+# such that they cannot be changed in place
 PLOT_DEFAULTS = {
 	'coastcolor': 'k', 
 	'disable_cb': False, 
@@ -500,18 +530,18 @@ PLOT_DEFAULTS = {
 	'oroalpha': 0.4, 
 	'orocolor': 'k', 
 	'oroscale': np.arange(1000,9000,1000),
-	'overlays': [], 
+	'overlays': (), 
 	'plev': None, 
 	'save': '', 
 	'scale': 'auto', 
 	'scale_exceed_percentiles': (0.01, 0.99),
-	'scale_intervals': [1,2,3,5,10,],
+	'scale_intervals': (1,2,3,5,10,),
 	'scale_intervals_periodic': True,
 	'scale_target_steps': 7,
 	'scale_symmetric_zero': False,
 	'show': True, 
 	'ticks': None, 
-	'ticklabels': [], 
+	'ticklabels': (), 
 	'title': '', 
 	'Zdata': None,
 
@@ -541,7 +571,7 @@ PLOT_DEFAULTS.update({
 })
 PLOTF_DEFAULTS.update({
 	'cb_orientation': 'horizontal',
-	'cmap': cm.gist_ncar, 
+	'cmap': cm.defabs, #cm.gist_ncar, needs to be immutable!
 	'colors': None, 
 	'extend': 'both', 
 
@@ -558,9 +588,10 @@ conf = settings_obj({
 	'datapath': ['.', ],
 	'opath': '.',
 	'plotpath': '.',
-	'file_std': '',
-	'file_stat': '', 	# Are these general enough to be included? In this case: Would need routines to write those files.
-	'file_mstat': '', 	# -"-
+	'file_std': None,
+	'file_stat': None, 	# Probably not general enough -> Might be superseeded by aggregration file names?
+	'file_mstat': None, 	# Probably not general enough -> Might be superseeded by aggregration file names?
+	# Include file name structures for: (1) Aggregrated data, (2) Time series, (3) Composites, (4) EOFs
 	'file_static': None,
 	'years': [],
 	'times': [],
