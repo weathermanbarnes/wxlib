@@ -1,6 +1,15 @@
 #!/bin/bash
 # Compile scrip for dynlib
+#
+# 0. User-editable configuration 
 
+# Define compile mode:
+#   Possible values: "productive" or "debug". 
+#   The debug mode includes array boundary checks, warnings for floating point exceptions
+#   and helpful error messages in case of such errors, but slows down execution considerably.
+COMPILE_OPTS="productive"
+
+#######################################################################
 # Obs: The order of the files in $files has to reflect the interdepencies!
 base=`pwd`
 baselib="$base/lib"
@@ -20,7 +29,20 @@ fortran_library="libdynfor"
 pysig="${precc}/$python_library.pyf"
 
 LIBS='-L/Data/gfi/users/local/lib -llapack -lspherepack'
-OPTS='-fno-range-check'
+
+# TODO: Make code ready for -pedantic
+if [ "$COMPILE_OPTS" == 'productive' ]; then
+	OPTS="-fPIC -O2 -fno-range-check"
+	F2PY_OPTS=""
+	flagset="\e[0;32mproductive\e[0m";
+elif [ "$COMPILE_OPTS" == 'debug' ]; then
+	OPTS="-fPIC -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace -g -fno-range-check"
+	F2PY_OPTS="--debug-capi --debug"
+	flagset="\e[0;31mdebug\e[0m";
+else
+	echo "Configuration error: COMPILE_OPTS must be one of ('productive', 'debug')"
+	exit 1
+fi
 
 # Empty precompiler directory
 mkdir -p $precc
@@ -68,18 +90,15 @@ mv ${pysig}_tmp $pysig
 
 
 # 3. Compiling the fortran modules 
-echo "Stage 3: Compiling Fortran shared object"
-gfortran $LIBS $OPTS -fPIC -c $filek $filec $files 
-gfortran -shared $fileko $fileco $fileso $LIBS $OPTS -o $fortran_library.so 
+echo -e "Stage 3: Compiling Fortran shared object using $flagset options."
+gfortran $OPTS $LIBS -c $filek $filec $files 
+gfortran -shared $fileko $fileco $fileso $OPTS $LIBS -o $fortran_library.so 
 mv $fortran_library.so $baselib
 
 
 # 4. Compiling the shared object usable from within python
-echo "Stage 4: Compiling the python module"
-DEBUG=' --debug-capi --debug --opt="-fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace -g -pedantic"'
-#set -x
-f2py -c $LIBS --fcompiler=gnu95 --opt=\"$OPTS\" $pysig $files $filec $filek > /dev/null
-#set +x
+echo -e "Stage 4: Compiling the python module using $flagset options."
+f2py -c $LIBS --fcompiler=gnu95 $F2PY_OPTS --opt="\"$OPTS\"" $pysig $files $filec $filek > /dev/null
 mv $python_library.so $baselib
 
 
