@@ -540,6 +540,10 @@ contains
   !@     Grid size in y-direction.
   !@ nz : int
   !@     Grid size in z- or t-direction.
+  !@ no : int
+  !@     Maximum number of points in all lines.
+  !@ nf : int
+  !@     Maximum number of lines.
   !@
   !@ Returns
   !@ -------
@@ -627,6 +631,10 @@ contains
   !@     Grid size in y-direction.
   !@ nz : int
   !@     Grid size in z- or t-direction.
+  !@ no : int
+  !@     Maximum number of points in all lines.
+  !@ nf : int
+  !@     Maximum number of lines.
   !@
   !@ Returns
   !@ -------

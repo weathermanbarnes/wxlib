@@ -20,7 +20,7 @@ import calendar
 
 
 
-def scale(var, cut=(slice(None),slice(None),slice(None)), bench=False):
+def scale(var):
 	""" Automatic scaling according to netcdf attributes `scale_factor` and `add_offset`
 
 	Parameters
@@ -28,10 +28,6 @@ def scale(var, cut=(slice(None),slice(None),slice(None)), bench=False):
 
 	var : nc.NetCDFVariable
 	    The variable to be scaled
-	cut : tuple of slice-objects
-	    *TODO*: Obsolete parameter to be removed
-	bench : bool
-	    *TODO*: Obsolete parameter to be removed
 	
 	Returns
 	-------
@@ -39,18 +35,13 @@ def scale(var, cut=(slice(None),slice(None),slice(None)), bench=False):
 	    The scaled data contained in the nc.NetCDFVariable object `var`.
 	"""
 	if hasattr(var, 'scale_factor') or hasattr(var, 'add_offset'):
-		if bench:
-			begin = dt.now()
 		# Python/numpy version is faster than Fortran function
-		var_dat = var[cut]*getattr(var, 'scale_factor', 1.0) + getattr(var, 'add_offset', 0.0)
-		#u_dat = dynfor.conv.scaleoff(u_dat, getattr(u, 'scale_factor', 1.0), getattr(u, 'add_offset', 0.0))
-		if bench:
-			print 'Python scaleoff', dt.now()-begin
+		var = var[::]*var.scale_factor + var.add_offset
 	
 	else:
-		var_dat = var[cut]
+		var = var[::]
 	
-	return var_dat
+	return var
 
 
 def unscale(var):
