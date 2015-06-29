@@ -20,6 +20,7 @@ fortran_library="libdynfor"
 pysig="${precc}/$python_library.pyf"
 
 LIBS='-L/Data/gfi/users/local/lib -llapack -lspherepack'
+OPTS='-fno-range-check'
 
 # Empty precompiler directory
 mkdir -p $precc
@@ -61,21 +62,24 @@ cd $precc
 f2py -m $python_library -h $pysig $filec $files > /dev/null
 sed "s/kind=nc/kind=16/g" $pysig | sed "s/_nc//g" |
 sed "s/kind=nr/kind=8/g" | sed "s/_nr//g" |
-sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" > ${pysig}_tmp
+sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" |
+grep -v "nan=" > ${pysig}_tmp
 mv ${pysig}_tmp $pysig
 
 
 # 3. Compiling the fortran modules 
 echo "Stage 3: Compiling Fortran shared object"
-gfortran $LIBS -fPIC -c $filek $filec $files 
-gfortran -shared $fileko $fileco $fileso $LIBS -o $fortran_library.so 
+gfortran $LIBS $OPTS -fPIC -c $filek $filec $files 
+gfortran -shared $fileko $fileco $fileso $LIBS $OPTS -o $fortran_library.so 
 mv $fortran_library.so $baselib
 
 
 # 4. Compiling the shared object usable from within python
 echo "Stage 4: Compiling the python module"
 DEBUG=' --debug-capi --debug --opt="-fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace -g -pedantic"'
-f2py -c $LIBS --fcompiler=gnu95 $pysig $files $filec $filek > /dev/null
+#set -x
+f2py -c $LIBS --fcompiler=gnu95 --opt=\"$OPTS\" $pysig $files $filec $filek > /dev/null
+#set +x
 mv $python_library.so $baselib
 
 

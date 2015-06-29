@@ -1408,6 +1408,7 @@ contains
        end do
     end do
     !
+    ! TODO: Should this be a NaN??
     respr(:,(/1,ny/),:)=0._nr
     !respr(:,:,(/1,nx/))=0._nr
     resmr(:,(/1,ny/),:)=0._nr

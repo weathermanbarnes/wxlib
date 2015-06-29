@@ -7,6 +7,7 @@
 module detect_fronts
   use kind
   use config
+  use consts
   use derivatives
   !
   implicit none
@@ -14,11 +15,11 @@ module detect_fronts
 contains
   !
   !
-  subroutine line_locate(lines,lnoff,nx,ny,nz,no,nf,lnloc,lnint,searchrad,minlen,NaN,dx,dy)
+  subroutine line_locate(lines,lnoff,nx,ny,nz,no,nf,lnloc,lnint,searchrad,minlen,dx,dy)
     use consts
     !
     real(kind=nr), intent(in) :: lnloc(nz,ny,nx), lnint(nz,ny,nx), &
-                 &               dx(ny,nx), dy(ny,nx), searchrad, NaN, minlen
+                 &               dx(ny,nx), dy(ny,nx), searchrad, minlen
     real(kind=nr), intent(out) :: lines(nz,no,3_ni), lnoff(nz,nf)
     integer(kind=ni) :: nx,ny,nz, no, nf
     !f2py depend(nx,ny,nz) lnint
@@ -38,15 +39,15 @@ contains
        write(*,'(I5,A4,I5,A)', advance='no') k, 'of', nz, cr
        !
        ! find fronts
-       call find_zeroloc(lnloc(k,:,:), nx,ny,nn, NaN, zeroloc,zerocnt)
+       call find_zeroloc(lnloc(k,:,:), nx,ny,nn, zeroloc,zerocnt)
        ! 
        ! searchrad is in grid point indexes, as zero locations are found at grid
        ! resolution, hence the number of neighbours for a given searchrad does not
        ! depend on location within the grid
        !
        allocate(recj(zerocnt,zerocnt), reci(zerocnt,zerocnt), lineptcnt(zerocnt), linelen(zerocnt) )
-       reci(:,:) = NaN
-       recj(:,:) = NaN
+       reci(:,:) = nan
+       recj(:,:) = nan
        linecnt    = 0_ni ! number of lines
        ptcnt      = 0_ni ! total numer of points
        lineptcnt(:) = 0_ni ! number of points per line
@@ -55,7 +56,7 @@ contains
        !
        off = 0_ni
        do n = 1_ni,zerocnt
-          if (recj(n,1_ni) == NaN) then
+          if (recj(n,1_ni) == nan) then
              exit
           end if
           !
@@ -97,10 +98,10 @@ contains
   end subroutine
   !
   ! TODO: Reduce duplication with line_locate
-  subroutine maxline_locate(lines,lnoff,nx,ny,nz,no,nf,dat,thres,searchrad,minlen,NaN,dx,dy)
+  subroutine maxline_locate(lines,lnoff,nx,ny,nz,no,nf,dat,thres,searchrad,minlen,dx,dy)
     use consts
     !
-    real(kind=nr), intent(in) :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx), thres, searchrad, NaN, minlen
+    real(kind=nr), intent(in) :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx), thres, searchrad, minlen
     real(kind=nr), intent(out) :: lines(nz,no,3_ni), lnoff(nz,nf)
     integer(kind=ni) :: nx,ny,nz, no, nf
     !f2py depend(nx,ny) dx, dy
@@ -116,7 +117,7 @@ contains
     ! -----------------------------------------------------------------
     !
     ! find lines by zero-criterion
-    call find_maxloc(dat(:,:,:),thres, nx,ny,nz, nn, NaN, maxloc_(:,:,:),maxcnt(:), dx,dy)
+    call find_maxloc(dat(:,:,:),thres, nx,ny,nz, nn,  maxloc_(:,:,:),maxcnt(:), dx,dy)
     !
     do k = 1_ni,nz
        write(*,'(I5,A4,I5,A)', advance='no') k, 'of', nz, cr
@@ -126,8 +127,8 @@ contains
        ! depend on location within the grid
        !
        allocate(recj(maxcnt(k),maxcnt(k)), reci(maxcnt(k),maxcnt(k)), lineptcnt(maxcnt(k)), linelen(maxcnt(k)) )
-       reci(:,:) = NaN
-       recj(:,:) = NaN
+       reci(:,:) = nan
+       recj(:,:) = nan
        linecnt    = 0_ni ! number of lines
        ptcnt      = 0_ni ! total numer of points
        lineptcnt(:) = 0_ni ! number of points per line
@@ -136,7 +137,7 @@ contains
        !
        off = 0_ni
        do n = 1_ni,maxcnt(k)
-          if (recj(n,1_ni) == NaN) then
+          if (recj(n,1_ni) == nan) then
              exit
           end if
           !
@@ -178,10 +179,9 @@ contains
   end subroutine
   !
   ! Find locations where dat is zero by interpolating the 2-dim gridded data
-  subroutine find_zeroloc(dat, nx,ny,nn, NaN, zeroloc, zerocnt)
-    real(kind=nr), intent(in)  ::  dat(ny,nx)
+  subroutine find_zeroloc(dat, nx,ny,nn, zeroloc, zerocnt)
+    real(kind=nr), intent(in)  :: dat(ny,nx)
     real(kind=nr), intent(out) :: zeroloc(nn,2_ni)
-    real(kind=nr), intent(in) :: NaN
     integer(kind=ni), intent(in) :: nx,ny, nn
     integer(kind=ni), intent(out) :: zerocnt 
     !
@@ -206,7 +206,7 @@ contains
              end if
           ! interpolate to find line, i direction first
           else   
-             if (dat(j,ip1) /= NaN .and. dat(j,i) /= NaN) then
+             if (dat(j,ip1) /= nan .and. dat(j,i) /= nan) then
                 if ((dat(j,i) > 0.0_nr .and. dat(j,ip1) < 0.0_nr) .or. &
                   & (dat(j,i) < 0.0_nr .and. dat(j,ip1) > 0.0_nr)) then
                    zerocnt = zerocnt + 1_ni
@@ -236,7 +236,7 @@ contains
              end if
           ! interpolate to find line, i direction first
           else   
-             if (dat(j,ip1) /= NaN .and. dat(j,i) /= NaN) then
+             if (dat(j,ip1) /= nan .and. dat(j,i) /= nan) then
                 if ((dat(j,i) > 0.0_nr .and. dat(j,ip1) < 0.0_nr) .or. &
                   & (dat(j,i) < 0.0_nr .and. dat(j,ip1) > 0.0_nr)) then
                    zerocnt = zerocnt + 1_ni
@@ -265,7 +265,7 @@ contains
              end if
           ! interpolate to find line, j direction first
           else   
-             if (dat(ip1,i) /= NaN .and. dat(j,i) /= NaN) then
+             if (dat(ip1,i) /= nan .and. dat(j,i) /= nan) then
                 if ((dat(j,i) > 0.0_nr .and. dat(ip1,i) < 0.0_nr) .or. &
                   & (dat(j,i) < 0.0_nr .and. dat(ip1,i) > 0.0_nr)) then
                    zerocnt = zerocnt + 1_ni
@@ -281,10 +281,9 @@ contains
   end  subroutine find_zeroloc
   !
   ! Find maximum axis locations by interpolating the 2-dim gridded data
-  subroutine find_maxloc(dat,thres, nx,ny,nz, nn, NaN, maxloc_, maxcnt, dx,dy)
-    real(kind=nr), intent(in)  ::  dat(nz,ny,nx), dx(ny,nx), dy(ny,nx), thres
+  subroutine find_maxloc(dat,thres, nx,ny,nz, nn, maxloc_, maxcnt, dx,dy)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx), thres
     real(kind=nr), intent(out) :: maxloc_(nz,nn,2_ni)
-    real(kind=nr), intent(in) :: NaN
     integer(kind=ni), intent(in) :: nx,ny,nz, nn
     integer(kind=ni), intent(out) :: maxcnt(nz)
     !f2py depend(nx,ny) dx, dy

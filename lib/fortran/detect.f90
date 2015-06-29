@@ -561,8 +561,6 @@ contains
     !f2py depend(nx,ny) dx, dy
     !f2py depend(nz) ja, jaoff
     !
-    real   (kind=nr), parameter :: NaN = -9999.9_nr, ddang_max = pi/2.0_nr
-    !
     !real(kind=nr) :: us(nz,ny,nx), vs(nz,ny,nx)
     real(kind=nr) :: dsheardx(nz,ny,nx), dsheardy(nz,ny,nx), &
                  &   jetint(nz,ny,nx), shear(nz,ny,nx), ones(ny,nx), ff(nz,ny,nx)
@@ -583,7 +581,7 @@ contains
     jetint(:,:,:) = (u(:,:,:)*dsheardy(:,:,:) - v(:,:,:)*dsheardx(:,:,:))/ff(:,:,:)
     !
     where(jetint > -jetint_thres)
-       shear = NaN
+       shear = nan
     end where
     !
     ! Save the wind speed along the jet axis in the third field along with the
@@ -591,7 +589,7 @@ contains
     !  (the original jetint is not needed anymore after the masking `where` block)
     jetint(:,:,:) = ff(:,:,:)
     !
-    call line_locate(ja,jaoff, nx,ny,nz,no,nf, shear,jetint,searchrad,minlen,NaN, dx,dy)
+    call line_locate(ja,jaoff, nx,ny,nz,no,nf, shear,jetint,searchrad,minlen, dx,dy)
     !
     return
   end subroutine
@@ -650,8 +648,6 @@ contains
     !f2py depend(nx,ny) dx, dy
     !f2py depend(nz) ja, jaoff
     !
-    real   (kind=nr), parameter :: NaN = -9999.9_nr, ddang_max = pi/2.0_nr
-    !
     real(kind=nr) :: us(nz,ny,nx), vs(nz,ny,nx), ffs(nz,ny,nx), & 
                  &   ddangdx(nz,ny,nx), ddangdy(nz,ny,nx), &
                  &   jetint(nz,ny,nx), jaloc(nz,ny,nx), ones(ny,nx)
@@ -677,11 +673,11 @@ contains
     !
     ! Mask wind minima
     where(jetint >= 0.0_nr)
-       jaloc = NaN
+       jaloc = nan
     end where
     ! Mask low wind zones
     where(ffs < 30.0_nr)
-       jaloc = NaN
+       jaloc = nan
     end where
     !
     ! Save the wind speed along the jet axis in the third field along with the
@@ -689,7 +685,7 @@ contains
     !  (the original jetint is not needed anymore after the masking `where` block)
     jetint(:,:,:) = sqrt(us(:,:,:)**2.0_nr + vs(:,:,:)**2.0_nr)
     !
-    call line_locate(ja,jaoff, nx,ny,nz,no,nf, jaloc,jetint,searchrad,minlen,NaN, dx,dy)
+    call line_locate(ja,jaoff, nx,ny,nz,no,nf, jaloc,jetint,searchrad,minlen, dx,dy)
     !
     return
   end subroutine
@@ -748,8 +744,6 @@ contains
     !f2py depend(nx,ny) dx, dy
     !f2py depend(nz) fr, froff
     !
-    real   (kind=nr), parameter :: NaN = -9999.9_nr
-    !
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
     integer(kind=ni), allocatable :: linelen(:)
     !
@@ -769,7 +763,7 @@ contains
     !
     ! frint must be negative and below a configurable threshold for front
     where(frint > frint_thres)
-       frloc = NaN
+       frloc = nan
     end where
     ! 
     do typ = 1_ni,3_ni
@@ -778,25 +772,25 @@ contains
           where(frspd(:,:,:) < -1_ni*frspd_thres)
              frloc_cws = frloc(:,:,:)
           elsewhere
-             frloc_cws = NaN
+             frloc_cws = nan
           end where
        ! warm fronts
        elseif(typ == 2_ni) then
           where(frspd(:,:,:) > frspd_thres)
              frloc_cws = frloc(:,:,:)
           elsewhere
-             frloc_cws = NaN
+             frloc_cws = nan
           end where
        ! stationary fronts
        else
           where(frspd(:,:,:) > -1_ni*frspd_thres .and. frspd(:,:,:) < frspd_thres)
              frloc_cws = frloc(:,:,:)
           elsewhere
-             frloc_cws = NaN
+             frloc_cws = nan
           end where
        end if
        !
-       call line_locate(fr(:,typ,:,:),froff(:,typ,:), nx,ny,nz,no,nf, frloc_cws,frint,searchrad,minlen,NaN, dx,dy)
+       call line_locate(fr(:,typ,:,:),froff(:,typ,:), nx,ny,nz,no,nf, frloc_cws,frint,searchrad,minlen, dx,dy)
        !
     end do ! loop over front type
     !
@@ -821,8 +815,6 @@ contains
     !f2py depend(nx,ny) dx, dy
     !f2py depend(nz) fr, froff
     !
-    real   (kind=nr), parameter :: NaN = -9999.9_nr
-    !
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
     integer(kind=ni), allocatable :: linelen(:)
     !
@@ -845,19 +837,19 @@ contains
     !
     ! frint must be negative and below a configurable threshold for front
     !where(absgrad > div_thres)
-    !   absx = NaN
-    !   absy = NaN
+    !   absx = nan
+    !   absy = nan
     !end where
     ! Masking which criterion to use
     !where(absxx > absyy)
-    !   absx = NaN
+    !   absx = nan
     !else where
-    !   absy = NaN
+    !   absy = nan
     !end where
     !
     absgrad = -absgrad
     !
-    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,-div_thres, searchrad,minlen,NaN, dx,dy)
+    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,-div_thres, searchrad,minlen, dx,dy)
     !
     return
   end subroutine
@@ -879,8 +871,6 @@ contains
     !f2py depend(nx,ny,nz) v
     !f2py depend(nx,ny) dx, dy
     !f2py depend(nz) fr, froff
-    !
-    real   (kind=nr), parameter :: NaN = -9999.9_nr
     !
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
     integer(kind=ni), allocatable :: linelen(:)
@@ -904,17 +894,17 @@ contains
     !
     ! frint must be negative and below a configurable threshold for front
     !where(absgrad < vor_thres)
-    !   absx = NaN
-    !   absy = NaN
+    !   absx = nan
+    !   absy = nan
     !end where
     ! Masking which criterion to use
     !where(absxx > absyy)
-    !   absx = NaN
+    !   absx = nan
     !else where
-    !   absy = NaN
+    !   absy = nan
     !end where
     ! 
-    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,vor_thres, searchrad,minlen,NaN, dx,dy)
+    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,vor_thres, searchrad,minlen, dx,dy)
     !
     return
   end subroutine
@@ -937,8 +927,6 @@ contains
     !f2py depend(nx,ny) dx, dy
     !f2py depend(nz) fr, froff
     !
-    real   (kind=nr), parameter :: NaN = -9999.9_nr
-    !
     real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
     integer(kind=ni), allocatable :: linelen(:)
     !
@@ -959,17 +947,17 @@ contains
     !
     ! frint must be negative and below a configurable threshold for front
     !where(absgrad < def_thres)
-    !   absx = NaN
-    !   absy = NaN
+    !   absx = nan
+    !   absy = nan
     !end where
     ! Masking which criterion to use
     !where(absxx > absyy)
-    !   absx = NaN
+    !   absx = nan
     !else where
-    !   absy = NaN
+    !   absy = nan
     !end where
     ! 
-    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,def_thres, searchrad,minlen,NaN, dx,dy)
+    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,def_thres, searchrad,minlen, dx,dy)
     !
     return
   end subroutine

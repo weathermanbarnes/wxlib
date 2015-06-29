@@ -9,13 +9,14 @@
 module derivatives
   use kind
   use config
+  use consts !, only: nan
   !
   implicit none
 contains
   !
   !@ Calculates partial x derivative: ddatdx = partial(dat)/partial(x)
   !@
-  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ The routine uses 2nd-order centered differences. Returns NaN on first and last 
   !@ longitude for non-cyclic grids.
   !@
   !@ Parameters
@@ -66,16 +67,16 @@ contains
        end forall
     else 
        forall(k = 1_ni:nz, j = 1_ni:ny)
-          res(k,j,1_ni) = 0._nr
-          res(k,j,nx  ) = 0._nr
+          res(k,j,1_ni) = nan
+          res(k,j,nx  ) = nan
        end forall
     end if
   end subroutine
   !
   !@ Calculates partial x derivative: ddatdx = partial(dat)/partial(x)
   !@
-  !@ The routine uses 4th-order centered differences. Returns 0 on first and last 
-  !@ longitude for non-cyclic grids.
+  !@ The routine uses 4th-order centered differences. Returns NaN on first and last 
+  !@ two longitudes for non-cyclic grids.
   !@
   !@ Parameters
   !@ ----------
@@ -127,17 +128,17 @@ contains
        end forall
     else 
        forall(k = 1_ni:nz, j = 1_ni:ny)
-          res(k,j,1_ni) = 0._nr
-          res(k,j,2_ni) = 0._nr
-          res(k,j,nx-1_ni) = 0._nr
-          res(k,j,nx) = 0._nr
+          res(k,j,1_ni) = nan
+          res(k,j,2_ni) = nan
+          res(k,j,nx-1_ni) = nan
+          res(k,j,nx) = nan
        end forall
     end if
   end subroutine
   !
   !@ Calculates the second partial x derivative: b = partial^2(dat)/partial(x)^2
   !@
-  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ The routine uses 2nd-order centered differences. Returns NaN on first and last 
   !@ longitude for non-cyclic grids.
   !@
   !@ Parameters
@@ -184,15 +185,15 @@ contains
        end forall
     else 
        forall(k = 1_ni:nz, j = 1_ni:ny)
-          res(k,j,1_ni) = 0._nr
-          res(k,j,nx  ) = 0._nr
+          res(k,j,1_ni) = nan
+          res(k,j,nx  ) = nan
        end forall
     end if
   end subroutine
   !
   !@ Calculates partial y derivative: ddatdy = partial(dat)/partial(y)
   !@
-  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ The routine uses 2nd-order centered differences. Returns NaN on first and last 
   !@ latitude.
   !@
   !@ Parameters
@@ -237,15 +238,15 @@ contains
        res(k,j,i) = (dat(k,j+1_ni,i)-dat(k,j-1_ni,i))/dy(j,i)
     end forall
     forall(k = 1_ni:nz, i = 1_ni:nx)
-       res(k,1_ni,i)=0._nr
-       res(k,ny,i)=0._nr
+       res(k,1_ni,i)=nan
+       res(k,ny,i)=nan
     end forall
   end subroutine
   !
   !@ Calculates partial y derivative: ddatdy = partial(dat)/partial(y)
   !@
-  !@ The routine uses 4nd-order centered differences. Returns 0 on first and last 
-  !@ latitude.
+  !@ The routine uses 4nd-order centered differences. Returns NaN on first and last 
+  !@ two latitudes.
   !@
   !@ Parameters
   !@ ----------
@@ -289,16 +290,16 @@ contains
        res(k,j,i) = (-dat(k,j+2_ni,i)+8_ni*dat(k,j+1_ni,i)-8_ni*dat(k,j-1_ni,i)+dat(k,j-2_ni,i))/(6_ni*dy(j,i))
     end forall
     forall(k = 1_ni:nz, i = 1_ni:nx)
-       res(k,1_ni,i)=0._nr
-       res(k,2_ni,i)=0._nr
-       res(k,ny-1_ni,i)=0._nr
-       res(k,ny,i)=0._nr
+       res(k,1_ni,i)=nan
+       res(k,2_ni,i)=nan
+       res(k,ny-1_ni,i)=nan
+       res(k,ny,i)=nan
     end forall
   end subroutine
   !
   !@ Calculates second partial y derivative: b = partial^2(dat)/partial(y)^2
   !@
-  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ The routine uses 2nd-order centered differences. Returns NaN on first and last 
   !@ latitude.
   !@
   !@ Parameters
@@ -339,8 +340,8 @@ contains
        res(k,j,i) = (dat(k,j+1_ni,i)-2_ni*dat(k,j,i)+dat(k,j-1_ni,i))/dy(j,i)**2_ni
     end forall
     forall(k = 1_ni:nz, i = 1_ni:nx)
-       res(k,1_ni,i)=0._nr
-       res(k,ny,i)=0._nr
+       res(k,1_ni,i)=nan
+       res(k,ny,i)=nan
     end forall
   end subroutine
   !
@@ -348,7 +349,7 @@ contains
   !@
   !@     b = partial^2(dat)/(partial(y)*partial(x)
   !@
-  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ The routine uses 2nd-order centered differences. Returns NaN on first and last 
   !@ latitude and longitude for non-cyclic grids.
   !@
   !@ Parameters
@@ -398,19 +399,19 @@ contains
        end forall
     else
        forall(k = 1_ni:nz, j = 2_ni:ny-1_ni)
-          res(k,j,1_ni) = 0._nr
-          res(k,j,nx) = 0._nr
+          res(k,j,1_ni) = nan
+          res(k,j,nx) = nan
        end forall
     end if
     forall(k = 1_ni:nz, i = 1_ni:nx)
-       res(k,1_ni,i) = 0._nr
-       res(k,ny  ,i) = 0._nr
+       res(k,1_ni,i) = nan
+       res(k,ny  ,i) = nan
     end forall
   end subroutine
   !
   !@ Calculates partial derivative in z direction ddatdz = partial(dat)/partial(z)
   !@
-  !@ The routine uses 2nd-order centered differences. Returns 0 on top and
+  !@ The routine uses 2nd-order centered differences. Returns NaN on top and
   !@ bottom level.
   !@
   !@ Parameters
@@ -448,8 +449,8 @@ contains
        res(k,j,i) = (dat(k+1_ni,j,i)-dat(k-1_ni,j,i))/dz(k,j,i)
     end forall
     forall(j = 1_ni:ny, i = 1_ni:nx)
-       res(1_ni,j,i)=0._nr
-       res(nz  ,j,i)=0._nr
+       res(1_ni,j,i)=nan
+       res(nz  ,j,i)=nan
     end forall
   end subroutine
   !
@@ -457,7 +458,7 @@ contains
   !@
   !@     bx, by = grad(dat)
   !@
-  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ The routine uses 2nd-order centered differences. Returns NaN on first and last 
   !@ latitude and longitude for non-cyclic grids.
   !@
   !@ Parameters
@@ -503,16 +504,16 @@ contains
     call ddx(resx,nx,ny,nz,dat,dx,dy)
     call ddy(resy,nx,ny,nz,dat,dx,dy)
     ! set to 0 where grad result not valid: j=1 and ny
-    resx(:,1_ni,:) = 0._nr
-    resy(:,1_ni,:) = 0._nr
-    resx(:,ny,:  ) = 0._nr
-    resy(:,ny,:  ) = 0._nr
+    resx(:,1_ni,:) = nan
+    resy(:,1_ni,:) = nan
+    resx(:,ny,:  ) = nan
+    resy(:,ny,:  ) = nan
     if (.not.(grid_cyclic_ew)) then
        ! set to 0 where grad result not valid: i=1 and nx
-       resx(:,:,1_ni) = 0._nr 
-       resy(:,:,1_ni) = 0._nr
-       resx(:,:,nx  ) = 0._nr
-       resy(:,:,nx  ) = 0._nr
+       resx(:,:,1_ni) = nan 
+       resy(:,:,1_ni) = nan
+       resx(:,:,nx  ) = nan
+       resy(:,:,nx  ) = nan
     end if
   end subroutine
   !
@@ -520,7 +521,7 @@ contains
   !@
   !@     bx, by, bz = grad3(dat)
   !@
-  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ The routine uses 2nd-order centered differences. Returns NaN on first and last 
   !@ latitude, longitude for non-cyclic grids and bottom and top levels.
   !@
   !@ Parameters
@@ -579,7 +580,7 @@ contains
   !
   !@ Calculates 2d Laplacian ldat = lap2(dat)
   !@
-  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ The routine uses 2nd-order centered differences. Returns NaN on first and last 
   !@ latitude and longitude for non-cyclic grids.
   !@
   !@ Parameters
@@ -634,13 +635,13 @@ contains
        end forall
     else
        forall(k = 1_ni:nz, j = 2_ni:ny-1_ni)
-          res(k,j,1_ni) = 0._nr
-          res(k,j,nx) = 0._nr
+          res(k,j,1_ni) = nan
+          res(k,j,nx) = nan
        end forall
     end if
     forall(k = 1_ni:nz, i = 1_ni:nx)
-       res(k,1_ni,i) = 0._nr
-       res(k,ny  ,i) = 0._nr
+       res(k,1_ni,i) = nan
+       res(k,ny  ,i) = nan
     end forall
   end subroutine
   !
@@ -648,7 +649,7 @@ contains
   !@ 
   !@    ldat = partial^2(dat)/partial(x)^2 - partial^2(dat)/partial(y)^2
   !@
-  !@ The routine uses 2nd-order centered differences. Returns 0 on first and last 
+  !@ The routine uses 2nd-order centered differences. Returns NaN on first and last 
   !@ latitude and longitude for non-cyclic grids.
   !@
   !@ Parameters
@@ -703,13 +704,13 @@ contains
        end forall
     else
        forall(k = 1_ni:nz, j = 2_ni:ny-1_ni)
-          res(k,j,1_ni) = 0._nr
-          res(k,j,nx) = 0._nr
+          res(k,j,1_ni) = nan
+          res(k,j,nx) = nan
        end forall
     end if
     forall(k = 1_ni:nz, i = 1_ni:nx)
-       res(k,1_ni,i) = 0._nr
-       res(k,ny  ,i) = 0._nr
+       res(k,1_ni,i) = nan
+       res(k,ny  ,i) = nan
     end forall
   end subroutine
   !
