@@ -1,0 +1,34 @@
+
+block -> fully integrate to utils.py
+      -> partly integrate to large-scale reversals
+
+composites -> decider: document and move to lib/
+           -> tests: filter general, document and move to lib/
+	   -> tests: choose example, document and move to examples/
+	   -> significance: move decider part to decider as new random composite
+	   -> significance: merge with main part in dyncal
+	   -> main: generalise to dyncal
+	   -> merge: make obsolete by file conventions
+
+trends -> fully integrate to stats.py
+
+correlate_ts -> generalise to new function in stats.py
+
+eof -> main: fully integrate to stats.py
+    -> proj: generalise to dyncal
+
+new lineutils.py -> jetaxis_split: split lines by criterion
+	      -> rasterise (optional smooth)
+	      -> rasterise_by_data
+	      -> jetaxis_trace_origin: rasterise_ends (both, end, start)
+
+new tendencies.f90 -> isat: islopes_adiabatic
+		   -> isat: islopes_diabatic
+
+isat -> diag.f90
+
+
+######### Moves
+
+dynlib.utils.regress -> dynlib.stats.regress
+dynlib.diag.def_tend_* -> dynlib.tendencies.deform
