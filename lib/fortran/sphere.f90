@@ -41,7 +41,7 @@ contains
     !real(kind=nr) :: br(nz,ny,ny), bi(nz,ny,ny), cr(nz,ny,ny), ci(nz,ny,ny)
     integer(kind=ni) :: ierror, k
     !
-    integer(kind=ni) :: lwork, ldwork
+    integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
     real(kind=nr), allocatable :: work(:)
     real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
@@ -65,8 +65,10 @@ contains
        lshaes = ((ny+1_ni)**3_ni)/2_ni + nx + 15_ni
        allocate(wshaes(lshaes))
        call shaesi(ny,nx,wshaes,lshaes,work,lwork,dwork,ldwork,ierror)
-       !wshaes(:) = 1.0_nr
-       write(*,*) ierror
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in shaesi, code', ierror
+          stop 1
+       end if
     end if
     !
     a(:,:,:) = 0.0_nr
@@ -75,7 +77,10 @@ contains
        call shaes(ny,nx,0_ni,1_ni, dat(k,:,:), ny,nx, &
                & a(k,:,:),b(k,:,:), ny,ny, wshaes,lshaes,work,lwork, ierror)
     end do
-    write(*,*) ierror
+    if ( ierror /= 0_ni ) then
+       write(*,*) 'Error in shaes, code', ierror
+       stop 1
+    end if
     !
     deallocate(work, dwork)
     !
@@ -108,7 +113,7 @@ contains
     !real(kind=nr) :: br(nz,ny,ny), bi(nz,ny,ny), cr(nz,ny,ny), ci(nz,ny,ny)
     integer(kind=ni) :: ierror, k
     !
-    integer(kind=ni) :: lwork, ldwork
+    integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
     real(kind=nr), allocatable :: work(:)
     real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
@@ -130,7 +135,10 @@ contains
        lshses = ((ny+1_ni)**3_ni)/4_ni + nx + 15_ni
        allocate(wshses(lshses))
        call shsesi(ny,nx,wshses,lshses,work,lwork,dwork,ldwork,ierror)
-       write(*,*) ierror
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in shsesi, code', ierror
+          stop 1
+       end if
     end if
     !
     res(:,:,:) = 0.0_nr
@@ -138,7 +146,10 @@ contains
        call shses(ny,nx,0_ni,1_ni, res(k,:,:), ny,nx, &
                & a(k,:,:),b(k,:,:), ny,ny, wshses,lshses,work,lwork, ierror)
     end do
-    write(*,*) ierror
+    if ( ierror /= 0_ni ) then
+       write(*,*) 'Error in shses, code', ierror
+       stop 1
+    end if
     !
     deallocate(work, dwork)
     !
@@ -172,7 +183,7 @@ contains
     !real(kind=nr) :: br(nz,ny,ny), bi(nz,ny,ny), cr(nz,ny,ny), ci(nz,ny,ny)
     integer(kind=ni) :: ierror, k
     !
-    integer(kind=ni) :: lwork, ldwork
+    integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
     real(kind=nr), allocatable :: work(:)
     real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
@@ -195,7 +206,10 @@ contains
        lvhaes = ((ny+1_ni)**3_ni) + nx + 15_ni
        allocate(wvhaes(lvhaes))
        call vhaesi(ny,nx,wvhaes,lvhaes,work,lwork,dwork,ldwork,ierror)
-       write(*,*) ierror
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in vhaesi, code', ierror
+          stop 1
+       end if
     end if
     !
     br(:,:,:) = 0.0_nr
@@ -206,7 +220,10 @@ contains
        call vhaes(ny,nx,0_ni,1_ni, -v(k,:,:),u(k,:,:), ny,nx, &
                & br(k,:,:),bi(k,:,:),cr(k,:,:),ci(k,:,:), ny,ny, wvhaes,lvhaes,work,lwork, ierror)
     end do
-    write(*,*) ierror
+    if ( ierror /= 0_ni ) then
+       write(*,*) 'Error in vhaes, code', ierror
+       stop 1
+    end if
     !
     deallocate(work, dwork)
     !
@@ -240,7 +257,7 @@ contains
     !real(kind=nr) :: br(nz,ny,ny), bi(nz,ny,ny), cr(nz,ny,ny), ci(nz,ny,ny)
     integer(kind=ni) :: ierror, k
     !
-    integer(kind=ni) :: lwork, ldwork
+    integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
     real(kind=nr), allocatable :: work(:)
     real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
@@ -262,7 +279,10 @@ contains
        lvhses = ((ny+1_ni)**3_ni) + nx + 15_ni
        allocate(wvhses(lvhses))
        call vhsesi(ny,nx,wvhses,lvhses,work,lwork,dwork,ldwork,ierror)
-       write(*,*) ierror
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in vhsesi, code', ierror
+          stop 1
+       end if
     end if
     !
     u(:,:,:) = 0.0_nr
@@ -271,8 +291,12 @@ contains
        call vhses(ny,nx,0_ni,1_ni, v(k,:,:),u(k,:,:), ny,nx, &
                & br(k,:,:),bi(k,:,:),cr(k,:,:),ci(k,:,:), ny,ny, wvhses,lvhses,work,lwork, ierror)
     end do
+    if ( ierror /= 0_ni ) then
+       write(*,*) 'Error in vhses, code', ierror
+       stop 1
+    end if
+    !
     v(:,:,:) = -v(:,:,:)
-    write(*,*) ierror
     !
     deallocate(work, dwork)
     !
