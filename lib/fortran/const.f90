@@ -28,5 +28,6 @@ module consts
   !
   ! Technical stuff
   character, parameter :: cr = char(13_1)        ! Carriage Retirm is ASCI code 13
+  real(kind=nr), parameter :: nan = 0.0_nr/0.0_nr ! Not-a-Number, used for missing values. Requires the gfortran compiler option -fno-range-check
   !
 end module

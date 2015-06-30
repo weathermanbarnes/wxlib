@@ -9,7 +9,6 @@ dynlib.derivatives
    -------------------
 
    .. autofunction:: antilap2
-   .. autofunction:: crosslap2
    .. autofunction:: ddx
    .. autofunction:: ddx2
    .. autofunction:: ddx_o4

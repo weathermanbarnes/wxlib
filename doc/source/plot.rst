@@ -43,7 +43,7 @@ oroscale		        ✓ 	✓ 	int/list 	        Δ=1000m                 Anything 
 overlays		        ✓ 	✓ 	list of overlay 	 	                List of overlays (being fronts or countours) to plot on top. 
 plev			        ✓ 	✓ 	string/int 	                                Vertical level of the plot. Used to auto-mask intersections with orography using the ERA-Interim average height of the level. 
 scale			        ✓ 	✓ 	list/int/string         ``'auto'``              If {\tt 'auto'}, use the configurable autoscaling (see {\tt scale*}-properties), otherwise anything {\tt matplotlib} accepts. 
-scale_exceed_percentiles        ✓       ✓ 	tuple of float          ``(0.02, 0.98)``        Percentiles giving the minimal displayed data coverage of the colorbar. For the default values, the lowermost and uppermost inverval cuts of maximally $2\%$ of the data values. 
+scale_exceed_percentiles        ✓       ✓ 	tuple of float          ``(0.01, 0.99)``        Percentiles giving the minimal displayed data coverage of the colorbar. For the default values, the lowermost and uppermost inverval cuts of maximally $2\%$ of the data values. 
 scale_intervals 	        ✓ 	✓ 	list of int             ``[1,2,3,5,10]``        Which intervals are considered to be "round"? By default it is this list for any order of magnitude.
 scale_intervals_periodic        ✓       ✓ 	bool 	                ``True``                Which intervals are considered to be "round"? If set to {\tt False} the above list applies only for the given order of magnitude. 
 scale_target_steps 	        ✓ 	✓ 	int 		        ``7`` 		        If {\tt scale}$=${\tt 'auto'}, how many intervals are desired? The actual intervals might be a few more/less, to allow for a "round" interval value. 
