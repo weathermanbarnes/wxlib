@@ -9,7 +9,45 @@ module stat
   !
   implicit none
 contains
-  ! Calculation of average fields and fields of standard deviation
+  ! 
+  !@ Calculation of min, max, average, standard deviation and dat(tidx)*tidx for linear trend estimation
+  !@
+  !@ The statistics are calculated for each grid point along the third
+  !@ dimension, typically time. All statistics are calculated at once, with only
+  !@ one pass through the input data array.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nt,ny,nx) and dtype float64
+  !@     Input data for the statistics calculation.
+  !@ tidx_start : int
+  !@     Absolute index for the first index in the third direction. To be used
+  !@     if trends are estimated over several subsequent calls to this function
+  !@     covering a longer input data set.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nt : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     Minimum value per grid point.
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     Maximum value per grid point.
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     Mean value per grid point.
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     Standard deviation per grid point.
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     tidx*dat(tidx,::), a quantity useful for linear trend estimation
   subroutine basic(minv,maxv,mean,stddev,tprod, nx,ny,nt, dat,tidx_start)
     real(kind=nr), intent(in) :: dat(nt,ny,nx), tidx_start
     real(kind=nr), intent(out) :: mean(ny,nx), stddev(ny,nx), &
@@ -38,7 +76,40 @@ contains
     end do
   end subroutine
   !
-  ! Calculation of confidence intervals for the trends
+  !@ Calculation of confidence intervals for the trends
+  !@
+  !@ Uses the squared residual as an indicator for the amount of variance
+  !@ explained by the given linear trend. As :meth:`basic`, the statistics are 
+  !@ calculated for each grid point along the third dimension.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nt,ny,nx) and dtype float64
+  !@     Input data for the statistics calculation.
+  !@ trend : np.ndarray with shape (ny,nx) and dtype float64
+  !@     Estimated linear trend coefficient.
+  !@ icept : np.ndarray with shape (ny,nx) and dtype float64
+  !@     Offset of the trend line for tidx=0.
+  !@ tidx_start : int
+  !@     Absolute index for the first index in the third direction. To be used
+  !@     if trends are estimated over several subsequent calls to this function
+  !@     covering a longer input data set.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nt : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     The squared residual, describing the variance not explained by the linear trend.
   subroutine basic_confidence(ressq, nx,ny,nt, dat,trend,icept,tidx_start)
     real(kind=nr), intent(in) :: dat(nt,ny,nx), trend(ny,nx), icept(ny,nx), tidx_start
     real(kind=nr), intent(out) :: ressq(ny,nx)
@@ -57,8 +128,42 @@ contains
     end do
   end subroutine
   !
-  ! Calculation of average fields and fields of standard deviation, respecting a
-  ! weighting of the individual data points
+  !@ Calculation of min, max, average and standard deviation, respecting a weight function
+  !@
+  !@ The statistics are calculated for each grid point along the third
+  !@ dimension, typically time. All statistics are calculated at once, with only
+  !@ one pass through the input data array.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Input data for the statistics calculation.
+  !@ weight : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Input data weights, do not need to be normalised.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nt : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     Minimum value per grid point.
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     Maximum value per grid point.
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     Mean value per grid point.
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     Standard deviation per grid point.
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     Sum of the weight function along the third dimension.
   subroutine basic_weighted(minv,maxv,mean,stddev,wsum, nx,ny,nt, dat,weight)
     real(kind=nr), intent(in)  :: dat(nt,ny,nx), weight(nt,ny,nx)
     real(kind=nr), intent(out) :: mean(ny,nx), stddev(ny,nx), wsum(ny,nx), &
@@ -88,8 +193,43 @@ contains
     end do
   end subroutine
   !
-  ! Calculation of some basic binned statistics: The most frequent value,
-  ! histograms and the median.
+  !@ Some basic binned statistics
+  !@ 
+  !@ Calculates the histogram using predefined bins, the most frequent value
+  !@ among the bins and the median. All statistics are calculated at once, with 
+  !@ only one pass through the input data array.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nt,ny,nx) and dtype float64
+  !@     Input data for the statistics calculation.
+  !@ bins : np.ndarray with shape (nbins,)
+  !@     A sorted sequence of bin boundaries. For the case that ``bins(n+1) < bins(n)``,
+  !@     all values outside the interval ``bins(n+1) ... bins(n)`` are put into
+  !@     that bin. In case a value fits into several of the given intervals, values are 
+  !@     put only in the first fitting bin.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nt : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     Most frequent value in the data set, estimated using the boundaries of
+  !@     the bin holding most values.
+  !@ np.ndarray with shape (nbins, ny,nx) and dtype float64
+  !@     Histogram, following the given bins. The last values hist[nbins,::]
+  !@     hold the number of values that did not fit into any of the given bins.
+  !@ np.ndarray with shape (ny,nx) and dtype float64
+  !@     Median value, approximated by the borders of the bin holding the median value.
   subroutine binned(mfv,hist,med, nx,ny,nt,nbin, dat,bins)
     real(kind=nr),    intent(in)  :: dat(nt,ny,nx), bins(nbin)
     real(kind=nr),    intent(out) :: mfv(ny,nx), med(ny,nx)

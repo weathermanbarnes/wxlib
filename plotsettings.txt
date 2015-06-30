@@ -1,0 +1,13 @@
+
+conf.contour.<q> 				-> 	conf.plot[kwargs.get('plev'),q]
+
+conf.contour.merge(q, **kwargs) 		-> 	conf.plot.merge(plev=kwargs.get('plev'), q, **kwargs)
+conf.contourf.default.merge(**kwargs) 		-> 	conf.plot.merge(plev=None, q=None, **kwargs)
+
+
+# Solution: None is apparently a hashable type!
+
+Add a new special level plev=None and a special variable q=None to plot_settings_dict
+-> Multiple assignment becomes assignment to keyN=None
+-> Access for (plev,q) must look for (None,q) and (plev,None); but which takes precedence?
+-> Multiple reset must be possible, resetting both single keys and None

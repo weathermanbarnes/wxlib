@@ -72,6 +72,7 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 		For a list of valid arguments refer to :ref:`plot configuration`. Keyword 
 		arguments are applied both to the inset map and the main cross section.
 	'''
+
 	# 1a. Prepare
 	kwargs = __prepare_config(kwargs)
 	kwargs_map = copy.copy(kwargs)
@@ -167,6 +168,7 @@ def map(dat, static, **kwargs):
 	plot arguments : all contourf
 		For a list of valid arguments refer to :ref:`plot configuration`.
 	'''
+
 	# 1. Prepare
 	kwargs = __prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
@@ -193,7 +195,7 @@ def map_deform(defabs, defang, static, **kwargs):
 	mask = __map_create_mask(static, kwargs)
 
 	defabs = __map_prepare_dat(defabs, mask, static, kwargs)
-	defang = __map_prepare_dat(defang, mask, static, conf.contour.defang)
+	defang = __map_prepare_dat(defang, mask, static, conf.plot[None,'defang'])
 	defdex = np.cos(defang[:,:]) *defabs
 	defdey = np.sin(defang[:,:]) *defabs
 
@@ -236,8 +238,8 @@ def map_barb(u, v, static, dat=None, **kwargs):
 	kwargs = __prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
 
-	u = __map_prepare_dat(u, mask, static, conf.contour.u)
-	v = __map_prepare_dat(v, mask, static, conf.contour.v)
+	u = __map_prepare_dat(u, mask, static, conf.plot[None,'u'])
+	v = __map_prepare_dat(v, mask, static, conf.plot[None,'v'])
 	if type(dat) == np.ndarray: 
 		dat = __map_prepare_dat(dat, mask, static, kwargs)
 	
@@ -349,22 +351,20 @@ def map_oro_fronts_nc(cfrs, wfrs, sfrs, static, dat=None, **kwargs):
 def __prepare_config(kwargs):
 	''' Make sure kwargs contains a complete contourf plot configuration, 
 	filling undefined keys from the dynlib configuration.'''
+
+	plev = kwargs.get('plev', None)
 	q = kwargs.pop('q', None)
-	if q:
-		kwargs = conf.contourf.merge(q, **kwargs)
-	else:
-		kwargs = conf.contourf.default.merge(**kwargs)
+	kwargs = conf.plot.merge(plev, q, **kwargs)
 	
 	return kwargs
 
 def __line_prepare_config(kwargs):
 	''' Make sure kwargs contains a complete contour plot configuration, 
 	filling undefined keys from the dynlib configuration.'''
+
+	plev = kwargs.get('plev', None)
 	q = kwargs.pop('q', None)
-	if q:
-		kwargs = conf.contour.merge(q, **kwargs)
-	else:
-		kwargs = conf.contour.default.merge(**kwargs)
+	kwargs = conf.plot.merge(plev, q, **kwargs)
 	
 	return kwargs
 
@@ -375,6 +375,7 @@ def __map_create_mask(static, kwargs):
 	 2. Orography using instantaneous z
 	 3. Orography using climatological z
 	'''
+
 	# Potential override by kwarg
 	mask = kwargs.pop('mask', None)
 	if type(mask) == np.ndarray:
@@ -384,7 +385,7 @@ def __map_create_mask(static, kwargs):
 	datZ = kwargs.pop('Zdata', None)
 	
 	if plev and not type(datZ) == np.ndarray:
-		f,datZ = metopen(conf.file_mstat % {'plev': plev, 'q': 'Z'}, 'mean', cut=conf.std_slice[1:], no_static=True)
+		f,datZ = metopen(conf.file_mstat % {'plev': plev, 'q': 'Z'}, 'mean', no_static=True)
 		if f: f.close()
 	if type(datZ) == np.ndarray:
 		datZ = concat1(datZ)
@@ -396,6 +397,7 @@ def __map_create_mask(static, kwargs):
 
 def __map_prepare_dat(dat, mask, static, kwargs):
 	''' Prepare the data to be plotted '''
+
 	if kwargs.get('hook'):
 		dat = kwargs.pop('hook')(dat)
 	
@@ -408,6 +410,7 @@ def __map_prepare_dat(dat, mask, static, kwargs):
 
 def __map_setup(mask, static, kwargs):
 	''' Setup the map projection and draw the lat/lon grid '''
+
 	if static.cyclic_ew:
 		lon, lat = concat1lonlat(static.x, static.y)
 		concat = concat1
@@ -468,6 +471,7 @@ def __map_setup(mask, static, kwargs):
 
 def __contourf_dat(m, x, y, dat, kwargs):
 	''' Plot the actual data '''
+
 	hatch = kwargs.pop('hatches')
 	scale = kwargs.pop('scale')
 	if scale == 'auto':
@@ -491,6 +495,7 @@ def __contourf_dat(m, x, y, dat, kwargs):
 
 def __decorate(m, x, y, mask, kwargs):
 	''' Add "decorations": colorbar, legends, overlays and a title'''
+
 	if not kwargs.pop('disable_cb'):
 		orient = kwargs.pop('cb_orientation', 'vertical')
 		spacing = kwargs.pop('cb_tickspacing', 'proportional')
@@ -529,7 +534,8 @@ def __decorate(m, x, y, mask, kwargs):
 	return
 
 def __output(kwargs):
-	''' Save and or show the plot '''
+	''' Save and/or show the plot '''
+
 	if kwargs.get('save'):
 		plt.savefig(kwargs.pop('save'))
 	if kwargs.pop('show'):
@@ -562,6 +568,7 @@ def section_overlay_dat(dat, sect, **kwargs):
 	function
 		Overlay as a callable function
 	'''
+
 	kwargs = __line_prepare_config(kwargs)
 
 	def overlay(m, static, dump, zorder, mask=None):
@@ -618,6 +625,7 @@ def map_overlay_dat(dat, static, **kwargs):
 	function
 		Overlay as a callable function
 	'''
+
 	kwargs = __line_prepare_config(kwargs)
 	
 	if static.cyclic_ew:
@@ -669,6 +677,7 @@ def map_overlay_fronts(fronts, froff, static, **kwargs):
 	function
 		Overlay as a callable function
 	'''
+
 	kwargs = __line_prepare_config(kwargs)
 
 	cfrs = __unflatten_fronts_t(fronts[0], froff[0], minlength=5)
@@ -730,6 +739,7 @@ def map_overlay_lines(lines, loff, static, **kwargs):
 	function
 		Overlay as a callable function
 	'''
+
 	kwargs = __line_prepare_config(kwargs)
 
 	lns = __unflatten_fronts_t(lines, loff, minlength=0)
@@ -769,6 +779,7 @@ def map_overlay_dots(xidxs, yidxs, static, **kwargs):
 	function
 		Overlay as a callable function
 	'''
+
 	kwargs = __line_prepare_config(kwargs)
 
 	def overlay(m, x, y, zorder, mask=None):
@@ -804,6 +815,7 @@ def map_overlay_shading(dat, static, **kwargs):
 	function
 		Overlay as a callable function
 	'''
+
 	kwargs = __prepare_config(kwargs)
 
 	dat = concat1(dat)
@@ -839,7 +851,8 @@ def map_overlay_latlonbox(lon0, lon1, lat0, lat1, vertices=30, **kwargs):
 	-------
 	function
 		Overlay as a callable function
-	'''	
+	'''
+
 	def overlay(m, x, y, zorder, mask=None):
 		# Western boundary
 		m.plot(np.ones((vertices,))*lon0, np.linspace(lat0,lat1,vertices), latlon=True, **kwargs)

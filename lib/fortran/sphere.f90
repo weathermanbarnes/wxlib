@@ -42,7 +42,8 @@ contains
     integer(kind=ni) :: ierror, k
     !
     integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
-    real(kind=nr), allocatable :: work(:), dwork(:)
+    real(kind=nr), allocatable :: work(:)
+    real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
     integer(kind=ni), parameter :: buffer = 10000_ni
     !
@@ -56,8 +57,7 @@ contains
     end if
     !
     lwork = max( 4_ni*(ny+1_ni)**2_ni , (nz+1_ni)*ny*nx )
-    ldwork = (ny + 1_ni)*2_ni ! This factor two is not in the SPHEREPACK 
-    ! documentation but necessary to avoid shaesi overwriting random parts in memory.
+    ldwork = ny + 1_ni
     allocate(work(lwork), dwork(ldwork))
     !
     ! No precalculated wshaes available
@@ -114,7 +114,8 @@ contains
     integer(kind=ni) :: ierror, k
     !
     integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
-    real(kind=nr), allocatable :: work(:), dwork(:)
+    real(kind=nr), allocatable :: work(:)
+    real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
     !f2py depend(nz,ny) bi, cr, ci, u, v
     ! -----------------------------------------------------------------
@@ -183,7 +184,8 @@ contains
     integer(kind=ni) :: ierror, k
     !
     integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
-    real(kind=nr), allocatable :: work(:), dwork(:)
+    real(kind=nr), allocatable :: work(:)
+    real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
     !f2py depend(nz,ny,nx) v
     !f2py depend(nz,ny) br, bi, cr, ci
@@ -256,7 +258,8 @@ contains
     integer(kind=ni) :: ierror, k
     !
     integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
-    real(kind=nr), allocatable :: work(:), dwork(:)
+    real(kind=nr), allocatable :: work(:)
+    real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
     !f2py depend(nz,ny) bi, cr, ci, u, v
     ! -----------------------------------------------------------------

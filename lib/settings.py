@@ -2,591 +2,629 @@
 # -*- encoding: utf-8
 
 
-''' Defines default settings and convenient ways to change them
+''' Defines basic data structures for settings storage and convenient access
 
-Dynlib settings are in essence a set of key-value pairs, which could be well
-represented by the python built-in ``dict`` object. However, the pure ``dict`` object
-has some drawbacks in this context:
+Dynlib settings are in essence a (rather large) set of key-value pairs, which 
+could be well represented by the python built-in ``dict`` object. However, the 
+pure ``dict`` object has some drawbacks in this context:
 
-1. ``dict`` objects cannot represent default values for keys. Whenever a key in
-   ``dict`` is overwritten, the original content is lost.
-2. ``dict`` cannot represent interdependencies between different keys.
-3. ``dict`` cannot represent several variants of itself. As an example, the 
-   plot configuration for different variables will be largely identical, but only
-   differ in a few configuration keys. When represented by pure ``dict`` objects, 
-   the plot configuration for each variable would need to be full independent 
-   from each other. This indepence complicates would makes it tedious and 
-   error-prone to apply a customised configuration to all variables.
+ #. ``dict`` objects cannot represent default values for keys. Whenever a key in
+    ``dict`` is overwritten, the original content is lost.
+ #. ``dict`` cannot represent interdependencies between different keys.
+ #. ``dict`` cannot represent several variants of itself. As an example, the 
+    plot configuration for different variables will be largely identical, but only
+    differ in a few configuration keys. When represented by pure ``dict`` objects, 
+    the plot configuration for each variable would need to be full independent 
+    from each other. This indepence complicates would makes it tedious and 
+    error-prone to apply a customised configuration to all variables.
 
-For these reasons, this module introduces a settings_dict object, which is 
-subsequently used to define first the default plot configuration for all plots, 
-and second some adapted configurarion for specific variables.
+For these reasons, this module introduces:
 
-Furthermore, this module defines a settings object which contains configuraton
-keys as attributes, including the plot configuration objects.
-
-To Do: Potential changes
-------------------------
-
-The settings object might be converted into an instance of settings_dict in the 
-future. This would allow to use the advantages 1.-3. also for non-plot
-configuration.
+ #. ``default_dict`` objects: A variant of ``dict`` with a pre-defined set of keys 
+    and default values for each.
+ #. ``nd_default_dict`` objects: Derived from ``default_dict``, it adds an abitrary
+    number of dimensions, accessible by ``dat[key1,key2,...,keyN]``. Valid keys for
+    each dimension are prescribed, and default values must be provided for each key
+    in the last dimesion. Default values are identical for all ``dat[::,keyN]``, 
+    and hence independent from anything but the last dimension.
+ #. ``plot_settings_dict``: A variant of the ``nd_default_dict`` used for storing
+    plot configuration. The number of dimensions is fixed to three. They are, in order: 
+    vertical level, variable and plot configuration key. 
+ #. ``settings_obj``: A variant of the ``default_dict`` where access is also possible
+    through the attribute syntax dat.key. This class is the basis for the conf 
+    object, the configuration root. Within, ``conf.plot`` and ``conf.plotf`` are 
+    ``plot_settings_dict`` objects.
 '''
 
-
-from copy import copy, deepcopy
-import os
-import math
-from collections import MutableMapping as mutmap
-
 import numpy as np
-import matplotlib.pyplot as plt
+from copy import copy 
 
 import proj
 import cm
 
-
-# #############################################################################
-# 1. Scales, ticks and labels
-# 
-scale_oro_c = range(10000,80001,10000)
-scale_oro_cf = range(-19000,51000,2000)
-
-scale_pv = np.array([-2,-1, 1, 2])
-
-scale_defang = (np.arange(-18,19)-0.5)*np.pi/36.0
-ticks_defang = np.arange(-4,5)*3.1415926535/8.0 
-labels_defang = [u'-π/2', u'-3π/8', u'-π/4', u'-π/8', u'0', u'π/8', u'π/4', u'3π/8', u'π/2']
-
-scale_dd = np.arange(0,36.1)*10.0
-ticks_dd = np.arange(0,8)*360.0/8.0 
-labels_dd = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
-
-scale_q = np.arange(0.0, 10.1, 1.0)
-
-# #############################################################################
-# 2. Default hooks for plotting
-#
-# TODO: These hooks should be taken into account for both contour and contourf plots automatically, 
-#       without the below repetition
-hooks = {}
-hooks['defabs'] = lambda defabs: defabs*1e5 	# To get typical magnitudes of deformation to the order 1-10
-hooks['pv'] = lambda pv: pv*1e6 		# From SI units to PVU
-hooks['q'] = lambda q: q*1e3 			# From kg/kg to g/kg
-hooks['msl'] = lambda msl: msl/100.0 		# From Pa to hPa
-hooks['z'] = lambda msl: msl/98.1		# From m2s-2 to gpdm
-def _tmp(oro):
-	oro[oro <= 100] = -17000
-	return oro
-hooks['oro'] = _tmp
+import collections
 
 
+__context__ = set([])
 
-# #############################################################################
-# 3. Default settings
-#
-
-Q = {'defabs': 'defabs', 'defang': 'defang', 'm': 'mont', 'p': 'pres', 'msl': 'msl', 'u': 'u', 'v': 'v', 'w': 'w', 'q': 'q', 
-		'T': 't', 'th': 'pt', 'the': 'thetae', 'Z': 'z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
-		'front': 'front', 'cold_front': 'cold_front', 'warm_front': 'warm_front', 'stat_front': 'stat_front',
-		'convl': 'convl', 'defl': 'defl', 'vorl': 'vorl', 
-		'jetaxis': 'jetaxis', 'tw': 'tcw', 'wv': 'tcwv', 'zeta': 'vo', 'div': 'div', 'ps': 'sp', 'ff': 'ff',
-		'ttr': 'ttr', 'SST': 'sst',
-		'blockint': 'blockint', 
-}
-QI = {'defabs': 'defabs', 'defang': 'defang', 'mont': 'm', 'pres': 'p', 'msl': 'msl', 'u': 'u', 'v': 'v', 'w': 'w', 'q': 'q', 
-		't': 'T', 'pt': 'th', 'thetae': 'the', 'z': 'Z', 'oro': 'oro', 'rsr': 'rsr', 'ow': 'ow', 'pv': 'pv', 
-		'front': 'front', 'cold_front': 'cold_front', 'warm_front': 'warm_front', 'stat_front': 'stat_front',
-		'froff': 'front', 'convl': 'convl', 'cloff': 'convl', 
-		'defl': 'defl', 'dloff': 'defl', 'vorl': 'vorl', 'vloff': 'vorl', 
-		'jetaxis': 'jetaxis', 'jaoff': 'jetaxis', 'tcw': 'tw', 'tcwv': 'wv', 'vo': 'zeta',
-		'div': 'div', 'sp': 'ps', 'ff': 'ff',
-		'ttr': 'ttr', 'sst': 'SST',
-		'blockint': 'blockint', 
-}
-
-UNITS = {'defabs': 's-1', 'defang': 'rad', 'defanr': 'rad', 'the': 'K', 'rsr': '1', 'ow': 's-2', 
-		'zeta': 's-1', 'div': 's-1', 'ttr': 'W m-2', 'blockint': 'varying', 'u': 'm s-1', 'v': 'm s-1', 'w': 'Pa s-1',
-}
-LONG = {'defabs': 'Total deformation', 'defang': 'Deformation angle', 'defanr': 'Deformation angle in natural coordinates',
-		'the': 'Equivalent potential temperature', 'rsr': 'Rotation/Strain-ratio', 'ow': 'Okubo-Weiss criterion',
-		'zeta': 'Horizontal vorticity', 'div': 'Horizontal divergence', 'jetaxis': 'Jet axis lines',
-		'ff': 'wind speed', 'pv': 'Potential vorticity', 'msl': 'Mean sea level pressure', 'w': 'Vertical velocity',
-		'cold_front': 'Cold front lines', 'warm_front': 'Warm front lines', 'stat_front': 'Stationary front lines',
-		'ttr': 'Top net thermal radiation', 'blockint': 'Blocking intensity indicator', 
-		'u': 'U velocity', 'v': 'V velocity',
-}
-
-_rose = [17,]
-_rose.extend(range(-18,18))
-BINS_Q = {'defang': np.array(_rose)*math.pi/36.0+math.pi/72.0, }
-
-DATAPATH = ['.', '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY', '/Data/gfi/users/csp001/share', ]
-OPATH    = '.'
-PPATH    = '.'
-FILE_STD   = 'ei.ans.%(time)d.%(plev)s.%(q)s'
-FILE_STAT  = 'ei.ans.%(time)d.%(plev)s.%(q)s.stat'
-FILE_MSTAT = 'ei.ans.stat.%(plev)s.%(q)s'
-STD_SLICE  = (slice(None), slice(None), slice(None))
-YEARS  = range(1979,2015)
-PLEVS  = ['100', '200', '300', '400', '500', '550', '600', '650', '700', '750', '800', '850', '900', '950', '1000', ]
-PTLEVS = ['pt300', 'pt315', 'pt330', 'pt350', ]
-PVLEVS = ['pv2000', ]
-
-# DEFAULT contour settings
-if os.getenv('DYNLIB_PLOT_PRINT'):
-	DEFAULT_KWARGS = {'m': proj.world, 'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 'auto', 
-		'overlays': [], 'disable_cb': True, 'show': False, 'save': '', 'title': '', 'hook': None,
-		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro_c,
-		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [], 'scale_symmetric_zero': False}
-else:
-	DEFAULT_KWARGS = {'m': proj.world, 'plev': None, 'lon': None, 'lat': None, 'mark': None, 'scale': 'auto', 
-		'overlays': [], 'disable_cb': False, 'show': True, 'save': '', 'title': '', 'hook': None,
-		'coastcolor': 'k', 'gridcolor': 'k', 'maskcolor': '0.25', 'orocolor': 'k', 'oroscale': scale_oro_c,
-		'oroalpha': 0.4, 'ticks': None, 'ticklabels': [], 'scale_symmetric_zero': False }
-DEFAULT_CONTOUR_KWARGS = {'colors': 'k', 'alpha': 1.0, 'cmap': None, 'norm': None, 
-	'vmin': None, 'vmax': None, 'levels': None, 'origin': None, 'extent': None, 
-	'extend': 'neither', 'linewidths': 2.0, 'linestyles': None, 'contour_labels': False}
-DEFAULT_CONTOURF_KWARGS = {'colors': None, 'alpha': 1.0, 'cmap': cm.gist_ncar, 'norm': None, 
-	'vmin': None, 'vmax': None, 'levels': None, 'origin': None, 'extent': None, 
-	'extend': 'both', 'hatches': None }
-
-MUTEX_GROUPS = [set(['colors', 'cmap']), ]
-
-# DEFAULT settings per quantity Q on contourf plots
-DEFAULT_Q_C = {}
-DEFAULT_Q_C['defabs'] = {'hook': hooks['defabs']}
-DEFAULT_Q_C['pv']  = {'hook': hooks['pv']}
-DEFAULT_Q_C['q'] = {'hook': hooks['q']}
-DEFAULT_Q_C['msl'] = {'hook': hooks['msl']}
-DEFAULT_Q_C['z'] = {'hook': hooks['z']}
-
-# DEFAULT settings per quantity Q on contourf plots
-DEFAULT_Q_CF = {}
-DEFAULT_Q_CF['defabs'] = {'cmap': cm.defabs(), 'hook': hooks['defabs']}
-DEFAULT_Q_CF['defang'] = {'cmap': cm.periodic(), 'scale': scale_defang, 'ticks': ticks_defang, 
-	'ticklabels': labels_defang}
-DEFAULT_Q_CF['t']   = {'cmap': plt.cm.RdBu_r}
-DEFAULT_Q_CF['pt']   = {'cmap': plt.cm.RdBu_r}
-DEFAULT_Q_CF['thetae']   = {'cmap': plt.cm.RdBu_r}
-DEFAULT_Q_CF['pv']  = {'hook': hooks['pv']}
-DEFAULT_Q_CF['oro'] = {'scale': scale_oro_cf, 'cmap': plt.cm.gist_earth, 'hook': hooks['oro']}
-DEFAULT_Q_CF['q'] = {'cmap': cm.q(), 'hook': hooks['q']}
-DEFAULT_Q_CF['tcw'] = {'cmap': cm.q()}
-DEFAULT_Q_CF['tcwv'] = {'cmap': cm.q()}
-DEFAULT_Q_CF['msl'] = {'hook': hooks['msl']}
-DEFAULT_Q_CF['z'] = {'hook': hooks['z']}
-
-
-# #############################################################################
-# 4. Making the settings easily available
-#
-class settings_dict(mutmap):
-	''' An extended dictionary object to be used for configuration
+def in_context(*contexts):
+	''' Check if any of the given contexts is active
 	
-	It handles default values:
-
-	 * They are readable through the ``default`` attribute.
-	 * They can be restored by using the ``reset`` function.
+	Parameters
+	----------
+	context1 - contextN : str
+	    Contexts to be checked
 	
-	It handles interdependencies between keys:
-	
-	 * Mutually exclusive keys can be defined by filling the
-	   ``_mutex_group`` attribute during the initialisation.
-	
-	Furthermore, it provides convenience functions for working with the 
-	configuration and defines the neccessary magic functions to appear 
-	largely like a pure python ``dict``.
+	Returns
+	-------
+	bool
+	    ``True`` if any of the given contexts are active.
 	'''
-	_mutexes = {}
 
-	def __init__(self, init={}, contourobj=None):
-		''' Initialisation
-		
-		Parameters
-		----------
-		init : dict
-			Optional initial overrides to the default configuration
-		contourobj : settings_dict
-			Optional. Take default values from this configuration object. 
-		'''
-		for mutex_group in MUTEX_GROUPS:
-			for key in mutex_group:
-				self._mutexes[key] = copy(mutex_group)
+	for c in contexts:
+		if c in __context__:
+			return True
+	
+	return False
+
+def def_context(context):
+	''' Define a new context
+
+	Parameters
+	----------
+	context : str
+	    Name of the context to be defined
+	'''
+
+	__context__.add(context)
+
+
+class default_dict(collections.MutableMapping):
+	''' Dictionary with a predefined set of valid keys and default values for each 
+
+	Non-default values are stored in ``self._``, the defaults in ``self._defaults``.
+	
+	Parameters
+	----------
+	defaults : dict
+	    Definition of valid keys and their default values.
+	mutexes : list of sets
+	    Sets of mutually exclusive configuration keys. As soon as one is not None, all others 
+	    are automaticall set to None.
+	'''
+
+	def __init__(self, defaults, mutexes):
+		self._ = {}
+		self._defaults = defaults
+
+		self._mutexes = {}
+		for mutex in mutexes:
+			for key in mutex:
+				self._mutexes[key] = copy(mutex)
 				self._mutexes[key].remove(key)
 
-		if contourobj:
-			self.default = contourobj.default
-		else: 
-			self.default = None
-		self.default_q = copy(init)
-		self._ = init
+		# Mutable (approximated by "non-hashable") types can be changed in place. 
+		# Hence, they must be copied over to the overrides dict to avoid overriding defaults
+		for key, value in defaults.items():
+			if not isinstance(value, collections.Hashable):
+				self._[key] = copy(value)
 
-		mutmap.__init__(self)
+		collections.MutableMapping.__init__(self)
+		
+	def __getitem__(self, key):
+		''' Implements the access syntax ``dat[key]`` '''
 
+		if key in self._:
+			return self._[key]
+		elif key in self._defaults:
+			return self._defaults[key]
+		else:
+			raise KeyError, key
+
+	def __setitem__(self, key, value):
+		''' Implements the assignment syntax ``dat[key] = value`` '''
+		
+		# Respect that some combination configuration are not meaningful
+		if not value == None:
+			for mutex in self._mutexes.get(key, []):
+				self._[mutex] = None
+
+		if key in self._defaults:
+			self._[key] = value
+		else:
+			raise KeyError, key
+
+	def __delitem__(self, key):
+		''' Implements the reset syntax ``del dat[key]`` '''
+
+		if key in self._:
+			# Mutable (approximated by "non-hashable") types can be changed in place. 
+			# Hence, they must be copied over to the overrides dict to avoid overriding defaults
+			if not isinstance(self._defaults[key], collections.Hashable):
+				self._[key] = copy(self._defaults[key])
+			else:
+				del self._[key]
+		elif key in self._defaults:
+			pass
+		else:
+			raise KeyError, key
+
+	def __iter__(self):
+		''' Implement interation over the dictionary, e.g. the syntax ``for key in dat:`` '''
+
+		return self._defaults.__iter__()
+
+	def __len__(self):
+		''' Implements the length query, allowing among others to use ``len(dat)`` '''
+
+		return len(self._defaults)
+
+
+class nd_default_dict(default_dict):
+	''' n-dimensional dictionary with default values for valid keys in the last dimension
+
+	The default value is independent from any dimension but the last. All dimensions 
+	before the last are subsequently called "first dimensions".
+
+	Valid combinations of keys for the first dimensions are specified using "tables". Each
+	table is a list of sets containing valid keys for each of the first dimensions. Every 
+	combination between these valid keys is assumed to be meaningful. As an example, a 
+	table could contain a set of all available pressure levels and a set of all variables 
+	available on pressure levels. If a variable is only available on one of the pressure
+	levels, it would require an additional table, if one wants to avoid the configuration
+	for that variable to be available on all pressure levels.
+	
+	The set of allowed keys for each dimension is limited. Valid keys can be introduced 
+	through the ``add_default()`` and ``add_table()`` functions.
+
+	Parameters
+	----------
+	first_table : list of sets
+	    Sets of valid keys for each of the first dimensions.
+	defaults : dict
+	    Definition of valid keys and their default values.
+	mutexes : list of sets
+	    Sets of mutually exclusive configuration keys. As soon as one is not None, all others 
+	    are automaticall set to None.
+	'''
+
+	def __init__(self, first_table, defaults, mutexes):
+		for default in defaults.values():
+			if not isinstance(default, collections.Hashable):
+				raise ValueError, 'Defaults for plotconf must be immutable, but got variable of type %s, value: %s' % (type(default), str(default))
+		self._fdims = [first_table, ]
+		self._ndims = len(first_table) + 1
+		default_dict.__init__(self, defaults, mutexes) 	# dictionary of valid keys in the last dimension and their default values
+	
+	def __check_key(self, key, allow_blank=False):
+		''' Check if a given query key is valid '''
+
+		if len(key) < self._ndims - 1:
+			raise KeyError, 'Key must contain at least %d dimensions' % self._ndims-1
+		elif len(key) > self._ndims:
+			raise KeyError, 'Key can at most contain %d dimensions' % self._ndims
+		
+		found = False
+		for table in self._fdims:
+			for i, valid_skeys in zip(range(self._ndims-1), table):
+				if key[i] == slice(None):
+					if allow_blank:
+						if i == self._ndims - 2:
+							found = True
+					else:
+						raise KeyError, 'Only multiple assignment supported.'
+				elif not key[i] in valid_skeys:
+					break
+				elif i == self._ndims - 2:
+					found = True
+			if found == True:
+				break
+		if not found:
+			raise KeyError, key
+		
 		return
+
+
+	def __default_walk(self, key, recur=None):
+		''' Return a list of keys to be checked for generic overrides'''
+
+		if recur == None:
+			recur = self._ndims-2
+
+		if recur > 0:
+			keys = []
+			keys.extend(self.__default_walk(key, recur-1))
+			if not key[recur] == None:
+				nkey = key[:recur] + (None, ) + key[recur+1:]
+				keys.extend(self.__default_walk(nkey, recur-1)) 
+		else:
+			if key[0] == None:
+				keys = [key, ]
+			else:
+				nkey = (None, ) + key[1:]
+				keys = [key, nkey]
+
+		return keys
 
 	
 	def __getitem__(self, key):
-		''' Implements access through ``conf['key']`` '''
-		if key not in self._ and self.default:
-			return self.default[key]
-		else: 	
-			return self._[key]
+		''' Implement access via the ``dat[key1,key2,...,keyN]`` syntax '''
+
+                self.__check_key(key)
+		
+		if len(key) == self._ndims:
+			for key in self.__default_walk(key):
+				if key in self._:
+					return self._[key]
+			
+			if key[-1] in self._defaults:
+				return self._defaults[key[-1]]
+			else:
+				raise KeyError, key
+		else: 
+			ret = {}
+			for skey in self._defaults:
+				fkey = key + (skey, )
+				ret[skey] = self[fkey]
+
+			return ret
 	
-
 	def __setitem__(self, key, value):
-		''' Implements setting overrides through ``conf['key'] = value`` '''
-		if self.default and key not in self.default:
-			raise KeyError, 'Cannot add new keys to the configuration'
-		#elif key not in self:
-		#	raise KeyError, 'Cannot add new keys to the configuration'
+		''' Implement assignment via the ``dat[key1,key2,...,keyN] = value`` syntax '''
 
-		if value != None:
-			for mutex in self._mutexes.get(key, []):
-				self._[mutex] = None
-		self._[key] = value
+		self.__check_key(key, allow_blank=True)
 
-		return
+		# Replace slice(None) by None for multiple assignment
+		for n, skey in zip(range(len(key)), copy(key)):
+			if skey == slice(None):
+				key = key[:n] + (None,) + key[n+1:]
+		
+		# Got one specific key to override
+		if len(key) == self._ndims:
+			# Respect that some combination configuration are not meaningful
+			if not value == None:
+				for mutex in self._mutexes.get(key[-1], []):
+					mkey = key[:-1] + (mutex,)
+					self._[mkey] = None
+			self._[key] = value
+		
+		# Last dimension missing, expecting dict to override several keys at once
+		else: 
+			if not type(value) == dict:
+				raise TypeError, 'Dict required for multiple assignment, got `%s` instead.' % type(value)
 
+			for lkey, lvalue in value.items():
+				fullkey = key + (lkey,)
+				if not lkey in self._defaults:
+					raise KeyError, fullkey
+				# Respect that some combination configuration are not meaningful
+				if not lvalue == None:
+					for mutex in self._mutexes.get(lkey, []):
+						mkey = key + (mutex,)
+						self._[mkey] = None
+				self._[fullkey] = lvalue
+				
 
 	def __delitem__(self, key):
-		''' Implements deleting overrides by ``del conf['key']`` '''
-		self.reset(key)
+		''' Implement reset via the ``del dat[key1,key2,...,keyN]`` syntax '''
 
-		return
-	
+		self.__check_key(key, allow_blank=True)
 
-	def __contains__(self, key):
-		''' Implements checks with the syntax ``if key in conf`` '''
-		return key in self.keys()
-
-
-	def __iter__(self):
-		''' Implements loops over the configuration keys, syntax ``for key in conf`` '''
-		if self.default:
-			for key in self.default:
-				yield key
-		else:
-			for key in self._:
-				yield key
-	
-	iterkeys = __iter__
-
-	#def __nonzero__(self):
-	#	return True
-
-
-	def __eq__(self, other):
-		''' Check if two objects are equal '''
-        	return sorted(self.iteritems()) == sorted(other.iteritems())
-
-
-
-	def __len__(self):
-		''' Return a length of the object, here number of defined configuration keys '''
-		if self.default:
-			return len(self.default)
-		else:
-			return len(self._)
-	
-
-	def __repr__(self):
-		''' Give a string-representation of the object '''
-		return dict(self.iteritems()).__repr__()
-
-	
-	def __reset_key(self, key):
-		''' Reset a single key to its defaults '''
-		if key in self.default_q:
-			self._[key] = self.default_q[key]
-		else:
-			del self._[key]
-
-		return
-
-
-	def iteritems(self):
-		''' Implements loops over the configuration keys, syntax ``for key, value in conf.iteritems()`` '''
-		for key in self.iterkeys():
-			yield key, self[key]
-	
-
-	#def items(self):
-	#
-	#	return
-
-
-	def values(self):
-		''' Stub method to implements loops over the configuration keys, syntax ``for value in conf.values()`` 
+		for n, skey in zip(range(len(key)), copy(key)):
+			if skey == slice(None):
+				key = key[:n] + (None,) + key[n+1:]
 		
-		This method is not implemented, but only present for consistency 
-		with the API of pure python ``dict`` objects.
-		'''
-		raise NotImplementedError, 'If you need it, implement it!'
-	itervalues = values
-	viewitems = values
-	viewvalues = values
-	
+		if len(key) == self._ndims:
+			if key in self._:
+				del self._[key]
+		else:
+			for lkey in self._defaults:
+				fullkey = key + (lkey,)
+				if fullkey in self._:
+					del self._[fullkey]
 
-	#def get(self, key):
-	#	if key in self._:
-	#		return self._[key]
-	#	else:
-	#		return default
+	def add_table(self, table):
+		''' Add new combinations for the first dimensions '''
+
+		if not len(table) == self._ndims - 1:
+			raise ValueError, 'Table needs to have %d dimensions, got %d instead.' % (
+					self._ndims - 1, len(table))
+		for dim in table:
+			if None in dim:
+				print dim
+				raise ValueError, 'None is reserved for internal use and cannot be used in tables'
+			dim.add(None)
+		self._fdims.append(table)
+
+	def add_default(self, key, value):
+		''' Add a new key and its default value for the last dimension '''
+
+		if key in self._defaults:
+			raise KeyError, 'Default value for %s exists already' % str(key)
+
+		self._defaults[key] = value
+
+
+class plot_settings_dict(nd_default_dict):
+	''' A version of the nd_default_dict, where the number of dimensions is fixed to 3
+
+	The dimensions are, in order: vertical level, variable and plot configuration key.
+
+	In contrast to the nd_default_dict, plot_settings_dict does not take an initial table as
+	an argument, as the dimensions are prescribed and no (plev,q)-table is more equal than
+	the others.
+
+	Parameters
+	----------
+	defaults : dict
+	    Definition of valid keys and their default values.
+	mutexes : list of sets
+	    Sets of mutually exclusive configuration keys. As soon as one is not None, all others 
+	    are automaticall set to None.
+	'''
+
+	def __init__(self, defaults, mutexes):
+		nd_default_dict.__init__(self, [], defaults, mutexes)
+		self._ndims = 3
+		self._fdims = []
 	
-	def merge(self, **kwargs):
-		''' Merge the given keyword arguments with the configuration in this object
+	def merge(self, plev, q, **kwargs):
+		''' Merge given plot settings with the stored plot settings for (plev,q)
+
+		Parameters
+		----------
+		plev : str
+		    Vertical level name.
+		q : str
+		    Variable name.
 
 		Keyword arguments
 		-----------------
-		Anything
+		plot arguments : all
+			For a list of valid arguments refer to :ref:`plot configuration`. Keyword 
+			arguments are applied both to the inset map and the main cross section.
 
 		Returns
 		-------
 		dict
-		    A dictionary containing the configuration in this object, potentially overriden
-		    and extended by the given keyword arguments.
+		    Merged plotconf parameters.
 		'''
 
-		rkwargs = dict(self)
-		for kwarg, argv in kwargs.items():
-			rkwargs[kwarg] = argv
-
-		return rkwargs
-
-	def reset(self, key=None):
-		''' Reset the configuration to its defaults (optional for a specific key)
-
-		Parameters
-		----------
-		key : any valid dict key
-		    Optional: Key to be reset to the defaults.
-		'''
-		if not self.default:
-			raise TypeError, 'Reset not possible for default object!'
-
-		if key:
-			for mutex in self._mutexes.get(key, []):
-				if mutex in self._:
-					self.__reset_key(mutex)
-			self.__reset_key(key)
-		else:
-			self._ = copy(self.default_q)
-
-		return
-
-
-
-class settings_contour(object):
-	''' Container object for contour plot settings
-
-	The object contains pointers to the respective settings for each
-	registered variable, available through attributes of this object.
-	''' 
-
-	default = settings_dict(DEFAULT_CONTOUR_KWARGS)
-	default.update(DEFAULT_KWARGS)
-	default_q = DEFAULT_Q_C
-
-	_overrides = {}
-
-	def __init__(self):
-		for q in QI:
-			self.new(q, self.default_q.get(q, {}))
-
-		return
-
-
-	def __getattribute__(self, q):
-		''' Implement configuration access through the syntax ``conf.key`` '''
-
-		if q[0] == '_':
-			return object.__getattribute__(self, q)
-		elif q not in self._overrides:
-			return object.__getattribute__(self, q)
+		merged = self[plev,q]
+		merged.update(kwargs)
 		
-		return self._overrides[q]
+		return merged
 
 
-	def __setattr__(self, q, value):
-		''' Implement configuration cjamhes through the syntax ``conf.key = value`` '''
+class settings_obj(default_dict):
+	''' Another interface to a dict using the attribute syntax for access 
 
-		if q in self._overrides or q == 'default':
-			raise AttributeError, 'The attributes cannot be overwritten'
-		object.__setattr__(self, q, value)
+	The object provides the primary access to dynlib configuration via its 
+	attributes, e.g. ``conf.datapath``. As the configuration keys must be 
+	valid attribute names, keys are restricted to strings containing valid
+	python variable names. They can for example not begin with a number.
 
-		return
+	Even though access through attributes is the prefered way of accessing
+	configuration, the dictionary syntax ``conf['datapath']`` is not 
+	disabled and provided identical functionality.
 
+	It also provides a mechanism to define new variables/vertical levels 
+	through the ``register_variable`` method.
 
-	def new(self, q, conf):
-		''' Register new variable 
-
-		Parameters
-		----------
-		q : str
-		    Abbreviated variable name, as it would appear in as a netCDF variable name
-		conf : dict-like
-		    Initial overrides for the plot configuration of the new variable
-		'''
-		self._overrides[q] = settings_dict(conf, self)
-
-		return
-	
-
-	def merge(self, q, **kwargs):
-		''' Proxy for ``settings_dict.merge`` 
-		
-		Parameters
-		----------
-		q : str
-		    Abbreviated variable name, as it would appear in as a netCDF variable name
-
-		Keyword Arguments
-		-----------------
-		Anything
-		'''
-
-		return self.__getattribute__(q).merge(**kwargs)
-
-
-	def reset(self, q, key=None):
-		''' Reset the configuration to its defaults (optional for a specific key)
-
-		Parameters
-		----------
-		key : any valid dict key
-		    Optional: Key to be reset to the defaults.
-		'''
-		self.__getattribute__(q).reset(key)
-
-		return
-
-
-
-class settings_contourf(settings_contour):
-	''' Container object for filled contour plot settings
-
-	The object contains pointers to the respective settings for each
-	registered variable, available through attributes of this object.
-	''' 
-
-	default = settings_dict(DEFAULT_CONTOURF_KWARGS)
-	default.update(DEFAULT_KWARGS)
-	default_q = DEFAULT_Q_CF
-	_overrides = {}
-	
-
-
-# TODO: Should this derive from settings_dict? Or should it be a settings_dict instance?
-# - Would prohibit (accientally but also volutarily) setting new config keys
-# - Would potentially avoid some code duplication: __special_funcs__() and reset()
-
-class settings(object):
-	''' Container object for all settings
-
-	Note: This object might become a settings_dict instance in the future!
-	
-	The object is yet another interface to a dictionary, including default values.
-	In contrast to the ``settings_dict`` object, here the configuration keys are
-	made accessible through attributes, with the syntax being ``conf.key`` 
-	instead of the dictionary lookup syntax ``conf['key']``.
+	Parameters
+	----------
+	defaults : dict
+	    Definition of valid keys and their default values.
 	'''
+	
+	# Configuration keys that have a special meaning for the functionality of this class:
+	# They are required for registering variables
+	_Q = 'q'
+	_Q_FILE = 'qf'
+	_Q_LONG = 'q_long'
+	_Q_UNITS = 'q_units'
+	_Q_BINS = 'q_bins'
+	
+	_PLOT = 'plot'
+	_PLOTF = 'plotf'
 
-	__default = {
-		'q': Q,
-		'qi': QI,
-		'q_units': UNITS,
-		'q_long': LONG,
-		'bins': BINS_Q,
-		'datapath': DATAPATH,
-		'opath': OPATH,
-		'ppath': PPATH,
-		'file_std': FILE_STD,
-		'file_stat': FILE_STAT,
-		'file_mstat': FILE_MSTAT,
-		'std_slice': STD_SLICE,
-		'years': YEARS,
-		'plevs': PLEVS,
-		'ptlevs': PTLEVS,
-		'pvlevs': PVLEVS,
-		'contour': settings_contour(),
-		'contourf': settings_contourf(),
-	}
+	def _get(self, *keys):
+		''' A third way to get a configuration item, using the syntax ``conf._get('datapath')`` '''
 
-	def __init__(self):
-		self.__current = deepcopy(self.__default)
+		if len(keys) > 1:
+			return self[keys[0]]._get(keys[1:])
+		elif len(keys) == 1:
+			return self[keys[0]]
+		else:
+			raise TypeError, '_get() requires at least one key'
+	
+	def _add_default(self, key, value):
+		''' Add a new configuration item and its default value '''
 
-		return
-
-
+		if key in self._defaults:
+			raise KeyError, str(key) + ' already set'
+		self._defaults[key] = value
+	
 	def __getattribute__(self, key):
-		''' Implement configuration access through the syntax ``conf.key`` '''
+		''' Implement the attribute access syntax ``conf.datapath`` '''
 
-		if key[0] == '_' or key in ['reset', 'new_variable', ]:
-			return object.__getattribute__(self, key)
+		if key[0] == '_' or key == 'register_variable':
+			return default_dict.__getattribute__(self, key)
 
-		return self.__current[key]
-
+		return self[key]
 
 	def __setattr__(self, key, value):
-		''' Implement configuration cjamhes through the syntax ``conf.key = value`` '''
+		''' Implement the attribute assignment syntax ``conf.datapath = value`` '''
 
-		if key in ['_settings__default', '__setattr__']:
-			raise AttributeError, 'The default values cannot be overwritten'
-		elif key[0] == '_' or key in ['reset', ]:
-			return object.__setattr__(self, key, value)
-		self.__current[key] = value
-
-		return
+		if key[0] == '_' or key == 'register_variable':
+			return default_dict.__setattr__(self, key, value)
+		
+		self[key] = value
 	
+	def __delattr__(self, key):
+		''' Implement attribute reset using the syntax ``del conf.datapath`` '''
 
-	def new_variable(self, q, qlong, conf_cf={}, conf_c={}):
-		''' Register a new variable in the plot and metadata configuration
+		if key[0] == '_' or key == 'register_variable':
+			return default_dict.__delattr__(self, key)
+		
+		del self[key]
+	
+	def _add_single_variable(self, q, q_file, q_long, q_units, q_bins):
+		''' Add a single variable to the configurarion '''
 
-		Parameters
-		----------
-		q : str
-		    Abbreviated variable name, as it would appear in as a netCDF variable name
-		qlong: str
-		    Full variable name, as it would appear in the long_name attribute of netCDF variables
-		conf_cf : dict-like
-		    Optional. Standard configuration overrides for filled-contour plots of the new variable
-		conf_c : dict-like
-		    Optional. Standard configuration overrides for contour plots of the new variable
-		'''
-		self.contourf.new(qlong, conf_cf)
-		self.contour.new(qlong, conf_c)
-		self.q[q] = qlong
-		self.qi[qlong] = q
+		if q_file:
+			self[self._Q_FILE][q] = q_file
+			self[self._Q][q_file] = q
+		if q_long:
+			self[self._Q_LONG][q] = q_long
+		if q_units:
+			self[self._Q_UNITS][q] = q_units
+		if q_bins:
+			self[self._Q_BINS][q] = q_bins
+	
+	def _unpack_q(self, q_item):
+		''' Unpack a tuple holding pertinent information about a variable '''
 
-		return
-
-
-	def reset(self, key=None):
-		''' Reset the configuration to its defaults (optional for a specific key)
-
-		Parameters
-		----------
-		key : any valid dict key
-		    Optional: Key to be reset to the defaults.
-		'''
-		if key and key in self.__current:
-			self.__current[key] = copy(self.__default[key])
+		if len(q_item) == 2:
+			q, q_file = q_item
+			q_long = None; q_units = None; q_bins = None
+		elif len(q_item) == 3:
+			q, q_file, q_long = q_item
+			q_units = None; q_bins = None
+		elif len(q_item) == 4:
+			q, q_file, q_long, q_units = q_item
+			q_bins = None
+		elif len(q_item) == 5:
+			q, q_file, q_long, q_units, q_bins = q_item
 		else:
-			self.__current = deepcopy(self.__default)
+			raise ValueError, 'q_item must be length 2--5, got %d instead.' % len(q_item)
 
-		return
-
-conf = settings()
+		return q, q_file, q_long, q_units, q_bins
 
 
+	def register_variable(self, qs, plevs):
+		''' Register (a) new variable(s) 
+		
+		Parameters
+		----------
+		qs : (list of) 2-,3-,4- or 5-tuple(s)
+		    Tuple(s) describing the variable, including the entries 
 
-# #############################################################################
-# 5. Clean-Up: Making the default settings only available through settings objects
-# 
-del Q, QI, BINS_Q, UNITS, LONG, DATAPATH, OPATH, PPATH, FILE_STD, FILE_STAT, FILE_MSTAT, STD_SLICE, YEARS, PLEVS, PTLEVS, PVLEVS
-del DEFAULT_KWARGS, DEFAULT_CONTOUR_KWARGS, DEFAULT_CONTOURF_KWARGS, DEFAULT_Q_C, DEFAULT_Q_CF
+		        1. Variable name as it appears in the netCDF file
+			2. File name segment for files containing the variable
+			3. (Optional) Long name for the variable
+			4. (Optional) Units of the variale
+			5. (Optional) Binning information for the variable
 
+		plevs : list
+		    Vertical levels on which the given variables are available. Might be an empty 
+		    list if the variable is only to be registered in the non-plot configuration.
+		'''
+
+		if type(qs) == list:
+			for q in qs:
+				q, q_file, q_long, q_units, q_bins = self._unpack_q(q)
+				self._add_single_variable(q, q_file, q_long, q_units, q_bins)
+			qs = set([q[0] for q in qs])
+		else:
+			q, q_file, q_long, q_units, q_bins = self._unpack_q(qs)
+			self._add_single_variable(q, q_file, q_long, q_units, q_bins)
+			qs = set([qs[0],])
+		
+		if len(plevs) > 0:
+			plevs = set(plevs)
+			self[self._PLOT].add_table([copy(plevs), copy(qs)])
+			self[self._PLOTF].add_table([copy(plevs), copy(qs)])
+
+
+# Make sure that the plot defaults are immutable, 
+# such that they cannot be changed in place
+PLOT_DEFAULTS = {
+	'coastcolor': 'k', 
+	'disable_cb': False, 
+	'gridcolor': 'k',
+	'hook': None,
+	'm': proj.world, 
+	'maskcolor': '0.25',
+	'mark': None, 
+	'oroalpha': 0.4, 
+	'orocolor': 'k', 
+	'oroscale': np.arange(1000,9000,1000),
+	'overlays': (), 
+	'plev': None, 
+	'save': '', 
+	'scale': 'auto', 
+	'scale_exceed_percentiles': (0.01, 0.99),
+	'scale_intervals': (1,2,3,5,10,),
+	'scale_intervals_periodic': True,
+	'scale_target_steps': 7,
+	'scale_symmetric_zero': False,
+	'show': True, 
+	'ticks': None, 
+	'ticklabels': (), 
+	'title': '', 
+	'Zdata': None,
+
+	'lon': None, 
+	'lat': None, 
+	'alpha': 1.0, 
+	'norm': None, 
+	'vmin': None,
+	'vmax': None, 
+	'levels': None, 
+	'origin': None, 
+	'extent': None, 
+}
+PLOTF_DEFAULTS = copy(PLOT_DEFAULTS) 
+
+PLOT_DEFAULTS.update({
+	'cmap': None, 
+	'colors': 'k', 
+	'contour_labels': False,
+	'contour_labels_fontsize': 12,
+	'contour_labels_inline': True,
+	'contour_labels_inline_spacing': 2,
+	'contour_labels_format': '%1.1f',
+	'extend': 'neither', 
+	'linestyles': None, 
+	'linewidths': 2.0, 
+})
+PLOTF_DEFAULTS.update({
+	'cb_orientation': 'horizontal',
+	'cmap': cm.defabs, #cm.gist_ncar, needs to be immutable!
+	'colors': None, 
+	'extend': 'both', 
+
+	'hatches': None 
+})
+
+MUTEX_GROUPS = [set(['colors', 'cmap']), ]
+
+
+conf = settings_obj({
+	'q': {}, 		# Given a file name segment, which variable to we expect to find there?
+	'qf': {}, 		# Given a variable name, in which file do we find it?
+	'q_units': {},
+	'q_long': {},
+	'q_bins': {},
+	'datapath': ['.', ],
+	'opath': '.',
+	'plotpath': '.',
+	'file_std': None,
+	'file_stat': None, 	# Probably not general enough -> Might be superseeded by aggregration file names?
+	'file_mstat': None, 	# Probably not general enough -> Might be superseeded by aggregration file names?
+	# Include file name structures for: (1) Aggregrated data, (2) Time series, (3) Composites, (4) EOFs
+	'file_static': None,
+	'years': [],
+	'times': [],
+	'plevs': [],
+	'ptlevs': [],
+	'pvlevs': [],
+	'zlevs': [],
+	'mlevs': [],
+	'sfclevs': [],
+	'plot': plot_settings_dict(PLOT_DEFAULTS, MUTEX_GROUPS),
+	'plotf': plot_settings_dict(PLOTF_DEFAULTS, MUTEX_GROUPS),
+}, [])
 
 # that's it

@@ -88,15 +88,6 @@ class grid(object):
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type "%s"' % self.gridtype
 
-		if type(self.x) == np.ndarray: self.x = self.x[self.cut]
-		if type(self.y) == np.ndarray: self.y = self.y[self.cut]
-		if type(self.z) == np.ndarray: self.z = self.z[self.cut]
-
-		if type(self.dx) == np.ndarray: self.dx = self.dx[self.cut]
-		if type(self.dy) == np.ndarray: self.dy = self.dy[self.cut]
-
-		if type(self.oro) == np.ndarray: self.oro = self.oro[self.cut]
-
 		return
 
 	rebuild_grid = __build_grid
@@ -111,10 +102,9 @@ class grid_by_nc(grid):
 	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z']
 	T_NAMES = ['time', 'Time']
 
-	def __init__(self, ncfile, ncvar=None, cut=slice(None)):
+	def __init__(self, ncfile, ncvar=None):
 		self.f = ncfile
 		self.v = ncvar
-		self.cut = cut
 		self.oro = None
 
 		grid.__init__(self)
@@ -289,9 +279,8 @@ class grid_by_nc(grid):
 class grid_by_static(grid):
 	''' Read relevant information from a static file, usually called "static.npz" '''
 
-	def __init__(self, staticfile, cut=slice(None)):
+	def __init__(self, staticfile):
 		self.f = staticfile
-		self.cut = cut
 
 		grid.__init__(self)
 

@@ -16,7 +16,7 @@ import Scientific.IO.NetCDF as nc
 import scipy.io.matlab as mat
 import pytz
 
-from settings import conf as c
+from settings import conf
 import utils
 from gridlib import grid_by_nc, grid_by_static
 
@@ -34,7 +34,7 @@ dynlib_version = (''.join(dynfor.consts.version)).strip()
 
 # TODO: Restrict the expected file types by providing a file name extension
 # TODO: Allow usage without directly requesting a variable, making q optional.
-def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=False, no_static=False):
+def metopen(filename, q, verbose=False, no_dtype_conversion=False, no_static=False):
 	''' Find and open files by name
 	
 	Uses the conf.datapath list to locale files in a variety of different locations.
@@ -48,8 +48,6 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 		The name of the file, excluding the file ending.
 	q : str
 		The requested variable within the file.
-	cut : slice
-		Obsolete and to be removed
 	verbose : bool
 		*Optional*, default ``False``. Print debug information on which files are 
 		being looked for.
@@ -72,13 +70,9 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 	grid.gridlib
 		If ``no_static=False`` meta-information about the requested data.
 	'''
-	if type(cut) == tuple and len(cut) > 1:
-		cuts = tuple(list(cut)[1:])
-	else: 
-		cuts = slice(None)
 	
 	tried = []
-	for path in c.datapath:
+	for path in conf.datapath:
 		static = None
 
 		if verbose:
@@ -86,7 +80,6 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 
 		if os.path.exists(path+'/'+filename+'.npy'):
 			dat = np.load(path+'/'+filename+'.npy', mmap_mode='r')
-			dat = dat[cut]
 			print 'Found '+path+'/'+filename+'.npy'
 			f = None
 		elif os.path.exists(path+'/'+filename+'.npz'):
@@ -94,14 +87,14 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 			if q not in f.files:
 				tried.append(path+'/'+filename+'.npz')
 				continue
-			dat = f[q][cut]
+			dat = f[q]
 			print 'Found '+path+'/'+filename+'.npz'
 		elif os.path.exists(path+'/'+filename+'.mat'):
 			f   = mat.loadmat(path+'/'+filename+'.mat')
 			if q not in f:
 				tried.append(path+'/'+filename+'.mat')
 				continue
-			dat = f[q][cut]
+			dat = f[q]
 			print 'Found '+path+'/'+filename+'.mat'
 		elif os.path.exists(path+'/'+filename+'.nc'):
 			#f   = nc.netcdf_file(path+'/'+filename+'.nc', 'r')
@@ -110,12 +103,11 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 			if q not in f.variables:
 				tried.append(path+'/'+filename+'.nc')
 				continue
-			dat = utils.scale(var, cut)
+			dat = utils.scale(var)
 			if not no_static:
-				static = grid_by_nc(f, var, cut=cuts)
+				static = grid_by_nc(f, var)
 				# TODO: Where to search for topography in nc files?
 				static.oro = np.zeros((static.ny, static.nx))
-				static.oro = static.oro[cuts]
 			print 'Found '+path+'/'+filename+'.nc'
 		else:
 			tried.append(path)
@@ -126,7 +118,7 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 
 		if not no_static:
 			if not static:
-				static = get_static(cuts, verbose, no_dtype_conversion)
+				static = get_static(verbose, no_dtype_conversion)
 						
 		else:
 			return f, dat
@@ -166,7 +158,7 @@ def metsave(dat, static, time, plev, q, q_units=None, compress_to_short=True):
 		raise NotImplementedError, 'dat does not seem to be a ERA-Interim like (t,y,x)-array.'
 	
 	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc3.netcdf_file(c.opath+'/'+(c.file_std % {'time': time, 'plev': plev, 'q': c.qi[q]})+'.nc', 'w')
+	of = nc3.netcdf_file(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'q': conf.qf[q]})+'.nc', 'w')
 	of._attributes = {'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	}
@@ -189,11 +181,11 @@ def metsave(dat, static, time, plev, q, q_units=None, compress_to_short=True):
 	if compress_to_short:
 		ovar = of.createVariable(q, 'h', ('time', 'latitude', 'longitude',))
 		dat, scale, off = utils.unscale(dat)
-		ovar._attributes = {'long_name': c.q_long[q], 'units': c.q_units[q],
+		ovar._attributes = {'long_name': conf.q_long[q], 'units': conf.q_units[q],
 				'add_offset': off, 'scale_factor': scale}
 	else:
 		ovar = of.createVariable(q, 'f', ('time', 'latitude', 'longitude',))
-		ovar._attributes = {'long_name': c.q_long[q], 'units': c.q_units[q]}
+		ovar._attributes = {'long_name': conf.q_long[q], 'units': conf.q_units[q]}
 	ovar[::] = dat
 
 	of.close()
@@ -238,7 +230,7 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 		raise RuntimeError, 'dat does not have size 3 in the third dimension'
 
 	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc3.netcdf_file(c.opath+'/'+(c.file_std % {'time': time, 'plev': plev, 'q': c.qi[q]})+'.nc', 'w')
+	of = nc3.netcdf_file(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'q': conf.qf[q]})+'.nc', 'w')
 	of._attributes = {'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	}
@@ -279,7 +271,7 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 	ooidx[:] = range(olen)
 	
 	oq = of.createVariable(q, 'f', ('time', 'pointindex', 'infotype',))
-	oq._attributes = {'long_name': c.q_long[q], 'units': 'mixed'}
+	oq._attributes = {'long_name': conf.q_long[q], 'units': 'mixed'}
 	oq[::] = dat[:,:llen,:]
 
 	oqoff = of.createVariable(qoff, 'i', ('time', 'lineindex',))
@@ -292,13 +284,11 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 
 
 # Get static information
-def get_static(cuts=slice(None), verbose=False, no_dtype_conversion=False):
+def get_static(verbose=False, no_dtype_conversion=False):
 	''' Get standard meta-information (for ERA-Interim)
 
 	Parameters
 	----------
-	cut : slice
-		Obsolete and to be removed
 	verbose : bool
 		*Optional*, default ``False``. Print debug information on where the static
 		file is being looked for.
@@ -310,8 +300,8 @@ def get_static(cuts=slice(None), verbose=False, no_dtype_conversion=False):
 	Returns
 	-------
 	'''
-	fo, oro = metopen('static', 'oro', cuts, verbose, no_dtype_conversion, True)
-	static = grid_by_static(fo, cut=cuts)
+	fo, oro = metopen('static', 'oro', verbose, no_dtype_conversion, True)
+	static = grid_by_static(fo)
 	static.oro = oro[::]
 	fo.close()
 
@@ -366,7 +356,7 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, qu
 	'''
 	# None means "take everything there is as pressure levels"
 	if not plevs:
-		plevs = c.plevs
+		plevs = conf.plevs
 	elif not type(plevs) == np.ndarray and not type(plevs) == list:
 		plevs = [plevs,]
 	
@@ -423,18 +413,18 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, qu
 		i = 0
 		for plev in plevs:
 			if not quiet:
-				print "Reading from "+c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}
+				print "Reading from "+conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}
 			if type(dat) == type(None):
 				if kwargs.get('no_static', False):
-					f, d = metopen(c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}, q, cut=cut, **kwargs)
+					f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
 					static = None
 				else:
-					f, d, static = metopen(c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}, q, cut=cut, **kwargs)
+					f, d, static = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
 					kwargs['no_static'] = True
 				s = tuple([1+tsmax-tsmin,len(plevs)] + list(d.shape)[1:])
 				dat = np.empty(s, dtype=d.dtype)
 			else:
-				f, d = metopen(c.file_std % {'time': year, 'plev': plev, 'q': c.qi[q]}, q, cut=cut, **kwargs)
+				f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
 			dat[datcut,i,::] = d
 			i += 1
 
