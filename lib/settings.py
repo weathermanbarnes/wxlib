@@ -87,16 +87,21 @@ class default_dict(collections.MutableMapping):
 	Parameters
 	----------
 	defaults : dict
-	    Definition of valid keys and their default values
-	
-	Notes
-	-----
-	 #. ToDo: Re-Implement mutex groups
+	    Definition of valid keys and their default values.
+	mutexes : list of sets
+	    Sets of mutually exclusive configuration keys. As soon as one is not None, all others 
+	    are automaticall set to None.
 	'''
 
-	def __init__(self, defaults):
+	def __init__(self, defaults, mutexes):
 		self._ = {}
 		self._defaults = defaults
+
+		self._mutexes = {}
+		for mutex in mutexes:
+			for key in mutex:
+				self._mutexes[key] = copy(mutex)
+				self._mutexes[key].remove(key)
 
 		# Mutable (approximated by "non-hashable") types can be changed in place. 
 		# Hence, they must be copied over to the overrides dict to avoid overriding defaults
@@ -118,6 +123,11 @@ class default_dict(collections.MutableMapping):
 
 	def __setitem__(self, key, value):
 		''' Implements the assignment syntax ``dat[key] = value`` '''
+		
+		# Respect that some combination configuration are not meaningful
+		if not value == None:
+			for mutex in self._mutexes.get(key, []):
+				self._[mutex] = None
 
 		if key in self._defaults:
 			self._[key] = value
@@ -170,22 +180,21 @@ class nd_default_dict(default_dict):
 	Parameters
 	----------
 	first_table : list of sets
-	    Sets of valid keys for each of the first dimensions
+	    Sets of valid keys for each of the first dimensions.
 	defaults : dict
-	    Definition of valid keys and their default values
-	
-	Notes
-	-----
-	 #. ToDo: Implement mutex groups
+	    Definition of valid keys and their default values.
+	mutexes : list of sets
+	    Sets of mutually exclusive configuration keys. As soon as one is not None, all others 
+	    are automaticall set to None.
 	'''
 
-	def __init__(self, first_table, defaults):
+	def __init__(self, first_table, defaults, mutexes):
 		for default in defaults.values():
 			if not isinstance(default, collections.Hashable):
 				raise ValueError, 'Defaults for plotconf must be immutable, but got variable of type %s, value: %s' % (type(default), str(default))
 		self._fdims = [first_table, ]
 		self._ndims = len(first_table) + 1
-		default_dict.__init__(self, defaults) 	# dictionary of valid keys in the last dimension and their default values
+		default_dict.__init__(self, defaults, mutexes) 	# dictionary of valid keys in the last dimension and their default values
 	
 	def __check_key(self, key, allow_blank=False):
 		''' Check if a given query key is valid '''
@@ -269,24 +278,32 @@ class nd_default_dict(default_dict):
 		for n, skey in zip(range(len(key)), copy(key)):
 			if skey == slice(None):
 				key = key[:n] + (None,) + key[n+1:]
-
-		#keys = self.__resolve_keys(key[:self._ndims-1])
-
-		#if len(key) == self._ndims:
-		#	keys = [_key+(key[-1],) for _key in keys]
 		
-		#for key in keys:
+		# Got one specific key to override
 		if len(key) == self._ndims:
+			# Respect that some combination configuration are not meaningful
+			if not value == None:
+				for mutex in self._mutexes.get(key[-1], []):
+					mkey = key[:-1] + (mutex,)
+					self._[mkey] = None
 			self._[key] = value
+		
+		# Last dimension missing, expecting dict to override several keys at once
 		else: 
 			if not type(value) == dict:
-				for lkey, lvalue in dict.items:
-					fullkey = key + (lkey,)
-					if not lkey in self._defaults:
-						raise KeyError, fullkey
-					self._[fullkey] = lvalue
-			else:
-				raise TypeError, 'Dict required for multiple assignment.'
+				raise TypeError, 'Dict required for multiple assignment, got `%s` instead.' % type(value)
+
+			for lkey, lvalue in value.items():
+				fullkey = key + (lkey,)
+				if not lkey in self._defaults:
+					raise KeyError, fullkey
+				# Respect that some combination configuration are not meaningful
+				if not lvalue == None:
+					for mutex in self._mutexes.get(lkey, []):
+						mkey = key + (mutex,)
+						self._[mkey] = None
+				self._[fullkey] = lvalue
+				
 
 	def __delitem__(self, key):
 		''' Implement reset via the ``del dat[key1,key2,...,keyN]`` syntax '''
@@ -340,11 +357,14 @@ class plot_settings_dict(nd_default_dict):
 	Parameters
 	----------
 	defaults : dict
-	    Definition of valid keys and their default values
+	    Definition of valid keys and their default values.
+	mutexes : list of sets
+	    Sets of mutually exclusive configuration keys. As soon as one is not None, all others 
+	    are automaticall set to None.
 	'''
 
-	def __init__(self, defaults):
-		nd_default_dict.__init__(self, [], defaults)
+	def __init__(self, defaults, mutexes):
+		nd_default_dict.__init__(self, [], defaults, mutexes)
 		self._ndims = 3
 		self._fdims = []
 	
@@ -394,7 +414,7 @@ class settings_obj(default_dict):
 	Parameters
 	----------
 	defaults : dict
-	    Definition of valid keys and their default values
+	    Definition of valid keys and their default values.
 	'''
 	
 	# Configuration keys that have a special meaning for the functionality of this class:
@@ -578,6 +598,8 @@ PLOTF_DEFAULTS.update({
 	'hatches': None 
 })
 
+MUTEX_GROUPS = [set(['colors', 'cmap']), ]
+
 
 conf = settings_obj({
 	'q': {}, 		# Given a file name segment, which variable to we expect to find there?
@@ -601,8 +623,8 @@ conf = settings_obj({
 	'zlevs': [],
 	'mlevs': [],
 	'sfclevs': [],
-	'plot': plot_settings_dict(PLOT_DEFAULTS),
-	'plotf': plot_settings_dict(PLOTF_DEFAULTS),
-})
+	'plot': plot_settings_dict(PLOT_DEFAULTS, MUTEX_GROUPS),
+	'plotf': plot_settings_dict(PLOTF_DEFAULTS, MUTEX_GROUPS),
+}, [])
 
 # that's it
