@@ -125,7 +125,7 @@ class default_dict(collections.MutableMapping):
 		''' Implements the assignment syntax ``dat[key] = value`` '''
 		
 		# Respect that some combination configuration are not meaningful
-		if not value == None:
+		if not type(value) == type(None):
 			for mutex in self._mutexes.get(key, []):
 				self._[mutex] = None
 
@@ -282,7 +282,7 @@ class nd_default_dict(default_dict):
 		# Got one specific key to override
 		if len(key) == self._ndims:
 			# Respect that some combination configuration are not meaningful
-			if not value == None:
+			if type(value) == type(None):
 				for mutex in self._mutexes.get(key[-1], []):
 					mkey = key[:-1] + (mutex,)
 					self._[mkey] = None
@@ -298,7 +298,7 @@ class nd_default_dict(default_dict):
 				if not lkey in self._defaults:
 					raise KeyError, fullkey
 				# Respect that some combination configuration are not meaningful
-				if not lvalue == None:
+				if type(lvalue) == type(None):
 					for mutex in self._mutexes.get(lkey, []):
 						mkey = key + (mutex,)
 						self._[mkey] = None
@@ -518,7 +518,7 @@ class settings_obj(default_dict):
 
 		plevs : list
 		    Vertical levels on which the given variables are available. Might be an empty 
-		    list if the variable is only to be registered in the non-plot configuration.
+		    list if the variable is only to be registered for a general level "None".
 		'''
 
 		if type(qs) == list:
@@ -531,15 +531,15 @@ class settings_obj(default_dict):
 			self._add_single_variable(q, q_file, q_long, q_units, q_bins)
 			qs = set([qs[0],])
 		
-		if len(plevs) > 0:
-			plevs = set(plevs)
-			self[self._PLOT].add_table([copy(plevs), copy(qs)])
-			self[self._PLOTF].add_table([copy(plevs), copy(qs)])
+		plevs = set(plevs)
+		self[self._PLOT].add_table([copy(plevs), copy(qs)])
+		self[self._PLOTF].add_table([copy(plevs), copy(qs)])
 
 
 # Make sure that the plot defaults are immutable, 
 # such that they cannot be changed in place
 PLOT_DEFAULTS = {
+	'cb_tickspacing': 'proportional',
 	'coastcolor': 'k', 
 	'disable_cb': False, 
 	'gridcolor': 'k',

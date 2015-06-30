@@ -46,6 +46,8 @@ u10 = ('u10', 'u10', '10 metre U wind component', 'm s**-1')
 v10 = ('v10', 'v10', '10 metre V wind component', 'm s**-1')
 tcwv = ('tcwv', 'wv', 'Total column water vapour', 'kg m**-2')
 
+oro = ('oro', None, 'Surface geopotential', 'm**2 s**-2')
+
 # 1. Pressure levels
 conf.plevs = ['100', '200', '300', '400', '500', '550', '600', '650', '700', '750', '800', '850', '900', '950', '1000', ]
 conf.register_variable([u, v, w, pv, z, t, q], conf.plevs)
@@ -61,5 +63,8 @@ conf.register_variable([u, v, pt, z], conf.pvlevs)
 # 4. Surface variables
 conf.sfclevs = ['sfc', ]
 conf.register_variable([msl, sp, ci, sst, t2m, tcw, u10, v10, tcwv], conf.sfclevs)
+
+# 5. No vertical level
+conf.register_variable([oro, ], [])
 
 # that's it
