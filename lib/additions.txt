@@ -27,6 +27,8 @@ new tendencies.f90 -> isat: islopes_adiabatic
 
 isat -> diag.f90
 
+perhom -> new python module
+
 
 ######### Moves
 
