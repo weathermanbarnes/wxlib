@@ -625,6 +625,8 @@ conf = settings_obj({
 	'sfclevs': [],
 	'plot': plot_settings_dict(PLOT_DEFAULTS, MUTEX_GROUPS),
 	'plotf': plot_settings_dict(PLOTF_DEFAULTS, MUTEX_GROUPS),
+	'plotformat': 'png',
+	'oformat': 'nc',
 }, [])
 
 # that's it
