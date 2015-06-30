@@ -24,6 +24,8 @@ ap.add_argument('-q', '--variable(s)', metavar='var', type=str, nargs='*', help=
 ap.add_argument('-l', '--level(s)', metavar='lev', type=str, nargs='*', help='Which vertical levels to use (if not predefined by the function itself).')
 ap.add_argument('-t', '--time', type=str, metavar='time', nargs='*', help='Which time period to use.')
 
+# Configure plot
+ap.add_argument('-m', '--mapprojection', type=str, metavar='time', nargs='?', help='Which predefined map projection to use for potential plots.')
 
 ap.parse_args()
 
