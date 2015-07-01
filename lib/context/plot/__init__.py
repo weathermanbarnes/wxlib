@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from ...settings import def_context, in_context, conf
+from ...settings import def_context, in_context, conf, cm
 def_context('plot')
 
 
@@ -33,7 +33,7 @@ if in_context('erainterim'):
 	conf.plotf[None,'oro','scale'] = range(-19000,51000,2000)
 
 if in_context('derived'):
-	conf.plotf[None,'thetae','cmap'] = cm.RdBu_r
+	conf.plotf[None,'eqpt','cmap'] = cm.RdBu_r
 
 	conf.plotf[None,'dd','scale'] = np.arange(0,36.1)*10.0
 	conf.plotf[None,'dd','ticks'] = np.arange(0,8)*360.0/8.0

@@ -20,8 +20,8 @@ defabs = ('defabs', 'defabs', 'Total deformation', 's**-1')
 _bins_defang = [17,]
 _bins_defang.extend(range(-18,18))
 _bins_defang = np.array(_bins_defang)*np.pi/36.0 + np.pi/72.0
-defang = ('defang', 'defang', 'Deformation angle', 'rad', _defang_bins)
-defanr = ('defanr', 'defanr', 'Deformation angle (natural coordinates)', 'rad', _defang_bins)
+defang = ('defang', 'defang', 'Deformation angle', 'rad', _bins_defang)
+defanr = ('defanr', 'defanr', 'Deformation angle (natural coordinates)', 'rad', _bins_defang)
 
 rsr = ('rsr', 'rsr', 'Rotation-strain ratio', '1')
 ow = ('ow', 'ow', 'Okubo-Weiss parameter', 's**-2')

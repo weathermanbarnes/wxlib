@@ -468,9 +468,9 @@ def __safename(name):
 	
 	# Month names to numbers for sorting
 	to_replace = {'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'mai': '05', 'jun': '06',
-			'jul', '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec', '12'}
+			'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'}
 	# Replace some critical characters
-	to_replace.update({u'æ': 'ae', u'ø': 'oe', u'å': 'aa', u'ä': 'ae', u'ö': 'oe', u'ü', 'ue', u'ß': 'ss'})
+	to_replace.update({u'æ': 'ae', u'ø': 'oe', u'å': 'aa', u'ä': 'ae', u'ö': 'oe', u'ü': 'ue', u'ß': 'ss'})
 
 	for from_, to in to_replace:
 		name = name.replace(from_, to)

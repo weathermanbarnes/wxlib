@@ -479,7 +479,7 @@ class settings_obj(default_dict):
 			self[self._Q_LONG][q] = q_long
 		if q_units:
 			self[self._Q_UNITS][q] = q_units
-		if q_bins:
+		if type(q_bins) in [list, np.ndarray]:
 			self[self._Q_BINS][q] = q_bins
 	
 	def _unpack_q(self, q_item):
@@ -621,7 +621,7 @@ conf = settings_obj({
 	'file_agg': None,
 	'file_ts': None,
 	'file_comp': None,
-	'file_eof', None,
+	'file_eof': None,
 	'file_static': None,
 	'years': [],
 	'times': [],
