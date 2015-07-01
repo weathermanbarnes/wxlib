@@ -21,7 +21,10 @@ def world():
 	Basemap
 		map projection instance
 	'''
-	return Basemap(projection='robin',lon_0=0,resolution='c', area_thresh=50000)
+
+	m = Basemap(projection='robin',lon_0=0,resolution='c', area_thresh=50000)
+	m.aspect = 1.5
+	return m
 
 # (b) Northern polar centered map
 def n_hemisphere():
@@ -32,7 +35,9 @@ def n_hemisphere():
 	Basemap
 		map projection instance
 	'''
-	return Basemap(projection='npstere',boundinglat=10,lon_0=-50,resolution='c', area_thresh=50000)
+	m = Basemap(projection='npstere',boundinglat=10,lon_0=-50,resolution='c', area_thresh=50000)
+	m.aspect = 1.0
+	return m
 
 # (c) Southern polar centered map
 def s_hemisphere():
@@ -43,7 +48,9 @@ def s_hemisphere():
 	Basemap
 		map projection instance
 	'''
-	return Basemap(projection='spstere',boundinglat=-10,lon_0=0,resolution='c', area_thresh=50000)
+	m = Basemap(projection='spstere',boundinglat=-10,lon_0=0,resolution='c', area_thresh=50000)
+	m.aspect = 1.0
+	return m
 
 # (d) North-Atlantic map
 def N_Atlantic():
@@ -54,8 +61,10 @@ def N_Atlantic():
 	Basemap
 		map projection instance
 	'''
-	return Basemap(projection='lcc', lat_0=55, lat_ts=55, lon_0=-30, resolution='l', 
+	m = Basemap(projection='lcc', lat_0=55, lat_ts=55, lon_0=-30, resolution='l', 
 			width=9000000, height=6000000)
+	m.aspect = 1.5
+	return m
 
 # (e) North-Pacific map
 def N_Pacific():
@@ -66,8 +75,10 @@ def N_Pacific():
 	Basemap
 		map projection instance
 	'''
-	return Basemap(projection='lcc', lat_0=50, lat_ts=50, lon_0=-180, resolution='l', 
+	m = Basemap(projection='lcc', lat_0=50, lat_ts=50, lon_0=-180, resolution='l', 
 			width=9000000, height=6000000)
+	m.aspect = 1.5
+	return m
 
 # (f) Australia map
 def Australia():
@@ -78,7 +89,9 @@ def Australia():
 	Basemap
 		map projection instance
 	'''
-	return Basemap(projection='lcc', lat_0=-35, lat_ts=-35, lon_0=120, resolution='l', 
+	m = Basemap(projection='lcc', lat_0=-35, lat_ts=-35, lon_0=120, resolution='l', 
 			width=12000000, height=8000000)
+	m.aspect = 1.5
+	return m
 
 # the end

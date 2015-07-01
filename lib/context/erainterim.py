@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
+from datetime import timedelta as td
+
 from ..settings import def_context, conf
 def_context('erainterim')
 
@@ -11,9 +13,12 @@ def_context('erainterim')
 
 conf.years = range(1979,2015)
 conf.file_std = 'ei.ans.%(time)d.%(plev)s.%(q)s'
-conf.file_stat = 'ei.ans.%(time)d.%(plev)s.%(q)s.stat'
-conf.file_mstat = 'ei.ans.stat.%(plev)s.%(q)s'
+conf.file_agg = 'ei.ans.agg_%(agg).%(time).%(plev)s.%(q)s'
+conf.file_comp = 'ei.ans.comp_%(comp).%(time).%(plev)s.%(q)s'
+conf.file_eof = 'ei.ans.eof_%(eof).%(time).%(plev)s.%(q)s'
+conf.file_ts = 'ei.ans.ts_%(ts).%(time).%(plev)s.%(q)s'
 conf.file_static = 'ei.ans.static'
+conf.timestep = td(0.25)
 conf.datapath.insert(1, '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY')
 conf.datapath.insert(1, '/Data/gfi/users/csp001/share') # for static; TODO: Move to a more general directory!
 

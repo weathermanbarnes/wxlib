@@ -187,167 +187,80 @@ def map(dat, static, **kwargs):
 	return
 
 
-# TODO: The dilatation axes should become an overlay, and this function should be removed
-def map_deform(defabs, defang, static, **kwargs):
-	''' Soon obsolete '''
-	# 1. Prepare
-	kwargs = __prepare_config(kwargs)
-	mask = __map_create_mask(static, kwargs)
-
-	defabs = __map_prepare_dat(defabs, mask, static, kwargs)
-	defang = __map_prepare_dat(defang, mask, static, conf.plot[None,'defang'])
-	defdex = np.cos(defang[:,:]) *defabs
-	defdey = np.sin(defang[:,:]) *defabs
-
-	# Masking everything below the lowest contour
-	if not type(kwargs.get('scale', None)) == type(None):
-		defdex[defabs < kwargs.get('scale')[0]] = np.nan
-		defdey[defabs < kwargs.get('scale')[0]] = np.nan
-
-	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
-
-	Nvecx = 27
-	Nvecy = 18
-
-	#2. Plot the actual deformation
-	if hasattr(m, 'transform_vector'):
-		ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0], Nvecx, Nvecy, returnxy=True)
-		qscale = 420
-	else:
-		skipx = defdex.shape[1]/Nvecx
-		skipy = defdey.shape[0]/Nvecy
-		slc = (slice(skipy/2,None,skipy), slice(skipx/2,None,skipx))
-		ut,vt,xt,yt = defdex[slc],defdey[slc],x[slc],y[slc]
-		qscale=72
-	m.quiver(xt, yt, ut, vt, zorder=4, scale=qscale, alpha=0.85)
-	m.quiver(xt, yt, -ut, -vt, zorder=4, scale=qscale, alpha=0.85)
-	
-	__contourf_dat(m, x, y, defabs, kwargs)
-	
-	# 3. Finish off
-	__decorate(m, x, y, mask, kwargs)
-	__output(kwargs)	
-
-	return
-
-
-# TODO: Wind barbs and arrows should become overlays, and this function should be removed
-def map_barb(u, v, static, dat=None, **kwargs):
-	''' Soon obsolete '''
-	# 1. Prepare
-	kwargs = __prepare_config(kwargs)
-	mask = __map_create_mask(static, kwargs)
-
-	u = __map_prepare_dat(u, mask, static, conf.plot[None,'u'])
-	v = __map_prepare_dat(v, mask, static, conf.plot[None,'v'])
-	if type(dat) == np.ndarray: 
-		dat = __map_prepare_dat(dat, mask, static, kwargs)
-	
-	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
-	
-	# 2. Plot the actual data
-	if type(dat) == np.ndarray: __contourf_dat(m, x, y, dat, kwargs)
-	
-	# TODO: Generalise, and make the arrow density customisable
-	try:
-		ut,vt, xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
-	except ValueError:
-		interval = kwargs.pop('vector_space_interval', 15)
-		slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
-		ut,vt, xt,yt = m.rotate_vector(u[slc], v[slc], lon[slc], lat[slc], returnxy=True)
-	
-	if not kwargs.pop('quiver', False):
-		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5, zorder=3)
-	else:
-		m.quiver(xt, yt, ut, vt, zorder=3, scale=kwargs.pop('quiver_length', None), scale_units='width')
-	
-	# 3. Finish off
-	__decorate(m, x, y, mask, kwargs)
-	__output(kwargs)
-
-	return
-
-
-# TODO: Fronts should become an overlay, and this function should be removed
-# TODO: Merge with other fronts overlay
-def map_oro_fronts(fronts, froff, static, dat=None, **kwargs):
-	''' Obsolete: Use map_overlay_fronts instead '''
-	# 1. Prepare
-	kwargs = __prepare_config(kwargs)
-	mask = __map_create_mask(static, kwargs)
-	
-	cfrs = __unflatten_fronts_t(fronts[0], froff[0], minlength=5)
-	wfrs = __unflatten_fronts_t(fronts[1], froff[1], minlength=5)
-	sfrs = __unflatten_fronts_t(fronts[2], froff[2], minlength=5)
-
-	if not dat == None: 
-		dat = __map_prepare_dat(dat, mask, static, kwargs)
-	
-	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
-	
-	# 2. Plot the actual data
-	if not dat == None: __contourf_dat(m, x, y, dat, kwargs)
-
-	# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
-	for cfr in cfrs:
-		lonfr = -180 + cfr[:,0]*0.5
-		latfr = 90.0 - cfr[:,1]*0.5
-		xfr, yfr = m(lonfr, latfr)
-		m.plot(xfr, yfr, 'b-', linewidth=2)
-	for wfr in wfrs:
-		lonfr = -180 + wfr[:,0]*0.5
-		latfr = 90.0 - wfr[:,1]*0.5
-		xfr, yfr = m(lonfr, latfr)
-		m.plot(xfr, yfr, 'r-', linewidth=2)
-	for sfr in sfrs:
-		lonfr = -180 + sfr[:,0]*0.5
-		latfr = 90.0 - sfr[:,1]*0.5
-		xfr, yfr = m(lonfr, latfr)
-		m.plot(xfr, yfr, 'm-', linewidth=2)
-
-	# 3. Finish off
-	__decorate(m, x, y, mask, kwargs)
-	__output(kwargs)
-
-	return
-
-# TODO: Fronts should become an overlay, and this function should be removed
-# TODO: Merge with other fronts overlay
-def map_oro_fronts_nc(cfrs, wfrs, sfrs, static, dat=None, **kwargs):
-	''' Obsolete: Use map_overlay_fronts instead '''
-	# 1. Prepare
-	kwargs = __prepare_config(kwargs)
-	mask = __map_create_mask(static, kwargs)
-	
-	if not dat == None: 
-		dat = __map_prepare_dat(dat, mask, static, kwargs)
-	
-	m, x, y = __map_setup(mask, static, kwargs)
-	
-	# 2. Plot the actual data
-	if not dat == None: __contourf_dat(m, x, y, dat, kwargs)
-
-	for cfr in cfrs:
-		lenfr = sum(cfr[:,0] > -200)
-		xfr, yfr = m(cfr[:lenfr,1], cfr[:lenfr,0])
-		m.plot(xfr, yfr, 'b-', linewidth=2)
-	for wfr in wfrs:
-		lenfr = sum(wfr[:,0] > -200)
-		xfr, yfr = m(wfr[:lenfr,1], wfr[:lenfr,0])
-		m.plot(xfr, yfr, 'r-', linewidth=2)
-	for sfr in sfrs:
-		lenfr = sum(sfr[:,0] > -200)
-		xfr, yfr = m(sfr[:lenfr,1], sfr[:lenfr,0])
-		m.plot(xfr, yfr, 'm-', linewidth=2)
-
-	# 3. Finish off
-	__decorate(m, x, y, mask, kwargs)
-	__output(kwargs)
-
-	return
-
-
 # Helper functions
+def setup(**kwargs):
+	''' Create a figure object, using some magic to automatically find a suitable size
+
+	To find a suitable size, the following information is used
+
+	 #. If fig_size is set to a tuple, the given fig_size will be used
+	 #. If fig_size is set to a number, the aspect ratio of the map projection will be 
+	    used to match the given size in square inches.
+	 #. If fig_size is set to ``'auto'``, a fig_size of 10 in² is used as a default.
+	
+	For all of the above cases, the figure size is subsequently adapted: 
+
+	 #. If a colorbar is to be added, the figure size is expanded accordingly to keep 
+	    the size of the actual plot constant.
+	 #. If a title is to be added, the figure size is expanded accordingly to keep 
+	    the size of the actual plot constant.
+
+	Keyword arguments
+	-----------------
+	plot arguments : all
+		For a list of valid arguments refer to :ref:`plot configuration`.
+	
+	Returns
+	-------
+	matplotlib.figure.Figure
+		Figure object with defined size and plot margins
+	'''
+
+	left = 0.01
+	right = 0.99
+	top = 0.99
+	bottom = 0.01
+
+	figsize = kwargs.pop('fig_size')
+	dpi = kwargs.pop('fig_dpi')
+
+	# Default size: 10 in² for 300dpi gives about 1 MPixels rasterised image.
+	# The scaling with dpi is to ,ake sure the image size in pixels stays about 
+	# constant when fig_dpi is changed
+	if figsize == 'auto':
+		figsize = 10.0 * (300.0 / dpi)**2.0
+	
+	# Use the aspect ratio of the projection (if given, otherwise 1.5 is used) 
+	# to find a good image size
+	if type(figsize) == int or type(figsize) == float:
+		aspect = getattr(m,'aspect', 1.5)
+		height = round(np.sqrt(figsize/aspect),1)
+		figsize = (aspect*height, height)
+
+	elif not type(figsize) == tuple: 
+		raise ValueError, "fig_size must be either the string 'auto', a number or a tuple."
+	
+	# Adapt figure size automatically if a color bar is added
+	if not kwargs.get('cb_disabled'): 
+		expand = kwargs.get('cb_expand_fig_fraction')
+		if kwargs.get('cb_orientation') == 'horizontal':
+			figsize = (figsize[0], figsize[1]/(1.0-expand))
+		else:
+			figsize = (figsize[0]/(1.0-expand), figsize[1])
+	
+	# Adapt figure size and top margin automatically if a title is added
+	if kwargs.get('title'):
+		titlesize = 0.4 	# height of the title in inches
+
+		height = figsize[1]
+		top = height*top / (height + titlesize)
+		figsize = (figsize[0], height + titlesize)
+
+	fio = plt.figure(figsize=figsize, dpi=dpi)
+	fio.subplotpars.update(left=left, right=right, top=top, bottom=bottom)
+
+	return fio
+
 def __prepare_config(kwargs):
 	''' Make sure kwargs contains a complete contourf plot configuration, 
 	filling undefined keys from the dynlib configuration.'''
@@ -385,7 +298,7 @@ def __map_create_mask(static, kwargs):
 	datZ = kwargs.pop('Zdata', None)
 	
 	if plev and not type(datZ) == np.ndarray:
-		f,datZ = metopen(conf.file_mstat % {'plev': plev, 'q': 'Z'}, 'mean', no_static=True)
+		f,datZ = metopen(conf.file_agg % {'agg': 'all', 'time': '%d-%d' % (conf.years[0],conf.years[-1]), 'plev': plev, 'q': 'Z'}, 'z', no_static=True)
 		if f: f.close()
 	if type(datZ) == np.ndarray:
 		datZ = concat1(datZ)
@@ -497,17 +410,14 @@ def __decorate(m, x, y, mask, kwargs):
 	''' Add "decorations": colorbar, legends, overlays and a title'''
 
 	if not kwargs.pop('disable_cb'):
-		orient = kwargs.pop('cb_orientation', 'vertical')
-		spacing = kwargs.pop('cb_tickspacing', 'proportional')
-		shrink = kwargs.pop('cb_shrink', 0.8)
-		if orient == 'vertical':
-			pad = 0.02
-			frac = 0.08
-		else:
-			pad = 0.03
-			frac = 0.12
-			#pad = 0.02
-			#frac = 0.08
+		orient = kwargs.pop('cb_orientation')
+		spacing = kwargs.pop('cb_tickspacing')
+		shrink = kwargs.pop('cb_shrink')
+		expand = kwargs.pop('cb_expand_fig_fraction')
+		
+		pad = expand/5
+		frac = 4*expand/5
+
 		cb = plt.colorbar(ticks=kwargs.pop('ticks'), orientation=orient, 
 				shrink=shrink, pad=pad, fraction=frac, spacing=spacing)
 		if kwargs.get('ticklabels'): 
@@ -537,11 +447,39 @@ def __output(kwargs):
 	''' Save and/or show the plot '''
 
 	if kwargs.get('save'):
-		plt.savefig(kwargs.pop('save'))
+		filename = kwargs.pop('save')
+		if filename == 'auto':
+			filename = '%s_%s_%s.%s' % (q, plev, __safename(kwargs.get('name', 'unnamed')), conf.plotformat)
+		if kwargs.get('name_prefix'):
+			filename = '%s_%s' % (kwargs.pop('name_prefix'), filename)
+
+		plt.savefig('%s/%s' % (conf.plotpath, filename) )
+	
 	if kwargs.pop('show'):
 		plt.show()
 	
 	return
+
+
+def __safename(name):
+	''' Make a plot name suitable and safe to be used as a file name segment '''
+
+	name = name.lower()
+	
+	# Month names to numbers for sorting
+	to_replace = {'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'mai': '05', 'jun': '06',
+			'jul', '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec', '12'}
+	# Replace some critical characters
+	to_replace.update({u'æ': 'ae', u'ø': 'oe', u'å': 'aa', u'ä': 'ae', u'ö': 'oe', u'ü', 'ue', u'ß': 'ss'})
+
+	for from_, to in to_replace:
+		name = name.replace(from_, to)
+	
+	# Remove anything else that does not fit in the set {A-Z, a-z, 0-9, _, -, @}
+	name = re.sub('([^A-Za-z0-9_\-@]+)', '_', name)
+
+	return name
+	
 
 
 ###############################################
@@ -628,12 +566,9 @@ def map_overlay_dat(dat, static, **kwargs):
 
 	kwargs = __line_prepare_config(kwargs)
 	
-	if static.cyclic_ew:
-		dat = concat1(dat)
-	if kwargs.get('hook'):
-		dat = kwargs.pop('hook')(dat)
-
 	def overlay(m, x, y, zorder, mask=None):
+		dat = __map_prepare_dat(dat, mask, static, kwargs)
+
 		if type(mask) == np.ndarray:
 			dat[mask] = np.nan
 		scale = kwargs.pop('scale')
@@ -818,9 +753,9 @@ def map_overlay_shading(dat, static, **kwargs):
 
 	kwargs = __prepare_config(kwargs)
 
-	dat = concat1(dat)
-
 	def overlay(m, x, y, zorder, mask=None):
+		dat = __map_prepare_dat(dat, mask, static, kwargs)
+
 		# TODO: What about an additional colorbar for this data?
 		__contourf_dat(m, x, y, dat, kwargs)
 
@@ -828,6 +763,135 @@ def map_overlay_shading(dat, static, **kwargs):
 
 	return overlay
 
+def map_overlay_barbs(u, v, static, **kwargs):  
+	''' Overlay wind barbs onto a map
+
+	Parameters
+	----------
+	u : np.ndarrays with dimensions (y,x)
+		x-component of the vector to be plotted.
+	v : np.ndarrays with dimensions (y,x)
+		y-component of the vector to be plotted.
+	static : gridlib.grid
+		Meta information about the data array, like the grid definition
+	
+	Keyword arguments
+	-----------------
+	plot arguments : all contour except ``overlay``
+		For a list of valid arguments refer to :ref:`plot configuration`.
+	
+	Returns
+	-------
+	function
+		Overlay as a callable function
+	'''
+	
+	kwargs = __line_prepare_config(kwargs)
+
+	def overlay(m, x, y, zorder, mask=None):
+		u = __map_prepare_dat(u, mask, static, kwargs)
+		v = __map_prepare_dat(v, mask, static, kwargs)
+
+		try:
+			ut,vt, xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
+		except ValueError:
+			interval = kwargs.pop('vector_space_interval', 15)
+			slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
+			ut,vt, xt,yt = m.rotate_vector(u[slc], v[slc], lon[slc], lat[slc], returnxy=True)
+		
+		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5, zorder=3)
+	
+	return overlay
+
+def map_overlay_quiver(u, v, static, **kwargs):  
+	''' Overlay quiver vectors onto a map
+
+	Parameters
+	----------
+	u : np.ndarrays with dimensions (y,x)
+		x-component of the vector to be plotted.
+	v : np.ndarrays with dimensions (y,x)
+		y-component of the vector to be plotted.
+	static : gridlib.grid
+		Meta information about the data array, like the grid definition
+	
+	Keyword arguments
+	-----------------
+	plot arguments : all contour except ``overlay``
+		For a list of valid arguments refer to :ref:`plot configuration`.
+	
+	Returns
+	-------
+	function
+		Overlay as a callable function
+	'''
+	
+	kwargs = __line_prepare_config(kwargs)
+
+	def overlay(m, x, y, zorder, mask=None):
+		u = __map_prepare_dat(u, mask, static, kwargs)
+		v = __map_prepare_dat(v, mask, static, kwargs)
+
+		try:
+			ut,vt, xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
+		except ValueError:
+			interval = kwargs.pop('vector_space_interval', 15)
+			slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
+			ut,vt, xt,yt = m.rotate_vector(u[slc], v[slc], lon[slc], lat[slc], returnxy=True)
+		
+		m.quiver(xt, yt, ut, vt, zorder=3, scale=kwargs.pop('quiver_length', None), scale_units='width')
+	
+	return overlay
+
+def map_overlay_dilatation(defabs, defang, static, **kwargs):
+	''' Overlay dilatation axes onto a map
+
+	Parameters
+	----------
+	defabs : np.ndarrays with dimensions (y,x)
+		Magnitude of the dilatation
+	defang : np.ndarrays with dimensions (y,x)
+		Orientation of the dilatation
+	static : gridlib.grid
+		Meta information about the data array, like the grid definition
+	
+	Keyword arguments
+	-----------------
+	plot arguments : all contour except ``overlay``
+		For a list of valid arguments refer to :ref:`plot configuration`.
+	
+	Returns
+	-------
+	function
+		Overlay as a callable function
+	'''
+
+	kwargs = __line_prepare_config(kwargs)
+
+	defdex = np.cos(defang[:,:]) *defabs
+	defdey = np.sin(defang[:,:]) *defabs
+	
+	def overlay(m, x, y, zorder, mask=None):
+		defdex = __map_prepare_dat(defdex, mask, static, kwargs)
+		defdey = __map_prepare_dat(defdey, mask, static, kwargs)
+
+		Nvecx = 27
+		Nvecy = 18
+
+		if hasattr(m, 'transform_vector'):
+			ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0], Nvecx, Nvecy, returnxy=True)
+			qscale = 420
+		else:
+			skipx = defdex.shape[1]/Nvecx
+			skipy = defdey.shape[0]/Nvecy
+			slc = (slice(skipy/2,None,skipy), slice(skipx/2,None,skipx))
+			ut,vt,xt,yt = defdex[slc],defdey[slc],x[slc],y[slc]
+			qscale=72
+
+		m.quiver(xt, yt, ut, vt, zorder=4, scale=qscale, alpha=0.85)
+		m.quiver(xt, yt, -ut, -vt, zorder=4, scale=qscale, alpha=0.85)
+
+	return overlay
 
 def map_overlay_latlonbox(lon0, lon1, lat0, lat1, vertices=30, **kwargs):
 	''' Overlay dots onto a map
