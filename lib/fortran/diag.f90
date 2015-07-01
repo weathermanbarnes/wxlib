@@ -1013,8 +1013,8 @@ contains
                 jac = reshape( (/ ux(t,k,j,i), vx(t,k,j,i), wx(t,k,j,i), &
                            &      uy(t,k,j,i), vy(t,k,j,i), wy(t,k,j,i), &
                            &      uz(t,k,j,i), vz(t,k,j,i), wz(t,k,j,i) /), (/ 3_ni, 3_ni /) )
-                call dgeev('N', 'V', 3_ni, jac, 3_ni, evalr, dummy0, & 
-                        & dummy1, 1_ni, evec, 3_ni, work, 102_ni, info)
+                !call dgeev('N', 'V', 3_ni, jac, 3_ni, evalr, dummy0, & 
+                !        & dummy1, 1_ni, evec, 3_ni, work, 102_ni, info)
                 ! sort eigenvalues and eigenvectors by eigenvalue
                 ! first: max
                 n = maxloc(evalr, dim=1_ni)
@@ -1398,7 +1398,7 @@ contains
        do j=2_ni,ny-1_ni
           do k=1_ni,nz  
             tem=gamma(k,j,i)%t
-            call dgeev('N','N',2,tem,2,eigensr,eigensi,dummy1,2,dummy2,2,dummy3,6,dummy4)
+            !call dgeev('N','N',2,tem,2,eigensr,eigensi,dummy1,2,dummy2,2,dummy3,6,dummy4)
             !like eigens(1:2) = eig(gamma(k,j,i)%t)
             respr(k,j,i)=eigensr(1) 
             respi(k,j,i)=eigensi(1) 

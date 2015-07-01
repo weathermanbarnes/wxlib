@@ -309,7 +309,7 @@ contains
              if ( dat(k,j,i) < thres ) cycle
              !
              hess(:,:) = reshape((/ datxx(k,j,i), datxy(k,j,i), datxy(k,j,i), datyy(k,j,i) /), (/ 2_ni, 2_ni /) )
-             call dgeev('N','V',2_ni,hess,2_ni,evalr,evali,dummy,2_ni,evec,2_ni,work,68_ni,info)
+             !call dgeev('N','V',2_ni,hess,2_ni,evalr,evali,dummy,2_ni,evec,2_ni,work,68_ni,info)
              !
              ! Minimum eigenvalue: Largest negative curvature
              minidx = minloc(evalr, 1_ni)
