@@ -119,7 +119,6 @@ def metopen(filename, q, verbose=False, no_dtype_conversion=False, no_static=Fal
 		if not no_static:
 			if not static:
 				static = get_static(verbose, no_dtype_conversion)
-						
 		else:
 			return f, dat
 
@@ -416,15 +415,18 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, qu
 				print "Reading from "+conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}
 			if type(dat) == type(None):
 				if kwargs.get('no_static', False):
-					f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
+					f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, **kwargs)
+					d = d[cut] # TODO: Reintroduce cut to metopen for the first dimension
 					static = None
 				else:
-					f, d, static = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
+					f, d, static = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, **kwargs)
+					d = d[cut] # TODO: Reintroduce cut to metopen for the first dimension
 					kwargs['no_static'] = True
 				s = tuple([1+tsmax-tsmin,len(plevs)] + list(d.shape)[1:])
 				dat = np.empty(s, dtype=d.dtype)
 			else:
-				f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
+				f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, **kwargs)
+				d = d[cut] # TODO: Reintroduce cut to metopen for the first dimension
 			dat[datcut,i,::] = d
 			i += 1
 

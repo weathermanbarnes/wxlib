@@ -31,7 +31,7 @@ def _find_scale(lthres, uthres, target_steps, symmetric_zero, intervals=DEFAULT_
 	It takes into account the given intervals and the given target amount of steps. 
 	'''
 
-	if not type(intervals) == np.ndarray and not type(intervals) == list:
+	if not type(intervals) in [np.ndarray, list, tuple]:
 		interval = intervals
 	elif len(intervals) == 1:
 		interval = intervals[0]

@@ -15,6 +15,7 @@ These functions have two main aims:
 
 
 import copy
+import re
 
 import numpy as np
 import scipy.interpolate as intp
@@ -74,7 +75,7 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	'''
 
 	# 1a. Prepare
-	kwargs = __prepare_config(kwargs)
+	plev, q, kwargs = __prepare_config(kwargs)
 	kwargs_map = copy.copy(kwargs)
 	mask = __map_create_mask(static, kwargs)
 	
@@ -142,7 +143,7 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	# 3. Finish off
 	# TODO: How to meaningfully replace x,y? Currently the mark feature is broken for sections
 	__decorate(m, static, None, slice(None), kwargs)
-	__output(kwargs)
+	__output(plev, q, kwargs)
 
 	return
 
@@ -170,7 +171,7 @@ def map(dat, static, **kwargs):
 	'''
 
 	# 1. Prepare
-	kwargs = __prepare_config(kwargs)
+	plev, q, kwargs = __prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
 
 	dat = __map_prepare_dat(dat, mask, static, kwargs)
@@ -182,7 +183,7 @@ def map(dat, static, **kwargs):
 
 	# 3. Finish off
 	__decorate(m, x, y, mask, kwargs)
-	__output(kwargs)
+	__output(plev, q, kwargs)
 
 	return
 
@@ -233,7 +234,7 @@ def setup(**kwargs):
 	# Use the aspect ratio of the projection (if given, otherwise 1.5 is used) 
 	# to find a good image size
 	if type(figsize) == int or type(figsize) == float:
-		aspect = getattr(m,'aspect', 1.5)
+		aspect = getattr(kwargs.get('m'),'aspect', 1.5)
 		height = round(np.sqrt(figsize/aspect),1)
 		figsize = (aspect*height, height)
 
@@ -265,17 +266,17 @@ def __prepare_config(kwargs):
 	''' Make sure kwargs contains a complete contourf plot configuration, 
 	filling undefined keys from the dynlib configuration.'''
 
-	plev = kwargs.get('plev', None)
+	plev = kwargs.pop('plev', None)
 	q = kwargs.pop('q', None)
 	kwargs = conf.plot.merge(plev, q, **kwargs)
 	
-	return kwargs
+	return plev, q, kwargs
 
 def __line_prepare_config(kwargs):
 	''' Make sure kwargs contains a complete contour plot configuration, 
 	filling undefined keys from the dynlib configuration.'''
 
-	plev = kwargs.get('plev', None)
+	plev = kwargs.pop('plev', None)
 	q = kwargs.pop('q', None)
 	kwargs = conf.plot.merge(plev, q, **kwargs)
 	
@@ -409,7 +410,7 @@ def __contourf_dat(m, x, y, dat, kwargs):
 def __decorate(m, x, y, mask, kwargs):
 	''' Add "decorations": colorbar, legends, overlays and a title'''
 
-	if not kwargs.pop('disable_cb'):
+	if not kwargs.pop('cb_disable'):
 		orient = kwargs.pop('cb_orientation')
 		spacing = kwargs.pop('cb_tickspacing')
 		shrink = kwargs.pop('cb_shrink')
@@ -443,7 +444,7 @@ def __decorate(m, x, y, mask, kwargs):
 	
 	return
 
-def __output(kwargs):
+def __output(plev, q, kwargs):
 	''' Save and/or show the plot '''
 
 	if kwargs.get('save'):
@@ -472,7 +473,7 @@ def __safename(name):
 	# Replace some critical characters
 	to_replace.update({u'æ': 'ae', u'ø': 'oe', u'å': 'aa', u'ä': 'ae', u'ö': 'oe', u'ü': 'ue', u'ß': 'ss'})
 
-	for from_, to in to_replace:
+	for from_, to in to_replace.items():
 		name = name.replace(from_, to)
 	
 	# Remove anything else that does not fit in the set {A-Z, a-z, 0-9, _, -, @}
@@ -567,14 +568,14 @@ def map_overlay_dat(dat, static, **kwargs):
 	kwargs = __line_prepare_config(kwargs)
 	
 	def overlay(m, x, y, zorder, mask=None):
-		dat = __map_prepare_dat(dat, mask, static, kwargs)
+		dat_ = __map_prepare_dat(dat, mask, static, kwargs)
 
 		if type(mask) == np.ndarray:
-			dat[mask] = np.nan
+			dat_[mask] = np.nan
 		scale = kwargs.pop('scale')
 		if scale == 'auto':
-			scale = autoscale(dat, **kwargs)
-		cs =  m.contour(x, y, dat, scale, latlon=True, **kwargs)
+			scale = autoscale(dat_, **kwargs)
+		cs =  m.contour(x, y, dat_, scale, latlon=True, **kwargs)
 
 		labels = kwargs.pop('contour_labels')
 		if labels:
