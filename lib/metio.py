@@ -33,8 +33,7 @@ dynlib_version = (''.join(dynfor.consts.version)).strip()
 # 
 
 # TODO: Restrict the expected file types by providing a file name extension
-# TODO: Allow usage without directly requesting a variable, making q optional.
-def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=False, no_static=False):
+def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversion=False, no_static=False):
 	''' Find and open files by name
 	
 	Uses the conf.datapath list to locale files in a variety of different locations.
@@ -45,33 +44,33 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 	Parameters
 	----------
 	filename : str
-		The name of the file, excluding the file ending.
+	    The name of the file, excluding the file ending.
 	q : str
-		The requested variable within the file.
+	    *Optional*. The requested variable within the file.
 	cut : slice
 	    *Optional*, default ``slice(None)``. Limit the request to a given time slice. 
 	    With the default data layout, only relevant data needs to be read when only 
 	    a time slice of the entire data is requested. Hence, using cut to limit your 
 	    data request can make reading the data largely more efficient.
 	verbose : bool
-		*Optional*, default ``False``. Print debug information on which files are 
-		being looked for.
+	    *Optional*, default ``False``. Print debug information on which files are 
+	    being looked for.
 	no_dtype_conversion : bool
-		*Optional*, default ``False``. By default, ``metopen`` uncompresses data in the 
-		file and converts all data to float64. This behaviour can be suppressed by 
-		setting this option to ``True``.
+	    *Optional*, default ``False``. By default, ``metopen`` uncompresses data in the 
+	    file and converts all data to float64. This behaviour can be suppressed by 
+	    setting this option to ``True``.
 	no_static : 
-		*Optional*, default ``False``. By default, ``metopen`` does its best to 
-		provide meta-information about the requested file, using 
-		:module:`grid.gridlib`, and returns the meta-information as a third value. 
-		This behaviour can be suppressed by setting this parameter to ``True``.
+	    *Optional*, default ``False``. By default, ``metopen`` does its best to 
+	    provide meta-information about the requested file, using 
+	    :module:`grid.gridlib`, and returns the meta-information as a third value. 
+	    This behaviour can be suppressed by setting this parameter to ``True``.
 	
 	Returns
 	-------
 	data file object
 		python data, netCDF or Matlab file object.
 	np.ndarray
-		Requested data.
+		If q given, data of the requested variable.
 	grid.gridlib
 		If ``no_static=False`` meta-information about the requested data.
 	'''
@@ -87,51 +86,64 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 			print 'Trying: '+path+'/'+filename+'.*'
 
 		if os.path.exists(path+'/'+filename+'.npy'):
-			dat = np.load(path+'/'+filename+'.npy', mmap_mode='r')
-			dat = dat[cut]
+			if q:
+				dat = np.load(path+'/'+filename+'.npy', mmap_mode='r')
+				dat = dat[cut]
 			print 'Found '+path+'/'+filename+'.npy'
 			f = None
 		elif os.path.exists(path+'/'+filename+'.npz'):
-			f   = np.load(path+'/'+filename+'.npz')
-			if q not in f.files:
-				tried.append(path+'/'+filename+'.npz')
-				continue
-			dat = f[q][cut]
+			f = np.load(path+'/'+filename+'.npz')
+			if q:
+				if q not in f.files:
+					tried.append(path+'/'+filename+'.npz')
+					continue
+				dat = f[q][cut]
 			print 'Found '+path+'/'+filename+'.npz'
 		elif os.path.exists(path+'/'+filename+'.mat'):
-			f   = mat.loadmat(path+'/'+filename+'.mat')
-			if q not in f:
-				tried.append(path+'/'+filename+'.mat')
-				continue
-			dat = f[q][cut]
+			f = mat.loadmat(path+'/'+filename+'.mat')
+			if q:
+				if q not in f:
+					tried.append(path+'/'+filename+'.mat')
+					continue
+				dat = f[q][cut]
 			print 'Found '+path+'/'+filename+'.mat'
 		elif os.path.exists(path+'/'+filename+'.nc'):
 			#f   = nc.netcdf_file(path+'/'+filename+'.nc', 'r')
 			f   = nc.NetCDFFile(path+'/'+filename+'.nc', 'r')
-			var = f.variables[q]
-			if q not in f.variables:
-				tried.append(path+'/'+filename+'.nc')
-				continue
-			dat = utils.scale(var, cut=cut)
+			if q:
+				var = f.variables[q]
+				if q not in f.variables:
+					tried.append(path+'/'+filename+'.nc')
+					continue
+				dat = utils.scale(var, cut=cut)
+			else:
+				var = None
+
 			if not no_static:
 				static = grid_by_nc(f, var)
 				# TODO: Where to search for topography in nc files?
 				static.oro = np.zeros((static.ny, static.nx))
+
 			print 'Found '+path+'/'+filename+'.nc'
 		else:
 			tried.append(path)
 			continue
 		
-		if not no_dtype_conversion:
+		if q and not no_dtype_conversion:
 			dat = dat.astype('f8')
 
 		if not no_static:
 			if not static:
 				static = get_static(verbose, no_dtype_conversion)
 		else:
-			return f, dat
-
-		return f, dat, static
+			if q:
+				return f, dat
+			else:
+				return f
+		if q:
+			return f, dat, static
+		else:
+			return f, static
 	
 	raise RuntimeError, '%s.* not found in any data location. \nTried the following (in order):\n\t%s' % (filename, '\n\t'.join(tried))
 

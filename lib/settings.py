@@ -557,7 +557,7 @@ PLOT_DEFAULTS = {
 	'name_prefix': '',
 	'oroalpha': 0.4, 
 	'orocolor': 'k', 
-	'oroscale': np.arange(1000,9000,1000),
+	'oroscale': np.arange(1000,9000,1000)*9.81,
 	'overlays': (), 
 	'save': '', 
 	'scale': 'auto', 
