@@ -408,8 +408,6 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, quiet=False, force=False
 		# One or more vertical levels?
 		i = 0
 		for plev in plevs:
-			if not quiet:
-				print "Reading from "+conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}
 			if type(dat) == type(None):
 				if kwargs.get('no_static', False):
 					f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
