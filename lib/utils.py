@@ -20,7 +20,7 @@ import calendar
 
 
 
-def scale(var):
+def scale(var, cut=slice(None)):
 	""" Automatic scaling according to netcdf attributes `scale_factor` and `add_offset`
 
 	Parameters
@@ -36,10 +36,10 @@ def scale(var):
 	"""
 	if hasattr(var, 'scale_factor') or hasattr(var, 'add_offset'):
 		# Python/numpy version is faster than Fortran function
-		var = var[::]*var.scale_factor + var.add_offset
+		var = var[cut]*var.scale_factor + var.add_offset
 	
 	else:
-		var = var[::]
+		var = var[cut]
 	
 	return var
 
