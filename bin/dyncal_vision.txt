@@ -1,0 +1,164 @@
+dyncal - A command line interface to dynlib.
+
+New paradigmas: 
+	Contexts: default, ERAI, ERA40, forecasts, <user-defined>
+		* Should correspond more or less to the current settings.py infrastructure.
+		* But: should also include the current ``static'' information.
+		* All centrally available datasets should provide a context.
+		* Contexts should be inheritable.
+	conf.plotpath;
+		* As conf.opath just used only for plots.
+	time:
+		* Should become a string to allow for example '1979-1984' or '2003.01'
+	
+Available functions:
+	Everything in dynlib
+
+Actions: 
+	Autoplot
+	Autosave
+
+
+Syntax examples:
+
+dyncal diag okubo_weiss
+dyncal detect fronts --plotpath=/path/to/plotdir --savepath=/path/to/datadir
+dyncal eof -q=jetaxis --context my_ERA40
+dyncal aggregate cal_weekly -q=u,v --context=/path/to/context
+dyncal composite NAO -q=defabs,defang [<context implicit by working directory>]
+dyncal -q defabs -l 300,800 -t 2013.01 -p
+
+
+Parameters:
+
+# Actions
+-p --plotpath
+-s --savepath
+-f --saveformat [netCDF/nc, Matlab/mat, python/npy]
+-h --help
+
+# Configuration in one.
+-c --context
+
+# Overrides
+-q --variable(s)
+-l --level(s)
+-t --time(start,end)
+
+
+-----------------------------------------------
+
+defpie future
+
+basic_confidence.py 			dyncal (dynlib:stats.basic_confidence, python)
+basic_stats.py 				dyncal (dynlib:stats.basic, python)
+block_mask.py 				dyncal (dynlib:utils.mask_minimum_connect, python:integrated block detection)
+block_persistence.py 			dyncal (python:integrated block detection)
+block.py 				dyncal (dynlib:detect; to be moved to dynlib:diag)
+composite_builder.py 			dynpie
+composite_decider.py 			dynpie
+composite_merge.py 			dyncal
+composite.py 				dyncal / {paperlib}
+composite_significance.py 		dyncal (python)
+composite_tests.py 			dyncal / {paperlib}
+convline_clim.py 			<obsolete -> dyncal composite>
+convline_detect.py 			dyncal (dynlib:detect)
+correlate_ts.py 			dynpie:utils (merge with eof_correl?)
+decider.py 				<obsolete>
+def3d.py 				dyncal (dynlib:diag)
+deformation_avg.py 			<obsolete -> dynpie:utils.aggregate / dynlib:utils.smooth_xy>
+deformation.py 				dyncal (dynlib:diag)
+eof_correl.py 				dynpie:utils (merge with correlate_ts?)
+eof_proj2.py 				dynpie / dyncal (rename)
+eof_proj.py 				dynpie / dyncal (dynlib:utils.regress)
+eof.py 					dynpie / dyncal
+extract_agg.py 				dyncal (dynpie:utils.aggregate, <dynlib:detect>)
+extract_grad_shear_samples.py 		{paperlib}
+extract_threshold.py 			dynpie
+extract_timeseries.py 			dynpie
+front_clim.py 				dyncal (dynlib:detect.fronts, merge with front_detect2.py)
+front_detect2.py 			dyncal (dynlib:detect.fronts, python, merge with front_clim.py)
+front_detect.py 			dyncal (dynlib:detect)
+front.py 				dyncal (dynlib:diag.front_intensity_speed)
+geopfmont.py 				dyncal (dynlib:diag.geop_from_montgp)
+jetaxis_diff.py 			{paperlib}
+jetaxis_hist.py 			{paperlib} (rename)
+jetaxis_split.py 			dynpie:lineutils / {paperlib}
+jetaxis_trace_origin.py 		dynpie:lineutils / {paperlib}
+okubo.py 				dyncal (dynlib:diag.okuboweiss)
+plot_2d_hist.py 			{paperlib}
+plot_all_deform.py 			dyncal -p
+plot_all_q.py 				dyncal -p
+plot_auheat.py 				? <obsolete> | {paperlib} (merge with plot_{eu|ru|RU}heat.py)
+plot_composites.py 			dyncal -p / {paperlib}
+plot_composites_thomas.py 		<obsolete>
+plot_contributing_deform.py 		{paperlib} (rename)
+plot_contributing_q.py 			{paperlib} (rename)
+plot_eofidx.py 				{paperlib} (rename)
+plot_eof.py 				dyncal -p / {paperlib}
+plot_euheat.py 				? <obsolete> | {paperlib} (merge with plot_{au|ru|RU}heat.py)
+plot_front_reasoning.py 		{paperlib}
+plot_hov.py 				{genlib}
+plot_instantaneous_barb.py 		dyncal -p / {genlib} / {paperlib} (merge with plot_instantaneous_{deform|q}.py) 
+plot_instantaneous_deform.py 		dyncal -p / {genlib} / {paperlib} (merge with plot_instantaneous_{barb|q}.py)
+plot_instantaneous_q.py 		dyncal -p / {genlib} / {paperlib} (merge with plot_instantaneous_{deform|barb}.py)
+plot_instantaneous_sect_q.py 		{genlib} / {paperlib}
+plot_jetaxis_agg.py 			dyncal -p / {paperlib}
+plot_jetaxis_diff.py 			{paperlib}
+plot_jetaxis_origin.py 			{paperlib}
+plot_jetaxis_reasoning.py 		{paperlib}
+plot_mjo.py 				{paperlib}
+plot_ruheat.py 				{paperlib} (merge with plot_{au|eu|RU}heat.py)
+plot_ts.py 				{genlib} (rename)
+plot_winter2014_phases_q.py 		{paperlib}
+pvfrontogen.py 				dyncal (dynlib:diag.stretch_stir)
+qfrontogen.py 				dyncal (dynlib:diag.stretch_stir)
+recalc_mfv_from_hist.py 		{paperlib}
+rwb_detect.py 				<obsolete> (contains front_detect.py)
+tend_defabs_pres.py 			dyncal (dynlib:diag.tend_def_total_pres)
+tend_def_pres.py 			{paperlib}
+thetaefrontogen.py 			dyncal (dynlib:diag.stretch_stir, dynlib:humidity.thetae_from_q)
+vertdiff.py 				{paperlib} (rename)
+vertint.py 				{paperlib} (rename)
+
+
+
+-----------------------------------------------
+
+To think about:
+
+aggregated file structure?
+ -> default: netCDF file as all others; 
+ -> But how to do time segmentation?
+ 	ei.ans.1979-1995.pv2000.jetaxis_freq.agg_3d.nc
+
+composite file structure?
+ -> default: netCDF files as all others;
+ -> Is it meaningful to separate files by variables?
+	ei.ans.1979-2013.pv2000.jetaxis_freq.composite_NAO@DJF.nc
+    Pro:
+    	(1) Equivalent structure to agg/mstat file names
+	(2) Makes composite_merge.py obsolete
+    Con:
+    	(1) Many files.
+	(2) Longer file names.
+
+new mstat file name conventions
+	ei.ans.2008.pv2000.u.stats.nc
+ 	ei.ans.1979-2013.pv2000.u.stats.nc
+
+metainformation in npz/mat files?
+ -> Common interface for metopen/metsave?
+ -> Potential to avoid the stupid static.npz?
+
+Remove utils.call?
+
+Documentation?
+ -> Where to document the Fortran subroutines?
+ -> How to auto-create documentation?
+ -> How to make the documentation available via dyncal --help?
+ -> How to make the documentation available via python introspection?
+
+Structure of the modules;
+ -> Should dynlib.dynlib.diag become dynlib.diag?
+ -> How to enable direct imports of dynlib[.dynlib].diag?
