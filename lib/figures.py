@@ -142,7 +142,7 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 
 	# 3. Finish off
 	# TODO: How to meaningfully replace x,y? Currently the mark feature is broken for sections
-	__decorate(m, static, None, slice(None), kwargs)
+	__decorate(m, static, None, slice(None), plev, q, kwargs)
 	__output(plev, q, kwargs)
 
 	return
@@ -182,7 +182,7 @@ def map(dat, static, **kwargs):
 	__contourf_dat(m, x, y, dat, kwargs)
 
 	# 3. Finish off
-	__decorate(m, x, y, mask, kwargs)
+	__decorate(m, x, y, mask, plev, q, kwargs)
 	__output(plev, q, kwargs)
 
 	return
@@ -223,13 +223,11 @@ def setup(**kwargs):
 	bottom = 0.01
 
 	figsize = kwargs.pop('fig_size')
-	dpi = kwargs.pop('fig_dpi')
+	dpi = kwargs.get('fig_dpi')
 
-	# Default size: 10 in² for 300dpi gives about 1 MPixels rasterised image.
-	# The scaling with dpi is to ,ake sure the image size in pixels stays about 
-	# constant when fig_dpi is changed
+	# Default size: 32 in² at 150dpi gives about 20x20cm image at typical screen resolutions of 100 dpi
 	if figsize == 'auto':
-		figsize = 10.0 * (300.0 / dpi)**2.0
+		figsize = 32.0 
 	
 	# Use the aspect ratio of the projection (if given, otherwise 1.5 is used) 
 	# to find a good image size
@@ -240,7 +238,7 @@ def setup(**kwargs):
 
 	elif not type(figsize) == tuple: 
 		raise ValueError, "fig_size must be either the string 'auto', a number or a tuple."
-	
+
 	# Adapt figure size automatically if a color bar is added
 	if not kwargs.get('cb_disabled'): 
 		expand = kwargs.get('cb_expand_fig_fraction')
@@ -251,7 +249,7 @@ def setup(**kwargs):
 	
 	# Adapt figure size and top margin automatically if a title is added
 	if kwargs.get('title'):
-		titlesize = 0.4 	# height of the title in inches
+		titlesize = 0.3 	# height of the title in inches
 
 		height = figsize[1]
 		top = height*top / (height + titlesize)
@@ -268,7 +266,7 @@ def __prepare_config(kwargs):
 
 	plev = kwargs.pop('plev', None)
 	q = kwargs.pop('q', None)
-	kwargs = conf.plot.merge(plev, q, **kwargs)
+	kwargs = conf.plotf.merge(plev, q, **kwargs)
 	
 	return plev, q, kwargs
 
@@ -407,7 +405,7 @@ def __contourf_dat(m, x, y, dat, kwargs):
 	
 	return
 
-def __decorate(m, x, y, mask, kwargs):
+def __decorate(m, x, y, mask, plev, q, kwargs):
 	''' Add "decorations": colorbar, legends, overlays and a title'''
 
 	if not kwargs.pop('cb_disable'):
@@ -440,7 +438,13 @@ def __decorate(m, x, y, mask, kwargs):
 				edgecolors='k', linewidths=3, zorder=3)
 	
 	if kwargs.get('title'):
-		plt.title(kwargs.pop('title'))
+		title = kwargs.pop('title')
+		if title == 'auto':
+			title = '%s @ %s' % (conf.q_long[q], plev)
+			if kwargs.get('name'):
+				title += ' for %s' % kwargs.get('name')
+
+		plt.title(title)
 	
 	return
 
@@ -454,7 +458,7 @@ def __output(plev, q, kwargs):
 		if kwargs.get('name_prefix'):
 			filename = '%s_%s' % (kwargs.pop('name_prefix'), filename)
 
-		plt.savefig('%s/%s' % (conf.plotpath, filename) )
+		plt.savefig('%s/%s' % (conf.plotpath, filename), dpi=kwargs.pop('fig_dpi'))
 	
 	if kwargs.pop('show'):
 		plt.show()

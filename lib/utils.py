@@ -20,7 +20,7 @@ import calendar
 
 
 
-def scale(var):
+def scale(var, cut=slice(None)):
 	""" Automatic scaling according to netcdf attributes `scale_factor` and `add_offset`
 
 	Parameters
@@ -28,6 +28,11 @@ def scale(var):
 
 	var : nc.NetCDFVariable
 	    The variable to be scaled
+	cut : slice
+	    *Optional*, default ``slice(None)``. Limit the request to a given time slice. 
+	    With the default data layout, only relevant data needs to be read when only 
+	    a time slice of the entire data is requested. Hence, using cut to limit your 
+	    data request can make reading the data largely more efficient.
 	
 	Returns
 	-------
@@ -36,10 +41,10 @@ def scale(var):
 	"""
 	if hasattr(var, 'scale_factor') or hasattr(var, 'add_offset'):
 		# Python/numpy version is faster than Fortran function
-		var = var[::]*var.scale_factor + var.add_offset
+		var = var[cut]*var.scale_factor + var.add_offset
 	
 	else:
-		var = var[::]
+		var = var[cut]
 	
 	return var
 

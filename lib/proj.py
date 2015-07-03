@@ -22,9 +22,9 @@ def world():
 		map projection instance
 	'''
 
-	m = Basemap(projection='robin',lon_0=0,resolution='c', area_thresh=50000)
-	m.aspect = 1.5
-	return m
+	return Basemap(projection='robin',lon_0=0,resolution='c', area_thresh=50000)
+
+world.aspect = 1.5
 
 # (b) Northern polar centered map
 def n_hemisphere():
@@ -35,9 +35,10 @@ def n_hemisphere():
 	Basemap
 		map projection instance
 	'''
-	m = Basemap(projection='npstere',boundinglat=10,lon_0=-50,resolution='c', area_thresh=50000)
-	m.aspect = 1.0
-	return m
+
+	return Basemap(projection='npstere',boundinglat=10,lon_0=-50,resolution='c', area_thresh=50000)
+
+n_hemisphere.aspect = 1.0
 
 # (c) Southern polar centered map
 def s_hemisphere():
@@ -48,9 +49,10 @@ def s_hemisphere():
 	Basemap
 		map projection instance
 	'''
-	m = Basemap(projection='spstere',boundinglat=-10,lon_0=0,resolution='c', area_thresh=50000)
-	m.aspect = 1.0
-	return m
+	
+	return Basemap(projection='spstere',boundinglat=-10,lon_0=0,resolution='c', area_thresh=50000)
+
+s_hemisphere.aspect = 1.0
 
 # (d) North-Atlantic map
 def N_Atlantic():
@@ -61,10 +63,11 @@ def N_Atlantic():
 	Basemap
 		map projection instance
 	'''
-	m = Basemap(projection='lcc', lat_0=55, lat_ts=55, lon_0=-30, resolution='l', 
+
+	return Basemap(projection='lcc', lat_0=55, lat_ts=55, lon_0=-30, resolution='l', 
 			width=9000000, height=6000000)
-	m.aspect = 1.5
-	return m
+
+N_Atlantic.aspect = 1.5
 
 # (e) North-Pacific map
 def N_Pacific():
@@ -75,10 +78,11 @@ def N_Pacific():
 	Basemap
 		map projection instance
 	'''
-	m = Basemap(projection='lcc', lat_0=50, lat_ts=50, lon_0=-180, resolution='l', 
+
+	return Basemap(projection='lcc', lat_0=50, lat_ts=50, lon_0=-180, resolution='l', 
 			width=9000000, height=6000000)
-	m.aspect = 1.5
-	return m
+
+N_Pacific.aspect = 1.5
 
 # (f) Australia map
 def Australia():
@@ -89,9 +93,10 @@ def Australia():
 	Basemap
 		map projection instance
 	'''
-	m = Basemap(projection='lcc', lat_0=-35, lat_ts=-35, lon_0=120, resolution='l', 
+	
+	return Basemap(projection='lcc', lat_0=-35, lat_ts=-35, lon_0=120, resolution='l', 
 			width=12000000, height=8000000)
-	m.aspect = 1.5
-	return m
+
+Australia.aspect = 1.5
 
 # the end

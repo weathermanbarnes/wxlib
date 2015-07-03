@@ -49,10 +49,10 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 	q : str
 		The requested variable within the file.
 	cut : slice
-		Limit the request to a given time slice. With the default data layout, only 
-	    relevant data needs to be read when only a time slice of the entire data is 
-	    requested. Hence, using cut to limit your data request can make reading the
-	    data largely more efficient.
+	    *Optional*, default ``slice(None)``. Limit the request to a given time slice. 
+	    With the default data layout, only relevant data needs to be read when only 
+	    a time slice of the entire data is requested. Hence, using cut to limit your 
+	    data request can make reading the data largely more efficient.
 	verbose : bool
 		*Optional*, default ``False``. Print debug information on which files are 
 		being looked for.
@@ -112,7 +112,7 @@ def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=Fal
 			if q not in f.variables:
 				tried.append(path+'/'+filename+'.nc')
 				continue
-			dat = utils.scale(var[cut])
+			dat = utils.scale(var, cut=cut)
 			if not no_static:
 				static = grid_by_nc(f, var)
 				# TODO: Where to search for topography in nc files?
@@ -308,7 +308,7 @@ def get_static(verbose=False, no_dtype_conversion=False):
 	Returns
 	-------
 	'''
-	fo, oro = metopen('static', 'oro', verbose, no_dtype_conversion, True)
+	fo, oro = metopen(conf.file_static, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, no_static=True)
 	static = grid_by_static(fo)
 	static.oro = oro[::]
 	fo.close()

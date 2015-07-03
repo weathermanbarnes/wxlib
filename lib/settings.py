@@ -540,13 +540,13 @@ class settings_obj(default_dict):
 # such that they cannot be changed in place
 PLOT_DEFAULTS = {
 	'cb_disable': False, 
-	'cb_expand_fig_fraction': 0.15,
+	'cb_expand_fig_fraction': 0.10,
 	'cb_orientation': 'horizontal',
 	'cb_tickspacing': 'proportional',
 	'cb_shrink': 0.8,
 	'coastcolor': 'k', 
 	'fig_size': 'auto',
-	'fig_dpi': 300,
+	'fig_dpi': 150,
 	'gridcolor': 'k',
 	'hatches': (),
 	'hook': None,
