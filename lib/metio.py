@@ -34,7 +34,7 @@ dynlib_version = (''.join(dynfor.consts.version)).strip()
 
 # TODO: Restrict the expected file types by providing a file name extension
 # TODO: Allow usage without directly requesting a variable, making q optional.
-def metopen(filename, q, verbose=False, no_dtype_conversion=False, no_static=False):
+def metopen(filename, q, cut=slice(None), verbose=False, no_dtype_conversion=False, no_static=False):
 	''' Find and open files by name
 	
 	Uses the conf.datapath list to locale files in a variety of different locations.
@@ -48,6 +48,11 @@ def metopen(filename, q, verbose=False, no_dtype_conversion=False, no_static=Fal
 		The name of the file, excluding the file ending.
 	q : str
 		The requested variable within the file.
+	cut : slice
+		Limit the request to a given time slice. With the default data layout, only 
+	    relevant data needs to be read when only a time slice of the entire data is 
+	    requested. Hence, using cut to limit your data request can make reading the
+	    data largely more efficient.
 	verbose : bool
 		*Optional*, default ``False``. Print debug information on which files are 
 		being looked for.
@@ -71,6 +76,9 @@ def metopen(filename, q, verbose=False, no_dtype_conversion=False, no_static=Fal
 		If ``no_static=False`` meta-information about the requested data.
 	'''
 	
+	if not type(cut) == slice:
+		raise ValueError, 'cut must be a 1-dimensional slice object' 
+	
 	tried = []
 	for path in conf.datapath:
 		static = None
@@ -80,6 +88,7 @@ def metopen(filename, q, verbose=False, no_dtype_conversion=False, no_static=Fal
 
 		if os.path.exists(path+'/'+filename+'.npy'):
 			dat = np.load(path+'/'+filename+'.npy', mmap_mode='r')
+			dat = dat[cut]
 			print 'Found '+path+'/'+filename+'.npy'
 			f = None
 		elif os.path.exists(path+'/'+filename+'.npz'):
@@ -87,14 +96,14 @@ def metopen(filename, q, verbose=False, no_dtype_conversion=False, no_static=Fal
 			if q not in f.files:
 				tried.append(path+'/'+filename+'.npz')
 				continue
-			dat = f[q]
+			dat = f[q][cut]
 			print 'Found '+path+'/'+filename+'.npz'
 		elif os.path.exists(path+'/'+filename+'.mat'):
 			f   = mat.loadmat(path+'/'+filename+'.mat')
 			if q not in f:
 				tried.append(path+'/'+filename+'.mat')
 				continue
-			dat = f[q]
+			dat = f[q][cut]
 			print 'Found '+path+'/'+filename+'.mat'
 		elif os.path.exists(path+'/'+filename+'.nc'):
 			#f   = nc.netcdf_file(path+'/'+filename+'.nc', 'r')
@@ -103,7 +112,7 @@ def metopen(filename, q, verbose=False, no_dtype_conversion=False, no_static=Fal
 			if q not in f.variables:
 				tried.append(path+'/'+filename+'.nc')
 				continue
-			dat = utils.scale(var)
+			dat = utils.scale(var[cut])
 			if not no_static:
 				static = grid_by_nc(f, var)
 				# TODO: Where to search for topography in nc files?
@@ -158,7 +167,7 @@ def metsave(dat, static, time, plev, q, q_units=None, compress_to_short=True):
 		raise NotImplementedError, 'dat does not seem to be a ERA-Interim like (t,y,x)-array.'
 	
 	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc3.netcdf_file(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'q': conf.qf[q]})+'.nc', 'w')
+	of = nc3.netcdf_file(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'q': conf.qi[q]})+'.nc', 'w')
 	of._attributes = {'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	}
@@ -230,7 +239,7 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 		raise RuntimeError, 'dat does not have size 3 in the third dimension'
 
 	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc3.netcdf_file(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'q': conf.qf[q]})+'.nc', 'w')
+	of = nc3.netcdf_file(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'q': conf.qi[q]})+'.nc', 'w')
 	of._attributes = {'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	}
@@ -314,7 +323,7 @@ def get_static(verbose=False, no_dtype_conversion=False):
 
 # TODO: Generalize this function to work on any (constant) input data interval. 
 # Or possibly any input data, even with irregular time axis?
-def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, quiet=False, force=False, **kwargs):
+def get_instantaneous(q, dates, plevs=None, tavg=False, quiet=False, force=False, **kwargs):
 	''' Data fetcher for instantaneous or short-term averaged fields
 
 	Allows general data requests in the configured data base, e.g. ERA-Interim. The request
@@ -334,10 +343,6 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, qu
 		*Optional*, defaults to all available pressure levels. The string representation
 		of the requested vertical level(s), e.g. ``'700'`` for 700 hPa or ``'pv2000'`` 
 		for the PV2-surface.
-	yidx : np.ndarray or slice
-		*Optional*. Restrict the output to the given set or range of y-indexes.
-	xidx : np.ndarray or slice
-		*Optional*. Restrict the output to the given set or range of x-indexes.
 	tavg : bool
 		*Optional*, default ``False``. Instead of returning a time-dimension, return
 		the temporal average of the requested data.
@@ -359,20 +364,6 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, qu
 		plevs = conf.plevs
 	elif not type(plevs) == np.ndarray and not type(plevs) == list:
 		plevs = [plevs,]
-	
-	if type(yidx) == np.ndarray:
-		yidxs = yidx
-	elif yidx == None:
-		yidxs = slice(None)
-	else:
-		yidxs = yidx
-	
-	if type(xidx) == np.ndarray:
-		xidxs = xidx
-	elif xidx == None:
-		xidxs = slice(None)
-	else:
-		xidxs = xidx
 	
 	dt0 = dt(1979,1,1,0)
 	# Convert dates to time indexes
@@ -400,31 +391,25 @@ def get_instantaneous(q, dates, plevs=None, yidx=None, xidx=None, tavg=False, qu
 		fst = fst.days*4 + fst.seconds/21600
 		lst = lst.days*4 + lst.seconds/21600 +1
 		# Leave out unnecessary indexes for better compatibility
-		if not type(xidxs) == np.ndarray and xidxs == slice(None): 
-			if yidxs == slice(None):
-				cut = (slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst)), )
-			else:
-				cut = (slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst)), yidxs)
-		else:
-			cut = (slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst)), yidxs, xidxs)
-		datcut = slice(fst+cut[0].start-tsmin, fst+cut[0].stop-tsmin)
+		cut = slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst))
+		datcut = slice(fst+cut.start-tsmin, fst+cut.stop-tsmin)
 		
 		# One or more vertical levels?
 		i = 0
 		for plev in plevs:
 			if not quiet:
-				print "Reading from "+conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}
+				print "Reading from "+conf.file_std % {'time': year, 'plev': plev, 'q': conf.qi[q]}
 			if type(dat) == type(None):
 				if kwargs.get('no_static', False):
-					f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
+					f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qi[q]}, q, cut=cut, **kwargs)
 					static = None
 				else:
-					f, d, static = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
+					f, d, static = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qi[q]}, q, cut=cut, **kwargs)
 					kwargs['no_static'] = True
 				s = tuple([1+tsmax-tsmin,len(plevs)] + list(d.shape)[1:])
 				dat = np.empty(s, dtype=d.dtype)
 			else:
-				f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
+				f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qi[q]}, q, cut=cut, **kwargs)
 			dat[datcut,i,::] = d
 			i += 1
 
