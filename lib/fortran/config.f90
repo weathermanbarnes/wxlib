@@ -17,6 +17,10 @@ module config
           &       jetint_thres = 2.5e-4_nr, & 
           &          searchrad = 1.5_nr, & 
           &        smooth_coef = 0.25_nr, &
-          &             minlen = 1.0e6
+          &             minlen = 1.0e6, &
+          &    thres_min_slope = 1.0e-5, &
+          &    thres_max_slope = 1.0e3, &
+          &    thres_min_dzdth = 1.0e-4, &
+          &    thres_max_dzdth = 1.0e4
   integer(kind=ni) :: nsmooth = 2_ni 
 end module

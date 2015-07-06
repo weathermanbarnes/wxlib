@@ -10,10 +10,11 @@ module tend
   use kind
   use config
   use derivatives
+  use diag
   !
   implicit none
   !
-  real(kind=nr), allocatable :: dzdth(:,:,:,:), slope(:,:,:,:), dzdx(:,:,:,:), dzdy(:,:,:,:)
+  real(kind=nr), allocatable :: dzdth(:,:,:,:), slope(:,:,:,:), dzdx(:,:,:,:), dzdy(:,:,:,:), w(:,:,:,:)
   integer(kind=ni) :: slope_nt=-1_ni, slope_nx=-1_ni, slope_ny=-1_ni, slope_nz=-1_ni
 contains
   !
@@ -47,7 +48,7 @@ contains
   !@ -------
   !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated tendencies of total deformation and deformation angle.
-  subroutine def_tend_adv(tendabs,tendang,nx,ny,nz,u,v,dx,dy)
+  subroutine def_adv(tendabs,tendang,nx,ny,nz,u,v,dx,dy)
     use consts
     !
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
@@ -105,7 +106,7 @@ contains
   !@ -------
   !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated tendencies of total deformation and deformation angle.
-  subroutine def_tend_adv3d(tendabs,tendang,nx,ny,nz,u,v,uz,vz,w,dx,dy)
+  subroutine def_adv3d(tendabs,tendang,nx,ny,nz,u,v,uz,vz,w,dx,dy)
     use consts
     !
     real(kind=nr), intent(in)  :: u (nz,ny,nx), v (nz,ny,nx), w(nz,ny,nx), &
@@ -165,7 +166,7 @@ contains
   !@ -------
   !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated tendencies of total deformation and deformation angle.
-  subroutine def_tend_beta(tendabs,tendang,nx,ny,nz,u,v,beta,dx,dy)
+  subroutine def_beta(tendabs,tendang,nx,ny,nz,u,v,beta,dx,dy)
     use consts
     !
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), beta(ny,nx), &
@@ -196,8 +197,10 @@ contains
   !@     U-wind velocity.
   !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     V-wind velocity.
-  !@ beta : np.ndarray with shape (ny,nx) and dtype float64
-  !@     Locally varying beta parameter.
+  !@ geop : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Geopotential or a related potential.
+  !@ fcor : np.ndarray with shape (ny,nx) and dtype float64
+  !@     Locally varying Coriolis parameter.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
   !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
@@ -219,7 +222,7 @@ contains
   !@ -------
   !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated tendencies of total deformation and deformation angle.
-  subroutine def_tend_prescor(tendabs,tendang,nx,ny,nz,u,v,geop,fcor,dx,dy)
+  subroutine def_prescor(tendabs,tendang,nx,ny,nz,u,v,geop,fcor,dx,dy)
     use consts
     !
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), geop(nz,ny,nx), &
@@ -283,7 +286,7 @@ contains
   !@ -------
   !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated tendencies of total deformation and deformation angle.
-  subroutine def_tend_tilt(tendabs,tendang,nx,ny,nz,u,v,uz,vz,w,dx,dy)
+  subroutine def_tilt(tendabs,tendang,nx,ny,nz,u,v,uz,vz,w,dx,dy)
     use consts
     !
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), &
@@ -351,8 +354,8 @@ contains
   !@ -------
   !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     The acceleration of the u and v velocity components.
-  subroutine uv_tend_prescor(resx,resy,nx,ny,nz,u,v,z,lat,dx,dy)
-    use consts!, only: pi, omega
+  subroutine uv_prescor(resx,resy,nx,ny,nz,u,v,z,lat,dx,dy)
+    use consts!, only: pi, omega_rot
     !
     real(kind=nr), intent(in)  :: u(nz,ny,nx),v(nz,ny,nx),z(nz,ny,nx),lat(ny),dx(ny,nx),dy(ny,nx)
     real(kind=nr), intent(out) :: resx(nz,ny,nx),resy(nz,ny,nx)
@@ -364,7 +367,7 @@ contains
     ! -----------------------------------------------------------------
     !
     forall(k = 1_ni:nz, i = 1_ni:nx)
-       f(k,:,i) = 2.0_nr * omega * sin(lat*pi/180._nr)
+       f(k,:,i) = 2.0_nr * omega_rot * sin(lat*pi/180._nr)
     end forall
     !
     call grad(a_pressx,a_pressy,nx,ny,nz,z,dx,dy)
@@ -404,7 +407,7 @@ contains
   !@ -------
   !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     Tendency of the slope due to frontogenesis.
-  subroutine slope_tend_fronto(tend, nx,ny,nz,nt, u,v, dx,dy)
+  subroutine slope_fronto(tend, nx,ny,nz,nt, u,v, dx,dy)
     use consts !, only: p0, kappa
     !
     real(kind=nr), intent(in) :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), &
@@ -420,7 +423,7 @@ contains
     ! -----------------------------------------------------------------
     !
     if ( slope_nt /= nt .or. slope_nz /= nz .or. slope_ny /= ny .or. slope_nx /= nx ) then
-       write(*,*) 'Input does not match prepared shape, did you forget to call slope_tend_prepare before?'
+       write(*,*) 'Input does not match prepared shape, did you forget to call slope_prepare before?'
        stop 1
     end if
     !
@@ -470,7 +473,7 @@ contains
   !@     Tendency of the slope due to full vertical motion.
   !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     Tendency of the slope due to cross-isentropic vertical motion.
-  subroutine slope_tend_tilt(tend,tend_ci, nx,ny,nz,nt, u,v, dx,dy)
+  subroutine slope_tilt(tend,tend_ci, nx,ny,nz,nt, u,v, dx,dy)
     use consts !, only: p0, kappa
     !
     real(kind=nr), intent(in) :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), &
@@ -486,7 +489,7 @@ contains
     ! -----------------------------------------------------------------
     !
     if ( slope_nt /= nt .or. slope_nz /= nz .or. slope_ny /= ny .or. slope_nx /= nx ) then
-       write(*,*) 'Input does not match prepared shape, did you forget to call slope_tend_prepare before?'
+       write(*,*) 'Input does not match prepared shape, did you forget to call slope_prepare before?'
        stop 1
     end if
     !
@@ -498,7 +501,7 @@ contains
        tend(n,:,:,:) = (dwdx * dzdx(n,:,:,:) + dwdy * dzdy(n,:,:,:))/slope(n,:,:,:)
        !
        call grad(dwdx,dwdy, nx,ny,nz, w_ci(n,:,:,:), dx,dy)
-       tend_ci = (ddx * dzdx(n,:,:,:) + ddy * dzdy(n,:,:,:))/slope(n,:,:,:)
+       tend_ci(n,:,:,:) = (dwdx * dzdx(n,:,:,:) + dwdy * dzdy(n,:,:,:))/slope(n,:,:,:)
     end do
     !
   end subroutine
@@ -537,7 +540,7 @@ contains
   !@ -------
   !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     Tendency of the slope due to horizontal advection.
-  subroutine slope_tend_adv(tend,residual, nx,ny,nz,nt, u,v, dx,dy)
+  subroutine slope_adv(tend, nx,ny,nz,nt, u,v, dx,dy)
     use consts !, only: p0, kappa
     !
     real(kind=nr), intent(in) :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), &
@@ -553,74 +556,13 @@ contains
     ! -----------------------------------------------------------------
     !
     if ( slope_nt /= nt .or. slope_nz /= nz .or. slope_ny /= ny .or. slope_nx /= nx ) then
-       write(*,*) 'Input does not match prepared shape, did you forget to call slope_tend_prepare before?'
+       write(*,*) 'Input does not match prepared shape, did you forget to call slope_prepare before?'
        stop 1
     end if
     !
     do n = 1_ni,nt
-       call grad(dslopedx,dslopedy, nx,ny,nz,nt, slope(n,:,:,:), dx,dy)
-       advection(n,:,:,:) = u(n,:,:,:) * dslopedx + v(n,:,:,:) * dslopedy
-    end do
-    !
-  end subroutine
-  !
-  !@ Tendency due to horizontal advection
-  !@ 
-  !@ TODO: Clarify "residual" calculation in isal.f90
-  !@ 
-  !@ Parameters
-  !@ ----------
-  !@ 
-  !@ u : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
-  !@     U-wind velocity.
-  !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
-  !@     V-wind velocity.
-  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
-  !@     The double grid spacing in x-direction to be directly for centered differences.
-  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
-  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
-  !@     The double grid spacing in y-direction to be directly for centered differences.
-  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
-  !@
-  !@ Other parameters
-  !@ ----------------
-  !@
-  !@ nx : int
-  !@     Grid size in x-direction.
-  !@ ny : int
-  !@     Grid size in y-direction.
-  !@ nz : int
-  !@     Number of isentropic levels.
-  !@ nt : int 
-  !@     Grid size in t-direction.
-  !@
-  !@ Returns
-  !@ -------
-  !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
-  !@     Tendency of the slope due to horizontal advection.
-  subroutine slope_maxprod(tend,residual, nx,ny,nz,nt, u,v, dx,dy)
-    use consts !, only: p0, kappa
-    !
-    real(kind=nr), intent(in) :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), &
-            &                    dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: tend(nt,nz,ny,nx)
-    integer(kind=ni), intent(in) :: nx,ny,nz,nt
-    !
-    real(kind=nr) :: dslopedx(nz,ny,nx), dslopedy(nz,ny,nx), dslopedth(nz,ny,nx)
-    integer(kind=ni) :: n
-    !f2py depend(nx,ny,nz) u,v,w, z, tend, tend_ci
-    !f2py depend(nx,ny,nz) dth
-    !f2py depend(nx,ny) dx,dy
-    ! -----------------------------------------------------------------
-    !
-    if ( slope_nt /= nt .or. slope_nz /= nz .or. slope_ny /= ny .or. slope_nx /= nx ) then
-       write(*,*) 'Input does not match prepared shape, did you forget to call slope_tend_prepare before?'
-       stop 1
-    end if
-    !
-    do n = 1_ni,nt
-       call grad(dslopedx,dslopedy, nx,ny,nz,nt, slope(n,:,:,:), dx,dy)
-       advection(n,:,:,:) = u(n,:,:,:) * dslopedx + v(n,:,:,:) * dslopedy
+       call grad(dslopedx,dslopedy, nx,ny,nz, slope(n,:,:,:), dx,dy)
+       tend(n,:,:,:) = u(n,:,:,:) * dslopedx + v(n,:,:,:) * dslopedy
     end do
     !
   end subroutine
@@ -659,7 +601,7 @@ contains
   !@ -------
   !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     Tendency of the slope due to the given diabatic heating field.
-  subroutine slope_tend_diab(tend, nx,ny,nz,nt, diab,p, dx,dy)
+  subroutine slope_diab(tend, nx,ny,nz,nt, diab,p, dx,dy)
     use consts !, only: p0, kappa
     !
     real(kind=nr), intent(in) :: diab(nt,nz,ny,nx), p(nt,nz,ny,nx), &
@@ -675,11 +617,11 @@ contains
     ! -----------------------------------------------------------------
     !
     if ( slope_nt /= nt .or. slope_nz /= nz .or. slope_ny /= ny .or. slope_nx /= nx ) then
-       write(*,*) 'Input does not match prepared shape, did you forget to call slope_tend_prepare before?'
+       write(*,*) 'Input does not match prepared shape, did you forget to call slope_prepare before?'
        stop 1
     end if
     !
-    tend = diab * (p0/p)**kappa
+    tend = diab * (p0/p)**(Rl/cp)
     do n = 1_ni,nt
        call grad(ddiabdx,ddiabdy, nx,ny,nz, tend(n,:,:,:), dx,dy)
        tend(n,:,:,:) = - dzdth(n,:,:,:) * (ddiabdx * dzdx(n,:,:,:) + ddiabdy * dzdy(n,:,:,:))/slope(n,:,:,:)
@@ -723,7 +665,7 @@ contains
   !@     Number of isentropic levels.
   !@ nt : int 
   !@     Grid size in t-direction.
-  subroutine slope_tend_prepare(nx,ny,nz,nt, z,p,T,omega, dx,dy,dth)
+  subroutine slope_prepare(nx,ny,nz,nt, z,p,T,omega, dx,dy,dth)
     real(kind=nr), intent(in) :: z(nt,nz,ny,nx), p(nt,nz,ny,nx), T(nt,nz,ny,nx), &
             &                    omega(nt,nz,ny,nx), &
             &                    dx(ny,nx), dy(ny,nx), dth(nz-2_ni,ny,nx)
@@ -736,19 +678,20 @@ contains
     !f2py depend(nx,ny) dx,dy
     ! -----------------------------------------------------------------
     !
-    if allocated(slope) deallocate(slope)
-    if allocated(dzdx) deallocate(dzdx)
-    if allocated(dzdy) deallocate(dzdy)
-    if allocated(dzdth) deallocate(dzdth)
+    if ( allocated(slope) ) deallocate(slope)
+    if ( allocated(dzdx) ) deallocate(dzdx)
+    if ( allocated(dzdy) ) deallocate(dzdy)
+    if ( allocated(dzdth) ) deallocate(dzdth)
+    if ( allocated(w) ) deallocate(w)
     !
-    allocate(slope(nt,nz,ny,nx), dzdx(nt,nz,ny,nx), dzdy(nt,nz,ny,nx), dzdx(nt,nz,ny,nx))
+    allocate(slope(nt,nz,ny,nx), dzdx(nt,nz,ny,nx), dzdy(nt,nz,ny,nx), dzdth(nt,nz,ny,nx), w(nt,nz,ny,nx))
     !
     slope_nx = nx
     slope_ny = ny
     slope_nz = nz
     slope_nt = nt
     !
-    call slope(slope,dzdx,dzdy,dzdth, nx,ny,nz,nt, z, dx,dy,dth)
+    call isen_geop_slope(slope,dzdx,dzdy,dzdth, nx,ny,nz,nt, z, dx,dy,dth)
     do n = 1_ni,nt
        call rho_from_T_p(rho, nx,ny,nz, T(n,:,:,:), p(n,:,:,:))
        call w_from_omega(w(n,:,:,:), nx,ny,nz, omega(n,:,:,:), rho)
