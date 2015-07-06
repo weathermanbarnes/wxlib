@@ -15,7 +15,7 @@ import dynfor
 import docutil
 
 # Take over the contents of dynfor.diag to this module and inject documentation from the Fortran sources
-docutil.takeover(dynfor.stat, 'tend', sys.modules[__name__])
+docutil.takeover(dynfor.tend, 'tend', sys.modules[__name__])
 
 
 
