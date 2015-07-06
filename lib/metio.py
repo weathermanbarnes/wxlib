@@ -189,6 +189,7 @@ def metsave(dat, static, time, plev, q, q_units=None, compress_to_short=True):
 	
 	if compress_to_short:
 		ovar = of.createVariable(q, 'h', ('time', 'latitude', 'longitude',))
+                # TODO: Introduce _FillValue attribute and map NaNs to _FillValue!
 		dat, scale, off = utils.unscale(dat)
 		ovar._attributes = {'long_name': conf.q_long[q], 'units': conf.q_units[q],
 				'add_offset': off, 'scale_factor': scale}

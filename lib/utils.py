@@ -34,6 +34,9 @@ def scale(var, cut=slice(None)):
 	np.ndarray
 	    The scaled data contained in the nc.NetCDFVariable object `var`.
 	"""
+        
+	# TODO: Respect _FillValue attribute and map to NaN
+
 	if hasattr(var, 'scale_factor') or hasattr(var, 'add_offset'):
 		# Python/numpy version is faster than Fortran function
 		var = var[cut]*var.scale_factor + var.add_offset
@@ -60,6 +63,9 @@ def unscale(var):
 	tuple (np.ndarray with dtype int16, float, float)
 	    The compressed data, the scale factor and the offset
 	"""
+
+	# TODO: Respect NaNs and map them to _FillValue
+
 	maxv  = var.max()
 	minv  = var.min()
 	# divide in 2^16-2 intervals, values from -32766 -> 32767 ; reserve -32767 as missing value
