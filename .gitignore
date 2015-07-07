@@ -10,6 +10,8 @@
 build
 dist
 MANIFEST
+# Local tests
+study
 # Swap, temp and backup files
 *.swp
 *.swo
