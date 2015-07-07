@@ -21,7 +21,10 @@ import calendar
 
 
 def scale(var, cut=slice(None)):
-	""" Automatic scaling according to netcdf attributes `scale_factor` and `add_offset`
+	""" Automatic scaling according to netcdf attributes ``scale_factor`` and ``add_offset``
+
+	If present missing or fill values, taken from the netCDF attributes ``missing_value``
+	and ``_FillValue`` are converted to NaN.
 
 	Parameters
 	----------
@@ -39,41 +42,63 @@ def scale(var, cut=slice(None)):
 	np.ndarray
 	    The scaled data contained in the nc.NetCDFVariable object `var`.
 	"""
+	
+	# Apply cut first, for speed
+	dat = var[cut,::]
+	dat = dat.astype('f8')
+
+	# Mask missing and fill values
+	if hasattr(var, 'missing_value'):
+		dat[dat == var.missing_value] = np.nan
+	if hasattr(var, '_FillValue'):
+		dat[dat == var._FillValue] = np.nan
+	
+	# Apply scaling, numpy is faster than Fortran function!
 	if hasattr(var, 'scale_factor') or hasattr(var, 'add_offset'):
-		# Python/numpy version is faster than Fortran function
-		var = var[cut]*var.scale_factor + var.add_offset
+		dat = dat*var.scale_factor + var.add_offset
 	
-	else:
-		var = var[cut]
-	
-	return var
+	return dat
 
 
 def unscale(var):
-	""" Inverse of the `scale` function. 
+	""" Inverse of the :func:`scale` function. 
 
 	Compresses floating point data to 16-bit integers plus an 64-bit offset and scaling factor.
+
+	NaN values are converted to a missing/fill value of -32767.
 
 	Parameters
 	----------
 
 	var : np.ndarray 
-	    The data to be compressed
+	    Data to be compressed.
 	
 	Returns
 	-------
-	tuple (np.ndarray with dtype int16, float, float)
-	    The compressed data, the scale factor and the offset
+	np.ndarray with dtype int16
+	    Compressed data.
+	float
+	    Scale factor.
+	float
+	    Offset.
+	int 
+	    Missing value.
 	"""
-	maxv  = var.max()
-	minv  = var.min()
+	
+	missing = -32767
+
+	maxv  = np.nanmax(var)
+	minv  = np.nanmin(var)
+
 	# divide in 2^16-2 intervals, values from -32766 -> 32767 ; reserve -32767 as missing value
 	scale = (maxv-minv)/65534.0
 	off   = +32766.5*scale + minv
 
 	res = np.round((var[::] - off)/scale)
 
-	return res.astype('>i2'), scale, off
+	res[np.isnan(res)] = missing
+
+	return res.astype('>i2'), scale, off, missing
 
 
 def concat1(data):

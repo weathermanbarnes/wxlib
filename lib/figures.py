@@ -21,6 +21,7 @@ import numpy as np
 import scipy.interpolate as intp
 
 import matplotlib.pyplot as plt
+import matplotlib.colors
 import mpl_toolkits.basemap
 basemap_version = mpl_toolkits.basemap.__version__
 
@@ -267,6 +268,10 @@ def __prepare_config(kwargs):
 	plev = kwargs.pop('plev', None)
 	q = kwargs.pop('q', None)
 	kwargs = conf.plotf.merge(plev, q, **kwargs)
+
+	# cmap might be a function returing the cmap; if so generate it now!
+	if 'cmap' in kwargs and not isinstance(kwargs['cmap'], matplotlib.colors.Colormap):
+		kwargs['cmap'] = kwargs['cmap']()
 	
 	return plev, q, kwargs
 

@@ -199,11 +199,15 @@ class grid_by_nc(grid):
 			self.cyclic_ew = True
 			self.x = self.f.variables[self.x_name][::]
 			self.y = self.f.variables[self.y_name][::]
+			self.x_name = 'longitude'
+			self.y_name = 'latitude'
 		elif self.x_unit == 'degrees_east' and self.y_unit == 'degrees_north':
 			self.gridtype = 'latlon'
 			self.cyclic_ew = True
 			self.x = self.f.variables[self.x_name][::]
 			self.y = self.f.variables[self.y_name][::]
+			self.x_name = 'longitude'
+			self.y_name = 'latitude'
 		elif self.x_unit == '1' and self.y_unit == '1':
 			if 'TITLE' in self.f._attributes and 'OUTPUT FROM WRF' in self.f._attributes['TITLE']:
 				if self.f._attributes['GRIDTYPE'] == 'C':
@@ -213,6 +217,8 @@ class grid_by_nc(grid):
 					# Just assuming that WRF is being sensible.
 					self.x_unit = 'm'
 					self.y_unit = 'm'
+					self.x_name = 'x'
+					self.y_name = 'y'
 
 				else:
 					raise NotImplementedError, 'Unknown WRF gridtype `%s\'' % self._attributes['GRIDTYPE']
@@ -220,10 +226,14 @@ class grid_by_nc(grid):
 				self.gridtype = 'idx'
 				self.x = np.arange(self.nx)
 				self.y = np.arange(self.ny)
+				self.x_name = 'xidx'
+				self.y_name = 'yidx'
 		elif self.x_unit == 'm' and self.y_unit == 'm':
 			self.gridtype = 'cartesian'
 			self.x = self.f.variables[self.x_name][::]
 			self.y = self.f.variables[self.y_name][::]
+			self.x_name = 'x'
+			self.y_name = 'y'
 
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type with units (%s/%s)' % (self.x_unit, self.y_unit)
@@ -267,7 +277,7 @@ class grid_by_nc(grid):
 					if type(start_dt) == type(None):
 						start_dt = dt(1,1,1,0,0)
 						
-					self.t_parsed = [start_dt + td(0, fac*int(ts)) for ts in self.t]
+					self.t_parsed = np.array([start_dt + td(0, fac*int(ts)) for ts in self.t])
 
 			else:
 				self.t_parsed = None

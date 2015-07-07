@@ -83,9 +83,9 @@ North Atlantic (line 29/30).
    :emphasize-lines: 13,17-18
 
 If you want to calculate deformation for all the data in an input file, the structure of the script 
-is very similar. The differences are highlighted in yellow. Most notably, insteand of using
-:func:`get_instantaneous` the script calls :func:`metopen` which simply returns all the data available for 
-the requested variable in the requested file. 
+is very similar. The differences are highlighted in yellow. Most notably, instead of using
+:func:`get_instantaneous` the script calls :func:`metopen` which simply returns all the data available 
+for the requested variable in the requested file. 
 
 File names typically follow a standard structure, which is stored in the configuration key 
 ``conf.file_std``. Parameters for completing the file name are filled in using the python string
@@ -97,7 +97,38 @@ or when you apply the script to a different data set.
 Settings and contexts
 ---------------------
 
- * Motivation
- * Cascade: Default settings, context settings, own default settings, script overrides
- * Contexts: Different data sets, different needs
+Dynlib comes with predefined settings for a couple of standard data sets, but aims to be easily
+configurable to use most other gridded data. The adaptation to different data sets happens 
+in **contexts**.
+
+A context is a set of configuration describing pertinent features of the data set. Some of these
+features are:
+
+ * Data file location(s)
+ * File naming conventions
+ * What variables exist on which levels
+ * Standard grid type, size and time step
+
+Not all of these features apply to every data set. They can hence be left empty, at the cost that
+some of the functionality of dynlib might not work out-of-the-box. However, in those cases, there
+is (or should be!) an alternative way of providing the configuration for your specific application.
+
+To keep the settings systems as flexible as possible, there are several layers of where settings
+can be set. Each of these layers can overwrite settings defined before.
+ 
+ #. Global defaults for all data sets
+ #. Context settings for a data set
+ #. Your personal default settings (potentially dependent on active context)
+ #. Overrides within a script using dynlib
+
+There are very few global default settings that apply to all data sets. Most of the relevant 
+configuration is done in the contexts describing the different data sets. Context can however not
+only be used to describe data sets. For examble the context :mod:`dynlib.context.derived` defines
+all variables that can be calculated using dynlib, and provides some meta data for them. This
+information is for example used, when saving the diagnostics in the above example scripts. 
+
+Furthermore, contexts can provide defaults for plotting. Some global plotting defaults are
+defined in :mod:`dynlib.context.plot`. These defaults apply for full variables plotted in color, 
+:mod:`dynlib.context.plot.anomaly` and :mod:`dynlib.context.plot.greyscale` provide the respective
+alternatives.
 

@@ -626,6 +626,8 @@ conf = settings_obj({
 	'years': [],
 	'times': [],
 	'timestep': None,
+	'gridsize': None,
+	'local_timezone': 'Europe/Oslo',
 	'plevs': [],
 	'ptlevs': [],
 	'pvlevs': [],

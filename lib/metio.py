@@ -15,6 +15,7 @@ import scipy.io.netcdf as nc3
 import Scientific.IO.NetCDF as nc
 import scipy.io.matlab as mat
 import pytz
+import calendar
 
 from settings import conf
 import utils
@@ -58,7 +59,8 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 	no_dtype_conversion : bool
 	    *Optional*, default ``False``. By default, ``metopen`` uncompresses data in the 
 	    file and converts all data to float64. This behaviour can be suppressed by 
-	    setting this option to ``True``.
+	    setting this option to ``True``. This implies, however, that scaling and offset
+	    cannot be applied automatically.
 	no_static : 
 	    *Optional*, default ``False``. By default, ``metopen`` does its best to 
 	    provide meta-information about the requested file, using 
@@ -115,7 +117,10 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 				if q not in f.variables:
 					tried.append(path+'/'+filename+'.nc')
 					continue
-				dat = utils.scale(var, cut=cut)
+				if not no_dtype_conversion:
+					dat = utils.scale(var, cut=cut)
+				else:
+					dat = var[cut]
 			else:
 				var = None
 
@@ -145,11 +150,11 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 		else:
 			return f, static
 	
-	raise RuntimeError, '%s.* not found in any data location. \nTried the following (in order):\n\t%s' % (filename, '\n\t'.join(tried))
+	raise ValueError, '%s.* not found in any data location. \nTried the following (in order):\n\t%s' % (filename, '\n\t'.join(tried))
 
 
 # Save dat as a netCDF file, using the metadata in static. 
-def metsave(dat, static, time, plev, q, q_units=None, compress_to_short=True):
+def metsave(dat, static, q, plev, compress_to_short=True):
 	''' Save data in a netCDF file
 
 	Parameters
@@ -158,51 +163,59 @@ def metsave(dat, static, time, plev, q, q_units=None, compress_to_short=True):
 		Data to be saved.
 	static : gridlib.grid
 		Some meta information about the data, like the grid information.
-	time : str
-		String representation of the time period covered by the data, e.g. ``'2005'`` for the year
-		2005 or ``'20050317'`` for 17 March 2005.
+	q : str
+		The variable name identifier, following the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
 	plev : str
 		String representation of the vertical level on which the data is defined, e.g. ``'700'`` 
 		for 700 hPa or ``'pv2000'`` for the PV2-surface.
-	q : str
-		The variable name identifier, following the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
-	q_units : str
-		Obsolete.
 	compress_to_short : bool
 		*Optional*, default ``True``. By default, ``metsave`` compresses the data by converting
 		the data field into int16, using the float64 ``add_offset`` and ``scale_factor`` attributes 
 		to represent the data.
 	'''
 	s = dat.shape
-	if not len(s) == 3 or not s[1:] == (361,720):
-		raise NotImplementedError, 'dat does not seem to be a ERA-Interim like (t,y,x)-array.'
+	if not len(s) == 3 or (conf.gridsize and not s[1:] == conf.gridsize):
+		raise NotImplementedError, 'dat does not seem to be a context-conform (t,y,x)-array.'
 	
-	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc3.netcdf_file(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'q': conf.qf[q]})+'.nc', 'w')
+	if not conf.oformat == 'nc':
+		raise NotImplementedError, 'Currently only saving in netCDF implemented in metsave.'
+
+	if not s[0] == len(static.t):
+		raise ValueError, 'Time dimension in data (%s) and static (%s) are not equally long.' % (s[0], len(static.t))
+	if not s[1] == len(static.y[:,0]):
+		raise ValueError, 'y-dimension in data (%s) and static (%s) are not equally long.' % (s[1], len(static.y[:,0]))
+	if not s[2] == len(static.x[0,:]):
+		raise ValueError, 'x-dimension in data (%s) and static (%s) are not equally long.' % (s[2], len(static.x[0,:]))
+
+	now = dt.now(pytz.timezone(conf.local_timezone))
+	of = nc3.netcdf_file(conf.opath+'/'+(conf.file_std % {
+		'time': dts2str(static.t_parsed), 'plev': plev, 'qf': conf.qf[q]})+'.nc', 'w')
 	of._attributes = {'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	}
 
-	of.createDimension('time', dat.shape[0])
-	of.createDimension('latitude', dat.shape[1])
-	of.createDimension('longitude', dat.shape[2])
+	of.createDimension('time', s[0])
+	of.createDimension(static.x_name, s[2])
+	of.createDimension(static.y_name, s[1])
 
 	ot = of.createVariable('time', 'i', ('time',))
 	ot._attributes = {'long_name': 'time', 'units': static.t_unit}
 	ot[:] = static.t
-	# TODO: Prescribing the name but taking the units from static is inconsistent!
-	olat = of.createVariable('latitude', 'f', ('latitude',))
-	olat._attributes = {'long_name': 'latitude', 'units': static.y_unit}
+	olat = of.createVariable(static.y_name, 'f', (static.y_name,))
+	olat._attributes = {'long_name': static.y_name, 'units': static.y_unit}
 	olat[:] = static.y[:,0]
-	olon = of.createVariable('longitude', 'f', ('longitude',))
-	olon._attributes = {'long_name': 'longitude', 'units': static.x_unit}
+	olon = of.createVariable(static.x_name, 'f', (static.x_name,))
+	olon._attributes = {'long_name': static.x_name, 'units': static.x_unit}
 	olon[:] = static.x[0,:]
 	
 	if compress_to_short:
 		ovar = of.createVariable(q, 'h', ('time', 'latitude', 'longitude',))
-		dat, scale, off = utils.unscale(dat)
+		dat, scale, off, fill = utils.unscale(dat)
 		ovar._attributes = {'long_name': conf.q_long[q], 'units': conf.q_units[q],
 				'add_offset': off, 'scale_factor': scale}
+		if fill: 
+			ovar._attributes['_FillValue'] = fill
+			ovar._attributes['missing_value'] = fill
 	else:
 		ovar = of.createVariable(q, 'f', ('time', 'latitude', 'longitude',))
 		ovar._attributes = {'long_name': conf.q_long[q], 'units': conf.q_units[q]}
@@ -250,7 +263,7 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 		raise RuntimeError, 'dat does not have size 3 in the third dimension'
 
 	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc3.netcdf_file(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'q': conf.qf[q]})+'.nc', 'w')
+	of = nc3.netcdf_file(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'qf': conf.qf[q]})+'.nc', 'w')
 	of._attributes = {'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	}
@@ -332,8 +345,6 @@ def get_static(verbose=False, no_dtype_conversion=False):
 # 2. Generalised data fetchers
 # 
 
-# TODO: Generalize this function to work on any (constant) input data interval. 
-# Or possibly any input data, even with irregular time axis?
 def get_instantaneous(q, dates, plevs=None, tavg=False, quiet=False, force=False, **kwargs):
 	''' Data fetcher for instantaneous or short-term averaged fields
 
@@ -370,20 +381,28 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, quiet=False, force=False
 	metopen arguments : all optional
 		Optional arguments passed on to calls of metopen within this function.
 	'''
-	# None means "take everything there is as pressure levels"
+	
 	if not plevs:
 		plevs = conf.plevs
 	elif not type(plevs) == np.ndarray and not type(plevs) == list:
 		plevs = [plevs,]
 	
-	dt0 = dt(1979,1,1,0)
+	if conf.years:
+		dt0 = dt(conf.years[0],1,1,0)
+	elif conf.times: 
+		dt0 = conf.times[0]
+	else:
+		raise ValueError, 'Could not determine start date of the data set, either conf.years or conf.times must be provided.'
+
+	dts = conf.timestep.total_seconds()
+
 	# Convert dates to time indexes
 	if type(dates) not in ([np.ndarray, list, tuple, set]):
 		dates = [dates, ]
 	years = set(map(lambda date: date.year, dates))
 	years = np.arange(min(years), max(years)+1)
 	tidxs = map(lambda date: date-dt0, dates)
-	tidxs = map(lambda diff: diff.days*4 + diff.seconds/21600, tidxs)
+	tidxs = map(lambda diff: int(diff.total_seconds()/dts), tidxs)
 	tsmin, tsmax = min(tidxs), max(tidxs)
 	
 	# Checking max length
@@ -392,15 +411,20 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, quiet=False, force=False
 		if force:
 			print 'Warning: you requested %d time steps.' % (tsmax-tsmin)
 		else:
-			raise RuntimeError, 'Cowardly refusing to fetch %d > %d time steps.\nUse force=True to override.' % (tsmax-tsmin, maxtlen)
+			raise ValueError, 'Cowardly refusing to fetch %d > %d time steps.\nUse force=True to override.' % (tsmax-tsmin, maxtlen)
 	
+	# Remove no_static if present
+	kwargs.pop('no_static', None)
+	static = None
+
 	dat = None
 	for year in years:
 		# Construct the slice
 		fst = dt(year,1,1,0) - dt0
-		lst = dt(year,12,31,18) - dt0
-		fst = fst.days*4 + fst.seconds/21600
-		lst = lst.days*4 + lst.seconds/21600 +1
+		lst = (dt(year+1,1,1,0) - conf.timestep) - dt0
+		fst = int(fst.total_seconds()/dts)
+		lst = int(lst.total_seconds()/dts) + 1
+
 		# Leave out unnecessary indexes for better compatibility
 		cut = slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst))
 		datcut = slice(fst+cut.start-tsmin, fst+cut.stop-tsmin)
@@ -409,16 +433,18 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, quiet=False, force=False
 		i = 0
 		for plev in plevs:
 			if type(dat) == type(None):
-				if kwargs.get('no_static', False):
-					f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
-					static = None
-				else:
-					f, d, static = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
-					kwargs['no_static'] = True
-				s = tuple([1+tsmax-tsmin,len(plevs)] + list(d.shape)[1:])
+				f, d, static = metopen(conf.file_std % {'time': year, 'plev': plev, 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+				s = (1+tsmax-tsmin, len(plevs), ) + d.shape[1:]
 				dat = np.empty(s, dtype=d.dtype)
+				static.t = static.t[cut]
+				if type(static.t_parsed) == np.ndarray:
+					static.t_parsed = static.t_parsed[cut]
 			else:
-				f, d = metopen(conf.file_std % {'time': year, 'plev': plev, 'q': conf.qf[q]}, q, cut=cut, **kwargs)
+				f, d, static_ = metopen(conf.file_std % {'time': year, 'plev': plev, 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+				static.t = np.concatenate((static.t, static_.t[cut]))
+				if type(static.t_parsed) == np.ndarray:
+					static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
+			
 			dat[datcut,i,::] = d
 			i += 1
 
@@ -440,6 +466,140 @@ def get_aggregate(q, year=None, plev=None, yidx=None, xidx=None):
 	raise NotImplementedError, 'If you need it, implement it!'
 
 	return dat
+
+
+# #############################################################################
+# 3. Utilities
+#
+
+def dts2str(dates):
+	''' Find a short, but decriptive string representation for a list of dates
+
+	If only a single date is given, the formatted date of the form YYYYMMDDHH is given.
+
+	If several dates are given, the minimum and maximum dates are given. The format 
+	depends on the dates. For the start date, hours, days and month are potentially
+	omitted if they are the first in their respective primitive period. Analogously, 
+	hours, days and month are omitted for the last date if they correspond to the last 
+	time step within a primitive period. The calculation of the last time step depends
+	on the ``conf.timestep`` property.
+
+	If the amount of dates given matches the number of dates expected for the given 
+	start and end dates with the ``conf.timestep``, the dates are *assumed* to be
+	contiguous, and the two dates are joined by a minus sign ``'-'``. Otherwise, the 
+	dates must be non-contiguous, and they are joined by two dots ``'..'``.
+
+	As a last rule, if the start and end date mark the beginning and end of a the
+	same primitive period, and the dates appear to be contiguous, then only this 
+	period is returned:
+	
+	>>> from datetime import datetime as dt, timedelta as td
+	>>> dts2str([dt(1986,2,1,0)+i*td(0.25) for i in range(112)])
+	'198602'
+
+	Here, the dates span the entire February 1986, but not more. This example, and all 
+	the following assume a time step of 6 hours.
+
+	>>> dts2str([dt(1986,2,1,0)+i*td(0.25) for i in range(236)])
+	'198602-198603'
+
+	Here, the dates span the entire February and March of 1986. However, if only the 
+	start and end date are given
+
+	>>> dts2str([dt(1986,2,1,0), dt(1986,3,31,18)])
+	'198602..198603'
+
+	the two dates are joined by two dots. The same mechanisms apply also to years
+
+	>>> dts2str([dt(1979,1,1,0)+i*td(0.25) for i in range(51136)])
+	'1979-2013'
+
+	and days.
+
+	>>> dts2str([dt(1986,4,7,0)+i*td(0.25) for i in range(4)]
+	'19860407'
+
+	However, note that, 
+
+	>>> dts2str([dt(1979,1,1,0)+i*td(0.25) for i in range(51137)])
+	'1979-2014010100'
+
+	because 1 January 2014 is the beginnig of a new primitive period rather than the ending of an old, and 
+	that
+
+	>>> dts2str([dt(1986,4,7,6), dt(1986,4,7,18), dt(1986,4,7,0)])
+	'19860407..19860407'
+
+	because the first and last time step of the primitive period 7 April 1986 is present, but not all time
+	steps in between.
+
+	Parameters
+	----------
+	dates : datetime or set/list/tuple of datetime
+	    Dates to be represented by a string. The order of the dates is irrelevant.
+	
+	Returns
+	-------
+	str 
+	    Representation of the dates.
+	'''
+
+	# Special cases: Only one datetime object given
+	if type(dates) == dt:
+		return dates.strftime('%Y%m%d%H')
+	
+	elif len(dates) == 1:
+		return dates[0].strftime('%Y%m%d%H')
+		
+	# General case: Several datetime objects given
+	dta = min(dates)
+	dtz = max(dates)
+
+	if dta.hour == 0:
+		if dta.day == 1:
+			if dta.month == 1:
+				ret = dta.strftime('%Y')
+			else:
+				ret = dta.strftime('%Y%m')
+		else:
+			ret = dta.strftime('%Y%m%d')
+	else:
+		ret = dta.strftime('%Y%m%d%H')
+	
+	if conf.timestep:
+		tsteps = (dtz - dta).total_seconds() / conf.timestep.total_seconds()
+		if len(dates) == tsteps + 1:
+			ret += '-'
+			contiguous = True
+		else:
+			ret += '..'
+			contiguous = False
+
+		lasthour = -conf.timestep.total_seconds()/3600 % 24
+		if dtz.hour == lasthour:
+			if dtz.day == calendar.monthrange(dtz.year, dtz.month)[1]:
+				if dtz.month == 12:
+					if dtz.year == dta.year and contiguous:
+						ret = dtz.strftime('%Y')
+					else:
+						ret += dtz.strftime('%Y')
+				else:
+					if dtz.year == dta.year and dtz.month == dta.month and contiguous:
+						ret = dtz.strftime('%Y%m')
+					else:
+						ret += dtz.strftime('%Y%m')
+			else:
+				if dtz.year == dta.year and dtz.month == dta.month \
+						and dtz.day == dta.day and contiguous:
+					ret = dtz.strftime('%Y%m%d')
+				else:
+					ret += dtz.strftime('%Y%m%d')
+		else:
+			ret += dtz.strftime('%Y%m%d%H')
+	else:
+		ret += '..' + dtz.strftime('%Y%m%d%H')
+
+	return ret
 
 
 # the end

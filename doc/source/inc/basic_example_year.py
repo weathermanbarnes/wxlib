@@ -14,17 +14,13 @@ year = 2011
 plev = '850'
 
 # Get wind velocity components on 850 hPa for the entire year 2011
-u, grid = metopen(conf.file_std % {'qf': 'u', 'time': year, 'plev': plev}, 'u')
-v, grid = metopen(conf.file_std % {'qf': 'v', 'time': year, 'plev': plev}, 'v')
+fu, u, grid = metopen(conf.file_std % {'qf': 'u', 'time': year, 'plev': plev}, 'u')
+fv, v, grid = metopen(conf.file_std % {'qf': 'v', 'time': year, 'plev': plev}, 'v')
 
 # Calculate total deformation
 defabs = dynlib.diag.def_total(u, v, grid.dx, grid.dy)
 
 # Save results as netCDF file
-# TODO: Currently time and plev are not part of/taken from grid object
-metsave(defabs, grid, q='defabs')
-
-# Current API
-metsave(defabs, grid, year, plev, 'defabs')
+metsave(defabs, grid, q='defabs', plev=plev)
 
 # the end
