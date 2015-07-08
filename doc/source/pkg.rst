@@ -34,7 +34,8 @@ for a source code packages, without any compiled libraries, and::
    python setup.py bdist
 
 to create a binary package, in which the Fortran library is already compiled. Please note,
-however, that binary packages are specific to an operating system.
+however, that binary packages are specific to an operating system and only work on the system
+for which they are compiled.
 
 
 Install on your own Linux machine
@@ -42,7 +43,7 @@ Install on your own Linux machine
 
 The general procedure to install dynlib on a Linux machine is:
 
- #. Install the required software packages using the package manager of your choice. Be aware, though
+ #. Install the required software packages using the package manager of your choice. Be aware, though,
     that the packages might be named slightly different in different Linux distributions.
  #. Install spherepack manually. 
  #. If you installed spherepack to a location that is not in the default search path for libraries,
