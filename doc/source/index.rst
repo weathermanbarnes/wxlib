@@ -14,8 +14,10 @@ Contents:
    intro
    basic
    use
+   filefmt
    plot
    devel
+   pkg
    apidoc
 
 

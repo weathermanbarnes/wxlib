@@ -35,23 +35,4 @@ Make your extension usable for others
 -------------------------------------
 
 
-Packaging and installation
-==========================
-
-Packaging mechanism: setuptools
--------------------------------
-
-Install on your own Linux machine
----------------------------------
-
-Install on your own MacOS X machine
------------------------------------
-
-Install on your own Windows machine
------------------------------------
-
-Updating the centrally installed dynlib
----------------------------------------
-
-
 

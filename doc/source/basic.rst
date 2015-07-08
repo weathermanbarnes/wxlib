@@ -47,6 +47,8 @@ unfortunately NCL does not support the Fortran90 concept of modules. Until this 
 dynlib cannot be used with NCL.
 
 
+.. _sec_examples:
+
 Examples: Read data, apply diagnostic, plot and save results
 ------------------------------------------------------------
 
@@ -131,4 +133,74 @@ Furthermore, contexts can provide defaults for plotting. Some global plotting de
 defined in :mod:`dynlib.context.plot`. These defaults apply for full variables plotted in color, 
 :mod:`dynlib.context.plot.anomaly` and :mod:`dynlib.context.plot.greyscale` provide the respective
 alternatives.
+
+
+Overview over available contexts
+""""""""""""""""""""""""""""""""
+
+Currently, the following contexts exist:
+
+:mod:`dynlib.context.erainterim`
+   ERA-Interim Reanalysis, 0.5° resolution, covering 1979-almost present.
+:mod:`dynlib.context.ecmwf_fc`
+   ECWMF forecast archive for the last 2 weeks or so. Currently contains only the deterministic forecast at 0.5° resolution.
+:mod:`dynlib.context.metno_fc`
+   AROME2.5 forecast archive for the last 2 weeks or so. 2.5 km resolution covering most of Scandinavia.
+:mod:`dynlib.context.derived`
+   Variable definitions for all diagnostics and detected features available in dynlib.
+
+Plus a few plotting related contexts:
+
+:mod:`dynlib.context.plot`
+   Sensible default settings for color plots of full variables (in contrast to anomaly variables).
+:mod:`dynlib.context.plot.greyscale`
+   Most defaults as in the standard plot context, but color maps and contours are restricted to greyscale.
+:mod:`dynlib.context.plot.anomaly`
+   Most defaults as in the standard plot context, but color maps and color bar settings appropriate for 
+   plotting anomalies.
+
+In addition, a few contexts are reserved for future use:
+
+:mod:`dynlib.context.era40`
+   ERA40 reanalysis.
+:mod:`dynlib.context.ncep`
+   NCEP/NCAR reanalysis.
+:mod:`dynlib.context.c20r`
+   20th century reanalysis.
+:mod:`dynlib.context.nora10`
+   NORA10 local reanalysis for Norway, 10 km resolution.
+:mod:`dynlib.context.bedymo`
+   Bedymo model output.
+:mod:`dynlib.context.wrf`
+   WRF model output.
+
+
+Using contexts in your personal settings
+""""""""""""""""""""""""""""""""""""""""
+
+You might want to make your personal settings dependent on which context you are in. There are two 
+potential mechanisms to achieve this. The choice on which is preferrable will depend mainly on how 
+different you want your settings to be in different contexts.
+
+ #. Create separate personal settings files for different contexts
+
+    This approach will be most useful, if there is little or no overlap in your personal settings 
+    between the different contexts. Furthermore, you might also want to move the imports of the 
+    predefined contexts (lines 5, 7 and 8 in the above examples) into the personal settings file 
+    (here called ``mysettings.py``) and then replace line 5 by::
+
+       from mysettings import conf, proj
+
+    and thereby shorten the file header considerably.
+ #. Check which context(s) are active from within a settings file
+
+    This approach will be most useful if there is considerable overlap in your settings between 
+    different contexts. :mod:`dynlib.settings` defines the function :func:`ìn_context`, which can
+    be used to check if the given contexts is/the given contexts are active.
+
+These two mechanisms can be mixed freely.
+
+Furthermore, you can also define your own contexts, to encapsulate for example all relevant settings
+for a specific task or paper. To do so, use the function :func:`dynlib.settings.def_context`. Your 
+personal contexts can be used in the same way as the pre-defined ones.
 
