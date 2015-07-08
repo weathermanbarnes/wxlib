@@ -473,37 +473,40 @@ def get_aggregate(q, year=None, plev=None, yidx=None, xidx=None):
 #
 
 def dts2str(dates):
-	''' Find a short, but decriptive string representation for a list of dates
+	''' Find a short, but descriptive string representation for a list of dates
 
-	If only a single date is given, the formatted date of the form YYYYMMDDHH is given.
+	If only a single date is given, the formatted date of the form YYYYMMDDHH is returned.
 
-	If several dates are given, the minimum and maximum dates are given. The format 
+	If several dates are given, the minimum and maximum dates are returned. The format 
 	depends on the dates. For the start date, hours, days and month are potentially
-	omitted if they are the first in their respective primitive period. Analogously, 
+	omitted if they are the first in their respective superordinate period. Analogously, 
 	hours, days and month are omitted for the last date if they correspond to the last 
-	time step within a primitive period. The calculation of the last time step depends
-	on the ``conf.timestep`` property.
+	time step within their superordinate period. 
+	
+	The calculation of the last time step depends on the ``conf.timestep`` property.
+	For example the last time step of October 2014 in the ERA-Interim data is 18 UTC
+	on 31 October 2014.
 
-	If the amount of dates given matches the number of dates expected for the given 
+	If the given number of dates given matches the number of dates expected for the given 
 	start and end dates with the ``conf.timestep``, the dates are *assumed* to be
 	contiguous, and the two dates are joined by a minus sign ``'-'``. Otherwise, the 
 	dates must be non-contiguous, and they are joined by two dots ``'..'``.
 
-	As a last rule, if the start and end date mark the beginning and end of a the
-	same primitive period, and the dates appear to be contiguous, then only this 
+	As a last rule, if the start and end date mark the beginning and end of the
+	same superordinate period, and if the dates appear to be contiguous, then only this 
 	period is returned:
 	
 	>>> from datetime import datetime as dt, timedelta as td
 	>>> dts2str([dt(1986,2,1,0)+i*td(0.25) for i in range(112)])
 	'198602'
 
-	Here, the dates span the entire February 1986, but not more. This example, and all 
-	the following assume a time step of 6 hours.
+	Here, the dates span the entire February 1986, but do not extend into March. This 
+	example, and all the following assume a time step of 6 hours.
 
 	>>> dts2str([dt(1986,2,1,0)+i*td(0.25) for i in range(236)])
 	'198602-198603'
 
-	Here, the dates span the entire February and March of 1986. However, if only the 
+	Here, the dates span the entire February and March of 1986. If only the 
 	start and end date are given
 
 	>>> dts2str([dt(1986,2,1,0), dt(1986,3,31,18)])
@@ -524,14 +527,14 @@ def dts2str(dates):
 	>>> dts2str([dt(1979,1,1,0)+i*td(0.25) for i in range(51137)])
 	'1979-2014010100'
 
-	because 1 January 2014 is the beginnig of a new primitive period rather than the ending of an old, and 
-	that
+	because 1 January 2014 is the beginning of a new superordinate period rather than the 
+	ending of an old. Furthermore,
 
 	>>> dts2str([dt(1986,4,7,6), dt(1986,4,7,18), dt(1986,4,7,0)])
 	'19860407..19860407'
 
-	because the first and last time step of the primitive period 7 April 1986 is present, but not all time
-	steps in between.
+	because even if the first and last time step of the superordinate period (=7 April 1986) is present, 
+	not all time steps in between are listed.
 
 	Parameters
 	----------
@@ -541,7 +544,7 @@ def dts2str(dates):
 	Returns
 	-------
 	str 
-	    Representation of the dates.
+	    Representation of the dates, to be used for example in file names.
 	'''
 
 	# Special cases: Only one datetime object given
