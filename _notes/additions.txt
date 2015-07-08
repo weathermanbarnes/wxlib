@@ -22,15 +22,9 @@ new lineutils.py -> jetaxis_split: split lines by criterion
 	      -> rasterise_by_data
 	      -> jetaxis_trace_origin: rasterise_ends (both, end, start)
 
-new tendencies.f90 -> isat: islopes_adiabatic
-		   -> isat: islopes_diabatic
-
-isat -> diag.f90
-
 perhom -> new python module
 
 
 ######### Moves
 
 dynlib.utils.regress -> dynlib.stats.regress
-dynlib.diag.def_tend_* -> dynlib.tendencies.deform
