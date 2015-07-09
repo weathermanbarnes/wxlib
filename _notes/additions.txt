@@ -19,10 +19,12 @@ eof -> main: fully integrate to stats.py
 
 new lineutils.py -> jetaxis_split: split lines by criterion
 	      -> rasterise (optional smooth)
-	      -> rasterise_by_data
+	      -> rasterise_with_data
 	      -> jetaxis_trace_origin: rasterise_ends (both, end, start)
 
 perhom -> new python module
+
+Aleksi's curly vector plot
 
 
 ######### Moves
