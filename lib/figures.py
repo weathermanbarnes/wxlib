@@ -496,7 +496,7 @@ def __safename(name):
 # Overlays
 
 # TODO: Should this one take the static object as an argument? If only for consistency in the API.
-def section_overlay_dat(dat, sect, **kwargs):
+def section_overlay_contour(dat, sect, **kwargs):
 	''' Overlay contours onto a section
 	
 	Parameters
@@ -553,7 +553,7 @@ def section_overlay_dat(dat, sect, **kwargs):
 	return overlay
 
 
-def map_overlay_dat(dat, static, **kwargs):  
+def map_overlay_contour(dat, static, **kwargs):  
 	''' Overlay contours onto a map
 	
 	Parameters

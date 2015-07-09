@@ -33,7 +33,7 @@ And what is written in python?
    encapsulating this kind of operation.
  * Anything that requires more complex data structures. A list or a key-value storage are very hard to 
    implement in Fortran, but included in the python language core. Many algorithms can be implemented
-   much more straightforward if these data structures are available. 
+   much more straightforwardly if these data structures are available. 
  * File input/output. There are already functions available for python that can read pretty much any
    data format, including netCDF, mat, and GRIB files. There's no need to reinvent those, or even to
    implement your own functions in Fortran.
@@ -43,7 +43,7 @@ A note on NCL
 """""""""""""
 
 There are alternative high-level languages, which provide the same advantages over Fortran as python,
-and that are similarly easlily coupled with Fortran. The most notable alternative is NCL. In principle, 
+and that are similarly easily coupled with Fortran. The most notable alternative is NCL. In principle, 
 it would be possible (and desirable) to provide all Fortran functions in dynlib also in NCL, but 
 unfortunately NCL does not support the Fortran90 concept of modules. Until this problem is solved, 
 dynlib cannot be used with NCL.

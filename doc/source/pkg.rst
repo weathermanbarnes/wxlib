@@ -13,6 +13,8 @@ Dynlib uses the following, freely available software.
  * ``matplotlib`` (python package)
  * ``matplotlib-basemap`` (python package)
  * ``Scientific`` (python package for netCDF4 support)
+ * ``sphinx`` (python package for generating the documentation)
+ * ``sphinx-napoleon`` (python package for automatically generating API documentation from numpy docstrings)
  * ``gfortran`` (Fortran compiler)
  * ``lapack`` (Linear algebra library)
  * ``spherepack`` (Spherical harmonics library)

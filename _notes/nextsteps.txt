@@ -25,8 +25,9 @@ Next steps
  19. Generalise: Correlation
  20. Move regression
  21. Integrate Aleksi's curly vector plot 			<- Aleksi send code
+ 22. Create streamline overlay
  ---------------------------- version 0.23 ---------------------------- 			@ 22.07
- 22. Some kind of testing infrastructure
+ 23. Some kind of testing infrastructure
  ---------------------------- version 1.0  ----------------------------
- 23. Add persistent homologies
+ 24. Add persistent homologies
 

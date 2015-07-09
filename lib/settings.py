@@ -539,6 +539,7 @@ class settings_obj(default_dict):
 # Make sure that the plot defaults are immutable, 
 # such that they cannot be changed in place
 PLOT_DEFAULTS = {
+	'alpha': 1.0, 
 	'cb_disable': False, 
 	'cb_expand_fig_fraction': 0.10,
 	'cb_orientation': 'horizontal',
@@ -548,7 +549,6 @@ PLOT_DEFAULTS = {
 	'fig_size': 'auto',
 	'fig_dpi': 150,
 	'gridcolor': 'k',
-	'hatches': (),
 	'hook': None,
 	'm': proj.world, 
 	'maskcolor': '0.25',
@@ -574,7 +574,6 @@ PLOT_DEFAULTS = {
 
 	'lon': None, 
 	'lat': None, 
-	'alpha': 1.0, 
 	'norm': None, 
 	'vmin': None,
 	'vmax': None, 
@@ -597,12 +596,11 @@ PLOT_DEFAULTS.update({
 	'linewidths': 2.0, 
 })
 PLOTF_DEFAULTS.update({
-	'cb_orientation': 'horizontal',
 	'cmap': cm.defabs, #cm.gist_ncar, needs to be immutable!
 	'colors': None, 
 	'extend': 'both', 
 
-	'hatches': None 
+	'hatches': (),
 })
 
 MUTEX_GROUPS = [set(['colors', 'cmap']), ]

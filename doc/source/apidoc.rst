@@ -40,7 +40,6 @@ IO and plotting
    api/gridlib
    api/metio
    api/figures
-   api/streamplot
    api/windrose
 
 

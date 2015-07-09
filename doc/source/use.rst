@@ -13,7 +13,7 @@ Using with python
 Dynlib is designed to work well with python. The example scripts in :ref:`sec_examples` give a good
 impression of how to use Fortran routines from python. 
 
-A comprehensive list of available functions is in :ref:`sec_api`.
+A comprehensive list of available functions is in the :ref:`sec_api`.
 
 
 Using with NCL
@@ -36,9 +36,8 @@ available to be included via Fortran's ``use`` statement. Once a dynlib module i
 routines can be called.
 
 The Fortran ``mod`` files are residing in ``$prefix/include``, the library itself is residing
-in ``$prefix/lib/libdynfor.so``. These are standard locations, so if ``$prefix`` is in the standard
-search path for the compiler and linker, everything will just work if you include the parameter
-``-ldynfor`` to the compilation command.
+in ``$prefix/lib/libdynfor.so``. If ``$prefix`` is in the standard search path for the compiler 
+and linker, you only need to include the parameter ``-ldynfor`` to the compilation command.
 
 For the centrally installed dynlib at UiB, however, ``prefix=/Data/gfi/users/local``, which is 
 not in the standard search path. Hence, you will also need to include the options
@@ -53,7 +52,7 @@ not in the standard search path. Hence, you will also need to include the option
 
 to the compiler command to make your program compile and run. 
 
-As a summary, complete minimal example, reading the default value of one of dynlib's configuration 
+As a summary, here is a complete minimal example, reading the default value of one of dynlib's configuration 
 values.
 
 .. literalinclude:: inc/use_fortran_example.f90
@@ -87,7 +86,8 @@ There are two downsides, however.
  #. At least in Fortran and python there is no integer-``NaN``. Hence, when compressing data to 16-bit
     integer for efficient storage, one must assign a custom missing value. 
  #. Explicitly assigning/creating a ``NaN`` in Fortran, without creating a floating point exception signal 
-    (SIGFPE) during run time is comparatively hard. 
+    (SIGFPE) during run time is comparatively hard. SIGFPEs are generally considered an error, such that
+    debugging is made much harder if they are created on purpose.
 
 Dynlib takes care of these downsides. First, the conversion to integer missing values is done 
 transparently in the :func:`dynlib.utils.scale` and :func:`dynlib.utils.unscale` functions when

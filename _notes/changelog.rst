@@ -51,6 +51,11 @@ Key backwards incompatible changes
    Refer to the documentation for more information about the new concept of 
    contexts.
 
+ * Renamed overlays:
+   
+   map_overlay_dat is now named map_overlay_contours and analogously, 
+   section_overlay_dat now section_overlay_contours.
+
  * More general metopen and get_instantaneous
 
    These functions stay largely compatible with previous versions. The only
@@ -92,6 +97,10 @@ Key backwards incompatible changes
    If data is read/written to a compressed netCDF file with 16-bit integers,
    the scale/unscale functions transparently convert the integer missing
    values to NaN and back.
+ 
+ * Removed obsolete streamplot
+   
+   This functionality is now provided by matplotlib itself.
 
 
 Key additions to dynlib
