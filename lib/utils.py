@@ -435,10 +435,10 @@ def aggregate(dates, dat, agg):
 
 	# Helper functions generating functions :-)
 	def first_func_gen(tdays):
-		epoch = dt(1979,1,1)
+		epoch = dates[0]
 		return lambda date: epoch + td(((date - epoch).days / tdays)*tdays)
 	def last_func_gen(tdays):
-		epoch = dt(1979,1,1)
+		epoch = dates[0]
 		return lambda date: epoch + td(((date - epoch).days / tdays + 1)*tdays) - dtd
 
 	# 1a. Defining aggregation types 
@@ -468,8 +468,8 @@ def aggregate(dates, dat, agg):
 		last_func = lambda date: dt(date.year+date.month/12, date.month % 12 + 1, 1) - dtd
 		agg = 'func'
 	
-	# Aggregate by ISO calendar weeks (which are aligned with 1979-1-1, so '7d' would be identical)
-	elif agg == 'cal_weekly' or agg == '7d' or agg == 'weekly':
+	# Aggregate by ISO calendar weeks
+	elif agg == 'cal_weekly':
 		# date.isocalendar gives the a tuple (ISOWEEK_YEAR, ISOWEEK, ISOWEEK_DAY)
 		first_func = lambda date: date - (date.isocalendar()[2] - 1)*td(1,0) - td(0,3600*date.hour)
 		last_func = lambda date: date + (8 - date.isocalendar()[2])*td(1,0) - td(0,3600*date.hour) - dtd
@@ -495,27 +495,32 @@ def aggregate(dates, dat, agg):
 			return dt(date.year, 1, 1) + (pentad+1)*td(5) + td(endleap) - dtd
 		agg = 'func'
 	
-	# Aggregate by 10-day periods, starting 1979-1-1
+	# Aggregate by 10-day periods
 	elif agg == '10d':
 		first_func = first_func_gen(10)
 		last_func = last_func_gen(10)
 		agg = 'func'
-	# Aggregate by 5-day periods, starting 1979-1-1
+	# Aggregate by 7-day periods
+	elif agg == '7d' or agg == 'weekly':
+		first_func = first_func_gen(7)
+		last_func = last_func_gen(7)
+		agg = 'func'
+	# Aggregate by 5-day periods
 	elif agg == '5d':
 		first_func = first_func_gen(5)
 		last_func = last_func_gen(5)
 		agg = 'func'
-	# Aggregate by 3-day periods, starting 1979-1-1
+	# Aggregate by 3-day periods
 	elif agg == '3d':
 		first_func = first_func_gen(3)
 		last_func = last_func_gen(3)
 		agg = 'func'
-	# Aggregate by 2-day periods, starting 1979-1-1
+	# Aggregate by 2-day periods
 	elif agg == '2d':
 		first_func = first_func_gen(2)
 		last_func = last_func_gen(2)
 		agg = 'func'
-	# Aggregate by 24h periods, starting 1979-1-1
+	# Aggregate by 24h periods
 	elif agg == '1d' or agg == 'daily':
 		first_func = first_func_gen(1)
 		last_func = last_func_gen(1)

@@ -1,7 +1,6 @@
 Next steps
 ----------
 
-  1. Documentation: Plotting
   2. metio: metsave for aggregates and get_aggregate
   3. Documentation: File formats (line, ts, agg) 		<- 2
  ---------------------------- version 0.20 ----------------------------
