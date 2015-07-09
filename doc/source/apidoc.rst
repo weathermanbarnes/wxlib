@@ -16,6 +16,7 @@ Functions
    api/humidity
    api/sphere
    api/stats
+   api/tend
    api/utils
 
 

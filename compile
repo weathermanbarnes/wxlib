@@ -20,7 +20,7 @@ work="$base/examples"
 doc="$base/doc"
 doc_extract=".compile_fortran_doc.py"
 
-files="config.f90 derivatives.f90 ellipse.f90 utils.f90 humidity.f90 diag.f90 detect_rwb_contour.f90 detect_fronts.f90 detect.f90 sphere.f90 stat.f90"
+files="config.f90 derivatives.f90 ellipse.f90 utils.f90 humidity.f90 diag.f90 detect_rwb_contour.f90 detect_fronts.f90 detect.f90 sphere.f90 stat.f90 tend.f90 diag_tend.f90"
 filec="const.f90"
 filek="kind.f90"
 
