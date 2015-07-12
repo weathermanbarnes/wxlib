@@ -56,8 +56,8 @@ Option 3 for composite:
  * Follow structure for instantaneous/aggregated data: One variable per file
  * 'dates', 'values' with binary values follow the ts specification
  * Problem: Many small files, duplicating 'dates' and 'values'
- * Problem: 
- * q*: For composited variables 
+ * q: Composited variables
+ * 'std', 'min', 'max' as optional additions, like for agg
  * Example file name: ei.ans.NAO+@DJF.1979-2014.pv2000.jetaxis_freq.nc
 
 

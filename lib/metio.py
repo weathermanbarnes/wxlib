@@ -11,8 +11,7 @@ import os
 import sys
 
 import numpy as np
-import scipy.io.netcdf as nc3
-import Scientific.IO.NetCDF as nc
+import netCDF4 as nc
 import scipy.io.matlab as mat
 import pytz
 import calendar
@@ -110,8 +109,7 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 				dat = f[q][cut]
 			print 'Found '+path+'/'+filename+'.mat'
 		elif os.path.exists(path+'/'+filename+'.nc'):
-			#f   = nc.netcdf_file(path+'/'+filename+'.nc', 'r')
-			f   = nc.NetCDFFile(path+'/'+filename+'.nc', 'r')
+			f   = nc.Dataset(path+'/'+filename+'.nc', 'r')
 			if q:
 				var = f.variables[q]
 				if q not in f.variables:
@@ -188,37 +186,37 @@ def metsave(dat, static, q, plev, compress_to_short=True):
 		raise ValueError, 'x-dimension in data (%s) and static (%s) are not equally long.' % (s[2], len(static.x[0,:]))
 
 	now = dt.now(pytz.timezone(conf.local_timezone))
-	of = nc3.netcdf_file(conf.opath+'/'+(conf.file_std % {
-		'time': dts2str(static.t_parsed), 'plev': plev, 'qf': conf.qf[q]})+'.nc', 'w')
-	of._attributes = {'Conventions': 'CF-1.0', 
+	of = nc.Dataset(conf.opath+'/'+(conf.file_std % {
+		'time': dts2str(static.t_parsed), 'plev': plev, 'qf': conf.qf[q]})+'.nc', 'w', format='NETCDF3_CLASSIC')
+	of.setncatts({'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
-	}
+	})
 
 	of.createDimension('time', s[0])
 	of.createDimension(static.x_name, s[2])
 	of.createDimension(static.y_name, s[1])
 
 	ot = of.createVariable('time', 'i', ('time',))
-	ot._attributes = {'long_name': 'time', 'units': static.t_unit}
-	ot[:] = static.t
+	ot.setncatts({'long_name': 'time', 'units': static.t_unit})
+	ot[::] = static.t
 	olat = of.createVariable(static.y_name, 'f', (static.y_name,))
-	olat._attributes = {'long_name': static.y_name, 'units': static.y_unit}
-	olat[:] = static.y[:,0]
+	olat.setncatts({'long_name': static.y_name, 'units': static.y_unit})
+	olat[::] = static.y[:,0]
 	olon = of.createVariable(static.x_name, 'f', (static.x_name,))
-	olon._attributes = {'long_name': static.x_name, 'units': static.x_unit}
-	olon[:] = static.x[0,:]
+	olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
+	olon[::] = static.x[0,:]
 	
 	if compress_to_short:
-		ovar = of.createVariable(q, 'h', ('time', 'latitude', 'longitude',))
+		ovar = of.createVariable(q, 'h', ('time', static.y_name, static.x_name,))
 		dat, scale, off, fill = utils.unscale(dat)
-		ovar._attributes = {'long_name': conf.q_long[q], 'units': conf.q_units[q],
-				'add_offset': off, 'scale_factor': scale}
+		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q],
+				'add_offset': off, 'scale_factor': scale})
 		if fill: 
-			ovar._attributes['_FillValue'] = fill
-			ovar._attributes['missing_value'] = fill
+			ovar._FillValue = fill
+			ovar.missing_value = fill
 	else:
-		ovar = of.createVariable(q, 'f', ('time', 'latitude', 'longitude',))
-		ovar._attributes = {'long_name': conf.q_long[q], 'units': conf.q_units[q]}
+		ovar = of.createVariable(q, 'f', ('time', static.y_name, static.x_name,))
+		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q]})
 	ovar[::] = dat
 
 	of.close()
@@ -263,10 +261,10 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 		raise RuntimeError, 'dat does not have size 3 in the third dimension'
 
 	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc3.netcdf_file(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'qf': conf.qf[q]})+'.nc', 'w')
-	of._attributes = {'Conventions': 'CF-1.0', 
+	of = nc.Dataset(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'qf': conf.qf[q]})+'.nc', 'w', format='NETCDF3_CLASSIC')
+	of.setncatts({'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
-	}
+	})
 	
 	# The maximum amount of line points for all time steps
 	#llen = int(datoff.max())
@@ -284,31 +282,31 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 	of.createDimension(static.x_name, static.x.shape[1])
 	of.createDimension(static.y_name, static.y.shape[0])
 	olon = of.createVariable(static.x_name, 'f', (static.x_name,))
-	olon._attributes = {'long_name': static.x_name, 'units': static.x_unit}
+	olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
 	olon[:] = static.x[0,:]
 	olat = of.createVariable(static.y_name, 'f', (static.y_name,))
-	olat._attributes = {'long_name': static.y_name, 'units': static.y_unit}
+	olat.setncatts({'long_name': static.y_name, 'units': static.y_unit})
 	olat[:] = static.y[:,0]
 
 	ot = of.createVariable(static.t_name, 'i', ('time',))
-	ot._attributes = {'long_name': static.t_name, 'units': static.t_unit}
+	ot.setncatts({'long_name': static.t_name, 'units': static.t_unit})
 	ot[:] = static.t
 	olidx = of.createVariable('pointindex', 'i', ('pointindex',))
-	olidx._attributes = {'long_name': 'Index of point along all lines', 'units': '1'}
+	olidx.setncatts({'long_name': 'Index of point along all lines', 'units': '1'})
 	olidx[:] = range(llen)
 	olity = of.createVariable('infotype', 'c', ('infotype',))
-	olity._attributes = {'long_name': 'Type of info stored for point', 'units': 'enum'}
+	olity.setncatts({'long_name': 'Type of info stored for point', 'units': 'enum'})
 	olity[:] = ['X', 'Y', 'I']
 	ooidx = of.createVariable('lineindex', 'i', ('lineindex',))
-	ooidx._attributes = {'long_name': 'Index of line', 'units': '1'}
+	ooidx.setncatts({'long_name': 'Index of line', 'units': '1'})
 	ooidx[:] = range(olen)
 	
 	oq = of.createVariable(q, 'f', ('time', 'pointindex', 'infotype',))
-	oq._attributes = {'long_name': conf.q_long[q], 'units': 'mixed'}
+	oq.setncatts({'long_name': conf.q_long[q], 'units': 'mixed'})
 	oq[::] = dat[:,:llen,:]
 
 	oqoff = of.createVariable(qoff, 'i', ('time', 'lineindex',))
-	oqoff._attributes = {'long_name': 'Index of first point of line', 'units': '1'}
+	oqoff.setncatts({'long_name': 'Index of first point of line', 'units': '1'})
 	oqoff[::] = datoff[:,:olen]
 
 	of.close()
@@ -345,7 +343,7 @@ def get_static(verbose=False, no_dtype_conversion=False):
 # 2. Generalised data fetchers
 # 
 
-def get_instantaneous(q, dates, plevs=None, tavg=False, quiet=False, force=False, **kwargs):
+def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	''' Data fetcher for instantaneous or short-term averaged fields
 
 	Allows general data requests in the configured data base, e.g. ERA-Interim. The request
@@ -368,8 +366,6 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, quiet=False, force=False
 	tavg : bool
 		*Optional*, default ``False``. Instead of returning a time-dimension, return
 		the temporal average of the requested data.
-	quiet : bool
-		*Optional*, default ``False``. Suppress any output from this function.
 	force : bool
 		*Optional*, default ``False``. Turn off the error, if large amounts of data are
 		requested at once. **Be sure you know what you are doing, when setting this to 
@@ -458,7 +454,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, quiet=False, force=False
 
 
 # Get aggregated (average, standard deviation, etc.) fields
-def get_aggregate(q, year=None, plev=None, yidx=None, xidx=None):
+def get_aggregate(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	''' Request aggregate data 
 	
 	This function is not implemented yet. It is only included to define the future API.
