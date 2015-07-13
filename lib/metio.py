@@ -21,6 +21,7 @@ import utils
 from gridlib import grid_by_nc, grid_by_static
 
 from datetime import datetime as dt, timedelta as td
+import tagg
 
 import dynfor
 dynlib_version = (''.join(dynfor.consts.version)).strip()
@@ -468,7 +469,7 @@ def get_aggregate(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 # 3. Utilities
 #
 
-def dts2str(dates):
+def dts2str(dates, agg=None):
 	''' Find a short, but descriptive string representation for a list of dates
 
 	If only a single date is given, the formatted date of the form YYYYMMDDHH is returned.
@@ -529,13 +530,15 @@ def dts2str(dates):
 	>>> dts2str([dt(1986,4,7,6), dt(1986,4,7,18), dt(1986,4,7,0)])
 	'19860407..19860407'
 
-	because even if the first and last time step of the superordinate period (=7 April 1986) is present, 
-	not all time steps in between are listed.
+	because even if the first and last time step of the superordinate period (which is 7 
+	April 1986) is present, not all time steps in between are listed.
 
 	Parameters
 	----------
 	dates : datetime or set/list/tuple of datetime
 	    Dates to be represented by a string. The order of the dates is irrelevant.
+	agg : str
+	    String representation for the time aggregation interval.
 	
 	Returns
 	-------
@@ -565,19 +568,33 @@ def dts2str(dates):
 	else:
 		ret = dta.strftime('%Y%m%d%H')
 	
+	# Try to find an applicable time aggregation interval, either by argument or from the data set
 	if conf.timestep:
-		tsteps = (dtz - dta).total_seconds() / conf.timestep.total_seconds()
-		if len(dates) == tsteps + 1:
-			ret += '-'
-			contiguous = True
-		else:
-			ret += '..'
-			contiguous = False
+		if agg:
+			agg = getattr(tagg, agg)
+		else: 
+			agg = getattr(tagg, conf.timestep)
 
-		lasthour = -conf.timestep.total_seconds()/3600 % 24
-		if dtz.hour == lasthour:
-			if dtz.day == calendar.monthrange(dtz.year, dtz.month)[1]:
-				if dtz.month == 12:
+		agg = agg(dta, dtz)
+	else:
+		agg = None
+	
+	# If an aggregation interval is available, find out if the given dates are contiguous 
+	# and simplify the date representation accordingly
+	if agg:
+		ret += '-'
+		contiguous = True
+		aggdates = list(agg)
+		for date in aggdates:
+			if not date in dates:
+				ret += '..'
+				contiguous = False
+				break
+
+		last = agg.start_next(aggdates[-1]) - conf.timestep
+		if dtz.hour == last.hour:
+			if dtz.day == last.day:
+				if dtz.month == last.month:
 					if dtz.year == dta.year and contiguous:
 						ret = dtz.strftime('%Y')
 					else:
