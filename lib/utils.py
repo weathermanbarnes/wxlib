@@ -15,6 +15,8 @@ import math
 import numpy as np
 from scipy.special import erfinv
 
+from settings import conf
+
 from datetime import datetime as dt, timedelta as td
 import calendar
 
@@ -184,7 +186,7 @@ def __unflatten_fronts_t(fronts, froff, minlength):
 
 #
 # return a 3d boolean array where frontal points are True, elsewere False
-def mask_fronts(fronts, froff, s=(361,720)):
+def mask_fronts(fronts, froff, s=conf.gridsize):
 	''' To be made obsolete by saving cold/warm/stat fronts separately as lines in the standard-dynlib way 
 	
 	See also
@@ -206,7 +208,7 @@ def mask_fronts(fronts, froff, s=(361,720)):
 	return masks
 
 
-def mask_lines_with_data(lines, loff, dat=None, s=(361,720)):
+def mask_lines_with_data(lines, loff, dat=None, s=conf.gridsize):
 	''' Mask lines in a gridded map
 
 	Instead of returning the value ``1`` for grid points containing a line, 
@@ -270,7 +272,7 @@ def mk_gauss(x0,stddev):
 	return lambda x: np.exp(-0.5*(x-x0)**2/stddev**2)/(np.sqrt(2*np.pi)*stddev)
 
 
-def smear_lines(lines, loff, s=(361,720)):
+def smear_lines(lines, loff, s=conf.gridsize):
 	''' Mask lines in a gridded map and then smooth slightly
 
 	Grid points containing a line will be marked with the value ``1``,

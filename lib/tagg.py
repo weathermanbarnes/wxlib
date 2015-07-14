@@ -26,10 +26,20 @@ import calendar
 
 
 class tagg(object):
-	def __init__(self, dtstart, dtd, epoch=None, dtend=None):
+	''' Time interval object and iterator
+	
+	'''
+
+	interval = None
+
+	def __init__(self, dtstart, dtend=None, dtd=None, epoch=None):
 		self.dtstart = dtstart
 		self.dtend = dtend
-		self.dtd = dtd
+
+		if not dtd:
+			self.dtd = self.interval
+		else:
+			self.dtd = dtd
 
 		if not epoch:
 			self.epoch = dtstart
@@ -42,6 +52,8 @@ class tagg(object):
 			self.cur = self.start_next(dtstart)
 		
 	def __iter__(self):
+		''' Generator function to allow iterating over the time range '''
+
 		if self.dtend:
 			while self.cur < self.dtend:
 				yield self.cur
@@ -52,12 +64,18 @@ class tagg(object):
 				self.cur = self.start_next()
 	
 	def start(self, dti):
+		''' Start of the interval the given date is in '''
+
 		raise NotImplementedError, 'To be overriden in base classes.'
 
 	def end(self, dti):
+		''' End date of the interval the given date is in '''
+
 		return self.start_next(dti) - self.dtd
 	
 	def start_next(self, dti=None):
+		''' Start of the next interval after the current or given '''
+
 		if dti:
 			dts = self.start(dti)
 		else:
@@ -65,46 +83,73 @@ class tagg(object):
 
 		return self._add_interval(dts)
 
+	def start_after_or_on(self, dti):
+		''' Start date of the interval starting at or after the given date '''
+
+		dts = self.start(dti)
+		if dts == dti:
+			return dti
+		else:
+			return self._add_interval(dts)
+
 	def _add_interval(self, dti):
-		raise NotImplementedError, 'To be overriden in base classes.'
+		''' Add one interval to the given date '''
+
+		return dti + self.interval
 
 
 
 
 class all(tagg):
 	def start(self, dti):
+		__doc__ = tagg.start.__doc__
+
 		return self.dtstart
 
 	def _add_interval(self, dti): 
+		__doc__ = tagg._add_interval.__doc__
+
 		return dti + (self.dtend - self.dtstart)
 	
 
-class met_season(tagg):
+class cal_year(tagg):
+	interval = rtd(years=+1)
+
 	def start(self, dti):
+		__doc__ = tagg.start.__doc__
+
+		return dt(dti.year, 1, 1)
+
+
+class met_season(tagg):
+	interval = rtd(months=+3)
+
+	def start(self, dti):
+		__doc__ = tagg.start.__doc__
+
 		# First month of a the season for a given month m
 		fst_month = ((dti.month / 3) * 3 - 1) % 12 + 1
 		# Is the beginning of the current season in a previous year?
 		fst_year_offset = -1 if fst_month > dti.month else 0
 		return dt(dti.year+fst_year_offset, fst_month, 1)
-
-	def _add_interval(self, dti): 
-		return dti + rtd(months=+3)
 	
 
 class cal_month(tagg):
-	def start(self, dti):
-		return dt(dti.year, dti.month,1)
+	interval = rtd(months=+1)
 
-	def _add_interval(self, dti):
-		return dti + rtd(months=+1)
+	def start(self, dti):
+		__doc__ = tagg.start.__doc__
+
+		return dt(dti.year, dti.month,1)
 
 
 class cal_week(tagg):
-	def start(self, dti):
-		return dti + rtd(weekday=monday, hour=0, minute=0, second=0, microsecond=0)
+	interval = rtd(weeks=+1)
 
-	def _add_interval(self, dti):
-		return dti + rtd(weeks=+1)
+	def start(self, dti):
+		__doc__ = tagg.start.__doc__
+
+		return dti + rtd(weekday=monday, hour=0, minute=0, second=0, microsecond=0)
 
 
 class cal_pentad(tagg):
@@ -126,11 +171,15 @@ class cal_pentad(tagg):
 		return pentad, startleap, longpentad
 
 	def start(self, dti):
+		__doc__ = tagg.start.__doc__
+
 		pentad, startleap, longpentad = self._get_pentad(dti)
 
 		return dt(dti.year, 1, 1) + pentad*td(5) + td(startleap)
 
 	def _add_interval(self, dti):
+		__doc__ = tagg._add_interval.__doc__
+
 		pentad, startleap, longpentad = self._get_pentad(dti)
 
 		return dti + td(5+longpentad)
@@ -138,14 +187,30 @@ class cal_pentad(tagg):
 
 def Nday_factory(N):
 	class new(tagg):
-		def start(self, dti):
-			return self.epoch + td(((dti - self.epoch).days / N) * N)
+		interval = td(N)
 
-		def _add_interval(self, dti):
-			return dti + td(N)
+		def start(self, dti):
+			__doc__ = tagg.start.__doc__
+
+			return self.epoch + td(((dti - self.epoch).days / N) * N)
 	
+
 	return new
 
+
+def Nhour_factory(N):
+	class new(tagg):
+		interval = td(0, N*3600)
+
+		def start(self, dti):
+			__doc__ = tagg.start.__doc__
+
+			return self.epoch + td(0, (int((dti - self.epoch).total_seconds()) / (N*3600)) * N*3600)
+	
+
+	return new
+
+six_hourly = Nhour_factory(6)
 daily = Nday_factory(1)
 two_daily = Nday_factory(2)
 three_daily = Nday_factory(3)
@@ -154,8 +219,18 @@ weekly = Nday_factory(7)
 ten_daily = Nday_factory(10)
 
 
-__all__ = ['met_season', 'cal_month', 'cal_week', 'cal_pentad', 
-	'ten_daily', 'weekly', 'five_daily', 'three_daily', 'two_daily', 'daily']
+__all__ = ['all', 'cal_year', 'met_season', 'cal_month', 'cal_week', 'cal_pentad', 
+	'ten_daily', 'weekly', 'five_daily', 'three_daily', 'two_daily', 'daily',
+	'six_hourly']
 
+def get_by_interval(td):
+	for agg in __all__:
+		agg_obj = globals()[agg]
+		if agg_obj.interval == td:
+			return agg_obj
+	
+	raise ValueError, 'No aggregator found for time interval `%s`' % str(td)
+
+__all__.append('get_by_interval')
 
 # the end

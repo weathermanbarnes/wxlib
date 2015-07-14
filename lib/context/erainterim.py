@@ -13,9 +13,9 @@ def_context('erainterim')
 
 conf.years = range(1979,2015)
 conf.file_std = 'ei.ans.%(time)s.%(plev)s.%(qf)s'
-conf.file_agg = 'ei.ans.agg_%(agg)s.%(time)s.%(plev)s.%(qf)s'
-conf.file_comp = 'ei.ans.comp_%(comp)s.%(time)s.%(plev)s.%(qf)s'
-conf.file_eof = 'ei.ans.eof_%(eof)s.%(time)s.%(plev)s.%(qf)s'
+conf.file_agg = 'ei.ans.%(agg)s.%(time)s.%(plev)s.%(qf)s'
+conf.file_comp = 'ei.ans.%(comp)s.%(time)s.%(plev)s.%(qf)s'
+conf.file_eof = 'ei.ans.%(eof)s.%(time)s.%(plev)s.%(qf)s'
 conf.file_ts = 'ei.ans.ts_%(ts)s.%(time)s.%(plev)s.%(qf)s'
 conf.file_static = 'ei.ans.static'
 conf.timestep = td(0.25)

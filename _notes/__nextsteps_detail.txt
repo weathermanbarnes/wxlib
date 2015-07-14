@@ -3,15 +3,6 @@ What is to do?
 metsave			-> add optional argument agg
 			-> add optional argument for additional data
 
-dts2str			-> add optional argument agg
-			-> do explicit completeness check
-
-get_aggregate/		-> Provide as empty proxy functions for new metread
-get_instantaneous
-
-metread			-> New function based on the old get_instantaneous
-			-> Add optional argument agg 
-
 get_composite/		-> New empty proxy functions for new metread_special
 get_eof
 
