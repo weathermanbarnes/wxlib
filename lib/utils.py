@@ -15,6 +15,7 @@ import math
 import numpy as np
 from scipy.special import erfinv
 
+import tagg
 from settings import conf
 
 from datetime import datetime as dt, timedelta as td
@@ -413,17 +414,21 @@ def aggregate(dates, dat, agg):
 	    implemented: 
 
 	    * ``all``: Temporal average everything
+	    * ``cal_year``: Years following the calendar definition
 	    * ``met_season``: Seasons after their standard meteorological definition
-	    * ``cal_monthly``: Months following the calendar definition
-	    * ``10d``: 10-day intervals starting from the first given date
-	    * ``cal_weekly``: Weeks following the calendar definition
-	    * ``7d`` or ``weekly``: 7-day intervals starting from the first given date, 
+	    * ``cal_month``: Months following the calendar definition
+	    * ``cal_week``: Weeks following the calendar definition, starting on Monday.
+	    * ``cal_pendad``: Pentads according to their definition
+
+	    In addition, the following regular periodic intervals are defined:
+
+	    * ``ten_daily``: 10-day intervals starting from the first given date
+	    * ``weekly``: 7-day intervals starting from the first given date, 
 	      irrespective of the day of the week
-	    * ``pendad``: Pentads according to their definition
-	    * ``5d``: 5-day intervals starting from the first given date
-	    * ``3d``: 3-day intervals starting from the first given date
-	    * ``2d``: 2-day intervals starting from the first given date
-	    * ``1d`` or ``daily``: 1-day intervals starting from the first given date
+	    * ``five_daily``: 5-day intervals starting from the first given date
+	    * ``three_daily``: 3-day intervals starting from the first given date
+	    * ``two_daily``: 2-day intervals starting from the first given date
+	    * ``daily``: 1-day intervals starting from the first given date
 	
 	Returns
 	-------
@@ -435,126 +440,27 @@ def aggregate(dates, dat, agg):
 
 	dtd = dates[1] - dates[0]
 
-	# Helper functions generating functions :-)
-	def first_func_gen(tdays):
-		epoch = dates[0]
-		return lambda date: epoch + td(((date - epoch).days / tdays)*tdays)
-	def last_func_gen(tdays):
-		epoch = dates[0]
-		return lambda date: epoch + td(((date - epoch).days / tdays + 1)*tdays) - dtd
-
-	# 1a. Defining aggregation types 
-	tslc = []
-	dates_out = []
+	t_iter = getattr(tagg, agg)(dates[0], dtd=dtd)
 	
-	# Aggregate everything
-	if agg == 'all':
-		first_func = lambda date: dates[0]
-		last_func = lambda date: dates[-1]
-		agg = 'func'
-	
-	# Aggregate by season
-	elif agg == 'met_season':
-		# Defining some helpers
-		season_start = {1: 12, 2: 12, 3: 3, 4: 3, 5: 3, 6: 6, 7: 6, 8: 6, 9: 9, 10: 9, 11: 9, 12: 12}
-		first_year_offset = {1: -1, 2: -1, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0}
-		last_year_offset = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 1}
-
-		first_func = lambda date: dt(date.year + first_year_offset[date.month], season_start[date.month], 1)
-		last_func = lambda date: dt(date.year + last_year_offset[date.month], (season_start[date.month]+2) % 12 + 1, 1) - dtd
-		agg = 'func'
-	
-	# Aggregate by calendar months
-	elif agg == 'cal_monthly':
-		first_func = lambda date: dt(date.year,date.month,1)
-		last_func = lambda date: dt(date.year+date.month/12, date.month % 12 + 1, 1) - dtd
-		agg = 'func'
-	
-	# Aggregate by ISO calendar weeks
-	elif agg == 'cal_weekly':
-		# date.isocalendar gives the a tuple (ISOWEEK_YEAR, ISOWEEK, ISOWEEK_DAY)
-		first_func = lambda date: date - (date.isocalendar()[2] - 1)*td(1,0) - td(0,3600*date.hour)
-		last_func = lambda date: date + (8 - date.isocalendar()[2])*td(1,0) - td(0,3600*date.hour) - dtd
-		agg = 'func'
-	
-	# Aggegate by pendats, following the CPC definition that Pentad 12 is always 25 Feb -- 1 Mar, even for leap years
-	elif agg == 'pentad':
-		def pentad_off(date):
-			leap = 0
-			startleap = 0
-			if calendar.isleap(date.year) and date.timetuple().tm_yday >= 60:
-				leap = 1
-			pentad = ((date - dt(date.year, 1, 1)).days - leap)/ 5 
-			if leap > 0 and pentad > 11:
-				startleap = 1
-			return pentad, startleap, leap
-
-		def first_func(date):
-			pentad, startleap, endleap = pentad_off(date)
-			return dt(date.year, 1, 1) + pentad*td(5) + td(startleap)
-		def last_func(date):
-			pentad, startleap, endleap = pentad_off(date)
-			return dt(date.year, 1, 1) + (pentad+1)*td(5) + td(endleap) - dtd
-		agg = 'func'
-	
-	# Aggregate by 10-day periods
-	elif agg == '10d':
-		first_func = first_func_gen(10)
-		last_func = last_func_gen(10)
-		agg = 'func'
-	# Aggregate by 7-day periods
-	elif agg == '7d' or agg == 'weekly':
-		first_func = first_func_gen(7)
-		last_func = last_func_gen(7)
-		agg = 'func'
-	# Aggregate by 5-day periods
-	elif agg == '5d':
-		first_func = first_func_gen(5)
-		last_func = last_func_gen(5)
-		agg = 'func'
-	# Aggregate by 3-day periods
-	elif agg == '3d':
-		first_func = first_func_gen(3)
-		last_func = last_func_gen(3)
-		agg = 'func'
-	# Aggregate by 2-day periods
-	elif agg == '2d':
-		first_func = first_func_gen(2)
-		last_func = last_func_gen(2)
-		agg = 'func'
-	# Aggregate by 24h periods
-	elif agg == '1d' or agg == 'daily':
-		first_func = first_func_gen(1)
-		last_func = last_func_gen(1)
-		agg = 'func'
-	
-	# Unknown aggregation period
-	else:
-		raise NotImplementedError, 'Unknown aggregation specifier `%s`' % str(agg)
-	
-	# 1b. Estimating length of output array
-	#     Aggegate by output of functions first_func and last_func; 
-	#     These functions give the first and the last time step for the interval `date` belongs to
-	if agg == 'func':
-		previ = -1
-		for i, date in zip(range(len(dates)), dates):
-			# Previous interval unfinished, yet we are in a new one.
-			# -> We apparently jumped over a range of dates and have to find a new start
-			if previ >= 0 and not first_func(date) == first_func(dates[previ]):
-				previ = -1
-			
-			# End of an interval -> save
-			if previ >= 0 and date == last_func(date):
-				tslc.append(slice(previ,i))
-				dates_out.append(dates[previ])
-				previ = -1
-			
-			# Start of an intercal -> remember 
-			if date == first_func(date):
-				previ = i
-	
-	else:
-		raise ValueError, 'Unknown agg value `%s`' % str(agg)
+	# 1. Find length of output array and generate time slices for each aggregation interval
+	#    Aggegate by output of functions t_iter.start and t_iter.end; 
+	#    These functions give the first and the last time step for the interval `date` belongs to
+	previ = -1
+	for i, date in zip(range(len(dates)), dates):
+		# Previous interval unfinished, yet we are in a new one.
+		# -> We apparently jumped over a range of dates and have to find a new start
+		if previ >= 0 and not t_iter.start(date) == t_iter.start(dates[previ]):
+			previ = -1
+		
+		# End of an interval -> save
+		if previ >= 0 and date == t_iter.end(date):
+			tslc.append(slice(previ,i))
+			dates_out.append(dates[previ])
+			previ = -1
+		
+		# Start of an interval -> remember 
+		if date == t_iter.start(date):
+			previ = i
 	
 	outlen = len(tslc)
 

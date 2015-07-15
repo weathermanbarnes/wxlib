@@ -13,6 +13,7 @@ a "static.npz" file that contains the pertinent information for a given data set
 
 
 import math
+import copy
 import numpy as np
 from datetime import datetime as dt, timedelta as td
 
@@ -91,6 +92,29 @@ class grid(object):
 		return
 
 	rebuild_grid = __build_grid
+
+	def new_time(self, dates):
+		''' Make a copy of itself with a new time axis
+
+		Parameters
+		----------
+		dates : list of datetime
+		    Dates defining the new time axis
+
+		Returns
+		-------
+		    Copy of the grid object with a new time axis
+		'''
+		
+		if type(self.t_parsed) == type(None):
+			raise TypeError, 'No (parsable) time axis to be replaced in this grid object!'
+
+		cpy = copy.copy(self)
+		cpy.t_parsed = dates
+		cpy.t = np.array([ (date - cpy.t_epoch).totalseconds()/float(cpy.t_interval_unit) 
+			for date in dates ])
+
+		return cpy
 
 
 # Construct the grid based on the grid information in a nc (netcdf) file
@@ -264,20 +288,20 @@ class grid_by_nc(grid):
 					self.t_parsed = None
 				else:
 					formats = ['%Y-%m-%d %H:%M:0.0', '%Y-%m-%d %H:%M:00', ]
-					fac = facs[tusplit[0]]
+					self.t_interval_unit = facs[tusplit[0]]
 					for fmt in formats:
 						try:
-							start_dt = dt.strptime(' '.join(tusplit[2:4]), fmt)
+							self.t_epoch = dt.strptime(' '.join(tusplit[2:4]), fmt)
 						except ValueError:
-							start_dt = None
+							self.t_epoch = None
 
-						if not type(start_dt) == type(None):
+						if not type(self.t_epoch) == type(None):
 							break
 
-					if type(start_dt) == type(None):
-						start_dt = dt(1,1,1,0,0)
+					if type(self.t_epoch) == type(None):
+						self.t_epoch = dt(1,1,1,0,0)
 						
-					self.t_parsed = np.array([start_dt + td(0, fac*int(ts)) for ts in self.t])
+					self.t_parsed = np.array([self.t_epoch + td(0, self.t_interval_unit*int(ts)) for ts in self.t])
 
 			else:
 				self.t_parsed = None

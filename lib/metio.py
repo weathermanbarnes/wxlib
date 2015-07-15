@@ -186,7 +186,7 @@ def metdiscover(filename):
 
 
 # Save dat as a netCDF file, using the metadata in static. 
-def metsave(dat, static, q, plev, compress_to_short=True):
+def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	''' Save data in a netCDF file
 
 	Parameters
@@ -200,6 +200,9 @@ def metsave(dat, static, q, plev, compress_to_short=True):
 	plev : str
 	    String representation of the vertical level on which the data is defined, e.g. ``'700'`` 
 	    for 700 hPa or ``'pv2000'`` for the PV2-surface.
+	agg : str
+	    *Optional*. String representation for the time aggregation interval, e.g. ``'daily'`` or 
+	    ``'cal_month'``. Affects the file name, and the string representation of the given dates.
 	compress_to_short : bool
 	    *Optional*, default ``True``. By default, ``metsave`` compresses the data by converting
 	    the data field into int16, using the float64 ``add_offset`` and ``scale_factor`` attributes 
@@ -222,8 +225,14 @@ def metsave(dat, static, q, plev, compress_to_short=True):
 		raise ValueError, 'x-dimension in data (%s) and static (%s) are not equally long.' % (s[2], len(static.x[0,:]))
 
 	now = dt.now(pytz.timezone(conf.local_timezone))
-	of = nc.Dataset(conf.opath+'/'+(conf.file_std % {
-		'time': dts2str(static.t_parsed), 'plev': plev, 'qf': conf.qf[q]})+'.nc', 'w', format='NETCDF3_CLASSIC')
+	if not agg:
+		of = nc.Dataset(conf.opath+'/'+(conf.file_std % {
+				'time': dts2str(static.t_parsed), 'plev': plev, 'qf': conf.qf[q]})+'.nc', 
+			'w', format='NETCDF3_CLASSIC')
+	else:
+		of = nc.Dataset(conf.opath+'/'+(conf.file_agg % { 'agg': agg,
+				'time': dts2str(static.t_parsed, agg), 'plev': plev, 'qf': conf.qf[q]})+'.nc', 
+			'w', format='NETCDF3_CLASSIC')
 	of.setncatts({'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	})

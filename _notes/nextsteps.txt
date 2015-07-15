@@ -1,11 +1,9 @@
 Next steps
 ----------
 
-  2. metio: metsave for aggregates and get_aggregate
-  3. Documentation: File formats (line, ts, agg) 		<- 2
  ---------------------------- version 0.20 ----------------------------
   4. dyncal: Generic infratructure
-  5. dyncal: Add actions (calc, agg, plot) 			<- 2, 4 			@ 12.07
+  5. dyncal: Add actions (calc, agg, plot) 			<- 2, 4
   6. Integrate composite infrastructure
   7. Integrate EOF functions
   8. metio: metsave for eof, comp and get_eof, get_composite 	<- 6, 7
@@ -17,7 +15,7 @@ Next steps
  13. Contexts: Extend (metno_fc, ecmwf_fc)
  14. Contexts: Create (wrf, bedymo)
  15. Contexts: Create (nora10, other available reanalyses)
- ---------------------------- version 0.22 ---------------------------- 			@ 19.07
+ ---------------------------- version 0.22 ----------------------------
  16. Integrate block
  17. Create lineutils
  18. Integrate trends
@@ -25,7 +23,7 @@ Next steps
  20. Move regression
  21. Integrate Aleksi's curly vector plot 			<- Aleksi send code
  22. Create streamline overlay
- ---------------------------- version 0.23 ---------------------------- 			@ 22.07
+ ---------------------------- version 0.23 ----------------------------
  23. Some kind of testing infrastructure
  ---------------------------- version 1.0  ----------------------------
  24. Add persistent homologies
