@@ -55,7 +55,7 @@ def scale(var, cut=slice(None)):
 		dat[dat == var.missing_value] = np.nan
 	if hasattr(var, '_FillValue'):
 		dat[dat == var._FillValue] = np.nan
-	
+
 	# Apply scaling, numpy is faster than Fortran function!
 	if hasattr(var, 'scale_factor') or hasattr(var, 'add_offset'):
 		dat = dat*var.scale_factor + var.add_offset
@@ -101,7 +101,7 @@ def unscale(var):
 
 	res[np.isnan(res)] = missing
 
-	return res.astype('>i2'), scale, off, missing
+	return res.astype('i2'), scale, off, missing
 
 
 def concat1(data):
@@ -446,6 +446,8 @@ def aggregate(dates, dat, agg):
 	#    Aggegate by output of functions t_iter.start and t_iter.end; 
 	#    These functions give the first and the last time step for the interval `date` belongs to
 	previ = -1
+	dates_out = []
+	tslc = []
 	for i, date in zip(range(len(dates)), dates):
 		# Previous interval unfinished, yet we are in a new one.
 		# -> We apparently jumped over a range of dates and have to find a new start
@@ -454,7 +456,7 @@ def aggregate(dates, dat, agg):
 		
 		# End of an interval -> save
 		if previ >= 0 and date == t_iter.end(date):
-			tslc.append(slice(previ,i))
+			tslc.append(slice(previ,i+1))
 			dates_out.append(dates[previ])
 			previ = -1
 		

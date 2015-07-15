@@ -69,9 +69,20 @@ class tagg(object):
 		raise NotImplementedError, 'To be overriden in base classes.'
 
 	def end(self, dti):
+		''' End date of the interval the given date is in or on '''
+		
+		if self.dtd <= self.interval:
+			return self.start_next(dti) - self.dtd
+		else:
+			return self.start_next(dti)
+	
+	def end_after(self, dti):
 		''' End date of the interval the given date is in '''
-
-		return self.start_next(dti) - self.dtd
+		
+		if self.dtd < self.interval:
+			return self.start_next(dti) - self.dtd
+		else:
+			return self.start_next(dti)
 	
 	def start_next(self, dti=None):
 		''' Start of the next interval after the current or given '''

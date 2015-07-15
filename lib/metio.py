@@ -22,6 +22,7 @@ import utils
 from gridlib import grid_by_nc, grid_by_static
 
 from datetime import datetime as dt, timedelta as td
+from dateutil.relativedelta import relativedelta as rtd
 import tagg
 
 import dynfor
@@ -116,7 +117,8 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 				dat = f[q][cut]
 			print 'Found '+path+'/'+filename+'.mat'
 		elif os.path.exists(path+'/'+filename+'.nc'):
-			f   = nc.Dataset(path+'/'+filename+'.nc', 'r')
+			f = nc.Dataset(path+'/'+filename+'.nc', 'r')
+			f.set_auto_scale(False)
 			if q:
 				var = f.variables[q]
 				if q not in f.variables:
@@ -252,13 +254,17 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	olon[::] = static.x[0,:]
 	
 	if compress_to_short:
-		ovar = of.createVariable(q, 'h', ('time', static.y_name, static.x_name,))
 		dat, scale, off, fill = utils.unscale(dat)
+		if fill: 
+			ovar = of.createVariable(q, 'i2', ('time', static.y_name, static.x_name,), fill_value=fill)
+			ovar.set_auto_scale(False)
+
+			ovar.missing_value = fill
+		else:
+			ovar = of.createVariable(q, 'i2', ('time', static.y_name, static.x_name,))
+
 		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q],
 				'add_offset': off, 'scale_factor': scale})
-		if fill: 
-			ovar._FillValue = fill
-			ovar.missing_value = fill
 	else:
 		ovar = of.createVariable(q, 'f', ('time', static.y_name, static.x_name,))
 		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q]})
@@ -555,15 +561,14 @@ def get_aggregate(q, dates, agg, plevs=None, tavg=False, force=False, **kwargs):
 		dates = [dates, ]
 	years = set(map(lambda date: date.year, dates))
 	years = np.arange(min(years), max(years)+1)
-	t_iter = getattr(tagg, agg)(dt0, max(dates))
+	t_iter = getattr(tagg, agg)(dt0)
+	t_iter.dtend = t_iter.start_next(max(dates))
 	t_list = list(t_iter)
 
 	t_fst = t_iter.start(min(dates))
 	t_lst = t_iter.end(max(dates))
 	tsmin = t_list.index(t_fst)
 	tsmax = t_list.index(t_lst) + 1
-
-	print tsmin, tsmax
 
 	# Checking max length
 	if tsmax-tsmin > MAX_TLEN:
@@ -621,8 +626,12 @@ def get_aggregate(q, dates, agg, plevs=None, tavg=False, force=False, **kwargs):
 	for year in years:
 		# Construct the slice
 		fst = t_iter.start_after_or_on(dt(year,1,1,0))
-		lst = t_iter.end(dt(year+1,1,1,0)) - t_iter.interval
 		fst = t_list.index(fst)
+		lst = t_iter.end_after(dt(year+1,1,1,0)) - t_iter.interval
+		if lst > t_list[-1]:
+			t_iter.cur = t_list[0]
+			t_iter.dtend = lst + t_iter.interval
+			t_list = list(t_iter) 
 		lst = t_list.index(lst) + 1
 
 		# Calculate offset for several years in one file
@@ -640,7 +649,7 @@ def get_aggregate(q, dates, agg, plevs=None, tavg=False, force=False, **kwargs):
 		for plev in plevs:
 			if type(dat) == type(None):
 				f, d, static = metopen(conf.file_agg % {'agg': agg, 'time': time, 'plev': plev, 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
-				s = (1+tsmax-tsmin, len(plevs), ) + d.shape[1:]
+				s = (tsmax-tsmin, len(plevs), ) + d.shape[1:]
 				dat = np.empty(s, dtype=d.dtype)
 				static.t = static.t[cut]
 				if type(static.t_parsed) == np.ndarray:
@@ -770,23 +779,24 @@ def dts2str(dates, agg=None):
 		ret = dta.strftime('%Y%m%d%H')
 	
 	# Try to find an applicable time aggregation interval, either by argument or from the data set
-	if conf.timestep:
-		if agg:
-			agg = getattr(tagg, agg)
-			timestep = agg.interval
-		elif type(conf.timestep) == str: 
+	if agg:
+		agg = getattr(tagg, agg)
+		timestep = agg.interval
+	elif conf.timestep:
+		if type(conf.timestep) == str: 
 			raise NotImplementedError
 		else:
 			timestep = conf.timestep
 			agg = tagg.get_by_interval(conf.timestep)
 
-		agg = agg(dta, dtend=dtz+timestep, dtd=timestep)
 	else:
 		agg = None
 	
 	# If an aggregation interval is available, find out if the given dates are contiguous 
 	# and simplify the date representation accordingly
 	if agg:
+		agg = agg(dta, dtend=dtz+timestep, dtd=timestep)
+
 		sep = '-'
 		contiguous = True
 
@@ -801,8 +811,13 @@ def dts2str(dates, agg=None):
 					contiguous = False
 					break
 		ret += sep
-
-		last4year = tagg.cal_year(aggdates[-1], timestep).start_next() - timestep
+		
+		# First time step of the next year 
+		# -> First time step of the agg interval starting in the next year 
+		# -> first time step of the last agg interval starting in the old year
+		yearly = tagg.cal_year(dta)
+		last4year = agg.start_next(yearly.start_next(aggdates[-1])) - timestep
+		#
 		if dtz.hour == last4year.hour:
 			if dtz.day == last4year.day:
 				if dtz.month == last4year.month:

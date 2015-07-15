@@ -111,7 +111,7 @@ class grid(object):
 
 		cpy = copy.copy(self)
 		cpy.t_parsed = dates
-		cpy.t = np.array([ (date - cpy.t_epoch).totalseconds()/float(cpy.t_interval_unit) 
+		cpy.t = np.array([ (date - cpy.t_epoch).total_seconds()/float(cpy.t_interval_unit) 
 			for date in dates ])
 
 		return cpy
@@ -214,9 +214,9 @@ class grid_by_nc(grid):
 				self.t_unit = '1'
 		else:
 			self.t_unit = None
-
-		self.nx = self.f.dimensions[self.x_name]
-		self.ny = self.f.dimensions[self.y_name]
+		
+		self.nx = len(self.f.dimensions[self.x_name])
+		self.ny = len(self.f.dimensions[self.y_name])
 
 		if self.x_unit == 'degrees_E' and self.y_unit == 'degrees_N':
 			self.gridtype = 'latlon'
