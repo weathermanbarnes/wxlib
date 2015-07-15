@@ -764,10 +764,10 @@ def map_overlay_shading(dat, static, **kwargs):
 	kwargs = __prepare_config(kwargs)
 
 	def overlay(m, x, y, zorder, mask=None):
-		dat = __map_prepare_dat(dat, mask, static, kwargs)
+		dat_ = __map_prepare_dat(dat, mask, static, kwargs)
 
 		# TODO: What about an additional colorbar for this data?
-		__contourf_dat(m, x, y, dat, kwargs)
+		__contourf_dat(m, x, y, dat_, kwargs)
 
 		return
 
@@ -799,15 +799,15 @@ def map_overlay_barbs(u, v, static, **kwargs):
 	kwargs = __line_prepare_config(kwargs)
 
 	def overlay(m, x, y, zorder, mask=None):
-		u = __map_prepare_dat(u, mask, static, kwargs)
-		v = __map_prepare_dat(v, mask, static, kwargs)
+		u_ = __map_prepare_dat(u, mask, static, kwargs)
+		v_ = __map_prepare_dat(v, mask, static, kwargs)
 
 		try:
-			ut,vt, xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
+			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
 		except ValueError:
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
-			ut,vt, xt,yt = m.rotate_vector(u[slc], v[slc], lon[slc], lat[slc], returnxy=True)
+			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
 		
 		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5, zorder=3)
 	
@@ -839,15 +839,15 @@ def map_overlay_quiver(u, v, static, **kwargs):
 	kwargs = __line_prepare_config(kwargs)
 
 	def overlay(m, x, y, zorder, mask=None):
-		u = __map_prepare_dat(u, mask, static, kwargs)
-		v = __map_prepare_dat(v, mask, static, kwargs)
+		u_ = __map_prepare_dat(u, mask, static, kwargs)
+		v_ = __map_prepare_dat(v, mask, static, kwargs)
 
 		try:
-			ut,vt, xt,yt = m.transform_vector(u[::-1,:],v[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
+			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
 		except ValueError:
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
-			ut,vt, xt,yt = m.rotate_vector(u[slc], v[slc], lon[slc], lat[slc], returnxy=True)
+			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
 		
 		m.quiver(xt, yt, ut, vt, zorder=3, scale=kwargs.pop('quiver_length', None), scale_units='width')
 	
@@ -878,10 +878,10 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 
 	kwargs = __line_prepare_config(kwargs)
 
-	defdex = np.cos(defang[:,:]) *defabs
-	defdey = np.sin(defang[:,:]) *defabs
-	
 	def overlay(m, x, y, zorder, mask=None):
+		defdex = np.cos(defang[:,:]) *defabs
+		defdey = np.sin(defang[:,:]) *defabs
+	
 		defdex = __map_prepare_dat(defdex, mask, static, kwargs)
 		defdey = __map_prepare_dat(defdey, mask, static, kwargs)
 
