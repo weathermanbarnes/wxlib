@@ -183,7 +183,7 @@ def map(dat, static, **kwargs):
 	__contourf_dat(m, x, y, dat, kwargs)
 
 	# 3. Finish off
-	__decorate(m, x, y, mask, plev, q, kwargs)
+	__decorate(m, x, y, lon, lat, mask, plev, q, kwargs)
 	__output(plev, q, kwargs)
 
 	return
@@ -410,7 +410,7 @@ def __contourf_dat(m, x, y, dat, kwargs):
 	
 	return
 
-def __decorate(m, x, y, mask, plev, q, kwargs):
+def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 	''' Add "decorations": colorbar, legends, overlays and a title'''
 
 	if not kwargs.pop('cb_disable'):
@@ -435,7 +435,7 @@ def __decorate(m, x, y, mask, plev, q, kwargs):
 	#	plt.legend([], legend_labels)
 	
 	for overlay in kwargs.pop('overlays'):
-		overlay(m,x,y, zorder=3, mask=mask)
+		overlay(m, x,y, lon,lat, zorder=3, mask=mask)
 	
 	if kwargs.get('mark'):
 		yidx, xidx = kwargs.pop('mark')
@@ -576,7 +576,7 @@ def map_overlay_contour(dat, static, **kwargs):
 
 	kwargs = __line_prepare_config(kwargs)
 	
-	def overlay(m, x, y, zorder, mask=None):
+	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		dat_ = __map_prepare_dat(dat, mask, static, kwargs)
 
 		if type(mask) == np.ndarray:
@@ -629,7 +629,7 @@ def map_overlay_fronts(fronts, froff, static, **kwargs):
 	wfrs = __unflatten_fronts_t(fronts[1], froff[1], minlength=5)
 	sfrs = __unflatten_fronts_t(fronts[2], froff[2], minlength=5)
 
-	def overlay(m, x, y, zorder, mask=None):
+	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
 		# TODO: Convert to latlon=True system
 		for cfr in cfrs:
@@ -689,7 +689,7 @@ def map_overlay_lines(lines, loff, static, **kwargs):
 
 	lns = __unflatten_fronts_t(lines, loff, minlength=0)
 
-	def overlay(m, x, y, zorder, mask=None):
+	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
 		# TODO: Convert to latlon=True system
 		for ln in lns:
@@ -727,7 +727,7 @@ def map_overlay_dots(xidxs, yidxs, static, **kwargs):
 
 	kwargs = __line_prepare_config(kwargs)
 
-	def overlay(m, x, y, zorder, mask=None):
+	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
 		# TODO: Convert to latlon=True system
 		lonfr = static.x[0,0] + (xidxs - 1)*(static.x[0,1]-static.x[0,0])
@@ -763,7 +763,7 @@ def map_overlay_shading(dat, static, **kwargs):
 
 	kwargs = __prepare_config(kwargs)
 
-	def overlay(m, x, y, zorder, mask=None):
+	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		dat_ = __map_prepare_dat(dat, mask, static, kwargs)
 
 		# TODO: What about an additional colorbar for this data?
@@ -798,7 +798,7 @@ def map_overlay_barbs(u, v, static, **kwargs):
 	
 	kwargs = __line_prepare_config(kwargs)
 
-	def overlay(m, x, y, zorder, mask=None):
+	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
 
@@ -838,7 +838,7 @@ def map_overlay_quiver(u, v, static, **kwargs):
 	
 	kwargs = __line_prepare_config(kwargs)
 
-	def overlay(m, x, y, zorder, mask=None):
+	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
 
@@ -878,7 +878,7 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 
 	kwargs = __line_prepare_config(kwargs)
 
-	def overlay(m, x, y, zorder, mask=None):
+	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		defdex = np.cos(defang[:,:]) *defabs
 		defdey = np.sin(defang[:,:]) *defabs
 	
@@ -887,7 +887,7 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 
 		Nvecx = 27
 		Nvecy = 18
-
+		
 		if hasattr(m, 'transform_vector'):
 			ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0], Nvecx, Nvecy, returnxy=True)
 			qscale = 420
@@ -927,7 +927,7 @@ def map_overlay_latlonbox(lon0, lon1, lat0, lat1, vertices=30, **kwargs):
 		Overlay as a callable function
 	'''
 
-	def overlay(m, x, y, zorder, mask=None):
+	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		# Western boundary
 		m.plot(np.ones((vertices,))*lon0, np.linspace(lat0,lat1,vertices), latlon=True, **kwargs)
 		# Eastern boundary
