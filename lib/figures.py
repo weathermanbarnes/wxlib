@@ -882,7 +882,7 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 		defdex = np.cos(defang[:,:]) *defabs
 		defdey = np.sin(defang[:,:]) *defabs
 	
-		defdex = __map_prepare_dat(defdex, mask, static, kwargs)
+		defdex = __map_prepare_dat(defdex, mask, static, copy.copy(kwargs))
 		defdey = __map_prepare_dat(defdey, mask, static, kwargs)
 
 		Nvecx = 27
