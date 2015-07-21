@@ -375,11 +375,11 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 	return
 
 
-def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=True, global_atts={}):
-	''' Save time-independet data like composites or EOFs in a netCDF file
+def metsave_timeless(dat, static, name, ids, q=None, plev=None, compress_to_short=True, global_atts={}):
+	''' Save time-independent data like composites or EOFs in a netCDF file
 
 	The data is saved either to an existing file with a matching name in conf.datapath, 
-	or, if such a file does not exist, to a new file is in conf.opath.
+	or, if such a file does not exist, to a new file in conf.opath.
 
 	Parameters
 	----------
@@ -388,22 +388,30 @@ def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=Tru
 	static : gridlib.grid
 	    Some meta information about the data, like the grid information.
 	    The variable name identifier, following the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
-	plev : str
-	    String representation of the vertical level on which the data is defined, e.g. ``'700'`` 
-	    for 700 hPa or ``'pv2000'`` for the PV2-surface.
+	name : str
+	    Name of the collection, identifying for example the composite or EOF.
+	ids : list of str
+	    Identifying names for each index in the ``id`` dimension.
 	q : str
-	    Only used and required if dat is a numpy array. The variable name identifier, following 
-	    the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
+	    *Optional*. Only used and required if dat is a numpy array. The variable name identifier, 
+	    following the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
+	plev : str
+	    *Optional*. Only used and required if dat is a numpy array. String representation of the 
+	    vertical level on which the data is defined, e.g. ``'700'`` for 700 hPa or ``'pv2000'`` 
+	    for the PV2-surface.
 	compress_to_short : bool
 	    *Optional*, default ``True``. By default, ``metsave`` compresses the data by converting
 	    the data field into int16, using the float64 ``add_offset`` and ``scale_factor`` attributes 
 	    to represent the data.
 	'''
 
+	# TODO: Allow dat with length-1 dimensions to signify that data is independent of that dimension
+	# TODO: Allow 2-dimensional data without id dimension and ids=None
+
 	if not type(dat) == dict:
-		if not q:
-			raise ValueError, 'Variable name q required, if dat is not a dict!'
-		datdict = {q: dat}
+		if not q or not plev:
+			raise ValueError, 'Variable name and vertical level required, if dat is not a dict!'
+		datdict = {(plev, q): dat}
 		s = dat.shape
 	else:
 		datdict = dat
@@ -460,7 +468,7 @@ def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=Tru
 		olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
 		olon[::] = static.x[0,:]
 
-	for q_ in dat:
+	for plev, q_ in dat:
 		if q_[-4:] == '_std':
 			q = q_[:-4]
 			prefix = 'Standard deviation of '

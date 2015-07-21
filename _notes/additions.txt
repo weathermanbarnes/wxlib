@@ -2,13 +2,9 @@
 block -> fully integrate to utils.py
       -> partly integrate to large-scale reversals
 
-composites -> decider: document and move to lib/
-           -> tests: filter general, document and move to lib/
-	   -> tests: choose example, document and move to examples/
+composites -> tests: choose example, document and move to examples/
 	   -> significance: move decider part to decider as new random composite
 	   -> significance: merge with main part in dyncal
-	   -> main: generalise to dyncal
-	   -> merge: make obsolete by file conventions
 
 trends -> fully integrate to stats.py
 

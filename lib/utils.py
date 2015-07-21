@@ -165,6 +165,35 @@ def concat1lonlat(x, y):
 	return lon, lat
 
 
+def cal_mfv(hist, bins):
+	''' Find the most frequent value from in a given histogram
+
+	The most frequent value is defined here as the mean of the bin interval 
+	boundaries.
+
+	Parameters
+	----------
+	hist : np.ndarray with 3 dimensions
+	     Histogram matching ``bins``.
+	bins : np.ndarray or list 
+	     Bin intervals used for the histogram. 
+	
+	Returns
+	-------
+	np.ndarray with 2 dimensions
+	    Most frequently value for each grid point.
+	'''
+
+	s = hist.shape[1:]
+	mfv = np.zeros(s)
+	for j in range(s[0]):
+		for i in range(s[1]):
+			bi = hist[:,j,i].argmax()
+			mfv[j,i] = (bins[bi+1]+bins[bi])/2.0
+	
+	return mfv
+
+
 # Unflatten a flattened front array, using the froff list; 
 #  separately for cold/warm and stationary fronts
 def unflatten_fronts(fronts, froff, minlength=1):
