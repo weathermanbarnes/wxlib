@@ -21,7 +21,7 @@ Option 1 for eof:
  * q*: For variables regressed on the EOF, including their vertical level information
  * Problem: Saving results means extending existing nc file
  * Problem: How to save the same variable on different (types of) vertical level in one file?
- * Example file name: ei.ans.eof01.1979-2014.monthly.pv2000.jetaxis.nc
+ * Example file name: ei.ans.1979-2014.eof01.monthly.pv2000.jetaxis.nc
 
 
 Option 2 for eof:
@@ -40,7 +40,7 @@ Option 1 for composite:
  * Problem: Saving results means extending existing nc file
  * Problem: How to save the same variable on different (types of) vertical level in one file?
  * q*: For composited variables, including their vertical level information
- * Example file name: ei.ans.NAO+@DJF.1979-2014.nc
+ * Example file name: ei.ans.1979-2014.NAO+@DJF.nc
 
 
 Option 2 for composite:

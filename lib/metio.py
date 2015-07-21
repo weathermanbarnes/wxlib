@@ -41,7 +41,7 @@ MAX_TLEN = 3000
 # 
 
 # TODO: Restrict the expected file types by providing a file name extension
-def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversion=False, no_static=False):
+def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversion=False, no_static=False, mode='r'):
 	''' Find and open files by name
 	
 	Uses the conf.datapath list to locale files in a variety of different locations.
@@ -73,6 +73,10 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 	    provide meta-information about the requested file, using 
 	    :module:`grid.gridlib`, and returns the meta-information as a third value. 
 	    This behaviour can be suppressed by setting this parameter to ``True``.
+	mode :
+	    *Optional*, default ``'r'``. Only effective for netCDF files. The read/write mode
+	    with which to open the file. Valid values are ``'r'`` for read-only access, `'a'``
+	    or ``'r+'` for read-write access and and ``'w'``for replacing the given file.
 	
 	Returns
 	-------
@@ -95,12 +99,16 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 			print 'Trying: '+path+'/'+filename+'.*'
 
 		if os.path.exists(path+'/'+filename+'.npy'):
+			if not mode == 'r':
+				print 'WARNING: Can only open npy files in read mode!'
 			if q:
 				dat = np.load(path+'/'+filename+'.npy', mmap_mode='r')
 				dat = dat[cut]
 			print 'Found '+path+'/'+filename+'.npy'
 			f = None
 		elif os.path.exists(path+'/'+filename+'.npz'):
+			if not mode == 'r':
+				print 'WARNING: Can only open npz files in read mode!'
 			f = np.load(path+'/'+filename+'.npz')
 			if q:
 				if q not in f.files:
@@ -109,6 +117,8 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 				dat = f[q][cut]
 			print 'Found '+path+'/'+filename+'.npz'
 		elif os.path.exists(path+'/'+filename+'.mat'):
+			if not mode == 'r':
+				print 'WARNING: Can only open mat files in read mode!'
 			f = mat.loadmat(path+'/'+filename+'.mat')
 			if q:
 				if q not in f:
@@ -117,7 +127,7 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 				dat = f[q][cut]
 			print 'Found '+path+'/'+filename+'.mat'
 		elif os.path.exists(path+'/'+filename+'.nc'):
-			f = nc.Dataset(path+'/'+filename+'.nc', 'r')
+			f = nc.Dataset(path+'/'+filename+'.nc', mode)
 			f.set_auto_scale(False)
 			if q:
 				var = f.variables[q]
@@ -363,6 +373,137 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 	of.close()
 
 	return
+
+
+def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=True, global_atts={}):
+	''' Save time-independet data like composites or EOFs in a netCDF file
+
+	The data is saved either to an existing file with a matching name in conf.datapath, 
+	or, if such a file does not exist, to a new file is in conf.opath.
+
+	Parameters
+	----------
+	dat : (dict of) np.ndarray 
+	    Data to be saved. If an numpy array, the variable name q used for meta information.
+	static : gridlib.grid
+	    Some meta information about the data, like the grid information.
+	    The variable name identifier, following the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
+	plev : str
+	    String representation of the vertical level on which the data is defined, e.g. ``'700'`` 
+	    for 700 hPa or ``'pv2000'`` for the PV2-surface.
+	q : str
+	    Only used and required if dat is a numpy array. The variable name identifier, following 
+	    the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
+	compress_to_short : bool
+	    *Optional*, default ``True``. By default, ``metsave`` compresses the data by converting
+	    the data field into int16, using the float64 ``add_offset`` and ``scale_factor`` attributes 
+	    to represent the data.
+	'''
+
+	if not type(dat) == dict:
+		if not q:
+			raise ValueError, 'Variable name q required, if dat is not a dict!'
+		datdict = {q: dat}
+		s = dat.shape
+	else:
+		datdict = dat
+		s = dat[dat.keys()[0]].shape
+	
+	now = dt.now(pytz.timezone(conf.local_timezone))
+	history = '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
+	filename = conf.file_timeless % {'time': dts2str(static.t_parsed), 'name': name}
+	try:
+		f = metopen(filename, no_static=True, mode='a')
+		new = False
+
+	except ValueError: 
+		f = nc.Dataset(conf.opath+'/'+filename+'.nc', 'w', format='NETCDF4')
+		new = True
+	
+	# Consistency checks
+	if not new:
+		for att in global_atts:
+			exist = getattr(f, att, None)
+			if exist:
+				if not exist == global_atts[att]:
+					raise ValueError, 'Existing file found with incompatible attributes: `%s` (existing: %s, given: %s)' % (att, exist, global_atts[att])
+			else:
+				setattr(f, att, global_atts[att])
+		f.history += '\n'+history
+		
+		for id1, id2 in zip(f.variables['id'], ids):
+			if not id1 == id2:
+				raise ValueError, 'Existing file found with incompatible ID dimension (existing: %s, given: %s)' % (f.variables['id'][::], ids)
+
+		if not static.y_name in f.variables:
+			raise ValueError, 'Dimension `%s` not found in existing file.' % static.y_name
+		if not static.x_name in f.variables:
+			raise ValueError, 'Dimension `%s` not found in existing file.' % static.x_name
+	
+	# Create netCDF dimensions and attributes
+	else:
+		f.setncatts(global_atts)
+		f.setncatts({'Conventions': 'CF-1.0', 
+				'history': history, 
+		})
+
+		f.createDimension('id', s[0])
+		f.createDimension(static.x_name, s[2])
+		f.createDimension(static.y_name, s[1])
+
+		oid = f.createVariable('id', str, ('id',))
+		oid.setncatts({'long_name': 'Identifying name'})
+		oid[::] = np.array(ids)
+		olat = f.createVariable(static.y_name, 'f', (static.y_name,))
+		olat.setncatts({'long_name': static.y_name, 'units': static.y_unit})
+		olat[::] = static.y[:,0]
+		olon = f.createVariable(static.x_name, 'f', (static.x_name,))
+		olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
+		olon[::] = static.x[0,:]
+
+	for q_ in dat:
+		if q_[-4:] == '_std':
+			q = q_[:-4]
+			prefix = 'Standard deviation of '
+		elif q_[-5:] == '_hist':
+			q = q_[:-5]
+			prefix = 'Histogram of '
+		elif q_[-4:] == '_mfv':
+			q = q_[:-4]
+			prefix = 'Most frequent value of '
+		elif q_[-4:] == '_min':
+			q = q_[:-4]
+			prefix = 'Minimum of '
+		elif q_[-4:] == '_max':
+			q = q_[:-4]
+			prefix = 'Maximum of '
+		else:
+			q = q_
+			prefix = ''
+
+		if compress_to_short:
+			dat_, scale, off, fill = utils.unscale(dat[q_])
+			if fill: 
+				ovar = f.createVariable('/%s/%s' % (plev, q_), 'i2', ('id', static.y_name, static.x_name,), fill_value=fill)
+				ovar.set_auto_scale(False)
+
+				ovar.missing_value = fill
+			else:
+				ovar = of.createVariable('/%s/%s' % (plev, q_), 'i2', ('id', static.y_name, static.x_name,))
+
+			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q],
+					'add_offset': off, 'scale_factor': scale})
+		else:
+			ovar = of.createVariable('/%s/%s' % (plev, q_), 'f', ('time', static.y_name, static.x_name,))
+			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q]})
+			dat_ = dat[q_]
+	
+		ovar[::] = dat_
+
+	f.close()
+	
+	return
+
 
 
 # Get static information
