@@ -14,9 +14,8 @@ def_context('erainterim')
 conf.years = range(1979,2015)
 conf.file_std = 'ei.ans.%(time)s.%(plev)s.%(qf)s'
 conf.file_agg = 'ei.ans.%(agg)s.%(time)s.%(plev)s.%(qf)s'
-conf.file_comp = 'ei.ans.%(comp)s.%(time)s.%(plev)s.%(qf)s'
-conf.file_eof = 'ei.ans.%(eof)s.%(time)s.%(plev)s.%(qf)s'
-conf.file_ts = 'ei.ans.ts_%(ts)s.%(time)s.%(plev)s.%(qf)s'
+conf.file_timeless = 'ei.ans.%(time)s.%(name)s'
+conf.file_ts = 'ei.ans.%(ts)s.%(time)s.%(plev)s.%(qf)s'
 conf.file_static = 'ei.ans.static'
 conf.timestep = td(0.25)
 conf.gridsize = (361,720)

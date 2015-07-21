@@ -429,7 +429,6 @@ def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=Tru
 					raise ValueError, 'Existing file found with incompatible attributes: `%s` (existing: %s, given: %s)' % (att, exist, global_atts[att])
 			else:
 				setattr(f, att, global_atts[att])
-		f.history += '\n'+history
 		
 		for id1, id2 in zip(f.variables['id'], ids):
 			if not id1 == id2:
@@ -491,11 +490,11 @@ def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=Tru
 			else:
 				ovar = of.createVariable('/%s/%s' % (plev, q_), 'i2', ('id', static.y_name, static.x_name,))
 
-			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q],
+			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q], 'history': history,
 					'add_offset': off, 'scale_factor': scale})
 		else:
 			ovar = of.createVariable('/%s/%s' % (plev, q_), 'f', ('time', static.y_name, static.x_name,))
-			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q]})
+			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q], 'history': history})
 			dat_ = dat[q_]
 	
 		ovar[::] = dat_
@@ -957,7 +956,7 @@ def dts2str(dates, agg=None):
 		# -> First time step of the agg interval starting in the next year 
 		# -> first time step of the last agg interval starting in the old year
 		yearly = tagg.cal_year(dta)
-		last4year = agg.start_next(yearly.start_next(aggdates[-1])) - timestep
+		last4year = agg.start(yearly.start_next(aggdates[-1])) - timestep
 		#
 		if dtz.hour == last4year.hour:
 			if dtz.day == last4year.day:
