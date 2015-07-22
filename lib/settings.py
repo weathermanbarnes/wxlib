@@ -612,7 +612,7 @@ conf = settings_obj({
 	'q_units': {},
 	'q_long': {},
 	'q_bins': {},
-	'datapath': ['.', ],
+	'datapath': ['.', '/Data/gfi/users/csp001/share/dynlib'], # TODO: Move to users/local as soon as Idar created the folder.
 	'opath': '.',
 	'plotpath': '.',
 	'file_std': None,

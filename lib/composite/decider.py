@@ -18,6 +18,7 @@ given decider, and to create all combinations between two lists of composites
 
 from copy import copy
 
+from ..settings import conf
 from ..shorthands import np, dt, td, metopen
 
 
@@ -176,7 +177,7 @@ class dat_lowerbound(decider):
 	
 
 # Criterion: (negative) exceedance of an upper threshold at a given location
-class dat_upperbound(lowerbound_pos):
+class dat_upperbound(dat_lowerbound):
 	''' Decider based on the negative exceedence of a threshold, applied to test data 
 	
 	Parameters
@@ -201,7 +202,7 @@ class dat_upperbound(lowerbound_pos):
 	'''
 
 	def match(self, date, tidx, prv, cur, nxt):
-		__doc__ = lowerbound_pos.match.__doc__
+		__doc__ = dat_lowerbound.match.__doc__
 
 		vals = self._get_vals(tidx, prv, cur, nxt)
 		if type(vals) == type(None):
@@ -211,7 +212,7 @@ class dat_upperbound(lowerbound_pos):
 
 
 # Criterion: boolean array true at a given location
-class dat_boolean(lowerbound_pos):
+class dat_boolean(dat_lowerbound):
 	''' Decider based on the negative exceedence of a threshold, applied to test data 
 	
 	Parameters
@@ -295,7 +296,7 @@ class ts_lowerbound(decider):
 
 
 # Criterion: (negative) exceedance of an upper threshold in a given time series
-class ts_upperbound(lowerbound_ts):
+class ts_upperbound(ts_lowerbound):
 	''' Decider based on the negative exceedence of a threshold, applied to a time series
 	
 	Parameters
@@ -309,7 +310,7 @@ class ts_upperbound(lowerbound_ts):
 	'''
 
 	def match(self, date, tidx, prv, cur, nxt):
-		__doc__ = lowerbound_ts.match.__doc__
+		__doc__ = ts_lowerbound.match.__doc__
 
 		if date < self.dates[0] or date >= self.dates[-1]:
 			return False
@@ -321,7 +322,7 @@ class ts_upperbound(lowerbound_ts):
 
 
 # Criterion: Given time series equal to given value
-class ts_equal(lowerbound_ts):
+class ts_equal(ts_lowerbound):
 	''' Decider checking a time series is equal to a given value
 
 	The time series should consist of integers to avoid rounding problems.
@@ -337,7 +338,7 @@ class ts_equal(lowerbound_ts):
 	'''
 
 	def match(self, date, tidx, prv, cur, nxt):
-		__doc__ = lowerbound_ts.match.__doc__
+		__doc__ = ts_lowerbound.match.__doc__
 
 		if date < self.dates[0] or date >= self.dates[-1]:
 			return False
@@ -349,7 +350,7 @@ class ts_equal(lowerbound_ts):
 
 
 # Criterion: Given time series equal to given value
-class ts_notnan(lowerbound_ts):
+class ts_notnan(ts_lowerbound):
 	''' Decider checking if a time series is not NaN
 	
 	Parameters
@@ -361,12 +362,12 @@ class ts_notnan(lowerbound_ts):
 	'''
 	
 	def __init__(self, name, ts):
-		lowerbound_ts.__init__(self, name, ts, None)
+		ts_lowerbound.__init__(self, name, ts, None)
 
 		return
 	
 	def match(self, date, tidx, prv, cur, nxt):
-		__doc__ = lowerbound_ts.match.__doc__
+		__doc__ = ts_lowerbound.match.__doc__
 
 		if date < self.dates[0] or date >= self.dates[-1]:
 			return False
