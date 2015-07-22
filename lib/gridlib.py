@@ -233,11 +233,11 @@ class grid_by_nc(grid):
 			self.x_name = 'longitude'
 			self.y_name = 'latitude'
 		elif self.x_unit == '1' and self.y_unit == '1':
-			if 'TITLE' in self.f._attributes and 'OUTPUT FROM WRF' in self.f._attributes['TITLE']:
-				if self.f._attributes['GRIDTYPE'] == 'C':
+			if 'OUTPUT FROM WRF' in getattr(self.f, 'TITLE', ''):
+				if self.f.GRIDTYPE == 'C':
 					self.gridtype = 'cartesian'
-					self.x = np.arange(self.nx)*self.f._attributes['DX']
-					self.y = np.arange(self.ny)*self.f._attributes['DY']
+					self.x = np.arange(self.nx)*self.f.DX
+					self.y = np.arange(self.ny)*self.f.DY
 					# Just assuming that WRF is being sensible.
 					self.x_unit = 'm'
 					self.y_unit = 'm'
@@ -245,7 +245,7 @@ class grid_by_nc(grid):
 					self.y_name = 'y'
 
 				else:
-					raise NotImplementedError, 'Unknown WRF gridtype `%s\'' % self._attributes['GRIDTYPE']
+					raise NotImplementedError, 'Unknown WRF gridtype `%s\'' % self.f.GRIDTYPE
 			else:
 				self.gridtype = 'idx'
 				self.x = np.arange(self.nx)
