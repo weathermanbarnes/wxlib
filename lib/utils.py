@@ -482,7 +482,7 @@ def aggregate(dates, dat, agg):
 		# -> We apparently jumped over a range of dates and have to find a new start
 		if previ >= 0 and not t_iter.start(date) == t_iter.start(dates[previ]):
 			previ = -1
-		
+
 		# End of an interval -> save
 		if previ >= 0 and date == t_iter.end(date):
 			tslc.append(slice(previ,i+1))

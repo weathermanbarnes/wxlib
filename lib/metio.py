@@ -375,11 +375,15 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 	return
 
 
-def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to_short=True, global_atts={}):
+def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to_short=True, 
+		timeseries={}, global_atts={}):
 	''' Save time-independent data like composites or EOFs in a netCDF file
 
 	The data is saved either to an existing file with a matching name in conf.datapath, 
 	or, if such a file does not exist, to a new file in conf.opath.
+
+	Optionally, time information may be retained in time series. Time series may use the ID
+	dimension, if ids set.
 
 	Parameters
 	----------
@@ -409,13 +413,12 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 		if not q or not plev:
 			raise ValueError, 'Variable name and vertical level required, if dat is not a dict!'
 		datdict = {(plev, q): dat}
-		s = dat.shape
 	else:
 		datdict = dat
-		s = dat[dat.keys()[0]].shape
 	
-	if len(s) == 3 and not len(ids) == s[0]:
-		raise ValueError, 'ids must be equally long to the first data dimension'
+	s = static.x.shape
+	if ids:
+		s = (len(ids), ) + s
 	
 	now = dt.now(pytz.timezone(conf.local_timezone))
 	history = '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
@@ -439,6 +442,9 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 					raise ValueError, 'Existing file found with incompatible attributes: `%s` (existing: %s, given: %s)' % (att, exist, global_atts[att])
 			else:
 				setattr(f, att, global_atts[att])
+
+		if timeseries and not 'time' in f.dimensions:
+			raise ValueError, 'Time series given, but no time dimension present in existing file.'
 		
 		if ids and 'id' in f.variables:
 			for id1, id2 in zip(f.variables['id'], ids):
@@ -465,11 +471,17 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 		f.setncatts({'Conventions': 'CF-1.0', 
 				'history': history, 
 		})
+
+		if timeseries:
+			f.createDimension('time', len(static.t))
+			ot = f.createVariable('time', 'i', ('time',))
+			ot.setncatts({'long_name': 'time', 'units': static.t_unit})
+			ot[::] = static.t
 		
 		if ids:
 			f.createDimension('id', s[0])
-			f.createDimension(static.x_name, s[2])
 			f.createDimension(static.y_name, s[1])
+			f.createDimension(static.x_name, s[2])
 
 			oid = f.createVariable('id', str, ('id',))
 			oid.setncatts({'long_name': 'Identifying name'})
@@ -520,6 +532,9 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 		elif q_[-4:] == '_max':
 			q = q_[:-4]
 			prefix = 'Maximum of '
+		elif q_[-8:] == '_pattern':
+			q = q_[:-8]
+			prefix = 'EOF loading pattern for '
 		else:
 			q = q_
 			prefix = ''
@@ -560,6 +575,31 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q], 'history': history})
 	
 		ovar[::] = dat_
+
+	for plev, q in timeseries:
+		# Finding 
+		if plev:
+			if plev in f.groups and q in f.groups[plev].variables:
+				print 'Warning: variable /%s/%s already present, skipping!' % (plev, q)
+				continue
+	
+			ncvarname = '/%s/%s' % (plev, q)
+
+		else:
+			if q in f.variables:
+				print 'Warning: variable %s already present, skipping!' % q
+				continue
+
+			ncvarname = q
+
+		if len(timeseries[plev,q].shape) == 2:
+			data_dimensions = ('time', 'id')
+		else:
+			data_dimensions = ('time', )
+		
+		ovar = f.createVariable(ncvarname, 'f', data_dimensions)
+		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q], 'history': history})
+		ovar[::] = timeseries[plev,q]
 
 	f.close()
 

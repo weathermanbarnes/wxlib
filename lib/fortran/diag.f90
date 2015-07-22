@@ -658,8 +658,8 @@ contains
                 jac = reshape( (/ ux(t,k,j,i), vx(t,k,j,i), wx(t,k,j,i), &
                            &      uy(t,k,j,i), vy(t,k,j,i), wy(t,k,j,i), &
                            &      uz(t,k,j,i), vz(t,k,j,i), wz(t,k,j,i) /), (/ 3_ni, 3_ni /) )
-                call dgeev('N', 'V', 3_ni, jac, 3_ni, evalr, dummy0, & 
-                        & dummy1, 1_ni, evec, 3_ni, work, 102_ni, info)
+                !call dgeev('N', 'V', 3_ni, jac, 3_ni, evalr, dummy0, & 
+                !        & dummy1, 1_ni, evec, 3_ni, work, 102_ni, info)
                 ! sort eigenvalues and eigenvectors by eigenvalue
                 ! first: max
                 n = maxloc(evalr, dim=1_ni)
