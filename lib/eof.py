@@ -42,8 +42,8 @@ def build(qs, eofs, times=None, agg='cal_month', N=10):
 				datloff, none = get_instantaneous(LINES[q], dates, force=True, plevs=plev, no_static=True)
 				agg_done = False
 
-			dat_ = utils.smear_lines(datline, datoff)
-			del datline, datoff
+			dat_ = utils.smear_lines(datline, datloff)
+			del datline, datloff
 
 		else:
 			try: 
@@ -153,7 +153,10 @@ def save(qs, eofs, tseries, pattern, thres, static):
 			(None, 'expvar'): thres[ename][:,np.newaxis,np.newaxis]
 		}
 		for plev, q in qs:
-			tosave[plev,q+'_pattern'] = pattern[ename,plev,q]
+			if q in LINES:
+				tosave[plev,q+'_freq_pattern'] = pattern[ename,plev,q]
+			else:
+				tosave[plev,q+'_pattern'] = pattern[ename,plev,q]
 
 		timeseries = {
 			(None, 'ecoeff'): tseries[ename],

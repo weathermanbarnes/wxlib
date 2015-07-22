@@ -238,7 +238,7 @@ def mask_fronts(fronts, froff, s=conf.gridsize):
 	return masks
 
 
-def mask_lines_with_data(lines, loff, dat=None, s=conf.gridsize):
+def mask_lines_with_data(lines, loff, dat=None, s=None):
 	''' Mask lines in a gridded map
 
 	Instead of returning the value ``1`` for grid points containing a line, 
@@ -267,6 +267,9 @@ def mask_lines_with_data(lines, loff, dat=None, s=conf.gridsize):
 	np.ndarray
 	    Gridded map of lines
 	'''
+
+	if type(s) == type(None):
+		s = conf.gridsize
 
 	mask = np.zeros((lines.shape[0], s[0], s[1]))
 
@@ -302,7 +305,7 @@ def mk_gauss(x0,stddev):
 	return lambda x: np.exp(-0.5*(x-x0)**2/stddev**2)/(np.sqrt(2*np.pi)*stddev)
 
 
-def smear_lines(lines, loff, s=conf.gridsize):
+def smear_lines(lines, loff, s=None):
 	''' Mask lines in a gridded map and then smooth slightly
 
 	Grid points containing a line will be marked with the value ``1``,
@@ -328,6 +331,9 @@ def smear_lines(lines, loff, s=conf.gridsize):
 	np.ndarray
 	    Gridded map of lines
 	'''
+
+	if type(s) == type(None):
+		s = conf.gridsize
 	
 	filtr_len = 5
 	filtr_func = mk_gauss(0, 1)
