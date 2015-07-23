@@ -10,14 +10,14 @@ def_context('wrf')
 
 uu = ('UU', None, 'U component of wind', 'm s**-1')
 vv = ('VV', None, 'V component of wind', 'm s**-1')
-w  = ('W', None 'W component of wind', 'm s**-1')
-ww = ('WW', None 'Pressure vertical velocity', 'Pa s**-1')
+w  = ('W', None, 'W component of wind', 'm s**-1')
+ww = ('WW', None, 'Pressure vertical velocity', 'Pa s**-1')
 
 tt = ('TT', None, 'Temperature', 'K')
 ght = ('GHT', None, 'Geopotential', 'm')
 pres = ('PRES', None, 'Pressure', 'Pa')
-mu = ('MU', None 'Perturbation dry air mass in column', 'Pa')
-mub = ('MUB', None 'Base state dry air mass in column', 'Pa')
+mu = ('MU', None, 'Perturbation dry air mass in column', 'Pa')
+mub = ('MUB', None, 'Base state dry air mass in column', 'Pa')
 psfc = ('PSFC', None, 'Surface pressure', 'Pa')
 
 qvapor = ('QVAPOR', None, 'Water vapor mixing ratio', 'kg kg**-1')
