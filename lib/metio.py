@@ -657,7 +657,8 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	plevs : list of str or str
 	    *Optional*, defaults to all available pressure levels. The string representation
 	    of the requested vertical level(s), e.g. ``'700'`` for 700 hPa or ``'pv2000'`` 
-	    for the PV2-surface.
+	    for the PV2-surface. The parameter is only effective if data is split into seperate 
+	    files per vertical level.
 	tavg : bool
 	    *Optional*, default ``False``. Instead of returning a time-dimension, return
 	    the temporal average of the requested data.
@@ -721,22 +722,41 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 		
 		# One or more vertical levels?
 		i = 0
-		for plev in plevs:
-			if type(dat) == type(None):
-				f, d, static = metopen(conf.file_std % {'time': year, 'plev': plev, 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
-				s = (1+tsmax-tsmin, len(plevs), ) + d.shape[1:]
-				dat = np.empty(s, dtype=d.dtype)
-				static.t = static.t[cut]
-				if type(static.t_parsed) == np.ndarray:
-					static.t_parsed = static.t_parsed[cut]
+		if type(dat) == type(None):
+			f, d, static = metopen(conf.file_std % {'time': year, 'plev': plevs[0], 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+			if len(d.shape) == 4 and d.shape[1] > 1:
+				separate_plevs = False
+				s = (1+tsmax-tsmin, ) + d.shape[1:]
 			else:
-				f, d, static_ = metopen(conf.file_std % {'time': year, 'plev': plev, 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
-				static.t = np.concatenate((static.t, static_.t[cut]))
-				if type(static.t_parsed) == np.ndarray:
-					static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
-			
-			dat[datcut,i,::] = d
-			i += 1
+				separate_plevs = True
+				s = (1+tsmax-tsmin, len(plevs), ) + d.shape[1:]
+
+			dat = np.empty(s, dtype=d.dtype)
+			if separate_plevs:
+				dat[datcut,0,::] = d
+			else:
+				dat[datcut,::] = d
+
+			static.t = static.t[cut]
+			if type(static.t_parsed) == np.ndarray:
+				static.t_parsed = static.t_parsed[cut]
+
+			i = 1
+		
+		if separate_plevs:
+			for plev in plevs[i:]:
+				f, dat[datcut,i,::], static_ = metopen(conf.file_std % {'time': year, 'plev': plev, 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+				if i == 0:
+					static.t = np.concatenate((static.t, static_.t[cut]))
+					if type(static.t_parsed) == np.ndarray:
+						static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
+				i += 1
+
+		elif i == 0:
+			f, dat[datcut,::], static_ = metopen(conf.file_std % {'time': year, 'plev': plevs[0], 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+			static.t = np.concatenate((static.t, static_.t[cut]))
+			if type(static.t_parsed) == np.ndarray:
+				static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
 
 	# Time-averaging if specified
 	if tavg and len(dates) > 1:

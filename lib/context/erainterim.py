@@ -28,7 +28,7 @@ conf.datapath.insert(1, '/Data/gfi/users/csp001/share') # for static; TODO: Move
 
 u = ('u', 'u', 'U component of wind', 'm s**-1')
 v = ('v', 'v', 'V component of wind', 'm s**-1')
-w = ('w', 'w', 'Vertical velocity', 'Pa s**-1')
+w = ('w', 'w', 'Pressure vertical velocity', 'Pa s**-1')
 
 vo = ('vo', 'zeta', 'Vorticity (relative)', 's**-1')
 pv = ('pv', 'pv', 'Potential vorticity', 'K m**2 kg**-1 s**-1')
