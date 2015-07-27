@@ -1,13 +1,10 @@
 Next steps
 ----------
 
- ---------------------------- version 0.20 ----------------------------
-  7. Integrate EOF functions
  ---------------------------- version 0.21 ----------------------------
  12. Contexts: Integrate iveret settings to plot
  13. Contexts: Extend (metno_fc, ecmwf_fc)
- 14. Contexts: Create (wrf, bedymo)
- 15. Contexts: Create (nora10, other available reanalyses)
+ 14. Contexts: Create (bedymo,nora10)
  ---------------------------- version 0.22 ----------------------------
  16. Integrate block
  17. Create lineutils

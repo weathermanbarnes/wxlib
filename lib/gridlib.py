@@ -15,7 +15,9 @@ a "static.npz" file that contains the pertinent information for a given data set
 import math
 import copy
 import numpy as np
+from mpl_toolkits.basemap.pyproj import Proj 		# for rotpole projection
 from datetime import datetime as dt, timedelta as td
+
 
 
 
@@ -52,42 +54,7 @@ class grid(object):
 
 	# Building the grid on top of the established axes
 	def __build_grid(self):
-		if self.gridtype == 'latlon':
-			self.dx = np.ones((self.ny, self.nx))*111111.111111
-			self.dy = np.ones((self.ny, self.nx))*111111.111111
-			for xidx in range(self.nx):
-				for yidx in range(1,self.ny-1):
-					dlon = self.x[(xidx+1)%self.nx]-self.x[(xidx-1)%self.nx]
-					if dlon > 180:
-						dlon -= 360
-					elif dlon < -180:
-						dlon += 360
-					self.dx[yidx,xidx] *= dlon*math.cos(math.pi/180.0*self.y[yidx])
-			for yidx in range(1,self.ny-1):
-				self.dy[yidx,:] *= self.y[yidx+1]-self.y[yidx-1]
-			self.dy[ 0,:] *= 2.0*(self.y[ 1]-self.y[ 0])
-			self.dy[-1,:] *= 2.0*(self.y[-1]-self.y[-2])
-
-			self.x = np.tile(self.x, (self.ny,1))
-			self.y = np.tile(self.y, (self.nx,1)).T
-
-		elif self.gridtype == 'idx':
-			self.dx = np.ones((self.ny, self.nx))*2
-			self.dy = np.ones((self.ny, self.nx))*2
-
-			self.x = np.tile(self.x, (self.ny,1))
-			self.y = np.tile(self.y, (self.nx,1)).T
-		elif self.gridtype == 'cartesian':
-			self.x = np.tile(self.x, (self.ny,1))
-			self.y = np.tile(self.y, (self.nx,1)).T
-
-			self.dx = np.empty(self.x.shape)
-			self.dy = np.empty(self.y.shape)
-			self.dx[:,1:-1] = self.x[:,2:] - self.x[:,:-2]
-			self.dy[1:-1,:] = self.y[2:,:] - self.y[:-2,:]
-
-		else:
-			raise NotImplementedError, '(Yet) Unknown grid type "%s"' % self.gridtype
+		# rather obsolete ...
 
 		return
 
@@ -121,10 +88,14 @@ class grid(object):
 class grid_by_nc(grid):
 	''' Extract the relevant information from a given netCDF file object '''
 
-	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x']
-	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y']
-	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z']
+	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x', 'rlon', 'rlon_2']
+	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', 'rlat']
+	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'lev_2']
 	T_NAMES = ['time', 'Time']
+
+	ROT_POLES = {
+		'rotated_pole': ('grid_north_pole_longitude', 'grid_north_pole_latitude'),  # name convention in NORA10
+	}
 
 	def __init__(self, ncfile, ncvar=None):
 		self.f = ncfile
@@ -232,6 +203,13 @@ class grid_by_nc(grid):
 			self.y = self.f.variables[self.y_name][::]
 			self.x_name = 'longitude'
 			self.y_name = 'latitude'
+		elif self.x_unit == 'degrees' and self.y_unit == 'degrees':
+			self.gridtype = 'latlon'
+			self.cyclic_ew = True
+			self.x = self.f.variables[self.x_name][::]
+			self.y = self.f.variables[self.y_name][::]
+			self.x_name = 'longitude'
+			self.y_name = 'latitude'
 		elif self.x_unit == '1' and self.y_unit == '1':
 			if 'OUTPUT FROM WRF' in getattr(self.f, 'TITLE', ''):
 				if self.f.GRIDTYPE == 'C':
@@ -261,6 +239,56 @@ class grid_by_nc(grid):
 
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type with units (%s/%s)' % (self.x_unit, self.y_unit)
+			
+		if self.gridtype == 'latlon':
+			self.dx = np.ones((self.ny, self.nx))*111111.111111
+			self.dy = np.ones((self.ny, self.nx))*111111.111111
+			for xidx in range(self.nx):
+				for yidx in range(1,self.ny-1):
+					dlon = self.x[(xidx+1)%self.nx]-self.x[(xidx-1)%self.nx]
+					if dlon > 180:
+						dlon -= 360
+					elif dlon < -180:
+						dlon += 360
+					self.dx[yidx,xidx] *= dlon*math.cos(math.pi/180.0*self.y[yidx])
+			for yidx in range(1,self.ny-1):
+				self.dy[yidx,:] *= self.y[yidx+1]-self.y[yidx-1]
+			self.dy[ 0,:] *= 2.0*(self.y[ 1]-self.y[ 0])
+			self.dy[-1,:] *= 2.0*(self.y[-1]-self.y[-2])
+
+		elif self.gridtype == 'idx':
+			self.dx = np.ones((self.ny, self.nx))*2
+			self.dy = np.ones((self.ny, self.nx))*2
+
+		elif self.gridtype == 'cartesian':
+			self.dx = np.empty(self.x.shape)
+			self.dy = np.empty(self.y.shape)
+			self.dx[:,1:-1] = self.x[:,2:] - self.x[:,:-2]
+			self.dy[1:-1,:] = self.y[2:,:] - self.y[:-2,:]
+
+		else:
+			raise NotImplementedError, '(Yet) Unknown grid type "%s"' % self.gridtype
+		
+		self.x = np.tile(self.x, (self.ny,1))
+		self.y = np.tile(self.y, (self.nx,1)).T
+
+		self.rotated = False
+		if self.gridtype == 'latlon':
+			for var in self.f.variables:
+				if var in self.ROT_POLES:
+					rot_nplon_name, rot_nplat_name = self.ROT_POLES[var]
+					rot_nplon = getattr(self.f.variables[var], rot_nplon_name) 
+					rot_nplat = getattr(self.f.variables[var], rot_nplat_name)
+					m = Proj(proj='ob_tran', o_proj='latlon', 
+							o_lon_p=rot_nplon,
+							o_lat_p=rot_nplat, 
+							lon_0=180,
+					)
+					self.x, self.y = m(self.x, self.y)
+					self.x *= 180.0/np.pi
+					self.y *= 180.0/np.pi
+					self.rotated = True
+					break # don't rotate more than once!
 
 		if self.z_name:
 			self.nz = self.f.dimensions[self.z_name]
