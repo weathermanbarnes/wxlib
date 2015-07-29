@@ -270,7 +270,7 @@ def __prepare_config(kwargs):
 	kwargs = conf.plotf.merge(plev, q, **kwargs)
 
 	# cmap might be a function returing the cmap; if so generate it now!
-	if 'cmap' in kwargs and not isinstance(kwargs['cmap'], matplotlib.colors.Colormap):
+	if 'cmap' in kwargs and hasattr(kwargs['cmap'], '__call__'):
 		kwargs['cmap'] = kwargs['cmap']()
 	
 	return plev, q, kwargs
