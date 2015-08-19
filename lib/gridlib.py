@@ -52,6 +52,24 @@ class grid(object):
 	def _init_grid(self):
 		pass
 
+	def _calc_dx_dy_latlon(self):
+		self.dx = np.ones((self.ny, self.nx))*111111.111111
+		self.dy = np.ones((self.ny, self.nx))*111111.111111
+		for xidx in range(self.nx):
+			for yidx in range(1,self.ny-1):
+				dlon = self.x[(xidx+1)%self.nx]-self.x[(xidx-1)%self.nx]
+				if dlon > 180:
+					dlon -= 360
+				elif dlon < -180:
+					dlon += 360
+				self.dx[yidx,xidx] *= dlon*math.cos(math.pi/180.0*self.y[yidx])
+		for yidx in range(1,self.ny-1):
+			self.dy[yidx,:] *= self.y[yidx+1]-self.y[yidx-1]
+		self.dy[ 0,:] *= 2.0*(self.y[ 1]-self.y[ 0])
+		self.dy[-1,:] *= 2.0*(self.y[-1]-self.y[-2])
+
+		return
+
 	# Building the grid on top of the established axes
 	def __build_grid(self):
 		# rather obsolete ...
@@ -241,20 +259,7 @@ class grid_by_nc(grid):
 			raise NotImplementedError, '(Yet) Unknown grid type with units (%s/%s)' % (self.x_unit, self.y_unit)
 			
 		if self.gridtype == 'latlon':
-			self.dx = np.ones((self.ny, self.nx))*111111.111111
-			self.dy = np.ones((self.ny, self.nx))*111111.111111
-			for xidx in range(self.nx):
-				for yidx in range(1,self.ny-1):
-					dlon = self.x[(xidx+1)%self.nx]-self.x[(xidx-1)%self.nx]
-					if dlon > 180:
-						dlon -= 360
-					elif dlon < -180:
-						dlon += 360
-					self.dx[yidx,xidx] *= dlon*math.cos(math.pi/180.0*self.y[yidx])
-			for yidx in range(1,self.ny-1):
-				self.dy[yidx,:] *= self.y[yidx+1]-self.y[yidx-1]
-			self.dy[ 0,:] *= 2.0*(self.y[ 1]-self.y[ 0])
-			self.dy[-1,:] *= 2.0*(self.y[-1]-self.y[-2])
+			self._calc_dx_dy_latlon()
 
 		elif self.gridtype == 'idx':
 			self.dx = np.ones((self.ny, self.nx))*2
@@ -363,8 +368,13 @@ class grid_by_static(grid):
 			self.y_name = 'latitude'
 			self.x_unit = 'degrees_east'
 			self.y_unit = 'degrees_north'
+
+			self._calc_dx_dy_latlon()
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type using the variables ' % str(self.f.files)
+
+		self.x = np.tile(self.x, (self.ny,1))
+		self.y = np.tile(self.y, (self.nx,1)).T
 
 		return
 
