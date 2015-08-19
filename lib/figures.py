@@ -16,6 +16,7 @@ These functions have two main aims:
 
 import copy
 import re
+import types
 
 import numpy as np
 import scipy.interpolate as intp
@@ -270,7 +271,7 @@ def __prepare_config(kwargs):
 	kwargs = conf.plotf.merge(plev, q, **kwargs)
 
 	# cmap might be a function returing the cmap; if so generate it now!
-	if 'cmap' in kwargs and not isinstance(kwargs['cmap'], matplotlib.colors.Colormap):
+	if 'cmap' in kwargs and type(kwargs['cmap']) == types.FunctionType:
 		kwargs['cmap'] = kwargs['cmap']()
 	
 	return plev, q, kwargs
@@ -761,7 +762,7 @@ def map_overlay_shading(dat, static, **kwargs):
 		Overlay as a callable function
 	'''
 
-	kwargs = __prepare_config(kwargs)
+	plev, q, kwargs = __prepare_config(kwargs)
 
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		dat_ = __map_prepare_dat(dat, mask, static, kwargs)
