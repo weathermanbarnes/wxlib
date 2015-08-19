@@ -146,7 +146,7 @@ contains
        do j=2_ni,ny-1_ni
           do k=1_ni,nz  
             tem=gamma(k,j,i)%t
-            call dgeev('N','N',2,tem,2,eigensr,eigensi,dummy1,2,dummy2,2,dummy3,6,dummy4)
+            !call dgeev('N','N',2,tem,2,eigensr,eigensi,dummy1,2,dummy2,2,dummy3,6,dummy4)
             !like eigens(1:2) = eig(gamma(k,j,i)%t)
             respr(k,j,i)=eigensr(1) 
             respi(k,j,i)=eigensi(1) 

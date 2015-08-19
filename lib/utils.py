@@ -165,6 +165,35 @@ def concat1lonlat(x, y):
 	return lon, lat
 
 
+def cal_mfv(hist, bins):
+	''' Find the most frequent value from in a given histogram
+
+	The most frequent value is defined here as the mean of the bin interval 
+	boundaries.
+
+	Parameters
+	----------
+	hist : np.ndarray with 3 dimensions
+	     Histogram matching ``bins``.
+	bins : np.ndarray or list 
+	     Bin intervals used for the histogram. 
+	
+	Returns
+	-------
+	np.ndarray with 2 dimensions
+	    Most frequently value for each grid point.
+	'''
+
+	s = hist.shape[1:]
+	mfv = np.zeros(s)
+	for j in range(s[0]):
+		for i in range(s[1]):
+			bi = hist[:,j,i].argmax()
+			mfv[j,i] = (bins[bi+1]+bins[bi])/2.0
+	
+	return mfv
+
+
 # Unflatten a flattened front array, using the froff list; 
 #  separately for cold/warm and stationary fronts
 def unflatten_fronts(fronts, froff, minlength=1):
@@ -209,7 +238,7 @@ def mask_fronts(fronts, froff, s=conf.gridsize):
 	return masks
 
 
-def mask_lines_with_data(lines, loff, dat=None, s=conf.gridsize):
+def mask_lines_with_data(lines, loff, dat=None, s=None):
 	''' Mask lines in a gridded map
 
 	Instead of returning the value ``1`` for grid points containing a line, 
@@ -238,6 +267,9 @@ def mask_lines_with_data(lines, loff, dat=None, s=conf.gridsize):
 	np.ndarray
 	    Gridded map of lines
 	'''
+
+	if type(s) == type(None):
+		s = conf.gridsize
 
 	mask = np.zeros((lines.shape[0], s[0], s[1]))
 
@@ -273,7 +305,7 @@ def mk_gauss(x0,stddev):
 	return lambda x: np.exp(-0.5*(x-x0)**2/stddev**2)/(np.sqrt(2*np.pi)*stddev)
 
 
-def smear_lines(lines, loff, s=conf.gridsize):
+def smear_lines(lines, loff, s=None):
 	''' Mask lines in a gridded map and then smooth slightly
 
 	Grid points containing a line will be marked with the value ``1``,
@@ -299,6 +331,9 @@ def smear_lines(lines, loff, s=conf.gridsize):
 	np.ndarray
 	    Gridded map of lines
 	'''
+
+	if type(s) == type(None):
+		s = conf.gridsize
 	
 	filtr_len = 5
 	filtr_func = mk_gauss(0, 1)
@@ -453,7 +488,7 @@ def aggregate(dates, dat, agg):
 		# -> We apparently jumped over a range of dates and have to find a new start
 		if previ >= 0 and not t_iter.start(date) == t_iter.start(dates[previ]):
 			previ = -1
-		
+
 		# End of an interval -> save
 		if previ >= 0 and date == t_iter.end(date):
 			tslc.append(slice(previ,i+1))

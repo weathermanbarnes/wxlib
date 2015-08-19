@@ -29,35 +29,4 @@ ap.add_argument('-m', '--mapprojection', type=str, metavar='time', nargs='?', he
 
 ap.parse_args()
 
-
-__metafun__ = {}
-
-class dynfun(object):
-	def __init__(self, dependency_tables, provides_tables):
-		self.deps = dependency_tables
-		self.provides = provides_tables
-		
-		# Register what this function can do, to be able to recursively resolve dependencies
-		for table in provides_tables:
-			for plev in table[0]:
-				for q in table[1]: 
-					if (plev, q) in __metafun__:
-						__metafun__[plev,q].append(self)
-					else:
-						__metafun__[plev,q] = [self, ]
-		
-		return
-
-# TODO: Status quo: 
-#
-# Needs to build a database of what each function uses and provides, in order to
-# (a) define what commands exist using dyncal
-# (b) Know which dynlib function to call which what arguments,
-# (c) potentially build dependency trees for chains of functions to call for a specific task
-#
-# Furthermore, a few additional commands must be available: e.g. "plot". These additional commands
-# cannot be directly mapped to a dynlib function (or maybe the should be?), but to supplementary scripts
-# like dyncal_plot.py
-
-
 # the end

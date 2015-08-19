@@ -71,18 +71,22 @@ class tagg(object):
 	def end(self, dti):
 		''' End date of the interval the given date is in or on '''
 		
-		if self.dtd <= self.interval:
-			return self.start_next(dti) - self.dtd
+		dtn = self.start_next(dti)
+
+		# Make sure the returned end date is not before the given date; this can happen for large dtd
+		if dtn - self.dtd < dti:
+			return dtn
 		else:
-			return self.start_next(dti)
+			return dtn - self.dtd
 	
 	def end_after(self, dti):
 		''' End date of the interval the given date is in '''
 		
-		if self.dtd < self.interval:
-			return self.start_next(dti) - self.dtd
+		# Make sure the returned end date is noti on or before the given date; this can happen for large dtd
+		if dtn - self.dtd <= dti:
+			return dtn
 		else:
-			return self.start_next(dti)
+			return dtn - self.dtd
 	
 	def start_next(self, dti=None):
 		''' Start of the next interval after the current or given '''

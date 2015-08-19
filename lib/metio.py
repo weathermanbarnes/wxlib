@@ -342,12 +342,12 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 	# Define helper dimensions; not explicitly used in any variable but useful to interpret the grid point indexes stored in dat
 	of.createDimension(static.x_name, static.x.shape[1])
 	of.createDimension(static.y_name, static.y.shape[0])
-	olon = of.createVariable(static.x_name, 'f', (static.x_name,))
-	olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
-	olon[:] = static.x[0,:]
 	olat = of.createVariable(static.y_name, 'f', (static.y_name,))
 	olat.setncatts({'long_name': static.y_name, 'units': static.y_unit})
 	olat[:] = static.y[:,0]
+	olon = of.createVariable(static.x_name, 'f', (static.x_name,))
+	olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
+	olon[:] = static.x[0,:]
 
 	ot = of.createVariable(static.t_name, 'i', ('time',))
 	ot.setncatts({'long_name': static.t_name, 'units': static.t_unit})
@@ -375,11 +375,15 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 	return
 
 
-def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=True, global_atts={}):
-	''' Save time-independet data like composites or EOFs in a netCDF file
+def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to_short=True, 
+		timeseries={}, global_atts={}):
+	''' Save time-independent data like composites or EOFs in a netCDF file
 
 	The data is saved either to an existing file with a matching name in conf.datapath, 
-	or, if such a file does not exist, to a new file is in conf.opath.
+	or, if such a file does not exist, to a new file in conf.opath.
+
+	Optionally, time information may be retained in time series. Time series may use the ID
+	dimension, if ids set.
 
 	Parameters
 	----------
@@ -388,12 +392,17 @@ def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=Tru
 	static : gridlib.grid
 	    Some meta information about the data, like the grid information.
 	    The variable name identifier, following the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
-	plev : str
-	    String representation of the vertical level on which the data is defined, e.g. ``'700'`` 
-	    for 700 hPa or ``'pv2000'`` for the PV2-surface.
+	name : str
+	    Name of the collection, identifying for example the composite or EOF.
+	ids : list of str
+	    Identifying names for each index in the ``id`` dimension.
 	q : str
-	    Only used and required if dat is a numpy array. The variable name identifier, following 
-	    the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
+	    *Optional*. Only used and required if dat is a numpy array. The variable name identifier, 
+	    following the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
+	plev : str
+	    *Optional*. Only used and required if dat is a numpy array. String representation of the 
+	    vertical level on which the data is defined, e.g. ``'700'`` for 700 hPa or ``'pv2000'`` 
+	    for the PV2-surface.
 	compress_to_short : bool
 	    *Optional*, default ``True``. By default, ``metsave`` compresses the data by converting
 	    the data field into int16, using the float64 ``add_offset`` and ``scale_factor`` attributes 
@@ -401,23 +410,27 @@ def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=Tru
 	'''
 
 	if not type(dat) == dict:
-		if not q:
-			raise ValueError, 'Variable name q required, if dat is not a dict!'
-		datdict = {q: dat}
-		s = dat.shape
+		if not q or not plev:
+			raise ValueError, 'Variable name and vertical level required, if dat is not a dict!'
+		datdict = {(plev, q): dat}
 	else:
 		datdict = dat
-		s = dat[dat.keys()[0]].shape
+	
+	s = static.x.shape
+	if ids:
+		s = (len(ids), ) + s
 	
 	now = dt.now(pytz.timezone(conf.local_timezone))
 	history = '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	filename = conf.file_timeless % {'time': dts2str(static.t_parsed), 'name': name}
 	try:
 		f = metopen(filename, no_static=True, mode='a')
+		print 'Saving to existing %s' % filename
 		new = False
 
 	except ValueError: 
 		f = nc.Dataset(conf.opath+'/'+filename+'.nc', 'w', format='NETCDF4')
+		print 'Saving to %s/%s.nc' % (conf.opath, filename)
 		new = True
 	
 	# Consistency checks
@@ -429,15 +442,28 @@ def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=Tru
 					raise ValueError, 'Existing file found with incompatible attributes: `%s` (existing: %s, given: %s)' % (att, exist, global_atts[att])
 			else:
 				setattr(f, att, global_atts[att])
+
+		if timeseries and not 'time' in f.dimensions:
+			raise ValueError, 'Time series given, but no time dimension present in existing file.'
 		
-		for id1, id2 in zip(f.variables['id'], ids):
-			if not id1 == id2:
-				raise ValueError, 'Existing file found with incompatible ID dimension (existing: %s, given: %s)' % (f.variables['id'][::], ids)
+		if ids and 'id' in f.variables:
+			for id1, id2 in zip(f.variables['id'], ids):
+				if not id1 == id2:
+					raise ValueError, 'Existing file found with incompatible ID dimension (existing: %s, given: %s)' % (f.variables['id'][::], ids)
+			data_dimensions = ('id', )
+		elif ids and not 'id' in f.variables:
+			raise ValueError, 'Existing file does not contain an ID dimension'
+		elif not ids and 'id' in f.variables:
+			raise ValueError, 'Existing file contains ID dimension, but no ids given!'
+		else:
+			data_dimensions = ()
 
 		if not static.y_name in f.variables:
 			raise ValueError, 'Dimension `%s` not found in existing file.' % static.y_name
 		if not static.x_name in f.variables:
 			raise ValueError, 'Dimension `%s` not found in existing file.' % static.x_name
+
+		data_dimensions += (static.y_name, static.x_name, )
 	
 	# Create netCDF dimensions and attributes
 	else:
@@ -446,13 +472,28 @@ def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=Tru
 				'history': history, 
 		})
 
-		f.createDimension('id', s[0])
-		f.createDimension(static.x_name, s[2])
-		f.createDimension(static.y_name, s[1])
+		if timeseries:
+			f.createDimension('time', len(static.t))
+			ot = f.createVariable('time', 'i', ('time',))
+			ot.setncatts({'long_name': 'time', 'units': static.t_unit})
+			ot[::] = static.t
+		
+		if ids:
+			f.createDimension('id', s[0])
+			f.createDimension(static.y_name, s[1])
+			f.createDimension(static.x_name, s[2])
 
-		oid = f.createVariable('id', str, ('id',))
-		oid.setncatts({'long_name': 'Identifying name'})
-		oid[::] = np.array(ids)
+			oid = f.createVariable('id', str, ('id',))
+			oid.setncatts({'long_name': 'Identifying name'})
+			oid[::] = np.array(ids)
+
+			data_dimensions = ('id', static.y_name, static.x_name, )
+		else:
+			f.createDimension(static.x_name, s[1])
+			f.createDimension(static.y_name, s[0])
+
+			data_dimensions = (static.y_name, static.x_name, )
+
 		olat = f.createVariable(static.y_name, 'f', (static.y_name,))
 		olat.setncatts({'long_name': static.y_name, 'units': static.y_unit})
 		olat[::] = static.y[:,0]
@@ -460,7 +501,22 @@ def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=Tru
 		olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
 		olon[::] = static.x[0,:]
 
-	for q_ in dat:
+	for plev, q_ in dat:
+		# Finding 
+		if plev:
+			if plev in f.groups and q_ in f.groups[plev].variables:
+				print 'Warning: variable /%s/%s already present, skipping!' % (plev, q_)
+				continue
+	
+			ncvarname = '/%s/%s' % (plev, q_)
+
+		else:
+			if q_ in f.variables:
+				print 'Warning: variable %s already present, skipping!' % q_
+				continue
+
+			ncvarname = q_
+		
 		if q_[-4:] == '_std':
 			q = q_[:-4]
 			prefix = 'Standard deviation of '
@@ -476,31 +532,77 @@ def metsave_timeless(dat, static, plev, name, ids, q=None, compress_to_short=Tru
 		elif q_[-4:] == '_max':
 			q = q_[:-4]
 			prefix = 'Maximum of '
+		elif q_[-8:] == '_pattern':
+			q = q_[:-8]
+			prefix = 'EOF loading pattern for '
 		else:
 			q = q_
 			prefix = ''
+		
+		s_ = dat[plev,q_].shape
+		if not len(s_) == len(data_dimensions):
+			raise ValueError, 'Data for (%s,%s) does not have the required number of dimensions. Expected: %d, got: %d.' % (
+					plev, q_, len(data_dimensions), len(s_))
+		data_dimensions_ = ()
+		squeezeme = False
+		for dimname, dim in zip(data_dimensions, s_):
+			if dim > 1:
+				data_dimensions_ += (dimname,)
+			else:
+				squeezeme = True
 
-		if compress_to_short:
-			dat_, scale, off, fill = utils.unscale(dat[q_])
+		if squeezeme:
+			dat_ = dat[plev,q_].squeeze()
+			compress_to_short_ = False
+		else: 
+			dat_ = dat[plev,q_]
+			compress_to_short_ = compress_to_short
+
+		if compress_to_short_:
+			dat_, scale, off, fill = utils.unscale(dat_)
 			if fill: 
-				ovar = f.createVariable('/%s/%s' % (plev, q_), 'i2', ('id', static.y_name, static.x_name,), fill_value=fill)
+				ovar = f.createVariable(ncvarname, 'i2', data_dimensions_, fill_value=fill)
 				ovar.set_auto_scale(False)
 
 				ovar.missing_value = fill
 			else:
-				ovar = of.createVariable('/%s/%s' % (plev, q_), 'i2', ('id', static.y_name, static.x_name,))
+				ovar = f.createVariable(ncvarname, 'i2', data_dimensions_)
 
 			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q], 'history': history,
 					'add_offset': off, 'scale_factor': scale})
 		else:
-			ovar = of.createVariable('/%s/%s' % (plev, q_), 'f', ('time', static.y_name, static.x_name,))
+			ovar = f.createVariable(ncvarname, 'f', data_dimensions_)
 			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q], 'history': history})
-			dat_ = dat[q_]
 	
 		ovar[::] = dat_
 
-	f.close()
+	for plev, q in timeseries:
+		# Finding 
+		if plev:
+			if plev in f.groups and q in f.groups[plev].variables:
+				print 'Warning: variable /%s/%s already present, skipping!' % (plev, q)
+				continue
 	
+			ncvarname = '/%s/%s' % (plev, q)
+
+		else:
+			if q in f.variables:
+				print 'Warning: variable %s already present, skipping!' % q
+				continue
+
+			ncvarname = q
+
+		if len(timeseries[plev,q].shape) == 2:
+			data_dimensions = ('time', 'id')
+		else:
+			data_dimensions = ('time', )
+		
+		ovar = f.createVariable(ncvarname, 'f', data_dimensions)
+		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q], 'history': history})
+		ovar[::] = timeseries[plev,q]
+
+	f.close()
+
 	return
 
 
@@ -555,7 +657,8 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	plevs : list of str or str
 	    *Optional*, defaults to all available pressure levels. The string representation
 	    of the requested vertical level(s), e.g. ``'700'`` for 700 hPa or ``'pv2000'`` 
-	    for the PV2-surface.
+	    for the PV2-surface. The parameter is only effective if data is split into seperate 
+	    files per vertical level.
 	tavg : bool
 	    *Optional*, default ``False``. Instead of returning a time-dimension, return
 	    the temporal average of the requested data.
@@ -619,22 +722,41 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 		
 		# One or more vertical levels?
 		i = 0
-		for plev in plevs:
-			if type(dat) == type(None):
-				f, d, static = metopen(conf.file_std % {'time': year, 'plev': plev, 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
-				s = (1+tsmax-tsmin, len(plevs), ) + d.shape[1:]
-				dat = np.empty(s, dtype=d.dtype)
-				static.t = static.t[cut]
-				if type(static.t_parsed) == np.ndarray:
-					static.t_parsed = static.t_parsed[cut]
+		if type(dat) == type(None):
+			f, d, static = metopen(conf.file_std % {'time': year, 'plev': plevs[0], 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+			if len(d.shape) == 4 and d.shape[1] > 1:
+				separate_plevs = False
+				s = (1+tsmax-tsmin, ) + d.shape[1:]
 			else:
-				f, d, static_ = metopen(conf.file_std % {'time': year, 'plev': plev, 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
-				static.t = np.concatenate((static.t, static_.t[cut]))
-				if type(static.t_parsed) == np.ndarray:
-					static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
-			
-			dat[datcut,i,::] = d
-			i += 1
+				separate_plevs = True
+				s = (1+tsmax-tsmin, len(plevs), ) + d.shape[1:]
+
+			dat = np.empty(s, dtype=d.dtype)
+			if separate_plevs:
+				dat[datcut,0,::] = d
+			else:
+				dat[datcut,::] = d
+
+			static.t = static.t[cut]
+			if type(static.t_parsed) == np.ndarray:
+				static.t_parsed = static.t_parsed[cut]
+
+			i = 1
+		
+		if separate_plevs:
+			for plev in plevs[i:]:
+				f, dat[datcut,i,::], static_ = metopen(conf.file_std % {'time': year, 'plev': plev, 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+				if i == 0:
+					static.t = np.concatenate((static.t, static_.t[cut]))
+					if type(static.t_parsed) == np.ndarray:
+						static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
+				i += 1
+
+		elif i == 0:
+			f, dat[datcut,::], static_ = metopen(conf.file_std % {'time': year, 'plev': plevs[0], 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+			static.t = np.concatenate((static.t, static_.t[cut]))
+			if type(static.t_parsed) == np.ndarray:
+				static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
 
 	# Time-averaging if specified
 	if tavg and len(dates) > 1:

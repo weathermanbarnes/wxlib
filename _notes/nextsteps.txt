@@ -1,20 +1,10 @@
 Next steps
 ----------
 
- ---------------------------- version 0.20 ----------------------------
-  4. dyncal: Generic infratructure
-  5. dyncal: Add actions (calc, agg, plot) 			<- 2, 4
-  6. Integrate composite infrastructure
-  7. Integrate EOF functions
-  8. metio: metsave for eof, comp and get_eof, get_composite 	<- 6, 7
-  9. Documentation File formats (eof, comp) 			<- 8
- 10. dyncal: Add actions (comp, eof) 				<- 4, 8
- 11. Documentation: dyncal 					<- 4, 5, 10
  ---------------------------- version 0.21 ----------------------------
  12. Contexts: Integrate iveret settings to plot
  13. Contexts: Extend (metno_fc, ecmwf_fc)
- 14. Contexts: Create (wrf, bedymo)
- 15. Contexts: Create (nora10, other available reanalyses)
+ 14. Contexts: Create (bedymo,nora10)
  ---------------------------- version 0.22 ----------------------------
  16. Integrate block
  17. Create lineutils
@@ -27,4 +17,8 @@ Next steps
  23. Some kind of testing infrastructure
  ---------------------------- version 1.0  ----------------------------
  24. Add persistent homologies
+  4. dyncal: Generic infratructure
+  5. dyncal: Add actions (calc, agg, plot)
+ 10. dyncal: Add actions (comp, eof)
+ 11. Documentation: dyncal
 
