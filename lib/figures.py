@@ -17,6 +17,8 @@ These functions have two main aims:
 import copy
 import re
 import types
+import cStringIO
+from PIL import Image
 
 import numpy as np
 import scipy.interpolate as intp
@@ -463,8 +465,18 @@ def __output(plev, q, kwargs):
 			filename = '%s_%s_%s.%s' % (q, plev, __safename(kwargs.get('name', 'unnamed')), conf.plotformat)
 		if kwargs.get('name_prefix'):
 			filename = '%s_%s' % (kwargs.pop('name_prefix'), filename)
+		
+		# If png: Use adaptive palette to save space
+		if filename[-3:] == 'png':
+			imgstr = cStringIO.StringIO()
+			plt.savefig(imgstr, format='png', dpi=kwargs.pop('fig_dpi'))
+			imgstr.seek(0)
+			img = Image.open(imgstr)
+			img_adaptive = img.convert('RGB').convert('P', palette=Image.ADAPTIVE)
+			img_adaptive.save('%s/%s' % (conf.plotpath, filename), format='PNG')
 
-		plt.savefig('%s/%s' % (conf.plotpath, filename), dpi=kwargs.pop('fig_dpi'))
+		else:
+			plt.savefig('%s/%s' % (conf.plotpath, filename), dpi=kwargs.pop('fig_dpi'))
 	
 	if kwargs.pop('show'):
 		plt.show()
