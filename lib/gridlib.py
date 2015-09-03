@@ -258,6 +258,9 @@ class grid_by_nc(grid):
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type with units (%s/%s)' % (self.x_unit, self.y_unit)
 			
+		self.x = np.tile(self.x, (self.ny,1))
+		self.y = np.tile(self.y, (self.nx,1)).T
+
 		if self.gridtype == 'latlon':
 			self._calc_dx_dy_latlon()
 
@@ -274,9 +277,6 @@ class grid_by_nc(grid):
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type "%s"' % self.gridtype
 		
-		self.x = np.tile(self.x, (self.ny,1))
-		self.y = np.tile(self.y, (self.nx,1)).T
-
 		self.rotated = False
 		if self.gridtype == 'latlon':
 			for var in self.f.variables:
