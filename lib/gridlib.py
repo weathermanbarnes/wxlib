@@ -260,12 +260,18 @@ class grid_by_nc(grid):
 			
 		if self.gridtype == 'latlon':
 			self._calc_dx_dy_latlon()
+			self.x = np.tile(self.x, (self.ny,1))
+			self.y = np.tile(self.y, (self.nx,1)).T
 
 		elif self.gridtype == 'idx':
 			self.dx = np.ones((self.ny, self.nx))*2
+			self.x = np.tile(self.x, (self.ny,1))
+			self.y = np.tile(self.y, (self.nx,1)).T
 			self.dy = np.ones((self.ny, self.nx))*2
 
 		elif self.gridtype == 'cartesian':
+			self.x = np.tile(self.x, (self.ny,1))
+			self.y = np.tile(self.y, (self.nx,1)).T
 			self.dx = np.empty(self.x.shape)
 			self.dy = np.empty(self.y.shape)
 			self.dx[:,1:-1] = self.x[:,2:] - self.x[:,:-2]
@@ -274,9 +280,6 @@ class grid_by_nc(grid):
 		else:
 			raise NotImplementedError, '(Yet) Unknown grid type "%s"' % self.gridtype
 		
-		self.x = np.tile(self.x, (self.ny,1))
-		self.y = np.tile(self.y, (self.nx,1)).T
-
 		self.rotated = False
 		if self.gridtype == 'latlon':
 			for var in self.f.variables:
