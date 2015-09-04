@@ -48,7 +48,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`ddx_o4`
+  !@ :meth:`ddx_o4`, :meth:`ddx_on_q`
   subroutine ddx(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -71,6 +71,93 @@ contains
           res(k,j,nx  ) = nan
        end forall
     end if
+  end subroutine
+  !
+  !@ Calculates partial x derivative, keeping datq constant:
+  !@
+  !@    ddatdx = partial(dat)/partial(x) - partial(dat)/partial(z)*partial(z)/partial(datq)*partial(datq)/dat(x)
+  !@
+  !@ The routine uses 2nd-order centered differences. Returns NaN on first and last 
+  !@ longitude for non-cyclic grids.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ datq : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array for the vertical coordinate to be kept constant
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     x-derivative of ``dat``.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`ddx`, :meth:`ddx_o4`
+  subroutine ddx_on_q(res,nx,ny,nz,dat,datq,dx,dy)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), datq(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni) :: i,j,k, nx,ny,nz
+    !f2py depend(nx,ny,nz) datq, res
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    ! Main part of the field
+    do k = 2_ni,nz-1_ni
+       do j = 1_ni,ny
+          do i = 2_ni,nx-1_ni
+             res(k,j,i) = (dat(k,j,i+1_ni) - dat(k,j,i-1_ni))/dx(j,i) &
+                  &     - (dat(k+1_ni,j,i) - dat(k-1_ni,j,i))/(datq(k+1_ni,j,i)-datq(k-1_ni,j,i)) &
+                  &      *(datq(k,j,i+1_ni) - datq(k,j,i-1_ni))
+          enddo
+       enddo
+    enddo
+    ! East-west boundaries (might be periodic)
+    if (grid_cyclic_ew) then
+       do k = 2_ni,nz-1_ni
+          do j = 1_ni,ny
+             res(k,j,1_ni) = (dat(k,j,2_ni) - dat(k,j,nx))/dx(j,1_ni) &
+                  &        - (dat(k+1_ni,j,i) - dat(k-1_ni,j,i))/(datq(k+1_ni,j,i)-datq(k-1_ni,j,i)) &
+                  &         *(datq(k,j,2_ni) - datq(k,j,nx))
+             res(k,j,nx  ) = (dat(k,j,1_ni) - dat(k,j,nx-1_ni))/dx(j,nx) &
+                  &        - (dat(k+1_ni,j,i) - dat(k-1_ni,j,i))/(datq(k+1_ni,j,i)-datq(k-1_ni,j,i)) &
+                  &         *(datq(k,j,1_ni) - datq(k,j,nx-1_ni))
+          end do
+       end do
+    else 
+       do k = 1_ni,nz
+          do j = 1_ni,ny
+             res(k,j,1_ni) = nan
+             res(k,j,nx  ) = nan
+          end do
+       end do
+    end if
+    ! top/bottom boundaries
+    do j = 1_ni,ny
+       do i = 1_ni,nx
+          res(1_ni,j,i) = nan
+          res(nz  ,j,i) = nan
+       end do
+    end do
+    !
   end subroutine
   !
   !@ Calculates partial x derivative: ddatdx = partial(dat)/partial(x)
@@ -107,7 +194,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`ddx`
+  !@ :meth:`ddx`, :meth:`ddx_on_q`
   subroutine ddx_o4(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -225,7 +312,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`ddy_o4`
+  !@ :meth:`ddy_o4`, :meth:`ddy_on_q`
   subroutine ddy(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -241,6 +328,80 @@ contains
        res(k,1_ni,i)=nan
        res(k,ny,i)=nan
     end forall
+  end subroutine
+  !
+  !@ Calculates partial x derivative, keeping datq constant:
+  !@
+  !@    ddatdy = partial(dat)/partial(y) - partial(dat)/partial(z)*partial(z)/partial(datq)*partial(datq)/dat(y)
+  !@
+  !@ The routine uses 2nd-order centered differences. Returns NaN on first and last 
+  !@ latitude.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ datq : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array for the vertical coordinate to be kept constant
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     x-derivative of ``dat``.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`ddy`, :meth:`ddy_o4`
+  subroutine ddy_on_q(res,nx,ny,nz,dat,datq,dx,dy)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), datq(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni) :: i,j,k, nx,ny,nz
+    !f2py depend(nx,ny,nz) datq, res
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    ! Main part of the field
+    do k = 2_ni,nz-1_ni
+       do j = 2_ni,ny-1_ni
+          do i = 1_ni,nx
+             res(k,j,i) = (dat(k,j+1_ni,i) - dat(k,j-1_ni,i))/dx(j,i) &
+                  &     - (dat(k+1_ni,j,i) - dat(k-1_ni,j,i))/(datq(k+1_ni,j,i)-datq(k-1_ni,j,i)) &
+                  &      *(datq(k,j+1_ni,i) - datq(k,j-1_ni,i))
+          enddo
+       enddo
+    enddo
+    ! Northern/Southern boundaries
+    do k = 1_ni,nz
+       do i = 1_ni,ny
+          res(k,1_ni,i) = nan
+          res(k,ny  ,i) = nan
+       end do
+    end do
+    ! top/bottom boundaries
+    do j = 1_ni,ny
+       do i = 1_ni,nx
+          res(1_ni,j,i) = nan
+          res(nz  ,j,i) = nan
+       end do
+    end do
+    !
   end subroutine
   !
   !@ Calculates partial y derivative: ddatdy = partial(dat)/partial(y)
@@ -277,7 +438,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`ddy`
+  !@ :meth:`ddy`, :meth:`ddy_on_q`
   subroutine ddy_o4(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -437,6 +598,10 @@ contains
   !@ -------
   !@ np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     z-derivative of ``dat``.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`ddz_on_q`
   subroutine ddz(res,nx,ny,nz,dat,dz)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dz(2_ni:nz-1_ni,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -452,6 +617,79 @@ contains
        res(1_ni,j,i)=nan
        res(nz  ,j,i)=nan
     end forall
+  end subroutine
+  !
+  !@ Calculates partial vertical derivative using datq as a vertical coordinate:
+  !@
+  !@    ddatdz = partial(dat)/partial(datq)
+  !@
+  !@ The routine uses 2nd-order centered differences with a rather curious discretisation.
+  !@ If the vertical grid spacing is uneven, the grid emphasises the estimate from the closer
+  !@ set of points over the estimate from the more distant set of points. 
+  !@ 
+  !@ The function returns nan on the upper and lowermost level.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array
+  !@ datq : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Data array for the vertical coordinate
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     x-derivative of ``dat``.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`ddz`
+  subroutine ddz_on_q(res,nx,ny,nz,dat,datq,dx,dy)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), datq(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    real(kind=nr) :: dq_upper, dq_lower
+    integer(kind=ni) :: i,j,k, nx,ny,nz
+    !f2py depend(nx,ny,nz) datq, res
+    !f2py depend(nx,ny) dx, dy
+    ! -----------------------------------------------------------------
+    !
+    ! Main part of the field
+    do k = 2_ni,nz-1_ni
+       do j = 1_ni,ny
+          do i = 1_ni,nx
+             dq_upper = datq(k,j,i) - datq(k+1_ni,j,i)
+             dq_lower = datq(k-1_ni,j,i) - datq(k,j,i)
+             res(k,j,i) = 1.0_nr/(dq_upper + dq_lower) &
+                    &    * ( (dq_upper/dq_lower) * (dat(k-1_ni,j,i) - dat(k,j,i))  &
+                    &      + (dq_lower/dq_upper) * (dat(k,j,i) - dat(k+1_ni,j,i)) )
+          enddo
+       enddo
+    enddo
+    ! top/bottom boundaries
+    do j = 1_ni,ny
+       do i = 1_ni,nx
+          res(1_ni,j,i) = nan
+          res(nz  ,j,i) = nan
+       end do
+    end do
+    !
   end subroutine
   !
   !@ Calculates second partial derivative in x and y directions::

@@ -20,6 +20,7 @@ dynlib.diag
    .. autofunction:: frontogenesis
    .. autofunction:: geop_from_montgp
    .. autofunction:: grad_shear_nat
+   .. autofunction:: isen_geop_slope
    .. autofunction:: isoline_angle
    .. autofunction:: isoline_to_deformation_angle
    .. autofunction:: okuboweiss

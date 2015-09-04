@@ -106,9 +106,9 @@ class grid(object):
 class grid_by_nc(grid):
 	''' Extract the relevant information from a given netCDF file object '''
 
-	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x', 'rlon', 'rlon_2']
-	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', 'rlat']
-	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'lev_2']
+	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x', 'rlon', 'rlon_2', 'dimx_Q']
+	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', 'rlat', 'dimy_Q']
+	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'lev_2', 'dimz_Q', 'dimz_PS']
 	T_NAMES = ['time', 'Time']
 
 	ROT_POLES = {
@@ -183,23 +183,23 @@ class grid_by_nc(grid):
 		
 		try:
 			self.x_unit = self.f.variables[self.x_name].units
-		except KeyError:
+                except (KeyError, AttributeError):
 			self.x_unit = '1'
 		try: 
 			self.y_unit = self.f.variables[self.y_name].units
-		except KeyError: 
+		except (KeyError, AttributeError): 
 			self.y_unit = '1'
 		if self.z_name:
 			try:
 				self.z_unit = self.f.variables[self.z_name].units
-			except KeyError:
+			except (KeyError, AttributeError):
 				self.z_unit = '1'
 		else:
 			self.z_unit = None
 		if self.t_name:
 			try:
 				self.t_unit = self.f.variables[self.t_name].units
-			except KeyError:
+			except (KeyError, AttributeError):
 				self.t_unit = '1'
 		else:
 			self.t_unit = None
@@ -296,13 +296,13 @@ class grid_by_nc(grid):
 					break # don't rotate more than once!
 
 		if self.z_name:
-			self.nz = self.f.dimensions[self.z_name]
+			self.nz = len(self.f.dimensions[self.z_name])
 			if self.z_name in self.f.variables:
 				self.z  = self.f.variables[self.z_name][::]
 			else:
 				self.z = np.arange(self.nz)
 		if self.t_name:
-			self.nt = self.f.dimensions[self.t_name]
+			self.nt = len(self.f.dimensions[self.t_name])
 			if not self.nt and not self.v: 
 				raise RuntimeError, 'grid_by_nc needs one specific variable for extracing the length of the netcdf-unlimited time dimension'
 			elif not self.nt:
@@ -315,7 +315,7 @@ class grid_by_nc(grid):
 			
 			# Try to parse the time axis into datetime objects
 			tusplit = self.t_unit.split()
-			if tusplit[1] == 'since':
+			if len(tusplit) > 3 and tusplit[1] == 'since':
 				facs = {'seconds': 1, 'minutes': 60, 'hours': 3600, 'days': 86400}
 				if tusplit[0] not in facs:
 					self.t_parsed = None

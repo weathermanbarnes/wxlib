@@ -33,7 +33,7 @@ dynlib_version = (''.join(dynfor.consts.version)).strip()
 # Maxmimum number of time steps to be requested at once in get_instantaneous 
 # and get_aggregate without having to use force
 MAX_TLEN = 3000
-
+NO_ENDING = 'nc' # ETH compatibility: if the file exists without file ending, try to interpret it as a netCDF file
 
 
 # #############################################################################
@@ -87,7 +87,67 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 	grid.gridlib
 	    If ``no_static=False`` meta-information about the requested data.
 	'''
+
+	def handle_npy(filepath):
+		if not mode == 'r':
+			print 'WARNING: Can only open npy files in read mode!'
+		if q:
+			dat = np.load(filepath, mmap_mode='r')
+			dat = dat[cut]
+		print 'Found '+filepath
+		f = None
+
+		return f, dat
+
+	def handle_npz(filepath):
+		if not mode == 'r':
+			print 'WARNING: Can only open npz files in read mode!'
+		f = np.load(filepath)
+		if q:
+			if q not in f.files:
+				tried.append(filepath)
+			dat = f[q][cut]
+		print 'Found '+filepath
+
+		return f, dat
 	
+	def handle_mat(filepath):
+		if not mode == 'r':
+			print 'WARNING: Can only open mat files in read mode!'
+		f = mat.loadmat(filepath)
+		if q:
+			if q not in f:
+				tried.append(filepath)
+			dat = f[q][cut]
+		print 'Found '+filepath
+
+		return f, dat
+
+	def handle_nc(filepath):
+		f = nc.Dataset(filepath, mode)
+		f.set_auto_scale(False)
+		if q:
+			var = f.variables[q]
+			if q not in f.variables:
+				tried.append(filepath)
+			if not no_dtype_conversion:
+				dat = utils.scale(var, cut=cut)
+			else:
+				dat = var[cut]
+		else:
+			var = None
+
+		if not no_static:
+			static = grid_by_nc(f, var)
+			# TODO: Where to search for topography in nc files?
+			static.oro = np.zeros((static.ny, static.nx))
+		else:
+			static = None
+
+		print 'Found '+filepath
+
+		return f, dat, static
+
 	if not type(cut) == slice:
 		raise ValueError, 'cut must be a 1-dimensional slice object' 
 	
@@ -98,55 +158,26 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 		if verbose:
 			print 'Trying: '+path+'/'+filename+'.*'
 
-		if os.path.exists(path+'/'+filename+'.npy'):
-			if not mode == 'r':
-				print 'WARNING: Can only open npy files in read mode!'
-			if q:
-				dat = np.load(path+'/'+filename+'.npy', mmap_mode='r')
-				dat = dat[cut]
-			print 'Found '+path+'/'+filename+'.npy'
-			f = None
+                if os.path.exists(path+'/'+filename+'.npy'):
+			f, dat = handle_npy(path+'/'+filename+'.npy')
+                elif os.path.exists(path+'/'+filename) and NO_ENDING == 'npy':
+			f, dat = handle_npy(path+'/'+filename)
+
 		elif os.path.exists(path+'/'+filename+'.npz'):
-			if not mode == 'r':
-				print 'WARNING: Can only open npz files in read mode!'
-			f = np.load(path+'/'+filename+'.npz')
-			if q:
-				if q not in f.files:
-					tried.append(path+'/'+filename+'.npz')
-					continue
-				dat = f[q][cut]
-			print 'Found '+path+'/'+filename+'.npz'
+			f, dat = handle_npz(path+'/'+filename+'.npz')
+		elif os.path.exists(path+'/'+filename) and NO_ENDING == 'npz':
+			f, dat = handle_npz(path+'/'+filename)
+
 		elif os.path.exists(path+'/'+filename+'.mat'):
-			if not mode == 'r':
-				print 'WARNING: Can only open mat files in read mode!'
-			f = mat.loadmat(path+'/'+filename+'.mat')
-			if q:
-				if q not in f:
-					tried.append(path+'/'+filename+'.mat')
-					continue
-				dat = f[q][cut]
-			print 'Found '+path+'/'+filename+'.mat'
+			f, dat = handle_mat(path+'/'+filename+'.mat')
+		elif os.path.exists(path+'/'+filename) and NO_ENDING == 'mat':
+			f, dat = handle_mat(path+'/'+filename)
+
 		elif os.path.exists(path+'/'+filename+'.nc'):
-			f = nc.Dataset(path+'/'+filename+'.nc', mode)
-			f.set_auto_scale(False)
-			if q:
-				var = f.variables[q]
-				if q not in f.variables:
-					tried.append(path+'/'+filename+'.nc')
-					continue
-				if not no_dtype_conversion:
-					dat = utils.scale(var, cut=cut)
-				else:
-					dat = var[cut]
-			else:
-				var = None
+			f, dat, static = handle_nc(path+'/'+filename+'.nc')
+		elif os.path.exists(path+'/'+filename) and NO_ENDING == 'nc':
+			f, dat, static = handle_nc(path+'/'+filename)
 
-			if not no_static:
-				static = grid_by_nc(f, var)
-				# TODO: Where to search for topography in nc files?
-				static.oro = np.zeros((static.ny, static.nx))
-
-			print 'Found '+path+'/'+filename+'.nc'
 		else:
 			tried.append(path)
 			continue
