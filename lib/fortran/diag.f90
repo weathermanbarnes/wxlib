@@ -615,8 +615,8 @@ contains
             &        vor_x(nt,nz,ny,nx), vor_y(nt,nz,ny,nx), vor_z(nt,nz,ny,nx), &
             &        div(nt,nz,ny,nx), wm(nt,nz,ny,nx)
     real(kind=nr) :: jac(3_ni,3_ni), evalr(3_ni), dummy0(3_ni), dummy1(1_ni,3_ni), &
-            &        evec(3_ni,3_ni), work(102_ni)
-    integer(kind=ni) :: i,j,k,n,t, info
+            &        evec(3_ni,3_ni), work(102_ni), diag(3_ni), subdiag(2_ni)
+    integer(kind=ni) :: i,j,k,n,t, info, ax,zx, minidx,maxidx
     ! -----------------------------------------------------------------
     !
     ! Crude transformation from Pa/s to m/s
@@ -626,9 +626,9 @@ contains
     call grad_3d(vx,vy,vz, nx,ny,nz,nt, v, dx,dy,dz)
     call grad_3d(wx,wy,wz, nx,ny,nz,nt, wm, dx,dy,dz)
     !
-    ! TEST: Disregard vertical wind shear
-    uz = wx
-    vz = wy
+    ! Test without vertical wind shear
+    !uz(:,:,:,:) = 0.0_nr
+    !vz(:,:,:,:) = 0.0_nr
     !
     ! Subtracting divergence and vorticity
     div = ux + vy + wz
@@ -647,30 +647,45 @@ contains
     vx = vx - 1.0_nr/2.0_nr * vor_z
     uy = uy + 1.0_nr/2.0_nr * vor_z
     !
+    if (grid_cyclic_ew) then
+       ax = 1_ni
+       zx = nx
+    else 
+       ax = 2_ni
+       zx = nx-1_ni
+    end if
+    !
     ! Find the eigenvectors of the remaining symmetric zero-trace matrixes
-    do i = 1_ni,nx
+    do i = ax,zx
        write(*,'(I5,A4,I5,A)', advance='no') i, 'of', nx, cr
        !
-       do j = 1_ni,ny
+       do j = 2_ni,ny-1_ni
           do k = 2_ni,nz-1_ni
              do t = 1_ni,nt
-                ! jac is in major column order
-                jac = reshape( (/ ux(t,k,j,i), vx(t,k,j,i), wx(t,k,j,i), &
-                           &      uy(t,k,j,i), vy(t,k,j,i), wy(t,k,j,i), &
-                           &      uz(t,k,j,i), vz(t,k,j,i), wz(t,k,j,i) /), (/ 3_ni, 3_ni /) )
-                !call dgeev('N', 'V', 3_ni, jac, 3_ni, evalr, dummy0, & 
-                !        & dummy1, 1_ni, evec, 3_ni, work, 102_ni, info)
+                ! Eigenvalues of symmetric matrixes
+                diag = (/ ux(t,k,j,i), vy(t,k,j,i), wz(t,k,j,i) /)
+                subdiag = (/ uy(t,k,j,i), vz(t,k,j,i) /)
+                call ssteqr('I', 3_ni, diag, subdiag, evec, 3_ni, work, info)
+                ! The diagonal elements are overwritten by the eigenvalues
+                evalr(:) = diag(:)
+                !
                 ! sort eigenvalues and eigenvectors by eigenvalue
+                minidx = min(minloc(evalr, dim=1_ni),1_ni)
+                maxidx = min(maxloc(evalr, dim=1_ni),1_ni)
+                ! If all values of evalr are equal: Use index order
+                if (minidx == 1_ni .and. maxidx == 1_ni) then
+                   maxidx = 3_ni
+                end if
                 ! first: max
-                n = maxloc(evalr, dim=1_ni)
+                n  = maxidx
                 res_eval(t,k,j,i,1_ni)   = evalr(n)
                 res_evec(t,k,j,i,1_ni,:) = evec(:,n)
                 ! second: middle
-                n = 6_ni - n - minloc(evalr, dim=1_ni)
+                n = 6_ni - maxidx - minidx
                 res_eval(t,k,j,i,2_ni)   = evalr(n)
                 res_evec(t,k,j,i,2_ni,:) = evec(:,n)
                 ! last and least
-                n = minloc(evalr, dim=1_ni)
+                n = minidx
                 res_eval(t,k,j,i,3_ni)   = evalr(n)
                 res_evec(t,k,j,i,3_ni,:) = evec(:,n)
              end do

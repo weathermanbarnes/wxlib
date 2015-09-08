@@ -76,6 +76,34 @@ class grid(object):
 
 		return
 
+        def _parse_time(self):
+		tusplit = self.t_unit.split()
+		if len(tusplit) > 3 and tusplit[1] == 'since':
+			facs = {'seconds': 1, 'minutes': 60, 'hours': 3600, 'days': 86400}
+			if tusplit[0] not in facs:
+				self.t_parsed = None
+			else:
+				formats = ['%Y-%m-%d %H:%M:0.0', '%Y-%m-%d %H:%M:00', '%Y-%m-%d %H:%M', ]
+				self.t_interval_unit = facs[tusplit[0]]
+				for fmt in formats:
+					try:
+						self.t_epoch = dt.strptime(' '.join(tusplit[2:4]), fmt)
+					except ValueError:
+						self.t_epoch = None
+
+					if not type(self.t_epoch) == type(None):
+						break
+
+				if type(self.t_epoch) == type(None):
+					self.t_epoch = dt(1,1,1,0,0)
+					
+				self.t_parsed = np.array([self.t_epoch + td(0, self.t_interval_unit*int(ts)) for ts in self.t])
+
+		else:
+			self.t_parsed = None
+		
+		return
+
 	rebuild_grid = __build_grid
 
 	def new_time(self, dates):
@@ -106,9 +134,9 @@ class grid(object):
 class grid_by_nc(grid):
 	''' Extract the relevant information from a given netCDF file object '''
 
-	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x', 'rlon', 'rlon_2', 'dimx_Q']
-	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', 'rlat', 'dimy_Q']
-	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'lev_2', 'dimz_Q', 'dimz_PS']
+	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x', 'rlon', 'rlon_2', 'dimx_Q', 'dimx_PS', ]
+	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', 'rlat', 'dimy_Q', 'dimy_PS', ]
+	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'lev_2', 'dimz_Q', 'dimz_PS', 'dimz_TH', ]
 	T_NAMES = ['time', 'Time']
 
 	ROT_POLES = {
@@ -317,30 +345,7 @@ class grid_by_nc(grid):
 				self.t = np.arange(self.nt)
 			
 			# Try to parse the time axis into datetime objects
-			tusplit = self.t_unit.split()
-			if len(tusplit) > 3 and tusplit[1] == 'since':
-				facs = {'seconds': 1, 'minutes': 60, 'hours': 3600, 'days': 86400}
-				if tusplit[0] not in facs:
-					self.t_parsed = None
-				else:
-					formats = ['%Y-%m-%d %H:%M:0.0', '%Y-%m-%d %H:%M:00', ]
-					self.t_interval_unit = facs[tusplit[0]]
-					for fmt in formats:
-						try:
-							self.t_epoch = dt.strptime(' '.join(tusplit[2:4]), fmt)
-						except ValueError:
-							self.t_epoch = None
-
-						if not type(self.t_epoch) == type(None):
-							break
-
-					if type(self.t_epoch) == type(None):
-						self.t_epoch = dt(1,1,1,0,0)
-						
-					self.t_parsed = np.array([self.t_epoch + td(0, self.t_interval_unit*int(ts)) for ts in self.t])
-
-			else:
-				self.t_parsed = None
+                        self._parse_time()
 
 		return
 
