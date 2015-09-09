@@ -614,8 +614,8 @@ contains
             &        wx(nt,nz,ny,nx), wy(nt,nz,ny,nx), wz(nt,nz,ny,nx), &
             &        vor_x(nt,nz,ny,nx), vor_y(nt,nz,ny,nx), vor_z(nt,nz,ny,nx), &
             &        div(nt,nz,ny,nx), wm(nt,nz,ny,nx)
-    real(kind=nr) :: jac(3_ni,3_ni), evalr(3_ni), dummy0(3_ni), dummy1(1_ni,3_ni), &
-            &        evec(3_ni,3_ni), work(102_ni), diag(3_ni), subdiag(2_ni)
+    real(kind=nr) :: jac(3_ni,3_ni), evalr(3_ni), tau(2_ni), &
+            &        evec(3_ni,3_ni), work(96_ni), diag(3_ni), subdiag(2_ni)
     integer(kind=ni) :: i,j,k,n,t, info, ax,zx, minidx,maxidx
     ! -----------------------------------------------------------------
     !
@@ -663,11 +663,20 @@ contains
           do k = 2_ni,nz-1_ni
              do t = 1_ni,nt
                 ! Eigenvalues of symmetric matrixes
-                diag = (/ ux(t,k,j,i), vy(t,k,j,i), wz(t,k,j,i) /)
-                subdiag = (/ uy(t,k,j,i), vz(t,k,j,i) /)
-                call ssteqr('I', 3_ni, diag, subdiag, evec, 3_ni, work, info)
-                ! The diagonal elements are overwritten by the eigenvalues
+                jac = reshape( (/ ux(t,k,j,i), vx(t,k,j,i), wx(t,k,j,i), &
+                    &             uy(t,k,j,i), vy(t,k,j,i), wy(t,k,j,i), &
+                    &             uz(t,k,j,i), vz(t,k,j,i), wz(t,k,j,i) /), (/ 3_ni, 3_ni /) )
+                call dsytrd('U', 3_ni, jac, 3_ni, diag, subdiag, tau, work, 96_ni, info)
+                call dorgtr('U', 3_ni, jac, 3_ni, tau, work, 96_ni, info)
+                call dsteqr('V', 3_ni, diag, subdiag, jac, 3_ni, work, info)
+                if (info /= 0_ni ) then
+                   diag(:) = nan
+                   jac(:,:) = nan
+                end if
+                ! The diagonal elements are overwritten by the eigenvalues,
+                ! and the rotation matrix Q by the eigenvectors
                 evalr(:) = diag(:)
+                evec(:,:) = jac(:,:)
                 !
                 ! sort eigenvalues and eigenvectors by eigenvalue
                 minidx = min(minloc(evalr, dim=1_ni),1_ni)
