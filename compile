@@ -28,7 +28,7 @@ python_library="dynfor"
 fortran_library="libdynfor"
 pysig="${precc}/$python_library.pyf"
 
-LIBS='-L/Data/gfi/users/local/lib -llapack -lspherepack'
+LIBS='-L/home/clemensp/sw/lib -lspherepack -lblas -llapack'
 
 # TODO: Make code ready for -pedantic
 if [ "$COMPILE_OPTS" == 'productive' ]; then
