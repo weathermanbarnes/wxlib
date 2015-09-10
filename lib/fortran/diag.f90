@@ -602,7 +602,7 @@ contains
     !
     real(kind=nr), intent(in)  :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), w(nt,nz,ny,nx), & 
             &                     rho(nt,nz,ny,nx),                               &
-            &                     dx(ny,nx), dy(ny,nx), dz(nt,2_ni:nz-1_ni,ny,nx)
+            &                     dx(ny,nx), dy(ny,nx), dz(nt,nz,ny,nx)
     real(kind=nr), intent(out) :: res_eval(nt,2_ni:nz-1_ni,ny,nx,3_ni), &
                                   res_evec(nt,2_ni:nz-1_ni,ny,nx,3_ni,3_ni)
     integer(kind=ni) :: nx,ny,nz,nt
@@ -613,18 +613,21 @@ contains
             &        vx(nt,nz,ny,nx), vy(nt,nz,ny,nx), vz(nt,nz,ny,nx), &
             &        wx(nt,nz,ny,nx), wy(nt,nz,ny,nx), wz(nt,nz,ny,nx), &
             &        vor_x(nt,nz,ny,nx), vor_y(nt,nz,ny,nx), vor_z(nt,nz,ny,nx), &
-            &        div(nt,nz,ny,nx), wm(nt,nz,ny,nx)
+            &        div(nt,nz,ny,nx), wm(nt,nz,ny,nx), dzm(nt,nz,ny,nx)
     real(kind=nr) :: jac(3_ni,3_ni), evalr(3_ni), tau(2_ni), &
             &        evec(3_ni,3_ni), work(96_ni), diag(3_ni), subdiag(2_ni)
     integer(kind=ni) :: i,j,k,n,t, info, ax,zx, minidx,maxidx
     ! -----------------------------------------------------------------
     !
     ! Crude transformation from Pa/s to m/s
-    wm = -w(:,:,:,:) / (rho(:,:,:,:)*g)
+    wm = -w(:,:,:,:) * rho(:,:,:,:)*g
     !
-    call grad_3d(ux,uy,uz, nx,ny,nz,nt, u, dx,dy,dz)
-    call grad_3d(vx,vy,vz, nx,ny,nz,nt, v, dx,dy,dz)
-    call grad_3d(wx,wy,wz, nx,ny,nz,nt, wm, dx,dy,dz)
+    ! Transforming vertical grid distances into m
+    dzm = -dz(:,:,:,:) * rho(:,:,:,:)*g
+    !
+    call grad_3d(ux,uy,uz, nx,ny,nz,nt, u, dx,dy,dzm)
+    call grad_3d(vx,vy,vz, nx,ny,nz,nt, v, dx,dy,dzm)
+    call grad_3d(wx,wy,wz, nx,ny,nz,nt, wm, dx,dy,dzm)
     !
     ! Test without vertical wind shear
     !uz(:,:,:,:) = 0.0_nr
