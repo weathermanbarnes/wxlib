@@ -448,7 +448,7 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 	if kwargs.get('title'):
 		title = kwargs.pop('title')
 		if title == 'auto':
-			title = '%s @ %s' % (conf.q_long[q], plev)
+			title = '%s @ %s' % (conf.q_long.get(q, q), plev)
 			if kwargs.get('name'):
 				title += ' for %s' % kwargs.get('name')
 

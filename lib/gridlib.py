@@ -134,9 +134,12 @@ class grid(object):
 class grid_by_nc(grid):
 	''' Extract the relevant information from a given netCDF file object '''
 
-	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x', 'rlon', 'rlon_2', 'dimx_Q', 'dimx_PS', ]
-	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', 'rlat', 'dimy_Q', 'dimy_PS', ]
-	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'lev_2', 'dimz_Q', 'dimz_PS', 'dimz_TH', ]
+	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x', ]
+	X_NAME_BEGINSWITH = ['rlon', 'dimx', ]
+	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', ]
+	Y_NAME_BEGINSWITH = ['rlat', 'dimy', ]
+	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', ]
+	Z_NAME_BEGINSWITH = ['lev', 'dimz', ]
 	T_NAMES = ['time', 'Time']
 
 	ROT_POLES = {
@@ -154,19 +157,29 @@ class grid_by_nc(grid):
 
 	# Skims through the netcdf file looking for the type of the x and y axis
 	def _init_grid(self):
+		def matches(match, names, begins):
+			for name in names:
+				if name == match: 
+					return True
+			for begin in begins:
+				if begin == match[:len(begin)]:
+					return True
+			
+			return False
+	
 		# Part 1: Looking for suitable axis
 		# 1. Using the given variable
 		if self.v:
 			for d in self.v.dimensions:
-				if d in self.X_NAMES:
+				if matches(d, self.X_NAMES, self.X_NAME_BEGINSWITH):
 					if self.x_name:
 						raise ValueError, 'Found several possible x-axes (using variable)'
 					self.x_name = d
-				if d in self.Y_NAMES:
+				if matches(d, self.Y_NAMES, self.Y_NAME_BEGINSWITH):
 					if self.y:
 						raise ValueError, 'Found several possible y-axes (using variable)'
 					self.y_name = d
-				if d in self.Z_NAMES:
+				if matches(d, self.Z_NAMES, self.Z_NAME_BEGINSWITH):
 					if self.z_name:
 						raise ValueError, 'Found several possible z-axes (using variable)'
 					self.z_name = d

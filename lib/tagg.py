@@ -225,7 +225,10 @@ def Nhour_factory(N):
 
 	return new
 
+hourly = Nhour_factory(1)
+three_hourly = Nhour_factory(3)
 six_hourly = Nhour_factory(6)
+twelve_hourly = Nhour_factory(12)
 daily = Nday_factory(1)
 two_daily = Nday_factory(2)
 three_daily = Nday_factory(3)
@@ -236,7 +239,7 @@ ten_daily = Nday_factory(10)
 
 __all__ = ['all', 'cal_year', 'met_season', 'cal_month', 'cal_week', 'cal_pentad', 
 	'ten_daily', 'weekly', 'five_daily', 'three_daily', 'two_daily', 'daily',
-	'six_hourly']
+	'twelve_hourly', 'six_hourly', 'three_hourly', 'hourly']
 
 def get_by_interval(td):
 	for agg in __all__:
@@ -246,6 +249,6 @@ def get_by_interval(td):
 	
 	raise ValueError, 'No aggregator found for time interval `%s`' % str(td)
 
-__all__.append('get_by_interval')
+#__all__.append('get_by_interval')
 
 # the end

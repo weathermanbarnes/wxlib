@@ -620,6 +620,7 @@ conf = settings_obj({
 	'file_ts': None,
 	'file_timeless': None,
 	'file_static': None,
+	'epoch': None,
 	'years': [],
 	'times': [],
 	'timestep': None,
