@@ -94,6 +94,8 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 		if q:
 			dat = np.load(filepath, mmap_mode='r')
 			dat = dat[cut]
+		else:
+			dat = None
 		print 'Found '+filepath
 		f = None
 
@@ -107,6 +109,8 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 			if q not in f.files:
 				tried.append(filepath)
 			dat = f[q][cut]
+		else:
+			dat = None
 		print 'Found '+filepath
 
 		return f, dat
@@ -119,6 +123,8 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 			if q not in f:
 				tried.append(filepath)
 			dat = f[q][cut]
+		else:
+			dat = None
 		print 'Found '+filepath
 
 		return f, dat
@@ -135,7 +141,7 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 			else:
 				dat = var[cut]
 		else:
-			var = None
+			dat = None
 
 		if not no_static:
 			static = grid_by_nc(f, var)
@@ -657,6 +663,10 @@ def get_static(verbose=False, no_dtype_conversion=False):
 	gridlib.grid
 	    Some meta information about the data, like the grid information.
 	'''
+	
+	if not conf.file_static:
+		raise ValueError, 'Static file must be configured for get_static() to work!'
+
 	fo, oro = metopen(conf.file_static, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, no_static=True)
 	static = grid_by_static(fo)
 	static.oro = oro[::]
@@ -985,56 +995,57 @@ def dts2str(dates, agg=None):
 	on 31 October 2014.
 
 	If the given number of dates given matches the number of dates expected for the given 
-	start and end dates with the ``conf.timestep``, the dates are *assumed* to be
-	contiguous, and the two dates are joined by a minus sign ``'-'``. Otherwise, the 
-	dates must be non-contiguous, and they are joined by two dots ``'..'``.
+	start and end dates with the ``conf.timestep``, the dates are checked wether they are
+	contiguous. If yes, the two dates are joined by a minus sign ``'-'``. Otherwise, for a
+	non-contiguous set of dates, the start and end dates are joined by two dots ``'..'``.
 
 	As a last rule, if the start and end date mark the beginning and end of the
 	same superordinate period, and if the dates appear to be contiguous, then only this 
 	period is returned:
 	
 	>>> from datetime import datetime as dt, timedelta as td
-	>>> dts2str([dt(1986,2,1,0)+i*td(0.25) for i in range(112)])
+	>>> dts2str([dt(1986,2,1,0)+i*td(0.25) for i in range(112)], 'six_hourly')
 	'198602'
 
 	Here, the dates span the entire February 1986, but do not extend into March. This 
 	example, and all the following assume a time step of 6 hours.
 
-	>>> dts2str([dt(1986,2,1,0)+i*td(0.25) for i in range(236)])
+	>>> dts2str([dt(1986,2,1,0)+i*td(0.25) for i in range(236)], 'six_hourly')
 	'198602-198603'
 
 	Here, the dates span the entire February and March of 1986. If only the 
 	start and end date are given
 
-	>>> dts2str([dt(1986,2,1,0), dt(1986,3,31,18)])
+	>>> dts2str([dt(1986,2,1,0), dt(1986,3,31,18)], 'six_hourly')
 	'198602..198603'
 
 	the two dates are joined by two dots. The same mechanisms apply also to years
 
-	>>> dts2str([dt(1979,1,1,0)+i*td(0.25) for i in range(51136)])
-	'1979-2013'
+	>>> dts2str([dt(1979,1,1,0)+i*td(0.25) for i in range(2924)], 'six_hourly')
+	'1979-1980'
 
 	and days.
 
-	>>> dts2str([dt(1986,4,7,0)+i*td(0.25) for i in range(4)]
+	>>> dts2str([dt(1986,4,7,0)+i*td(0.25) for i in range(4)], 'six_hourly')
 	'19860407'
 
 	However, note that, 
 
-	>>> dts2str([dt(1979,1,1,0)+i*td(0.25) for i in range(51137)])
-	'1979-2014010100'
+	>>> dts2str([dt(1979,1,1,0)+i*td(0.25) for i in range(2925)], 'six_hourly')
+	'1979010100-1981010100'
 
 	because 1 January 2014 is the beginning of a new superordinate period rather than the 
 	ending of an old. Furthermore,
 
-	>>> dts2str([dt(1986,4,7,6), dt(1986,4,7,18), dt(1986,4,7,0)])
+	>>> dts2str([dt(1986,4,7,6), dt(1986,4,7,18), dt(1986,4,7,0)], 'six_hourly')
 	'19860407..19860407'
 
 	because even if the first and last time step of the superordinate period (which is 7 
 	April 1986) is present, not all time steps in between are listed.
 
 	The time step can be overwritten by using the optional argument agg to specify a time
-	aggregation interval.
+	aggregation interval. In most cases it can be omitted. In this case, the aggregation
+	period is set to the time step configured in the context.
 
 	Parameters
 	----------
@@ -1059,17 +1070,22 @@ def dts2str(dates, agg=None):
 	# General case: Several datetime objects given
 	dta = min(dates)
 	dtz = max(dates)
-
+	
+	repr_intervals = {0: '%Y', 1: '%Y%m', 2: '%Y%m%d', 3: '%Y%m%d%H'}
 	if dta.hour == 0:
 		if dta.day == 1:
 			if dta.month == 1:
-				ret = dta.strftime('%Y')
+				# year only
+				repr_interval = 0
 			else:
-				ret = dta.strftime('%Y%m')
+				# year and month
+				repr_interval = 1
 		else:
-			ret = dta.strftime('%Y%m%d')
+			# year, month and day
+			repr_interval = 2
 	else:
-		ret = dta.strftime('%Y%m%d%H')
+		# year, month, day and hour
+		repr_interval = 3
 	
 	# Try to find an applicable time aggregation interval, either by argument or from the data set
 	if agg:
@@ -1100,39 +1116,38 @@ def dts2str(dates, agg=None):
 		else:
 			for date in aggdates:
 				if not date in dates:
-					ret = '..'
+					sep = '..'
 					contiguous = False
 					break
-		ret += sep
 		
 		# First time step of the next year 
 		# -> First time step of the agg interval starting in the next year 
 		# -> first time step of the last agg interval starting in the old year
 		yearly = tagg.cal_year(dta)
+		monthly = tagg.cal_month(dta)
 		last4year = agg.start(yearly.start_next(aggdates[-1])) - timestep
+		last4month = agg.start(monthly.start_next(aggdates[-1])) - timestep
 		#
-		if dtz.hour == last4year.hour:
-			if dtz.day == last4year.day:
+		if dtz.hour == last4month.hour:
+			if dtz.day == last4month.day:
 				if dtz.month == last4year.month:
-					if dtz.year == dta.year and contiguous:
-						ret = dtz.strftime('%Y')
-					else:
-						ret += dtz.strftime('%Y')
+					repr_interval = max(repr_interval, 0)
 				else:
-					if dtz.year == dta.year and dtz.month == dta.month and contiguous:
-						ret = dtz.strftime('%Y%m')
-					else:
-						ret += dtz.strftime('%Y%m')
+					repr_interval = max(repr_interval, 1)
 			else:
-				if dtz.year == dta.year and dtz.month == dta.month \
-						and dtz.day == dta.day and contiguous:
-					ret = dtz.strftime('%Y%m%d')
-				else:
-					ret += dtz.strftime('%Y%m%d')
+				repr_interval = max(repr_interval, 2)
 		else:
-			ret += dtz.strftime('%Y%m%d%H')
+			repr_interval = 3
+
+		fst = dta.strftime(repr_intervals[repr_interval])
+		lst = dtz.strftime(repr_intervals[repr_interval])
+		if fst == lst and contiguous:
+			ret = fst
+		else:
+			ret = fst + sep + lst
+
 	else:
-		ret += '..' + dtz.strftime('%Y%m%d%H')
+		ret = dta.strftime(repr_intervals[3]) + '..' + dtz.strftime(repr_intervals[3])
 
 	return ret
 

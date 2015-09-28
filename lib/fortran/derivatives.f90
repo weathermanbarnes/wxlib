@@ -603,7 +603,7 @@ contains
   !@ --------
   !@ :meth:`ddz_on_q`
   subroutine ddz(res,nx,ny,nz,dat,dz)
-    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dz(2_ni:nz-1_ni,ny,nx)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), dz(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     integer(kind=ni) :: i,j,k, nx,ny,nz
     !f2py depend(nx,ny,nz) res
@@ -800,7 +800,7 @@ contains
   !@ --------
   !@ :meth:`grad`
   subroutine grad_3d(resx,resy,resz,nx,ny,nz,nt,dat,dx,dy,dz)
-    real(kind=nr), intent(in)  :: dat(nt,nz,ny,nx), dx(ny,nx), dy(ny,nx), dz(nt,2_ni:nz-1_ni,ny,nx)
+    real(kind=nr), intent(in)  :: dat(nt,nz,ny,nx), dx(ny,nx), dy(ny,nx), dz(nt,nz,ny,nx)
     real(kind=nr), intent(out) :: resx(nt,nz,ny,nx), resy(nt,nz,ny,nx), resz(nt,nz,ny,nx)
     integer(kind=ni) :: nx,ny,nz,nt
     !f2py depend(nx,ny,nz,nt) resx, resy, resz
