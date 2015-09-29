@@ -144,7 +144,10 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 			dat = None
 
 		if not no_static:
-			static = grid_by_nc(f, var)
+			if q:
+				static = grid_by_nc(f, var)
+			else:
+				static = grid_by_nc(f)
 			# TODO: Where to search for topography in nc files?
 			static.oro = np.zeros((static.ny, static.nx))
 		else:
