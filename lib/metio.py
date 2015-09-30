@@ -263,18 +263,20 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	s = dat.shape
 	
 	# TODO: Why check against gridsize? Or at least: Why not allowing gridsize to be unset?
-	if not len(s) == 3 or (conf.gridsize and not s[1:] == conf.gridsize):
-		raise NotImplementedError, 'dat does not seem to be a context-conform (t,y,x)-array.'
+	if not len(s) == 4 or (conf.gridsize and not s[2:] == conf.gridsize):
+		raise NotImplementedError, 'dat does not seem to be a context-conform (t,z,y,x)-array.'
 	
 	if not conf.oformat == 'nc':
 		raise NotImplementedError, 'Currently only saving in netCDF implemented in metsave.'
 
 	if not s[0] == len(static.t):
 		raise ValueError, 'Time dimension in data (%s) and static (%s) are not equally long.' % (s[0], len(static.t))
-	if not s[1] == len(static.y[:,0]):
-		raise ValueError, 'y-dimension in data (%s) and static (%s) are not equally long.' % (s[1], len(static.y[:,0]))
-	if not s[2] == len(static.x[0,:]):
-		raise ValueError, 'x-dimension in data (%s) and static (%s) are not equally long.' % (s[2], len(static.x[0,:]))
+	if not s[1] == len(static.z):
+		raise ValueError, 'z-dimension in data (%s) and static (%s) are not equally long.' % (s[1], len(static.z))
+	if not s[2] == len(static.y[:,0]):
+		raise ValueError, 'y-dimension in data (%s) and static (%s) are not equally long.' % (s[2], len(static.y[:,0]))
+	if not s[3] == len(static.x[0,:]):
+		raise ValueError, 'x-dimension in data (%s) and static (%s) are not equally long.' % (s[3], len(static.x[0,:]))
 
 	now = dt.now(pytz.timezone(conf.local_timezone))
 	if not agg:
@@ -290,17 +292,30 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	})
 
 	of.createDimension('time', s[0])
-	of.createDimension(static.x_name, s[2])
-	of.createDimension(static.y_name, s[1])
+	of.createDimension(static.z_name, s[1])
+	of.createDimension(static.y_name, s[2])
+	of.createDimension(static.x_name, s[3])
+
+	known_vertical_level_units = {
+			'Pa': ('pressure', 'down'),
+			'K': ('isentropic', 'up'),
+			'PVU': ('potential_vorticity', 'up'),
+	}
+	if static.z_unit not in known_vertical_level_units:
+		raise ValueError, 'Unknown vertical level type unit: `%s`' % static.z_unit
+	z_name, z_positive = known_vertical_level_units[static.z_unit]
 
 	ot = of.createVariable('time', 'i', ('time',))
 	ot.setncatts({'long_name': 'time', 'units': static.t_unit})
 	ot[::] = static.t
 	olat = of.createVariable(static.y_name, 'f', (static.y_name,))
-	olat.setncatts({'long_name': static.y_name, 'units': static.y_unit})
+	olat.setncatts({'long_name': z_name, 'units': static.z_unit, 'axis': 'Z', 'positive': z_positive})
+	olat[::] = static.y[:,0]
+	olat = of.createVariable(static.y_name, 'f', (static.y_name,))
+	olat.setncatts({'long_name': static.y_name, 'units': static.y_unit, 'axis': 'Y'})
 	olat[::] = static.y[:,0]
 	olon = of.createVariable(static.x_name, 'f', (static.x_name,))
-	olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
+	olon.setncatts({'long_name': static.x_name, 'units': static.x_unit, 'axis': 'X'})
 	olon[::] = static.x[0,:]
 	
 	if compress_to_short:
