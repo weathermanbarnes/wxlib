@@ -308,9 +308,9 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	ot = of.createVariable('time', 'i', ('time',))
 	ot.setncatts({'long_name': 'time', 'units': static.t_unit})
 	ot[::] = static.t
-	olat = of.createVariable(static.y_name, 'f', (static.y_name,))
-	olat.setncatts({'long_name': z_name, 'units': static.z_unit, 'axis': 'Z', 'positive': z_positive})
-	olat[::] = static.y[:,0]
+	olev = of.createVariable(static.z_name, 'f', (static.z_name,))
+	olev.setncatts({'long_name': z_name, 'units': static.z_unit, 'axis': 'Z', 'positive': z_positive})
+	olev[::] = static.z[:]
 	olat = of.createVariable(static.y_name, 'f', (static.y_name,))
 	olat.setncatts({'long_name': static.y_name, 'units': static.y_unit, 'axis': 'Y'})
 	olat[::] = static.y[:,0]
@@ -321,17 +321,18 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	if compress_to_short:
 		dat, scale, off, fill = utils.unscale(dat)
 		if fill: 
-			ovar = of.createVariable(q, 'i2', ('time', static.y_name, static.x_name,), fill_value=fill)
+			ovar = of.createVariable(q, 'i2', ('time', static.z_name, static.y_name, static.x_name,), 
+					fill_value=fill)
 			ovar.set_auto_scale(False)
 
 			ovar.missing_value = fill
 		else:
-			ovar = of.createVariable(q, 'i2', ('time', static.y_name, static.x_name,))
+			ovar = of.createVariable(q, 'i2', ('time', static.z_name, static.y_name, static.x_name,))
 
 		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q],
 				'add_offset': off, 'scale_factor': scale})
 	else:
-		ovar = of.createVariable(q, 'f', ('time', static.y_name, static.x_name,))
+		ovar = of.createVariable(q, 'f', ('time', static.z_name, static.y_name, static.x_name,))
 		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q]})
 	ovar[::] = dat
 
