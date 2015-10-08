@@ -146,7 +146,7 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 
 	# 3. Finish off
 	# TODO: How to meaningfully replace x,y? Currently the mark feature is broken for sections
-	__decorate(m, static, None, slice(None), plev, q, kwargs)
+	__decorate(m, xxy/1e3, z, None, None, slice(None), plev, q, kwargs)
 	__output(plev, q, kwargs)
 
 	return
