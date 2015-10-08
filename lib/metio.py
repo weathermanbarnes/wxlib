@@ -342,7 +342,7 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 
 
 # Save dat as a netCDF file, using the metadata in static. 
-def metsave_lines(dat, datoff, static, time, plev, q, qoff):
+def metsave_lines(dat, datoff, static, plev, q, qoff):
 	''' Save line data in a netCDF file
 
 	A disk-space-effective way to store collections of lines (e.g. front lines, jet axes, ...)
@@ -359,9 +359,6 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 	    Starting point indexes for each line.
 	static : gridlib.grid
 	    Some meta information about the data, like the grid information.
-	time : str
-	    String representation of the time period covered by the data, e.g. ``'2005'`` for the year
-	    2005 or ``'20050317'`` for 17 March 2005.
 	plev : str
 	    String representation of the vertical level on which the data is defined, e.g. ``'700'`` 
 	    for 700 hPa or ``'pv2000'`` for the PV2-surface.
@@ -378,7 +375,8 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 		raise RuntimeError, 'dat does not have size 3 in the third dimension'
 
 	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc.Dataset(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'qf': conf.qf[q]})+'.nc', 'w', format='NETCDF3_CLASSIC')
+	of = nc.Dataset(conf.opath+'/'+(conf.file_std % {'time': dts2str(static.t_parsed), 
+		'plev': plev, 'qf': conf.qf[q]})+'.nc', 'w', format='NETCDF3_CLASSIC')
 	of.setncatts({'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	})
@@ -704,8 +702,6 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	Allows general data requests in the configured data base, e.g. ERA-Interim. The request
 	can span several files, e.g. by including several vertical levels or by covering several
 	years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
-	However, length-1 dimensions are removed, so the returned array can have fewer 
-	dimensions.
 
 	Parameters
 	----------
@@ -787,13 +783,16 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 			if len(d.shape) == 4 and d.shape[1] > 1:
 				separate_plevs = False
 				s = (1+tsmax-tsmin, ) + d.shape[1:]
+			elif len(d.shape) == 4: 
+				separate_plevs = True
+				s = (1+tsmax-tsmin, len(plevs), ) + d.shape[2:]
 			else:
 				separate_plevs = True
 				s = (1+tsmax-tsmin, len(plevs), ) + d.shape[1:]
 
 			dat = np.empty(s, dtype=d.dtype)
 			if separate_plevs:
-				dat[datcut,0,::] = d
+				dat[datcut,0:1,::] = d
 			else:
 				dat[datcut,::] = d
 
@@ -828,7 +827,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	if tavg and len(dates) > 1:
 		dat = dat.mean(axis=0)
 	
-	dat = dat.squeeze()
+	#dat = dat.squeeze()
 	
 	return dat, static
 

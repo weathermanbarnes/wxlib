@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf8
 
-from dynlib.shorthands import metopen, metsave
+from dynlib.shorthands import metopen, metsave, np
 from dynlib.settings import conf
 
 import dynlib.context.erainterim
@@ -18,9 +18,9 @@ fu, u, grid = metopen(conf.file_std % {'qf': 'u', 'time': year, 'plev': plev}, '
 fv, v, grid = metopen(conf.file_std % {'qf': 'v', 'time': year, 'plev': plev}, 'v')
 
 # Calculate total deformation
-defabs = dynlib.diag.def_total(u, v, grid.dx, grid.dy)
+defabs = dynlib.diag.def_total(u[:,0,:,:], v[:,0,:,:], grid.dx, grid.dy)
 
 # Save results as netCDF file
-metsave(defabs, grid, q='defabs', plev=plev)
+metsave(defabs[:,np.newaxis,:,:], grid, q='defabs', plev=plev)
 
 # the end

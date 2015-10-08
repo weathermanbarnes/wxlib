@@ -54,7 +54,7 @@ dynlib cannot be used with NCL.
 Examples: Read data, apply diagnostic, plot and save results
 ------------------------------------------------------------
 
-.. literalinclude:: inc/basic_example_inst.py
+.. literalinclude:: inc/example_diag_plot_instantaneous.py
    :linenos:
    
 The first two lines are a standard header for a python file. Line 1 declares the file to be a python 
@@ -82,7 +82,7 @@ then saved to a netCDF file in line 25.
 For each of the time steps available, the deformation field is also plotted on a map covering the 
 North Atlantic (line 29/30).
 
-.. literalinclude:: inc/basic_example_year.py
+.. literalinclude:: inc/example_diag_yearly.py
    :linenos:
    :emphasize-lines: 13,17-18
 
