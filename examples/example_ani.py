@@ -1,20 +1,16 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+# Dynlib example script: Using matplotlib's animation features with dynlib
+
+# Make sure we have a graphical user interface
 import matplotlib as mpl
-from mpl_toolkits.basemap import Basemap, cm as bmcm
-from metopen import metopen
-from utils import concat1
+mpl.use('TkAgg')
 
-from datetime import timedelta as td
+import matplotlib.animation as animation
 
-import static as c
-
-
-import figures as f
+from dynlib.shorthands import *
+from dynlib.context.erainterim import conf, proj
 
 lat = f.lat
 lon = f.lon

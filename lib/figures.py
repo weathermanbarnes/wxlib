@@ -432,6 +432,11 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 				cb.ax.set_xticklabels(kwargs.pop('ticklabels'))
 			else:
 				cb.ax.set_yticklabels(kwargs.pop('ticklabels'))
+		if kwargs.get('cb_label'):
+			if not orient == 'vertical':
+				cb.ax.set_xlabel(kwargs.pop('cb_label'))
+			else:
+				cb.ax.set_ylabel(kwargs.pop('cb_label'))
 	
 	#legend_labels = kwargs.pop('legend_labels', None)
 	#if legend_labels:
@@ -448,9 +453,9 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 	if kwargs.get('title'):
 		title = kwargs.pop('title')
 		if title == 'auto':
-			title = '%s @ %s' % (conf.q_long.get(q, q), plev)
+			title = u'%s @ %s' % (conf.q_long.get(q, q), plev)
 			if kwargs.get('name'):
-				title += ' for %s' % kwargs.get('name')
+				title += u' for %s' % kwargs.get('name')
 
 		plt.title(title)
 	

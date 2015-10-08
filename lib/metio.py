@@ -810,6 +810,12 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 					static.t = np.concatenate((static.t, static_.t[cut]))
 					if type(static.t_parsed) == np.ndarray:
 						static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
+				elif year == years[0]:
+					if not static.z_name == static_.z_name or \
+							not static.z_unit == static_.z_unit:
+						print 'WARNING: concatenating vertical levels of different types!'
+						static.z_unit = u'MIXED!'
+					static.z = np.concatenate((static.z, static_.z))
 				i += 1
 
 		elif i == 0:
