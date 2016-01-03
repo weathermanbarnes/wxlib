@@ -47,7 +47,10 @@ def scale(var, cut=slice(None)):
 	"""
 	
 	# Apply cut first, for speed
-	dat = var[cut,::]
+	if len(var.shape) > 2:
+		dat = var[cut,::]
+	else:
+		dat = var[::]
 	dat = dat.astype('f8')
 
 	# Mask missing and fill values
