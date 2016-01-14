@@ -305,7 +305,7 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 				'K': ('isentropic', 'up'),
 				'PVU': ('potential_vorticity', 'up'),
 		}
-		if not static.z_unit not in known_vertical_level_units:
+		if not static.z_unit in known_vertical_level_units:
 			raise ValueError, 'Unknown vertical level type unit: `%s`' % static.z_unit
 		z_name, z_positive = known_vertical_level_units[static.z_unit]
 
