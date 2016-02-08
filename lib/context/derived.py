@@ -14,7 +14,7 @@ def_context('derived')
 ff = ('ff', 'ff', 'Wind speed', 'm s**-1')
 dd = ('dd', 'dd', 'Wind direction', '(0 - 360)')
 
-vo = ('vo', 'zeta', 'Vorticity (relative)', 's**-1')
+vo = ('vo', 'vo', 'Vorticity (relative)', 's**-1')
 div = ('div', 'div', 'Divergence', 's**-1')
 defabs = ('defabs', 'defabs', 'Total deformation', 's**-1')
 _bins_defang = [17,]
@@ -26,7 +26,7 @@ defanr = ('defanr', 'defanr', 'Deformation angle (natural coordinates)', 'rad', 
 rsr = ('rsr', 'rsr', 'Rotation-strain ratio', '1')
 ow = ('ow', 'ow', 'Okubo-Weiss parameter', 's**-2')
 
-eqpt = ('eqpt', 'the', 'Equivalent potential temperature', 'K')
+eqpt = ('eqpt', 'eqpt', 'Equivalent potential temperature', 'K')
 
 cfront = ('cfront', 'cfront', 'Cold front lines')
 cfroff = ('cfroff', 'cfront')

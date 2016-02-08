@@ -213,6 +213,60 @@ contains
     res = dxu - dyv
   end subroutine
   !
+  !@ Calculate stretch deformation in natural coordinates::
+  !@
+  !@    def_stretch =  du/ds - dv/dn
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The u-wind velocity field.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The v-wind velocity field.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated stretching deformation.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`def_shear`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
+  subroutine def_stretch_nat(res,nx,ny,nz,u,v,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res, v
+    !f2py depend(nx,ny) dx, dy
+    !
+    real(kind=nr) :: ux(nz,ny,nx), uy(nz,ny,nx), vx(nz,ny,nx), vy(nz,ny,nx), &
+       &             ff2(nz,ny,nx)
+    ! -----------------------------------------------------------------
+    !
+    call grad(ux,uy, nx,ny,nz, u, dx,dy)
+    call grad(vx,vy, nx,ny,nz, v, dx,dy)
+    !
+    ff2 = u(:,:,:)**2_ni + v(:,:,:)**2_ni
+    res = ( (u*u - v*v)*(ux - vy) + 2.0_nr*u*v*(vx + uy) ) / ff2
+  end subroutine
+  !
   !@ Calculate total deformation
   !@
   !@ Total deformation is a coordinate-system independent measure for the
@@ -552,11 +606,10 @@ contains
   !
   !@ Calculate 3d deformation
   !@ 
-  !@ **Note**: This subroutine is work-in-progress and likely to change in the
-  !@ future. The generalisation of deformation to 3 dimensions is done using the
+  !@ The generalisation of deformation to 3 dimensions is done using the
   !@ analogy to Lyapunov exponents.
-  !@
-  !@ TODO: Should work-in-progress routines live in a different name space?
+  !@ 
+  !@ To be applied on pressure levels.
   !@
   !@ Parameters
   !@ ----------
@@ -579,6 +632,10 @@ contains
   !@ dz : np.ndarray with shape (nz-2,ny,nx) and dtype float64
   !@     The double grid spacing in z-direction to be directly for centered differences.
   !@     ``dz(k,j,i)`` is expected to contain the z-distance between ``(k+1,j,i)`` and ``(k-1,j,i)``.
+  !@ lstretch_only : boolean
+  !@     Calculate stretching part of 3D deformation only
+  !@ lshear_only : boolean
+  !@     Calculate shearing part of 3D deformation only
   !@
   !@ Other parameters
   !@ ----------------
@@ -597,15 +654,15 @@ contains
   !@ 2-tuple of np.ndarray with shapes (nt,nz-2,ny,nx), (nt,nz-2,ny,nx,3) and dtype float64
   !@     Calculated 3D eigenvalues and eigenvectors showing the strength and
   !@     orientation of deformation in 3D.
-  subroutine def_3d(res_eval,res_evec,nx,ny,nz,nt,u,v,w,rho,dx,dy,dz)
+  subroutine def_3d(res_eval,res_evec,nx,ny,nz,nt,u,v,w,rho,dx,dy,dz,lstretch_only,lshear_only)
     use consts
     !
     real(kind=nr), intent(in)  :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), w(nt,nz,ny,nx), & 
-            &                     rho(nt,nz,ny,nx),                               &
-            &                     dx(ny,nx), dy(ny,nx), dz(nt,nz,ny,nx)
-    real(kind=nr), intent(out) :: res_eval(nt,2_ni:nz-1_ni,ny,nx,3_ni), &
-                                  res_evec(nt,2_ni:nz-1_ni,ny,nx,3_ni,3_ni)
-    integer(kind=ni) :: nx,ny,nz,nt
+            &                     rho(nt,nz,ny,nx), dx(ny,nx), dy(ny,nx), dz(nt,nz,ny,nx)
+    real(kind=nr), intent(out) :: res_eval(nt,nz,ny,nx,3_ni), &
+                                  res_evec(nt,nz,ny,nx,3_ni,3_ni)
+    integer(kind=ni), intent(in) :: nx,ny,nz,nt
+    logical, intent(in) :: lstretch_only, lshear_only
     !f2py depend(nx,ny,nz,nt) res, v, w
     !f2py depend(nx,ny) dx, dy
     !
@@ -616,8 +673,13 @@ contains
             &        div(nt,nz,ny,nx), wm(nt,nz,ny,nx), dzm(nt,nz,ny,nx)
     real(kind=nr) :: jac(3_ni,3_ni), evalr(3_ni), tau(2_ni), &
             &        evec(3_ni,3_ni), work(96_ni), diag(3_ni), subdiag(2_ni)
-    integer(kind=ni) :: i,j,k,n,t, info, ax,zx, minidx,maxidx
+    integer(kind=ni) :: i,j,k,n,ti, info, ax,zx, minidx,maxidx
     ! -----------------------------------------------------------------
+    !
+    if ( lshear_only .and. lstretch_only ) then
+       write(*,*) 'Either lshear_only or lstretch_only or both must be False'
+       stop 1
+    end if
     !
     ! Crude transformation from Pa/s to m/s
     wm = -w(:,:,:,:) * rho(:,:,:,:)*g
@@ -629,28 +691,39 @@ contains
     call grad_3d(vx,vy,vz, nx,ny,nz,nt, v, dx,dy,dzm)
     call grad_3d(wx,wy,wz, nx,ny,nz,nt, wm, dx,dy,dzm)
     !
-    ! Test without vertical wind shear
-    !uz(:,:,:,:) = 0.0_nr
-    !vz(:,:,:,:) = 0.0_nr
-    !
     ! Subtracting divergence and vorticity
-    div = ux + vy + wz
-    ux = ux - 1.0_nr/3.0_nr * div
-    vy = vy - 1.0_nr/3.0_nr * div
-    wz = wz - 1.0_nr/3.0_nr * div
+    if ( .not. lshear_only ) then
+       div = ux + vy + wz
+       ux = ux - 1.0_nr/3.0_nr * div
+       vy = vy - 1.0_nr/3.0_nr * div
+       wz = wz - 1.0_nr/3.0_nr * div
+    else
+       ux = 0.0_nr
+       vy = 0.0_nr
+       wz = 0.0_nr
+    end if
     !
-    vor_x = wy - vz
-    vor_y = uz - wx
-    vor_z = vx - uy
+    if ( .not. lstretch_only ) then
+       vor_x = wy - vz
+       vor_y = uz - wx
+       vor_z = vx - uy
+       !
+       wy = wy - 1.0_nr/2.0_nr * vor_x
+       vz = vz + 1.0_nr/2.0_nr * vor_x
+       uz = uz - 1.0_nr/2.0_nr * vor_y
+       wx = wx + 1.0_nr/2.0_nr * vor_y
+       vx = vx - 1.0_nr/2.0_nr * vor_z
+       uy = uy + 1.0_nr/2.0_nr * vor_z
+    else
+       wy = 0.0_nr
+       vz = 0.0_nr
+       uz = 0.0_nr
+       wx = 0.0_nr
+       vx = 0.0_nr
+       uy = 0.0_nr
+    end if
     !
-    wy = wy - 1.0_nr/2.0_nr * vor_x
-    vz = vz + 1.0_nr/2.0_nr * vor_x
-    uz = uz - 1.0_nr/2.0_nr * vor_y
-    wx = wx + 1.0_nr/2.0_nr * vor_y
-    vx = vx - 1.0_nr/2.0_nr * vor_z
-    uy = uy + 1.0_nr/2.0_nr * vor_z
-    !
-    if (grid_cyclic_ew) then
+    if ( grid_cyclic_ew ) then
        ax = 1_ni
        zx = nx
     else 
@@ -664,11 +737,11 @@ contains
        !
        do j = 2_ni,ny-1_ni
           do k = 2_ni,nz-1_ni
-             do t = 1_ni,nt
+             do ti = 1_ni,nt
                 ! Eigenvalues of symmetric matrixes
-                jac = reshape( (/ ux(t,k,j,i), vx(t,k,j,i), wx(t,k,j,i), &
-                    &             uy(t,k,j,i), vy(t,k,j,i), wy(t,k,j,i), &
-                    &             uz(t,k,j,i), vz(t,k,j,i), wz(t,k,j,i) /), (/ 3_ni, 3_ni /) )
+                jac = reshape( (/ ux(ti,k,j,i), vx(ti,k,j,i), wx(ti,k,j,i), &
+                    &             uy(ti,k,j,i), vy(ti,k,j,i), wy(ti,k,j,i), &
+                    &             uz(ti,k,j,i), vz(ti,k,j,i), wz(ti,k,j,i) /), (/ 3_ni, 3_ni /) )
                 call dsytrd('U', 3_ni, jac, 3_ni, diag, subdiag, tau, work, 96_ni, info)
                 call dorgtr('U', 3_ni, jac, 3_ni, tau, work, 96_ni, info)
                 call dsteqr('V', 3_ni, diag, subdiag, jac, 3_ni, work, info)
@@ -690,20 +763,261 @@ contains
                 end if
                 ! first: max
                 n  = maxidx
-                res_eval(t,k,j,i,1_ni)   = evalr(n)
-                res_evec(t,k,j,i,1_ni,:) = evec(:,n)
+                res_eval(ti,k,j,i,1_ni)   = evalr(n)
+                res_evec(ti,k,j,i,1_ni,:) = evec(:,n)
                 ! second: middle
                 n = 6_ni - maxidx - minidx
-                res_eval(t,k,j,i,2_ni)   = evalr(n)
-                res_evec(t,k,j,i,2_ni,:) = evec(:,n)
+                res_eval(ti,k,j,i,2_ni)   = evalr(n)
+                res_evec(ti,k,j,i,2_ni,:) = evec(:,n)
                 ! last and least
                 n = minidx
-                res_eval(t,k,j,i,3_ni)   = evalr(n)
-                res_evec(t,k,j,i,3_ni,:) = evec(:,n)
+                res_eval(ti,k,j,i,3_ni)   = evalr(n)
+                res_evec(ti,k,j,i,3_ni,:) = evec(:,n)
              end do
           end do
        end do
     end do
+    !
+    res_eval(:,1_ni,:,:,:) = nan
+    res_eval(:,nz,:,:,:) = nan
+    res_evec(:,1_ni,:,:,:,:) = nan
+    res_evec(:,nz,:,:,:,:) = nan
+    !
+    return
+  end subroutine
+  !
+  !@ Calculate 3d deformation in 3d natural coordinates
+  !@ 
+  !@ The generalisation of deformation to 3 dimensions is done using the
+  !@ analogy to Lyapunov exponents. Before calculating the eigenvectors of 
+  !@ the velocity gradient tensor, this tensor is transferred to 3D
+  !@ natural coordinates. The new x-direction follows the 3D wind vector, the
+  !@ new y-direction perpendicular to x but in the horizontal plane. Finally,
+  !@ the new z-direction follows from orthogonality.
+  !@ 
+  !@ To be applied on pressure levels.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ w : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Pressure vertical wind velocity.
+  !@ rho : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Density of air, used to convert the pressure vertical velocity to a cartensian 
+  !@     vertical velocity.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@ dz : np.ndarray with shape (nz-2,ny,nx) and dtype float64
+  !@     The double grid spacing in z-direction to be directly for centered differences.
+  !@     ``dz(k,j,i)`` is expected to contain the z-distance between ``(k+1,j,i)`` and ``(k-1,j,i)``.
+  !@ lstretch_only : boolean
+  !@     Calculate stretching part of 3D deformation only
+  !@ lshear_only : boolean
+  !@     Calculate shearing part of 3D deformation only
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z-direction.
+  !@ nt : int
+  !@     Grid size in t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 2-tuple of np.ndarray with shapes (nt,nz-2,ny,nx), (nt,nz-2,ny,nx,3) and dtype float64
+  !@     Calculated 3D eigenvalues and eigenvectors showing the strength and
+  !@     orientation of deformation in 3D.
+  subroutine def_3d_nat(res_eval,res_evec,nx,ny,nz,nt,u,v,w,rho,dx,dy,dz,lstretch_only,lshear_only)
+    use consts
+    !
+    real(kind=nr), intent(in)  :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), w(nt,nz,ny,nx), & 
+            &                     rho(nt,nz,ny,nx), dx(ny,nx), dy(ny,nx), dz(nt,nz,ny,nx)
+    real(kind=nr), intent(out) :: res_eval(nt,nz,ny,nx,3_ni), &
+                                  res_evec(nt,nz,ny,nx,3_ni,3_ni)
+    integer(kind=ni), intent(in) :: nx,ny,nz,nt
+    logical, intent(in) :: lstretch_only, lshear_only
+    !f2py depend(nx,ny,nz,nt) res, v, w
+    !f2py depend(nx,ny) dx, dy
+    !
+    real(kind=nr) :: ux(nt,nz,ny,nx), uy(nt,nz,ny,nx), uz(nt,nz,ny,nx), &
+            &        vx(nt,nz,ny,nx), vy(nt,nz,ny,nx), vz(nt,nz,ny,nx), &
+            &        wx(nt,nz,ny,nx), wy(nt,nz,ny,nx), wz(nt,nz,ny,nx), &
+            &        vor_x(nt,nz,ny,nx), vor_y(nt,nz,ny,nx), vor_z(nt,nz,ny,nx), &
+            &        div(nt,nz,ny,nx), wm(nt,nz,ny,nx), dzm(nt,nz,ny,nx)
+    real(kind=nr) :: jac(3_ni,3_ni), rot(3_ni,3_ni), evalr(3_ni), tau(2_ni), &
+            &        evec(3_ni,3_ni), work(96_ni), diag(3_ni), subdiag(2_ni), ff2, ff3
+    integer(kind=ni) :: i,j,k,n,ti, info, ax,zx, minidx,maxidx
+    ! -----------------------------------------------------------------
+    !
+    if ( lshear_only .and. lstretch_only ) then
+       write(*,*) 'Either lshear_only or lstretch_only or both must be False'
+       stop 1
+    end if
+    !
+    ! Crude transformation from Pa/s to m/s
+    wm = -w(:,:,:,:) * rho(:,:,:,:)*g
+    !
+    ! Transforming vertical grid distances into m
+    dzm = -dz(:,:,:,:) * rho(:,:,:,:)*g
+    !
+    call grad_3d(ux,uy,uz, nx,ny,nz,nt, u, dx,dy,dzm)
+    call grad_3d(vx,vy,vz, nx,ny,nz,nt, v, dx,dy,dzm)
+    call grad_3d(wx,wy,wz, nx,ny,nz,nt, wm, dx,dy,dzm)
+    !
+    if ( grid_cyclic_ew ) then
+       ax = 1_ni
+       zx = nx
+    else 
+       ax = 2_ni
+       zx = nx-1_ni
+    end if
+    !
+    ! Rotate the Jacobian into local natural coordinates
+    do i = ax,zx
+       do j = 2_ni,ny-1_ni
+          do k = 2_ni,nz-1_ni
+             do ti = 1_ni,nt
+                ff2 = sqrt(u(ti,k,j,i)**2_ni + v(ti,k,j,i)**2_ni)
+                ff3 = sqrt(u(ti,k,j,i)**2_ni + v(ti,k,j,i)**2_ni + w(ti,k,j,i)**2_ni)
+                !
+                ! Rotation matrix into local natural coordinates
+                rot = reshape( (/ u(ti,k,j,i)/ff3, -v(ti,k,j,i)/ff2, -u(ti,k,j,i)/ff2*w(ti,k,j,i)/ff3, &
+                    &             v(ti,k,j,i)/ff3,  u(ti,k,j,i)/ff2, -v(ti,k,j,i)/ff2*w(ti,k,j,i)/ff3, &
+                    &             w(ti,k,j,i)/ff3,  0.0_nr, ff2/ff3 /), (/ 3_ni, 3_ni /) )
+                !
+                ! Construct the velocity gradient tensor
+                jac = reshape( (/ ux(ti,k,j,i), vx(ti,k,j,i), wx(ti,k,j,i), &
+                    &             uy(ti,k,j,i), vy(ti,k,j,i), wy(ti,k,j,i), &
+                    &             uz(ti,k,j,i), vz(ti,k,j,i), wz(ti,k,j,i) /), (/ 3_ni, 3_ni /) )
+                jac = matmul(rot, jac)
+                !
+                ! Saving back into the gradient arrays
+                ux(ti,k,j,i) = jac(1_ni,1_ni)
+                uy(ti,k,j,i) = jac(1_ni,2_ni)
+                uz(ti,k,j,i) = jac(1_ni,3_ni)
+                vx(ti,k,j,i) = jac(2_ni,1_ni)
+                vy(ti,k,j,i) = jac(2_ni,2_ni)
+                vz(ti,k,j,i) = jac(2_ni,3_ni)
+                wx(ti,k,j,i) = jac(3_ni,1_ni)
+                wy(ti,k,j,i) = jac(3_ni,2_ni)
+                wz(ti,k,j,i) = jac(3_ni,3_ni)
+             end do
+          end do
+       end do
+    end do
+    !
+    ! Subtracting divergence and vorticity
+    if ( .not. lshear_only ) then
+       div = ux + vy + wz
+       ux = ux - 1.0_nr/3.0_nr * div
+       vy = vy - 1.0_nr/3.0_nr * div
+       wz = wz - 1.0_nr/3.0_nr * div
+    else
+       ux = 0.0_nr
+       vy = 0.0_nr
+       wz = 0.0_nr
+    end if
+    !
+    if ( .not. lstretch_only ) then
+       vor_x = wy - vz
+       vor_y = uz - wx
+       vor_z = vx - uy
+       !
+       wy = wy - 1.0_nr/2.0_nr * vor_x
+       vz = vz + 1.0_nr/2.0_nr * vor_x
+       uz = uz - 1.0_nr/2.0_nr * vor_y
+       wx = wx + 1.0_nr/2.0_nr * vor_y
+       vx = vx - 1.0_nr/2.0_nr * vor_z
+       uy = uy + 1.0_nr/2.0_nr * vor_z
+    else
+       wy = 0.0_nr
+       vz = 0.0_nr
+       uz = 0.0_nr
+       wx = 0.0_nr
+       vx = 0.0_nr
+       uy = 0.0_nr
+    end if
+    !
+    ! Find the eigenvectors of the remaining symmetric zero-trace matrixes
+    do i = ax,zx
+       write(*,'(I5,A4,I5,A)', advance='no') i, 'of', nx, cr
+       !
+       do j = 2_ni,ny-1_ni
+          do k = 2_ni,nz-1_ni
+             do ti = 1_ni,nt
+                ! Construct the velocity gradient tensor
+                jac = reshape( (/ ux(ti,k,j,i), vx(ti,k,j,i), wx(ti,k,j,i), &
+                    &             uy(ti,k,j,i), vy(ti,k,j,i), wy(ti,k,j,i), &
+                    &             uz(ti,k,j,i), vz(ti,k,j,i), wz(ti,k,j,i) /), (/ 3_ni, 3_ni /) )
+                !
+                ! Eigenvalues of symmetric matrixes
+                call dsytrd('U', 3_ni, jac, 3_ni, diag, subdiag, tau, work, 96_ni, info)
+                call dorgtr('U', 3_ni, jac, 3_ni, tau, work, 96_ni, info)
+                call dsteqr('V', 3_ni, diag, subdiag, jac, 3_ni, work, info)
+                if (info /= 0_ni ) then
+                   diag(:) = nan
+                   jac(:,:) = nan
+                end if
+                ! The diagonal elements are overwritten by the eigenvalues,
+                ! and the rotation matrix Q by the eigenvectors
+                evalr(:) = diag(:)
+                evec(:,:) = jac(:,:)
+                !
+                ! Transforming the eigenvectors back to the original coordinates
+                ff2 = sqrt(u(ti,k,j,i)**2_ni + v(ti,k,j,i)**2_ni)
+                ff3 = sqrt(u(ti,k,j,i)**2_ni + v(ti,k,j,i)**2_ni + w(ti,k,j,i)**2_ni)
+                !
+                ! Rotation matrix back from local natural coordinates (inverse=transpose of the above!)
+                rot = reshape( (/ u(ti,k,j,i)/ff3, v(ti,k,j,i)/ff3, w(ti,k,j,i)/ff3, &
+                             &   -v(ti,k,j,i)/ff2, u(ti,k,j,i)/ff2, 0.0_nr, &
+                             &   -u(ti,k,j,i)/ff2*w(ti,k,j,i)/ff3, -v(ti,k,j,i)/ff2*w(ti,k,j,i)/ff3, ff2/ff3 /), &
+                             & (/ 3_ni, 3_ni /) )
+                !
+                evec(:,1_ni) = matmul(rot, evec(:,1_ni))
+                evec(:,2_ni) = matmul(rot, evec(:,2_ni))
+                evec(:,3_ni) = matmul(rot, evec(:,3_ni))
+                !
+                ! sort eigenvalues and eigenvectors by eigenvalue
+                minidx = min(minloc(evalr, dim=1_ni),1_ni)
+                maxidx = min(maxloc(evalr, dim=1_ni),1_ni)
+                ! If all values of evalr are equal: Use index order
+                if (minidx == 1_ni .and. maxidx == 1_ni) then
+                   maxidx = 3_ni
+                end if
+                ! first: max
+                n  = maxidx
+                res_eval(ti,k,j,i,1_ni)   = evalr(n)
+                res_evec(ti,k,j,i,1_ni,:) = evec(:,n)
+                ! second: middle
+                n = 6_ni - maxidx - minidx
+                res_eval(ti,k,j,i,2_ni)   = evalr(n)
+                res_evec(ti,k,j,i,2_ni,:) = evec(:,n)
+                ! last and least
+                n = minidx
+                res_eval(ti,k,j,i,3_ni)   = evalr(n)
+                res_evec(ti,k,j,i,3_ni,:) = evec(:,n)
+             end do
+          end do
+       end do
+    end do
+    !
+    res_eval(:,1_ni,:,:,:) = nan
+    res_eval(:,nz,:,:,:) = nan
+    res_evec(:,1_ni,:,:,:,:) = nan
+    res_evec(:,nz,:,:,:,:) = nan
     !
     return
   end subroutine

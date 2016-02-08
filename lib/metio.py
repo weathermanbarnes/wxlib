@@ -41,7 +41,7 @@ NO_ENDING = 'nc' # ETH compatibility: if the file exists without file ending, tr
 # 
 
 # TODO: Restrict the expected file types by providing a file name extension
-def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversion=False, no_static=False, mode='r'):
+def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversion=False, no_static=False, quiet=False, mode='r'):
 	''' Find and open files by name
 	
 	Uses the conf.datapath list to locale files in a variety of different locations.
@@ -96,13 +96,14 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 			dat = dat[cut]
 		else:
 			dat = None
-		print 'Found '+filepath
+		if not quiet:
+			print 'Found '+filepath
 		f = None
 
 		return f, dat
 
 	def handle_npz(filepath):
-		if not mode == 'r':
+		if not mode == 'r' and not quiet:
 			print 'WARNING: Can only open npz files in read mode!'
 		f = np.load(filepath)
 		if q:
@@ -111,12 +112,13 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 			dat = f[q][cut]
 		else:
 			dat = None
-		print 'Found '+filepath
+		if not quiet:
+			print 'Found '+filepath
 
 		return f, dat
 	
 	def handle_mat(filepath):
-		if not mode == 'r':
+		if not mode == 'r' and not quiet:
 			print 'WARNING: Can only open mat files in read mode!'
 		f = mat.loadmat(filepath)
 		if q:
@@ -125,7 +127,8 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 			dat = f[q][cut]
 		else:
 			dat = None
-		print 'Found '+filepath
+		if not quiet:
+			print 'Found '+filepath
 
 		return f, dat
 
@@ -150,7 +153,8 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 		else:
 			static = None
 
-		print 'Found '+filepath
+		if not quiet:
+			print 'Found '+filepath
 
 		return f, dat, static
 
@@ -193,7 +197,7 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 
 		if not no_static:
 			if not static:
-				static = get_static(verbose, no_dtype_conversion)
+				static = get_static(verbose, no_dtype_conversion, quiet)
 		else:
 			if q:
 				return f, dat
@@ -645,7 +649,7 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 
 
 # Get static information
-def get_static(verbose=False, no_dtype_conversion=False):
+def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
 	''' Get standard meta-information (for ERA-Interim)
 
 	Parameters
@@ -667,7 +671,7 @@ def get_static(verbose=False, no_dtype_conversion=False):
 	if not conf.file_static:
 		raise ValueError, 'Static file must be configured for get_static() to work!'
 
-	fo, oro = metopen(conf.file_static, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, no_static=True)
+	fo, oro = metopen(conf.file_static, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, quiet=quiet, no_static=True)
 	static = grid_by_static(fo)
 	static.oro = oro[::]
 	fo.close()
@@ -1151,5 +1155,52 @@ def dts2str(dates, agg=None):
 
 	return ret
 
+
+def str2dts(periodstr, agg=None, epoch=None):
+	''' Inverse of dts2str: Convert string to list of datetime objects '''
+
+	known_formats = {'cal_year':'%Y', 'cal_month': '%Y%m', 'daily': '%Y%m%d', 'hourly': '%Y%m%d%H'}
+
+
+	# Not defined in in function signature as they should be evaluated on run-time and not in import-time
+	if not agg:
+		agg = conf.timestep
+	if not epoch:
+		epoch = conf.epoch
+
+	if periodstr.find('..') >= 0:
+		raise ValueError, 'Cannot create list of dates for a period string representing a non-contiguous set of dates'
+
+	if periodstr.find('-') >= 0:
+		sep = periodstr.find('-')
+		fst = periodstr[:sep]
+		lst = periodstr[sep+1:]
+	else:
+		fst = periodstr
+		lst = None
+	
+	for pagg, fmt in known_formats.items():
+		try:
+			fstp = dt.strptime(fst, fmt)
+		except ValueError:
+			continue
+		else:
+			break
+	if not fstp:
+		raise ValueError, 'The string `%s` could not be parsed into a time.' % (fst)
+	
+	agg = tagg.get_by_interval(agg)
+	pagg = getattr(tagg, pagg)
+
+	if lst:
+		lstp = dt.strptime(lst, fmt)
+	else:
+		lstp = fstp
+	
+	lstp = pagg(epoch).start_next(lstp)
+	
+	dates = list(agg(fstp, lstp))
+
+	return dates
 
 # the end

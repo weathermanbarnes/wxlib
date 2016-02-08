@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
-from datetime import timedelta as td
+from datetime import datetime as dt, timedelta as td
 
 from ..settings import def_context, conf
 def_context('erainterim')
@@ -11,6 +11,7 @@ def_context('erainterim')
 # General settings
 # ================
 
+conf.epoch = dt(1979,1,1)
 conf.years = range(1979,2015)
 conf.file_std = 'ei.ans.%(time)s.%(plev)s.%(qf)s'
 conf.file_agg = 'ei.ans.%(agg)s.%(time)s.%(plev)s.%(qf)s'
