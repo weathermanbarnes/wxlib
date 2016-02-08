@@ -557,7 +557,7 @@ PLOT_DEFAULTS = {
 	'name_prefix': '',
 	'oroalpha': 0.4, 
 	'orocolor': 'k', 
-	'oroscale': (9810, 19620, 29430, 39240, 49050, 58860, 68670, 78480),
+	'oroscale': (9810., 19620., 29430., 39240., 49050., 58860., 68670., 78480.),
 	'overlays': (), 
 	'save': '', 
 	'scale': 'auto', 

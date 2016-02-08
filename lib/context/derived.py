@@ -50,7 +50,7 @@ jetaxis_freq = ('jetaxis_freq', 'jetaxis_freq', 'Jet axis detection frequency', 
 rwb_a = ('rwb_a', 'rwb_a', 'Anticyclonic wave breaking frequency', '(time step)**-1')
 rwb_c = ('rwb_c', 'rwb_c', 'Cyclonic wave breaking frequency', '(time step)**-1')
 
-blockint = ('blockint', 'blockint', 'Block intensity indicator')
+blockint = ('blockint', 'blockint', 'Block intensity indicator', '(input) m**-1')
 block = ('block', 'block', 'Block mask', '1')
 
 

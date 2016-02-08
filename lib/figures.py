@@ -145,8 +145,7 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	plt.xlabel('Distance along section [km]')
 
 	# 3. Finish off
-	# TODO: How to meaningfully replace x,y? Currently the mark feature is broken for sections
-	__decorate(m, static, None, slice(None), plev, q, kwargs)
+	__decorate(m, xxy, z, xlon, xlat, slice(None), plev, q, kwargs)
 	__output(plev, q, kwargs)
 
 	return
@@ -456,6 +455,11 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 				cb.ax.set_xticklabels(kwargs.pop('ticklabels'))
 			else:
 				cb.ax.set_yticklabels(kwargs.pop('ticklabels'))
+		if kwargs.get('cb_label'):
+			if not orient == 'vertical':
+				cb.ax.set_xlabel(kwargs.pop('cb_label'))
+			else:
+				cb.ax.set_ylabel(kwargs.pop('cb_label'))
 	
 	#legend_labels = kwargs.pop('legend_labels', None)
 	#if legend_labels:
@@ -472,9 +476,9 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 	if kwargs.get('title'):
 		title = kwargs.pop('title')
 		if title == 'auto':
-			title = '%s @ %s' % (conf.q_long.get(q, q), plev)
+			title = u'%s @ %s' % (conf.q_long.get(q, q), plev)
 			if kwargs.get('name'):
-				title += ' for %s' % kwargs.get('name')
+				title += u' for %s' % kwargs.get('name')
 
 		plt.title(title)
 	
@@ -533,15 +537,15 @@ def __safename(name):
 # Overlays
 
 # TODO: Should this one take the static object as an argument? If only for consistency in the API.
-def section_overlay_contour(dat, sect, **kwargs):
+def section_overlay_contour(dat, static, **kwargs):
 	''' Overlay contours onto a section
 	
 	Parameters
 	----------
 	dat : np.ndarray with dimensions (z,y,x)
 		Data to be plotted
-	sect : list of 2-tuples
-		List of coordinates defining the cross section
+	static : gridlib.grid
+		Meta information about the data array, like the grid definition
 	
 	Keyword arguments
 	-----------------
@@ -556,10 +560,7 @@ def section_overlay_contour(dat, sect, **kwargs):
 
 	kwargs = __line_prepare_config(kwargs)
 
-	def overlay(m, static, dump, zorder, mask=None):
-		xlon, xlat, xxy = sect_gen_points(sect, m, 25000.0)
-		xxy = np.array(xxy)
-
+	def overlay(m, xxy, z, xlon, xlat, zorder, mask=None):
 		dati = np.empty((dat.shape[0], len(xlon),))
 		for i in range(dat.shape[0]):
 			interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[i,::-1,:].T)
@@ -568,13 +569,7 @@ def section_overlay_contour(dat, sect, **kwargs):
 		if type(mask) == np.ndarray:
 			dati[mask] = np.nan
 		scale = kwargs.pop('scale')
-		if scale == 'auto':
-			scale = autoscale(dat, **kwargs)
-		if kwargs.get('logp', False):
-			z = map(lambda x: np.log(float(z)), static.z)
-		else:
-			z = static.z
-		cs =  plt.contour(xxy/1e3, static.z, dati, scale, **kwargs)
+		cs =  plt.contour(xxy/1e3, z, dati, scale, **kwargs)
 
 		labels = kwargs.pop('contour_labels')
 		if labels:

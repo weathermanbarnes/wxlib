@@ -578,7 +578,7 @@ contains
     !
     ff = sqrt( u(:,:,:)**2_ni + v(:,:,:)**2_ni )
     !
-    ! Based on shear in natural  coordinates
+    ! Based on shear in natural coordinates, and the absolute wind speed u calculate d/dn(u * du/dn)
     call shear_nat(shear, nx,ny,nz, u,v, dx,dy)
     call ddx(dsheardx, nx,ny,nz, shear*ff, dx,dy)
     call ddy(dsheardy, nx,ny,nz, shear*ff, dx,dy)

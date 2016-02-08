@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf8
 
-from dynlib.shorthands import dt, get_instantaneous, metsave, fig
+from dynlib.shorthands import dt, get_instantaneous, metsave, fig, np
 from dynlib.settings import conf, proj
 
 import dynlib.context.erainterim
@@ -18,10 +18,10 @@ u, grid = get_instantaneous('u', timeinterval, plevs=plev)
 v, grid = get_instantaneous('v', timeinterval, plevs=plev)
 
 # Calculate total deformation
-defabs = dynlib.diag.def_total(u, v, grid.dx, grid.dy)
+defabs = dynlib.diag.def_total(u[:,0,:,:], v[:,0,:,:], grid.dx, grid.dy)
 
 # Save results as netCDF file
-metsave(defabs, grid, q='defabs', plev=plev)
+metsave(defabs[:,np.newaxis,:,:], grid, q='defabs', plev=plev)
 
 # Plot results
 conf.register_variable([dynlib.context.derived.defabs, ], [plev, ])

@@ -147,7 +147,10 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 			dat = None
 
 		if not no_static:
-			static = grid_by_nc(f, var)
+			if q:
+				static = grid_by_nc(f, var)
+			else:
+				static = grid_by_nc(f)
 			# TODO: Where to search for topography in nc files?
 			static.oro = np.zeros((static.ny, static.nx))
 		else:
@@ -264,18 +267,20 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	s = dat.shape
 	
 	# TODO: Why check against gridsize? Or at least: Why not allowing gridsize to be unset?
-	if not len(s) == 3 or (conf.gridsize and not s[1:] == conf.gridsize):
-		raise NotImplementedError, 'dat does not seem to be a context-conform (t,y,x)-array.'
+	if not len(s) == 4 or (conf.gridsize and not s[2:] == conf.gridsize):
+		raise NotImplementedError, 'dat does not seem to be a context-conform (t,z,y,x)-array.'
 	
 	if not conf.oformat == 'nc':
 		raise NotImplementedError, 'Currently only saving in netCDF implemented in metsave.'
 
 	if not s[0] == len(static.t):
 		raise ValueError, 'Time dimension in data (%s) and static (%s) are not equally long.' % (s[0], len(static.t))
-	if not s[1] == len(static.y[:,0]):
-		raise ValueError, 'y-dimension in data (%s) and static (%s) are not equally long.' % (s[1], len(static.y[:,0]))
-	if not s[2] == len(static.x[0,:]):
-		raise ValueError, 'x-dimension in data (%s) and static (%s) are not equally long.' % (s[2], len(static.x[0,:]))
+	if not s[1] == len(static.z):
+		raise ValueError, 'z-dimension in data (%s) and static (%s) are not equally long.' % (s[1], len(static.z))
+	if not s[2] == len(static.y[:,0]):
+		raise ValueError, 'y-dimension in data (%s) and static (%s) are not equally long.' % (s[2], len(static.y[:,0]))
+	if not s[3] == len(static.x[0,:]):
+		raise ValueError, 'x-dimension in data (%s) and static (%s) are not equally long.' % (s[3], len(static.x[0,:]))
 
 	now = dt.now(pytz.timezone(conf.local_timezone))
 	if not agg:
@@ -291,33 +296,47 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	})
 
 	of.createDimension('time', s[0])
-	of.createDimension(static.x_name, s[2])
-	of.createDimension(static.y_name, s[1])
+	of.createDimension(static.z_name, s[1])
+	of.createDimension(static.y_name, s[2])
+	of.createDimension(static.x_name, s[3])
+
+	known_vertical_level_units = {
+			'Pa': ('pressure', 'down'),
+			'K': ('isentropic', 'up'),
+			'PVU': ('potential_vorticity', 'up'),
+	}
+	if static.z_unit not in known_vertical_level_units:
+		raise ValueError, 'Unknown vertical level type unit: `%s`' % static.z_unit
+	z_name, z_positive = known_vertical_level_units[static.z_unit]
 
 	ot = of.createVariable('time', 'i', ('time',))
 	ot.setncatts({'long_name': 'time', 'units': static.t_unit})
 	ot[::] = static.t
+	olev = of.createVariable(static.z_name, 'f', (static.z_name,))
+	olev.setncatts({'long_name': z_name, 'units': static.z_unit, 'axis': 'Z', 'positive': z_positive})
+	olev[::] = static.z[:]
 	olat = of.createVariable(static.y_name, 'f', (static.y_name,))
-	olat.setncatts({'long_name': static.y_name, 'units': static.y_unit})
+	olat.setncatts({'long_name': static.y_name, 'units': static.y_unit, 'axis': 'Y'})
 	olat[::] = static.y[:,0]
 	olon = of.createVariable(static.x_name, 'f', (static.x_name,))
-	olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
+	olon.setncatts({'long_name': static.x_name, 'units': static.x_unit, 'axis': 'X'})
 	olon[::] = static.x[0,:]
 	
 	if compress_to_short:
 		dat, scale, off, fill = utils.unscale(dat)
 		if fill: 
-			ovar = of.createVariable(q, 'i2', ('time', static.y_name, static.x_name,), fill_value=fill)
+			ovar = of.createVariable(q, 'i2', ('time', static.z_name, static.y_name, static.x_name,), 
+					fill_value=fill)
 			ovar.set_auto_scale(False)
 
 			ovar.missing_value = fill
 		else:
-			ovar = of.createVariable(q, 'i2', ('time', static.y_name, static.x_name,))
+			ovar = of.createVariable(q, 'i2', ('time', static.z_name, static.y_name, static.x_name,))
 
 		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q],
 				'add_offset': off, 'scale_factor': scale})
 	else:
-		ovar = of.createVariable(q, 'f', ('time', static.y_name, static.x_name,))
+		ovar = of.createVariable(q, 'f', ('time', static.z_name, static.y_name, static.x_name,))
 		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q]})
 	ovar[::] = dat
 
@@ -327,7 +346,7 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 
 
 # Save dat as a netCDF file, using the metadata in static. 
-def metsave_lines(dat, datoff, static, time, plev, q, qoff):
+def metsave_lines(dat, datoff, static, plev, q, qoff):
 	''' Save line data in a netCDF file
 
 	A disk-space-effective way to store collections of lines (e.g. front lines, jet axes, ...)
@@ -344,9 +363,6 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 	    Starting point indexes for each line.
 	static : gridlib.grid
 	    Some meta information about the data, like the grid information.
-	time : str
-	    String representation of the time period covered by the data, e.g. ``'2005'`` for the year
-	    2005 or ``'20050317'`` for 17 March 2005.
 	plev : str
 	    String representation of the vertical level on which the data is defined, e.g. ``'700'`` 
 	    for 700 hPa or ``'pv2000'`` for the PV2-surface.
@@ -363,7 +379,8 @@ def metsave_lines(dat, datoff, static, time, plev, q, qoff):
 		raise RuntimeError, 'dat does not have size 3 in the third dimension'
 
 	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc.Dataset(conf.opath+'/'+(conf.file_std % {'time': time, 'plev': plev, 'qf': conf.qf[q]})+'.nc', 'w', format='NETCDF3_CLASSIC')
+	of = nc.Dataset(conf.opath+'/'+(conf.file_std % {'time': dts2str(static.t_parsed), 
+		'plev': plev, 'qf': conf.qf[q]})+'.nc', 'w', format='NETCDF3_CLASSIC')
 	of.setncatts({'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	})
@@ -689,8 +706,6 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	Allows general data requests in the configured data base, e.g. ERA-Interim. The request
 	can span several files, e.g. by including several vertical levels or by covering several
 	years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
-	However, length-1 dimensions are removed, so the returned array can have fewer 
-	dimensions.
 
 	Parameters
 	----------
@@ -772,13 +787,16 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 			if len(d.shape) == 4 and d.shape[1] > 1:
 				separate_plevs = False
 				s = (1+tsmax-tsmin, ) + d.shape[1:]
+			elif len(d.shape) == 4: 
+				separate_plevs = True
+				s = (1+tsmax-tsmin, len(plevs), ) + d.shape[2:]
 			else:
 				separate_plevs = True
 				s = (1+tsmax-tsmin, len(plevs), ) + d.shape[1:]
 
 			dat = np.empty(s, dtype=d.dtype)
 			if separate_plevs:
-				dat[datcut,0,::] = d
+				dat[datcut,0:1,::] = d
 			else:
 				dat[datcut,::] = d
 
@@ -795,6 +813,12 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 					static.t = np.concatenate((static.t, static_.t[cut]))
 					if type(static.t_parsed) == np.ndarray:
 						static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
+				elif year == years[0]:
+					if not static.z_name == static_.z_name or \
+							not static.z_unit == static_.z_unit:
+						print 'WARNING: concatenating vertical levels of different types!'
+						static.z_unit = u'MIXED!'
+					static.z = np.concatenate((static.z, static_.z))
 				i += 1
 
 		elif i == 0:
@@ -807,7 +831,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	if tavg and len(dates) > 1:
 		dat = dat.mean(axis=0)
 	
-	dat = dat.squeeze()
+	#dat = dat.squeeze()
 	
 	return dat, static
 
