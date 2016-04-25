@@ -50,7 +50,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`div`, :meth:`def_shear`, :meth:`def_stretch`
+  !@ :meth:`vor_curv`, :meth:`div`, :meth:`def_shear`, :meth:`def_stretch`
   subroutine vor(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -63,6 +63,60 @@ contains
     call ddx(dxv,nx,ny,nz,v,dx,dy)
     call ddy(dyu,nx,ny,nz,u,dx,dy)
     res = dxv - dyu
+  end subroutine
+  !
+  !@ Calculate curvature vorticity::
+  !@
+  !@     vor_c = dv/ds
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The u-wind velocity field.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The v-wind velocity field.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated vorticity.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`def_stretch_nat`, :meth:`vor`, :meth:`div`, :meth:`def_shear`, :meth:`def_stretch`
+  subroutine vor_curv(res,nx,ny,nz,u,v,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res, v
+    !f2py depend(nx,ny) dx, dy
+    !
+    real(kind=nr) :: ux(nz,ny,nx), uy(nz,ny,nx), vx(nz,ny,nx), vy(nz,ny,nx), &
+       &             ff2(nz,ny,nx)
+    ! -----------------------------------------------------------------
+    !
+    call grad(ux,uy, nx,ny,nz, u, dx,dy)
+    call grad(vx,vy, nx,ny,nz, v, dx,dy)
+    !
+    ff2 = u(:,:,:)**2_ni + v(:,:,:)**2_ni
+    res = (u*u*vx + u*v*(vy - ux) - v*v*uy) / ff2
   end subroutine
   !
   !@ Calculate divergence::
@@ -248,7 +302,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`def_shear`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
+  !@ :meth:`def_shear_nat`, :meth:`def_stretch`,  :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
   subroutine def_stretch_nat(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -265,6 +319,60 @@ contains
     !
     ff2 = u(:,:,:)**2_ni + v(:,:,:)**2_ni
     res = ( (u*u - v*v)*(ux - vy) + 2.0_nr*u*v*(vx + uy) ) / ff2
+  end subroutine
+  !
+  !@ Calculate shearing deformation in natural coordinates::
+  !@
+  !@    def_shear =  du/dn + dv/ds
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The u-wind velocity field.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The v-wind velocity field.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated shearing deformation.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`vor_curv`, :meth:`def_stretch_nat`, :meth:`def_shear`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
+  subroutine def_shear_nat(res,nx,ny,nz,u,v,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res, v
+    !f2py depend(nx,ny) dx, dy
+    !
+    real(kind=nr) :: ux(nz,ny,nx), uy(nz,ny,nx), vx(nz,ny,nx), vy(nz,ny,nx), &
+       &             ff2(nz,ny,nx)
+    ! -----------------------------------------------------------------
+    !
+    call grad(ux,uy, nx,ny,nz, u, dx,dy)
+    call grad(vx,vy, nx,ny,nz, v, dx,dy)
+    !
+    ff2 = u(:,:,:)**2_ni + v(:,:,:)**2_ni
+    res = ( (u*u - v*v)*(uy + vy) + 2.0_nr*u*v*(vy - ux) ) / ff2
   end subroutine
   !
   !@ Calculate total deformation
@@ -1259,7 +1367,7 @@ contains
   !@ z : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Geopotential on a pressure surface or equivalent potentials on other
   !@     surfaces.
-  !@ lat : np.ndarray with shape (ny,nx) and dtype float64
+  !@ lat : np.ndarray with shape (ny) and dtype float64
   !@     Latitude of the grid point.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
