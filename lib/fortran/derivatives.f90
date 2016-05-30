@@ -765,7 +765,7 @@ contains
   !@ Parameters
   !@ ----------
   !@
-  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@ dat : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     Data array
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
@@ -773,7 +773,7 @@ contains
   !@ dy : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in y-direction to be directly for centered differences.
   !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
-  !@ dz : np.ndarray with shape (nz-2,ny,nx) and dtype float64
+  !@ dz : np.ndarray with shape (nt,nz-2,ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
   !@     ``dx(k,j,i)`` is expected to contain the x-distance between ``(k+1,j,i)`` and ``(k-1,j,i)``.
   !@
@@ -789,11 +789,11 @@ contains
   !@
   !@ Returns
   !@ -------
-  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     x-derivative of ``dat``.
-  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     y-derivative of ``dat``.
-  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     z-derivative of ``dat``.
   !@
   !@ See Also
