@@ -1398,18 +1398,11 @@ contains
     div = ux + vy
     def_str = ux - vy
     def_she = vx + uy
-    write(*,*) 'debug div', count(isnan(div))
-    write(*,*) 'debug def+', count(isnan(def_str))
-    write(*,*) 'debug defx', count(isnan(def_she))
     !
     tdiv  = -0.5_nr*absgrad * div
     tdef  = -1.0_nr/absgrad * (0.5_nr*def_str*(datx**2_ni - daty**2_ni) + def_she*datx*daty)
     ttilt = -1.0_nr/absgrad * (datx*datz*wx + daty*datz*wy)
     theat =  1.0_nr/absgrad * (datx*heatx + daty*heaty)
-    write(*,*) 'debug tdiv', count(isnan(tdiv))
-    write(*,*) 'debug tdef', count(isnan(tdef))
-    write(*,*) 'debug ttilt', count(isnan(ttilt))
-    write(*,*) 'debug theat', count(isnan(theat))
     !
   end subroutine
   !
