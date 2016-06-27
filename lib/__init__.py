@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
-# Make version information easily accessible
-import dynfor
+from __future__ import absolute_import, unicode_literals
 
-version = ''.join(dynfor.consts.version[7:]).strip()
+# Make version information easily accessible
+from . import dynfor
+
+version = ''.join([x.decode('ascii') for x in dynfor.consts.version[7:]]).strip()
 
 #

@@ -38,7 +38,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`tdew_from_e`
+  !@ :meth:`tdew_from_e`
   subroutine e_sat_liq(res,nx,ny,nz,temp)
     real(kind=nr), intent(in)  :: temp(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -79,7 +79,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`q_from_e`, :meth:`e_from_mv`
+  !@ :meth:`q_from_e`, :meth:`e_from_mv`
   subroutine e_from_q(res,nx,ny,nz,q,p)
     real(kind=nr), intent(in)  :: q(nz,ny,nx), p(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -120,7 +120,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`mv_from_e`, :meth:`e_from_q`
+  !@ :meth:`mv_from_e`, :meth:`e_from_q`
   subroutine e_from_mv(res,nx,ny,nz,mv,p)
     real(kind=nr), intent(in)  :: mv(nz,ny,nx), p(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -161,7 +161,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`q_from_e`, :meth:`e_from_mv`
+  !@ :meth:`q_from_e`, :meth:`e_from_mv`
   subroutine e_from_rh(res,nx,ny,nz,rh,temp)
     real(kind=nr), intent(in)  :: temp(nz,ny,nx), rh(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -203,7 +203,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`e_sat_liq`
+  !@ :meth:`e_sat_liq`
   subroutine tdew_from_e(res,nx,ny,nz,e)
     real(kind=nr), intent(in)  :: e(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -244,7 +244,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`e_from_q`, :meth:`mv_from_e`
+  !@ :meth:`e_from_q`, :meth:`mv_from_e`
   subroutine q_from_e(res,nx,ny,nz,e,p)
     real(kind=nr), intent(in)  :: e(nz,ny,nx), p(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -285,7 +285,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`e_from_mv`, :meth:`q_from_e`
+  !@ :meth:`e_from_mv`, :meth:`q_from_e`
   subroutine mv_from_e(res,nx,ny,nz,e,p)
     real(kind=nr), intent(in)  :: e(nz,ny,nx), p(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -401,7 +401,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`thetae_from_q`
+  !@ :meth:`thetae_from_q`
   subroutine te_from_q(res,nx,ny,nz,q,temp)
     real(kind=nr), intent(in)  :: temp(nz,ny,nx), q(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -447,7 +447,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`te_from_q`
+  !@ :meth:`te_from_q`
   subroutine thetae_from_q(res,nx,ny,nz,q,temp,pres)
     real(kind=nr), intent(in)  :: temp(nz,ny,nx), q(nz,ny,nx), pres(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)

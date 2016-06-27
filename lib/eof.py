@@ -1,10 +1,12 @@
 #!/usr/bin/env python 
 # -*- encoding: utf-8
 
-import utils
-import tagg
-from shorthands import np, dt, get_instantaneous, get_aggregate, metsave_timeless
-from settings import conf
+from __future__ import absolute_import, unicode_literals, print_function
+
+from . import utils
+from . import tagg
+from .shorthands import np, dt, get_instantaneous, get_aggregate, metsave_timeless
+from .settings import conf
 
 import pca_module as pca
 
@@ -105,7 +107,7 @@ def build(qs, eofs, times=None, agg='cal_month', N=10):
 
 		del datlin_, dat_
 
-		print 'Starting calculation of EOF `%s`, input shape: %s' % (name, str(datlin.shape))
+		print('Starting calculation of EOF `%s`, input shape: %s' % (name, str(datlin.shape)))
 
 		# Do the actual EOF calculations
 		tseries[name], pattern_raw, thres[name] = pca.PCA_nipals_c(datlin, PCs=N, standardize=False)

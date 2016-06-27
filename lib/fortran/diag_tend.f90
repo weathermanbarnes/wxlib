@@ -24,7 +24,7 @@ contains
   !@ Their effective rotation takes into account both vorticity and rotation of the axis 
   !@ of dilatation.
   !@ 
-  !@ TODO: Do you need to assume z=mont, or does the same routine work also on pressure levels?
+  !@ TODO: Do you need to assume z=mont, or does the same routine work also on pressure levels?
   !@ 
   !@ Parameters
   !@ ----------

@@ -598,7 +598,6 @@ if __name__=='__main__':
 	l = ax.legend(axespad=-0.10)
 	setp(l.get_texts(), fontsize=8)
 	draw()
-	#print ax._info
 	show()
 
 

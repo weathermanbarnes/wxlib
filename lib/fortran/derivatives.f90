@@ -48,7 +48,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`ddx_o4`, :meth:`ddx_on_q`
+  !@ :meth:`ddx_o4`, :meth:`ddx_on_q`
   subroutine ddx(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -111,7 +111,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`ddx`, :meth:`ddx_o4`
+  !@ :meth:`ddx`, :meth:`ddx_o4`
   subroutine ddx_on_q(res,nx,ny,nz,dat,datq,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), datq(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -194,7 +194,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`ddx`, :meth:`ddx_on_q`
+  !@ :meth:`ddx`, :meth:`ddx_on_q`
   subroutine ddx_o4(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -312,7 +312,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`ddy_o4`, :meth:`ddy_on_q`
+  !@ :meth:`ddy_o4`, :meth:`ddy_on_q`
   subroutine ddy(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -368,7 +368,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`ddy`, :meth:`ddy_o4`
+  !@ :meth:`ddy`, :meth:`ddy_o4`
   subroutine ddy_on_q(res,nx,ny,nz,dat,datq,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), datq(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -438,7 +438,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`ddy`, :meth:`ddy_on_q`
+  !@ :meth:`ddy`, :meth:`ddy_on_q`
   subroutine ddy_o4(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -601,7 +601,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`ddz_on_q`
+  !@ :meth:`ddz_on_q`
   subroutine ddz(res,nx,ny,nz,dat,dz)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dz(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -660,7 +660,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`ddz`
+  !@ :meth:`ddz`
   subroutine ddz_on_q(res,nx,ny,nz,dat,datq,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), datq(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -730,7 +730,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`grad_3d`
+  !@ :meth:`grad_3d`
   subroutine grad(resx,resy,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: resx(nz,ny,nx), resy(nz,ny,nx)
@@ -798,7 +798,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`grad`
+  !@ :meth:`grad`
   subroutine grad_3d(resx,resy,resz,nx,ny,nz,nt,dat,dx,dy,dz)
     real(kind=nr), intent(in)  :: dat(nt,nz,ny,nx), dx(ny,nx), dy(ny,nx), dz(nt,nz,ny,nx)
     real(kind=nr), intent(out) :: resx(nt,nz,ny,nx), resy(nt,nz,ny,nx), resz(nt,nz,ny,nx)
@@ -850,7 +850,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`antilap2`
+  !@ :meth:`antilap2`
   subroutine lap2(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -919,7 +919,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`lap2`
+  !@ :meth:`lap2`
   subroutine antilap2(res,nx,ny,nz,dat,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)

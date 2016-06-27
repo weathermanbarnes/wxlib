@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
+from __future__ import absolute_import
+
 # Importing some widely used functions in a common name space
 
-import dynfor
+from . import dynfor
 
-import figures as fig
-import gridlib as gridlib
-import utils as utils
-import settings as settings
-from metio import metopen, metsave, metsave_lines, metsave_timeless, get_aggregate, get_instantaneous, get_static
+from . import figures as fig
+from . import gridlib
+from . import utils
+from . import settings
+from .metio import metopen, metsave, metsave_lines, metsave_timeless, get_aggregate, get_instantaneous, get_static
 
 import numpy as np
 import scipy as sp

@@ -36,11 +36,12 @@ For these reasons, this module introduces:
     ``plot_settings_dict`` objects.
 '''
 
+from __future__ import absolute_import, unicode_literals
+
 import numpy as np
 from copy import copy 
 
-import proj
-import cm
+from . import cm, proj
 
 import collections
 
@@ -119,7 +120,7 @@ class default_dict(collections.MutableMapping):
 		elif key in self._defaults:
 			return self._defaults[key]
 		else:
-			raise KeyError, key
+			raise KeyError(key)
 
 	def __setitem__(self, key, value):
 		''' Implements the assignment syntax ``dat[key] = value`` '''
@@ -132,7 +133,7 @@ class default_dict(collections.MutableMapping):
 		if key in self._defaults:
 			self._[key] = value
 		else:
-			raise KeyError, key
+			raise KeyError(key)
 
 	def __delitem__(self, key):
 		''' Implements the reset syntax ``del dat[key]`` '''
@@ -147,7 +148,7 @@ class default_dict(collections.MutableMapping):
 		elif key in self._defaults:
 			pass
 		else:
-			raise KeyError, key
+			raise KeyError(key)
 
 	def __iter__(self):
 		''' Implement interation over the dictionary, e.g. the syntax ``for key in dat:`` '''
@@ -191,7 +192,7 @@ class nd_default_dict(default_dict):
 	def __init__(self, first_table, defaults, mutexes):
 		for default in defaults.values():
 			if not isinstance(default, collections.Hashable):
-				raise ValueError, 'Defaults for plotconf must be immutable, but got variable of type %s, value: %s' % (type(default), str(default))
+				raise ValueError('Defaults for plotconf must be immutable, but got variable of type %s, value: %s' % (type(default), str(default)))
 		self._fdims = [first_table, ]
 		self._ndims = len(first_table) + 1
 		default_dict.__init__(self, defaults, mutexes) 	# dictionary of valid keys in the last dimension and their default values
@@ -200,9 +201,9 @@ class nd_default_dict(default_dict):
 		''' Check if a given query key is valid '''
 
 		if len(key) < self._ndims - 1:
-			raise KeyError, 'Key must contain at least %d dimensions' % self._ndims-1
+			raise KeyError('Key must contain at least %d dimensions' % self._ndims-1)
 		elif len(key) > self._ndims:
-			raise KeyError, 'Key can at most contain %d dimensions' % self._ndims
+			raise KeyError('Key can at most contain %d dimensions' % self._ndims)
 		
 		found = False
 		for table in self._fdims:
@@ -212,7 +213,7 @@ class nd_default_dict(default_dict):
 						if i == self._ndims - 2:
 							found = True
 					else:
-						raise KeyError, 'Only multiple assignment supported.'
+						raise KeyError('Only multiple assignment supported.')
 				elif not key[i] in valid_skeys:
 					break
 				elif i == self._ndims - 2:
@@ -220,7 +221,7 @@ class nd_default_dict(default_dict):
 			if found == True:
 				break
 		if not found:
-			raise KeyError, key
+			raise KeyError(key)
 		
 		return
 
@@ -250,7 +251,7 @@ class nd_default_dict(default_dict):
 	def __getitem__(self, key):
 		''' Implement access via the ``dat[key1,key2,...,keyN]`` syntax '''
 
-                self.__check_key(key)
+		self.__check_key(key)
 		
 		if len(key) == self._ndims:
 			for key in self.__default_walk(key):
@@ -260,7 +261,7 @@ class nd_default_dict(default_dict):
 			if key[-1] in self._defaults:
 				return self._defaults[key[-1]]
 			else:
-				raise KeyError, key
+				raise KeyError(key)
 		else: 
 			ret = {}
 			for skey in self._defaults:
@@ -291,12 +292,12 @@ class nd_default_dict(default_dict):
 		# Last dimension missing, expecting dict to override several keys at once
 		else: 
 			if not type(value) == dict:
-				raise TypeError, 'Dict required for multiple assignment, got `%s` instead.' % type(value)
+				raise TypeError('Dict required for multiple assignment, got `%s` instead.' % type(value))
 
 			for lkey, lvalue in value.items():
 				fullkey = key + (lkey,)
 				if not lkey in self._defaults:
-					raise KeyError, fullkey
+					raise KeyError(fullkey)
 				# Respect that some combination configuration are not meaningful
 				if type(lvalue) == type(None):
 					for mutex in self._mutexes.get(lkey, []):
@@ -327,12 +328,11 @@ class nd_default_dict(default_dict):
 		''' Add new combinations for the first dimensions '''
 
 		if not len(table) == self._ndims - 1:
-			raise ValueError, 'Table needs to have %d dimensions, got %d instead.' % (
-					self._ndims - 1, len(table))
+			raise ValueError('Table needs to have %d dimensions, got %d instead.' % (
+					self._ndims - 1, len(table)) )
 		for dim in table:
 			if None in dim:
-				print dim
-				raise ValueError, 'None is reserved for internal use and cannot be used in tables'
+				raise ValueError('None is reserved for internal use and cannot be used in tables')
 			dim.add(None)
 		self._fdims.append(table)
 
@@ -340,7 +340,7 @@ class nd_default_dict(default_dict):
 		''' Add a new key and its default value for the last dimension '''
 
 		if key in self._defaults:
-			raise KeyError, 'Default value for %s exists already' % str(key)
+			raise KeyError('Default value for %s exists already' % str(key))
 
 		self._defaults[key] = value
 
@@ -436,13 +436,13 @@ class settings_obj(default_dict):
 		elif len(keys) == 1:
 			return self[keys[0]]
 		else:
-			raise TypeError, '_get() requires at least one key'
+			raise TypeError('_get() requires at least one key')
 	
 	def _add_default(self, key, value):
 		''' Add a new configuration item and its default value '''
 
 		if key in self._defaults:
-			raise KeyError, str(key) + ' already set'
+			raise KeyError(str(key) + ' already set')
 		self._defaults[key] = value
 	
 	def __getattribute__(self, key):
@@ -497,7 +497,7 @@ class settings_obj(default_dict):
 		elif len(q_item) == 5:
 			q, q_file, q_long, q_units, q_bins = q_item
 		else:
-			raise ValueError, 'q_item must be length 2--5, got %d instead.' % len(q_item)
+			raise ValueError('q_item must be length 2--5, got %d instead.' % len(q_item))
 
 		return q, q_file, q_long, q_units, q_bins
 

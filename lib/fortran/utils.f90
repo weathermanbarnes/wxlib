@@ -21,7 +21,7 @@ contains
   !@
   !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     The data to be mirrorred. 
-  !@     *Note*, the input data is expected to have a y-axis running from 90°S to 90°N,
+  !@     *Note*, the input data is expected to have a y-axis running from 90 degS to 90 degN,
   !@     *not* following the ERA-Interim convention. Furthermore, the grid size in 
   !@     x-direction (nx) must be even.
   !@

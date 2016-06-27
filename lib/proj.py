@@ -7,6 +7,7 @@ Much of the research focusses on specific regions. These map projections are int
 standard projections covering these regions.
 '''
 
+from __future__ import absolute_import, unicode_literals
 
 from mpl_toolkits.basemap import Basemap
 

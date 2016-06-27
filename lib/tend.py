@@ -9,10 +9,12 @@ Currently there are routines for terms in the tendency equations of
 
 '''
 
+from __future__ import absolute_import, unicode_literals
+
 import sys
 
-import dynfor
-import docutil
+from . import dynfor
+from . import docutil
 
 # Take over the contents of dynfor.diag to this module and inject documentation from the Fortran sources
 docutil.takeover(dynfor.tend, 'tend', sys.modules[__name__])

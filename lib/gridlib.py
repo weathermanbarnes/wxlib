@@ -77,7 +77,7 @@ class grid(object):
 
 		return
 
-        def _parse_time(self):
+	def _parse_time(self):
 		tusplit = self.t_unit.split()
 		if len(tusplit) > 3 and tusplit[1] == 'since':
 			facs = {'seconds': 1, 'minutes': 60, 'hours': 3600, 'days': 86400}
@@ -121,7 +121,7 @@ class grid(object):
 		'''
 		
 		if type(self.t_parsed) == type(None):
-			raise TypeError, 'No (parsable) time axis to be replaced in this grid object!'
+			raise TypeError('No (parsable) time axis to be replaced in this grid object!')
 
 		cpy = copy.copy(self)
 		cpy.t_parsed = dates
@@ -174,19 +174,19 @@ class grid_by_nc(grid):
 			for d in self.v.dimensions:
 				if matches(d, self.X_NAMES, self.X_NAME_BEGINSWITH):
 					if self.x_name:
-						raise ValueError, 'Found several possible x-axes (using variable)'
+						raise ValueError('Found several possible x-axes (using variable)')
 					self.x_name = d
 				if matches(d, self.Y_NAMES, self.Y_NAME_BEGINSWITH):
 					if self.y:
-						raise ValueError, 'Found several possible y-axes (using variable)'
+						raise ValueError('Found several possible y-axes (using variable)')
 					self.y_name = d
 				if matches(d, self.Z_NAMES, self.Z_NAME_BEGINSWITH):
 					if self.z_name:
-						raise ValueError, 'Found several possible z-axes (using variable)'
+						raise ValueError('Found several possible z-axes (using variable)')
 					self.z_name = d
 				if d in self.T_NAMES:
 					if self.t_name:
-						raise ValueError, 'Found several possible t-axes (using variable)'
+						raise ValueError('Found several possible t-axes (using variable)')
 					self.t_name = d
 
 		if not self.x_name or not self.y_name or not self.z_name or not self.t_name:
@@ -198,25 +198,25 @@ class grid_by_nc(grid):
 			for d in self.f.dimensions:
 				if d in self.X_NAMES:
 					if self.x_name:
-						raise ValueError, 'Found several possible x-axes (using file)'
+						raise ValueError('Found several possible x-axes (using file)')
 					self.x_name = d
 				if d in self.Y_NAMES:
 					if self.y:
-						raise ValueError, 'Found several possible y-axes (using file)'
+						raise ValueError('Found several possible y-axes (using file)')
 					self.y_name = d
 				if d in self.Z_NAMES:
 					if self.z_name:
-						raise ValueError, 'Found several possible z-axes (using file)'
+						raise ValueError('Found several possible z-axes (using file)')
 					self.z_name = d
 				if d in self.T_NAMES:
 					if self.t_name:
-						raise ValueError, 'Found several possible t-axes (using file)'
+						raise ValueError('Found several possible t-axes (using file)')
 					self.t_name = d
 		
 		if not self.x_name:
-			raise ValueError, 'No x-axis found'
+			raise ValueError('No x-axis found')
 		if not self.y_name:
-			raise ValueError, 'No y-axis found'
+			raise ValueError('No y-axis found')
 
 		# Part 2: Determining type of axis
 		self.gridtype = None
@@ -225,7 +225,7 @@ class grid_by_nc(grid):
 		
 		try:
 			self.x_unit = self.f.variables[self.x_name].units
-                except (KeyError, AttributeError):
+		except (KeyError, AttributeError):
 			self.x_unit = '1'
 		try: 
 			self.y_unit = self.f.variables[self.y_name].units
@@ -283,7 +283,7 @@ class grid_by_nc(grid):
 					self.y_name = 'y'
 
 				else:
-					raise NotImplementedError, 'Unknown WRF gridtype `%s\'' % self.f.GRIDTYPE
+					raise NotImplementedError('Unknown WRF gridtype `%s\'' % self.f.GRIDTYPE)
 			else:
 				self.gridtype = 'idx'
 				self.x = np.arange(self.nx)
@@ -298,7 +298,7 @@ class grid_by_nc(grid):
 			self.y_name = 'y'
 
 		else:
-			raise NotImplementedError, '(Yet) Unknown grid type with units (%s/%s)' % (self.x_unit, self.y_unit)
+			raise NotImplementedError('(Yet) Unknown grid type with units (%s/%s)' % (self.x_unit, self.y_unit))
 			
 		if self.gridtype == 'latlon':
 			self._calc_dx_dy_latlon()
@@ -320,7 +320,7 @@ class grid_by_nc(grid):
 			self.dy[1:-1,:] = self.y[2:,:] - self.y[:-2,:]
 
 		else:
-			raise NotImplementedError, '(Yet) Unknown grid type "%s"' % self.gridtype
+			raise NotImplementedError('(Yet) Unknown grid type "%s"' % self.gridtype)
 		
 		self.rotated = False
 		if self.gridtype == 'latlon':
@@ -349,7 +349,7 @@ class grid_by_nc(grid):
 		if self.t_name:
 			self.nt = len(self.f.dimensions[self.t_name])
 			if not self.nt and not self.v: 
-				raise RuntimeError, 'grid_by_nc needs one specific variable for extracing the length of the netcdf-unlimited time dimension'
+				raise RuntimeError('grid_by_nc needs one specific variable for extracing the length of the netcdf-unlimited time dimension')
 			elif not self.nt:
 				timedim = self.v.dimensions.index(self.t_name)
 				self.nt = self.v.shape[timedim]
@@ -395,7 +395,7 @@ class grid_by_static(grid):
 
 			self._calc_dx_dy_latlon()
 		else:
-			raise NotImplementedError, '(Yet) Unknown grid type using the variables ' % str(self.f.files)
+			raise NotImplementedError('(Yet) Unknown grid type using the variables ' % str(self.f.files))
 
 		self.x = np.tile(self.x, (self.ny,1))
 		self.y = np.tile(self.y, (self.nx,1)).T

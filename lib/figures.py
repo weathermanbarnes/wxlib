@@ -13,11 +13,12 @@ These functions have two main aims:
     for example temperatures are by default plotted in a consistent an meaningful way.
 '''
 
+from __future__ import absolute_import, unicode_literals
 
 import copy
 import re
 import types
-import cStringIO
+from io import StringIO
 from PIL import Image
 
 import numpy as np
@@ -29,11 +30,11 @@ from matplotlib.collections import LineCollection
 import mpl_toolkits.basemap
 basemap_version = mpl_toolkits.basemap.__version__
 
-from settings import conf
+from .settings import conf
 
-from metio import metopen
-from utils import concat1, concat1lonlat, __unflatten_fronts_t, sect_gen_points
-from autoscale import autoscale
+from .metio import metopen
+from .utils import concat1, concat1lonlat, __unflatten_fronts_t, sect_gen_points
+from .autoscale import autoscale
 
 
 def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
@@ -241,7 +242,7 @@ def setup(**kwargs):
 		figsize = (aspect*height, height)
 
 	elif not type(figsize) == tuple: 
-		raise ValueError, "fig_size must be either the string 'auto', a number or a tuple."
+		raise ValueError("fig_size must be either the string 'auto', a number or a tuple.")
 
 	# Adapt figure size automatically if a color bar is added
 	if not kwargs.get('cb_disabled'): 
@@ -498,7 +499,7 @@ def __output(plev, q, kwargs):
 		
 		# If png: Use adaptive palette to save space
 		if filename[-3:] == 'png':
-			imgstr = cStringIO.StringIO()
+			imgstr = StringIO.StringIO()
 			plt.savefig(imgstr, format='png', dpi=kwargs.pop('fig_dpi'))
 			imgstr.seek(0)
 			img = Image.open(imgstr)

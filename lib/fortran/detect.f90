@@ -147,9 +147,9 @@ contains
   !@ Detects the occurrence of anticyclonic and cyclonic wave-breaking 
   !@ events from a PV field on isentropic coordinates.
   !@
-  !@ Reference: Rivière (2009, hereafter R09): Effect of latitudinal 
+  !@ Reference: Riviere (2009, hereafter R09): Effect of latitudinal 
   !@ variations in low-level baroclinicity on eddy life cycles and upper-
-  !@ tropospheric wave-breaking processes. J. Atmos. Sci., 66, 1569–1592.
+  !@ tropospheric wave-breaking processes. J. Atmos. Sci., 66, 1569-1592.
   !@ See the appendix C.
   !@
   !@ Parameters
@@ -470,10 +470,10 @@ contains
     ! -----------------------------------------------------------------
     !
     ! TODO: Move to constants / arguments
-    dj = 30  ! 15°latitude
-    di = 15  ! 7.5°longitude
-    j0 = 120 ! From 30°N
-    j1 = 40  ! To 70°N
+    dj = 30  ! 15 deg  latitude
+    di = 15  ! 7.5 def longitude
+    j0 = 120 ! From 30 degN
+    j1 = 40  ! To 70 degN
     !
     res(:,:,:) = 0.0_nr
     !
@@ -601,7 +601,7 @@ contains
   !@ Find jetaxes by zero-shear condition and masks selecting wind maxima above a 
   !@ certain wind speed threshold.
   !@
-  !@ The mask for wind maxima is defined by d²U/dn < 0. The wind speed threshold
+  !@ The mask for wind maxima is defined by d^2U/dn < 0. The wind speed threshold
   !@ is currently fixed at 30 m/s.
   !@
   !@ Parameters

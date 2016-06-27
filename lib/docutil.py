@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function, unicode_literals
+
 import os
 import sys
 import re
@@ -45,9 +47,9 @@ def _insert_doc(module, func, fortran_doc, docstr):
 	''' Do some plausability checks and then safe the docstring into the fortran_doc dictionary '''
 
 	if not module and not func:
-		raise RuntimeError, 'Got neither a module nor a function name for the docstring:\n\n%s' % docstr
+		raise RuntimeError('Got neither a module nor a function name for the docstring:\n\n%s' % docstr)
 	if not module:
-		raise RuntimeError, 'Found a function `%s` without module' % func
+		raise RuntimeError('Found a function `%s` without module' % func)
 	if not func:
 		fortran_doc[module] = docstr
 	else:
@@ -72,7 +74,7 @@ def parse_fortran_file(fname, fortran_doc):
 	'''
 
 	if not os.path.isfile(fname):
-		raise ValueError, 'File not found: `%s`' % fname
+		raise ValueError('File not found: `%s`' % fname)
 
 	f = open(fname)
 	srclines = f.readlines()
@@ -122,9 +124,9 @@ def parse_fortran_file(fname, fortran_doc):
 				documented = True
 				inmodule = name
 			if not documented:
-				raise Warning, 'Found a documentation comment without associated module/function '\
-						'at line %d of file `%s`, and hence will be discarded. '\
-						'The docstring reads:\n\n%s' % (lnr, fname, srcdoc)
+				raise Warning('Found a documentation comment without associated module/function '
+						'at line %d of file `%s`, and hence will be discarded. '
+						'The docstring reads:\n\n%s' % (lnr, fname, srcdoc) )
 			indoc = False
 			srcdoc = ''
 
@@ -148,8 +150,8 @@ def save_fortran_doc(fortran_doc):
 	None
 	'''
 
-	f = open('../%s' % PICKLE_FILENAME , 'w')
-	pickle.dump(fortran_doc, f)
+	f = open('../%s' % PICKLE_FILENAME , 'wb')
+	pickle.dump(fortran_doc, f, protocol=2, fix_imports=True)
 	f.close()
 
 
@@ -177,11 +179,11 @@ def takeover(f2pymodule, name, module):
 
 	pth = os.path.abspath(os.path.join(os.path.dirname(__file__), PICKLE_FILENAME))
 	if os.path.isfile(pth):
-		f = open(pth, 'r')
+		f = open(pth, 'rb')
 		fortran_doc = pickle.load(f)
 		f.close()
 	else:
-		print 'Warning: Fortran documentation not found. Make sure you have compiled dynlib.'
+		print('Warning: Fortran documentation not found. Make sure you have compiled dynlib.')
 		fortran_doc = {}
 
 	# Setting documentation for the functions within the module

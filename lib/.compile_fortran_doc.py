@@ -10,6 +10,7 @@
 #
 # Documentation syntax: Such comments are indicated by lines beginnng with '!@'
 
+from __future__ import unicode_literals
 
 import sys
 import docutil

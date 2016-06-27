@@ -1,11 +1,14 @@
 #!/usr/bin/env python
+# -*- encoding: utf-8
 
 ''' Utilities that don't fit elsewhere '''
 
+from __future__ import absolute_import, unicode_literals, print_function
+
 import sys
 
-import dynfor
-import docutil
+from . import dynfor
+from . import docutil
 
 # Take over the contents of dynfor.diag to this module and inject documentation from the Fortran sources
 docutil.takeover(dynfor.utils, 'utils', sys.modules[__name__])
@@ -15,8 +18,8 @@ import math
 import numpy as np
 from scipy.special import erfinv
 
-import tagg
-from settings import conf
+from . import tagg
+from .settings import conf
 
 from datetime import datetime as dt, timedelta as td
 import calendar
@@ -137,7 +140,7 @@ def concat1(data):
 	elif len(data.shape) == 4:
 		data = np.concatenate((data, np.reshape(data[:,:,:,0], (data.shape[0], data.shape[1], data.shape[2], 1)) ), axis=3)
 	else:
-		raise NotImplementedError, 'Concatenation not implemented for %d dimensions' % len(data.shape)
+		raise NotImplementedError('Concatenation not implemented for %d dimensions' % len(data.shape))
 	
 	return data
 
@@ -189,10 +192,10 @@ def cal_mfv(hist, bins):
 	np.ndarray with 2 dimensions
 	    Most frequently value for each grid point.
 	'''
-        
-        s = hist[-1,:,:].sum()
-        if s > 0:
-		print 'WARNING: hist[-1,:,:].sum() larger than zero!'
+	
+	s = hist[-1,:,:].sum()
+	if s > 0:
+		print('WARNING: hist[-1,:,:].sum() larger than zero!')
 
 	s = hist.shape[1:]
 	mfv = np.zeros(s)

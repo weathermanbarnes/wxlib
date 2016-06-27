@@ -55,7 +55,7 @@ def _find_scale(lthres, uthres, target_steps, symmetric_zero, intervals=DEFAULT_
 		i -= 1
 		interval = intervals[i] * 10**int(exp)
 	else:
-		raise ValueError, 'Either interval or target_steps must be given'
+		raise ValueError('Either interval or target_steps must be given')
 
 	if symmetric_zero:
 		lthres = (np.floor(lthres/interval - 0.5)+0.5)*interval

@@ -50,7 +50,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`vor_curv`, :meth:`div`, :meth:`def_shear`, :meth:`def_stretch`
+  !@ :meth:`vor_curv`, :meth:`div`, :meth:`def_shear`, :meth:`def_stretch`
   subroutine vor(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -100,7 +100,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`def_stretch_nat`, :meth:`vor`, :meth:`div`, :meth:`def_shear`, :meth:`def_stretch`
+  !@ :meth:`def_stretch_nat`, :meth:`vor`, :meth:`div`, :meth:`def_shear`, :meth:`def_stretch`
   subroutine vor_curv(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -154,7 +154,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`vor`, :meth:`def_shear`, :meth:`def_stretch`
+  !@ :meth:`vor`, :meth:`def_shear`, :meth:`def_stretch`
   subroutine div(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -204,7 +204,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`def_stretch`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
+  !@ :meth:`def_stretch`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
   subroutine def_shear(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -252,7 +252,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`def_shear`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
+  !@ :meth:`def_shear`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
   subroutine def_stretch(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -302,7 +302,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`def_shear_nat`, :meth:`def_stretch`,  :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
+  !@ :meth:`def_shear_nat`, :meth:`def_stretch`,  :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
   subroutine def_stretch_nat(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -356,7 +356,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`vor_curv`, :meth:`def_stretch_nat`, :meth:`def_shear`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
+  !@ :meth:`vor_curv`, :meth:`def_stretch_nat`, :meth:`def_shear`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
   subroutine def_shear_nat(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -413,7 +413,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`def_angle`, :meth:`def_angle_nat`
+  !@ :meth:`def_angle`, :meth:`def_angle_nat`
   subroutine def_total(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -467,7 +467,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`def_angle_nat`, :meth:`def_total`
+  !@ :meth:`def_angle_nat`, :meth:`def_total`
   subroutine def_angle(res,nx,ny,nz,u,v,dx,dy)
     use consts
     !
@@ -517,7 +517,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`def_angle`, :meth:`def_total`
+  !@ :meth:`def_angle`, :meth:`def_total`
   subroutine def_angle_nat(res,nx,ny,nz,u,v,dx,dy)
     use consts
     !
@@ -1134,7 +1134,7 @@ contains
   !@ 
   !@ The direction of isolines is calculated by::
   !@
-  !@     k times grad(dat)
+  !@     k times grad(dat)
   !@
   !@ Keyser, Reeder and Reed (1988) call this angle "alpha".
   !@ 
@@ -1240,18 +1240,18 @@ contains
   !@      1/|grad(dat)| * d/dt(|grad(dat)|)
   !@
   !@ and called gamma in Lapeyre, Klein and Hua (1999). This quantity alone is often
-  !@ referred to as the [Petterssen] frontogenesis function 
+  !@ referred to as the [Petterssen] frontogenesis function 
   !@ (e.g. in Markowski and Richardson 2011). 
   !@ 
   !@ Keyser, Reeder and Reed (1988) generalise the Petterssen frontogenesis function to
   !@ its vector form, introducing the stirring rate of the gradient as its second component.
   !@ The stirring rate is defined as::
   !@
-  !@      grad(dat)/|grad(dat)|² * (k \times d/dt(grad(dat)))
+  !@      grad(dat)/|grad(dat)|^2 * (k \times d/dt(grad(dat)))
   !@ 
   !@ In the nomenclature of Lapeyre, Klein and Hua, this quantity is simply::
   !@
-  !@      d(theta)/dt
+  !@      d(theta)/dt
   !@ 
   !@ Parameters
   !@ ----------

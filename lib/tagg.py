@@ -66,7 +66,7 @@ class tagg(object):
 	def start(self, dti):
 		''' Start of the interval the given date is in '''
 
-		raise NotImplementedError, 'To be overriden in base classes.'
+		raise NotImplementedError('To be overriden in base classes.')
 
 	def end(self, dti):
 		''' End date of the interval the given date is in or on '''
@@ -247,7 +247,7 @@ def get_by_interval(td):
 		if agg_obj.interval == td:
 			return agg_obj
 	
-	raise ValueError, 'No aggregator found for time interval `%s`' % str(td)
+	raise ValueError('No aggregator found for time interval `%s`' % str(td))
 
 #__all__.append('get_by_interval')
 

@@ -2,7 +2,7 @@
 ! 		DynLib -- contour tracking and RWB detection
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
-! Module adopted from code by Gwendal Rivière
+! Module adopted from code by Gwendal Riviere
 ! Module maintained by <?>
 module detect_rwb_contour
   use kind
@@ -25,11 +25,11 @@ contains
         integer(kind=ni),INTENT(IN) :: NX,NY,ncon
 ! ndim is the highest number of points that can define a contour
         integer(kind=ni),PARAMETER :: ndim=8000
-! lonmin is the first value of longitude (generally 180°W)
-! latmin is the first value of latitude (either 90°S or 0°)
+! lonmin is the first value of longitude (generally 180 degW)
+! latmin is the first value of latitude (either 90 degS or 0 deg)
 ! incr is the grid step
         real(kind=nr),INTENT(IN) :: LONMIN,LATMIN,INCR
-! lon is the table containing all longitudes (from 180°W to 180°E)
+! lon is the table containing all longitudes (from 180 degW to 180 degE)
         real(kind=nr),DIMENSION(NX),INTENT(IN) :: lon
 ! lat is the table containing all latitudes
         real(kind=nr),DIMENSION(NY),INTENT(IN) :: lat

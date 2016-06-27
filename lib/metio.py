@@ -7,6 +7,8 @@ Provides convenient access to met-data stored in numpy, netCDF and Matlab format
 and provides functions to save meteorological fields and lines in netCDF files.
 '''
 
+from __future__ import absolute_import, unicode_literals, print_function
+
 import os
 import sys
 import glob
@@ -16,17 +18,15 @@ import netCDF4 as nc
 import scipy.io.matlab as mat
 import pytz
 import calendar
-
-from settings import conf
-import utils
-from gridlib import grid_by_nc, grid_by_static
-
 from datetime import datetime as dt, timedelta as td
 from dateutil.relativedelta import relativedelta as rtd
-import tagg
 
-import dynfor
-dynlib_version = (''.join(dynfor.consts.version)).strip()
+from .settings import conf
+from . import utils
+from .gridlib import grid_by_nc, grid_by_static
+from . import tagg
+from . import dynfor
+dynlib_version = ''.join([x.decode('ascii') for x in dynfor.consts.version]).strip()
 
 
 
@@ -90,21 +90,21 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 
 	def handle_npy(filepath):
 		if not mode == 'r':
-			print 'WARNING: Can only open npy files in read mode!'
+			print('WARNING: Can only open npy files in read mode!')
 		if q:
 			dat = np.load(filepath, mmap_mode='r')
 			dat = dat[cut]
 		else:
 			dat = None
 		if not quiet:
-			print 'Found '+filepath
+			print('Found '+filepath)
 		f = None
 
 		return f, dat
 
 	def handle_npz(filepath):
 		if not mode == 'r' and not quiet:
-			print 'WARNING: Can only open npz files in read mode!'
+			print('WARNING: Can only open npz files in read mode!')
 		f = np.load(filepath)
 		if q:
 			if q not in f.files:
@@ -113,13 +113,13 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 		else:
 			dat = None
 		if not quiet:
-			print 'Found '+filepath
+			print('Found '+filepath)
 
 		return f, dat
 	
 	def handle_mat(filepath):
 		if not mode == 'r' and not quiet:
-			print 'WARNING: Can only open mat files in read mode!'
+			print('WARNING: Can only open mat files in read mode!')
 		f = mat.loadmat(filepath)
 		if q:
 			if q not in f:
@@ -128,7 +128,7 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 		else:
 			dat = None
 		if not quiet:
-			print 'Found '+filepath
+			print('Found '+filepath)
 
 		return f, dat
 
@@ -157,23 +157,23 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 			static = None
 
 		if not quiet:
-			print 'Found '+filepath
+			print('Found '+filepath)
 
 		return f, dat, static
 
 	if not type(cut) == slice:
-		raise ValueError, 'cut must be a 1-dimensional slice object' 
+		raise ValueError('cut must be a 1-dimensional slice object')
 	
 	tried = []
 	for path in conf.datapath:
 		static = None
 
 		if verbose:
-			print 'Trying: '+path+'/'+filename+'.*'
+			print('Trying: '+path+'/'+filename+'.*')
 
-                if os.path.exists(path+'/'+filename+'.npy'):
+		if os.path.exists(path+'/'+filename+'.npy'):
 			f, dat = handle_npy(path+'/'+filename+'.npy')
-                elif os.path.exists(path+'/'+filename) and NO_ENDING == 'npy':
+		elif os.path.exists(path+'/'+filename) and NO_ENDING == 'npy':
 			f, dat = handle_npy(path+'/'+filename)
 
 		elif os.path.exists(path+'/'+filename+'.npz'):
@@ -211,7 +211,8 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 		else:
 			return f, static
 	
-	raise ValueError, '%s.* not found in any data location. \nTried the following (in order):\n\t%s' % (filename, '\n\t'.join(tried))
+	raise ValueError('%s.* not found in any data location. \n'
+			'Tried the following (in order):\n\t%s' % (filename, '\n\t'.join(tried)) )
 
 
 def metdiscover(filename):
@@ -268,25 +269,25 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 
 	# TODO: Why check against gridsize? Or at least: Why not allowing gridsize to be unset?
 	if not plev == 'sfc' and (not len(s) == 4 or (conf.gridsize and not s[2:] == conf.gridsize)):
-		raise NotImplementedError, ('dat does not seem to be a context-conform (t,z,y,x)-array.'
+		raise NotImplementedError('dat does not seem to be a context-conform (t,z,y,x)-array.'
 				'\n Expected 4D with horizontal grid of dimension %s'
 				'\n Got shape: %s' % (conf.gridsize, s) )
 	elif plev == 'sfc' and (not len(s) == 3 or (conf.gridsize and not s[1:] == conf.gridsize)):
-		raise NotImplementedError, ('dat does not seem to be a context-conform surface (t,y,x)-array.'
+		raise NotImplementedError('dat does not seem to be a context-conform surface (t,y,x)-array.'
 				'\n Expected 3D with horizontal grid of dimension %s'
 				'\n Got shape: %s' % (conf.gridsize, s) )
 	
 	if not conf.oformat == 'nc':
-		raise NotImplementedError, 'Currently only saving in netCDF implemented in metsave.'
+		raise NotImplementedError('Currently only saving in netCDF implemented in metsave.')
 
 	if not s[0] == len(static.t):
-		raise ValueError, 'Time dimension in data (%s) and static (%s) are not equally long.' % (s[0], len(static.t))
+		raise ValueError('Time dimension in data (%s) and static (%s) are not equally long.' % (s[0], len(static.t)))
 	if not plev == 'sfc' and not s[1] == len(static.z):
-		raise ValueError, 'z-dimension in data (%s) and static (%s) are not equally long.' % (s[1], len(static.z))
+		raise ValueError('z-dimension in data (%s) and static (%s) are not equally long.' % (s[1], len(static.z)))
 	if not s[-2] == len(static.y[:,0]):
-		raise ValueError, 'y-dimension in data (%s) and static (%s) are not equally long.' % (s[-2], len(static.y[:,0]))
+		raise ValueError('y-dimension in data (%s) and static (%s) are not equally long.' % (s[-2], len(static.y[:,0])))
 	if not s[-1] == len(static.x[0,:]):
-		raise ValueError, 'x-dimension in data (%s) and static (%s) are not equally long.' % (s[-1], len(static.x[0,:]))
+		raise ValueError('x-dimension in data (%s) and static (%s) are not equally long.' % (s[-1], len(static.x[0,:])))
 
 	now = dt.now(pytz.timezone(conf.local_timezone))
 	if not agg:
@@ -314,7 +315,7 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 				'PVU': ('potential_vorticity', 'up'),
 		}
 		if not static.z_unit in known_vertical_level_units:
-			raise ValueError, 'Unknown vertical level type unit: `%s`' % static.z_unit
+			raise ValueError('Unknown vertical level type unit: `%s`' % static.z_unit)
 		z_name, z_positive = known_vertical_level_units[static.z_unit]
 
 	ot = of.createVariable('time', 'i', ('time',))
@@ -387,11 +388,11 @@ def metsave_lines(dat, datoff, static, plev, q, qoff, additional_axes=[]):
 	    data values. All additional keys will be taken over as attributes for the axis variable.
 	'''
 	if not len(dat.shape) == (3+len(additional_axes)) and len(datoff.shape) == (2+len(additional_axes)):
-		raise RuntimeError, 'dat and/or datoff have the wrong number of dimensions'
+		raise RuntimeError('dat and/or datoff have the wrong number of dimensions')
 	if not dat.shape[:-2] == datoff.shape[:-1]:
-		raise RuntimeError, 'dat and datoff have different axis lengths'
+		raise RuntimeError('dat and datoff have different axis lengths')
 	if not dat.shape[-1] == 3:
-		raise RuntimeError, 'dat does not have size 3 in the last dimension'
+		raise RuntimeError('dat does not have size 3 in the last dimension')
 
 	now = dt.now(pytz.timezone('Europe/Oslo'))
 	of = nc.Dataset(conf.opath+'/'+(conf.file_std % {'time': dts2str(static.t_parsed), 
@@ -421,7 +422,7 @@ def metsave_lines(dat, datoff, static, plev, q, qoff, additional_axes=[]):
 	add_dimnames = ()
 	for dim in additional_axes:
 		if 'name' not in dim or 'data' not in dim:
-			raise ValueError, 'Additional dimensions must have a name and data'
+			raise ValueError('Additional dimensions must have a name and data')
 		of.createDimension(dim['name'], len(dim['data']))
 		odim = of.createVariable(dim['name'], 'f', (dim['name'], ))
 		odim[:] = dim['data']
@@ -493,7 +494,7 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 
 	if not type(dat) == dict:
 		if not q or not plev:
-			raise ValueError, 'Variable name and vertical level required, if dat is not a dict!'
+			raise ValueError('Variable name and vertical level required, if dat is not a dict!')
 		datdict = {(plev, q): dat}
 	else:
 		datdict = dat
@@ -507,12 +508,12 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 	filename = conf.file_timeless % {'time': dts2str(static.t_parsed), 'name': name}
 	try:
 		f = metopen(filename, no_static=True, mode='a')
-		print 'Saving to existing %s' % filename
+		print('Saving to existing %s' % filename)
 		new = False
 
 	except ValueError: 
 		f = nc.Dataset(conf.opath+'/'+filename+'.nc', 'w', format='NETCDF4')
-		print 'Saving to %s/%s.nc' % (conf.opath, filename)
+		print('Saving to %s/%s.nc' % (conf.opath, filename))
 		new = True
 	
 	# Consistency checks
@@ -521,29 +522,31 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 			exist = getattr(f, att, None)
 			if exist:
 				if not exist == global_atts[att]:
-					raise ValueError, 'Existing file found with incompatible attributes: `%s` (existing: %s, given: %s)' % (att, exist, global_atts[att])
+					raise ValueError('Existing file found with incompatible attributes: '
+							'`%s` (existing: %s, given: %s)' % (
+								att, exist, global_atts[att]))
 			else:
 				setattr(f, att, global_atts[att])
 
 		if timeseries and not 'time' in f.dimensions:
-			raise ValueError, 'Time series given, but no time dimension present in existing file.'
+			raise ValueError('Time series given, but no time dimension present in existing file.')
 		
 		if ids and 'id' in f.variables:
 			for id1, id2 in zip(f.variables['id'], ids):
 				if not id1 == id2:
-					raise ValueError, 'Existing file found with incompatible ID dimension (existing: %s, given: %s)' % (f.variables['id'][::], ids)
+					raise ValueError('Existing file found with incompatible ID dimension (existing: %s, given: %s)' % (f.variables['id'][::], ids))
 			data_dimensions = ('id', )
 		elif ids and not 'id' in f.variables:
-			raise ValueError, 'Existing file does not contain an ID dimension'
+			raise ValueError('Existing file does not contain an ID dimension')
 		elif not ids and 'id' in f.variables:
-			raise ValueError, 'Existing file contains ID dimension, but no ids given!'
+			raise ValueError('Existing file contains ID dimension, but no ids given!')
 		else:
 			data_dimensions = ()
 
 		if not static.y_name in f.variables:
-			raise ValueError, 'Dimension `%s` not found in existing file.' % static.y_name
+			raise ValueError('Dimension `%s` not found in existing file.' % static.y_name)
 		if not static.x_name in f.variables:
-			raise ValueError, 'Dimension `%s` not found in existing file.' % static.x_name
+			raise ValueError('Dimension `%s` not found in existing file.' % static.x_name)
 
 		data_dimensions += (static.y_name, static.x_name, )
 	
@@ -587,14 +590,14 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 		# Finding 
 		if plev:
 			if plev in f.groups and q_ in f.groups[plev].variables:
-				print 'Warning: variable /%s/%s already present, skipping!' % (plev, q_)
+				print('Warning: variable /%s/%s already present, skipping!' % (plev, q_))
 				continue
 	
 			ncvarname = '/%s/%s' % (plev, q_)
 
 		else:
 			if q_ in f.variables:
-				print 'Warning: variable %s already present, skipping!' % q_
+				print('Warning: variable %s already present, skipping!' % q_)
 				continue
 
 			ncvarname = q_
@@ -623,8 +626,9 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 		
 		s_ = dat[plev,q_].shape
 		if not len(s_) == len(data_dimensions):
-			raise ValueError, 'Data for (%s,%s) does not have the required number of dimensions. Expected: %d, got: %d.' % (
-					plev, q_, len(data_dimensions), len(s_))
+			raise ValueError('Data for (%s,%s) does not have the required number of dimensions. '
+					'Expected: %d, got: %d.' % (
+					plev, q_, len(data_dimensions), len(s_)) )
 		data_dimensions_ = ()
 		squeezeme = False
 		for dimname, dim in zip(data_dimensions, s_):
@@ -662,14 +666,14 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 		# Finding 
 		if plev:
 			if plev in f.groups and q in f.groups[plev].variables:
-				print 'Warning: variable /%s/%s already present, skipping!' % (plev, q)
+				print('Warning: variable /%s/%s already present, skipping!' % (plev, q))
 				continue
 	
 			ncvarname = '/%s/%s' % (plev, q)
 
 		else:
 			if q in f.variables:
-				print 'Warning: variable %s already present, skipping!' % q
+				print('Warning: variable %s already present, skipping!' % q)
 				continue
 
 			ncvarname = q
@@ -710,7 +714,7 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
 	'''
 	
 	if not conf.file_static:
-		raise ValueError, 'Static file must be configured for get_static() to work!'
+		raise ValueError('Static file must be configured for get_static() to work!')
 
 	fo, oro = metopen(conf.file_static, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, quiet=quiet, no_static=True)
 	static = grid_by_static(fo)
@@ -768,7 +772,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	elif conf.times: 
 		dt0 = conf.times[0]
 	else:
-		raise ValueError, 'Could not determine start date of the data set, either conf.years or conf.times must be provided.'
+		raise ValueError('Could not determine start date of the data set, either conf.years or conf.times must be provided.')
 
 	dts = conf.timestep.total_seconds()
 
@@ -784,9 +788,9 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	# Checking max length
 	if tsmax-tsmin > MAX_TLEN:
 		if force:
-			print 'Warning: you requested %d time steps.' % (tsmax-tsmin)
+			print('Warning: you requested %d time steps.' % (tsmax-tsmin))
 		else:
-			raise ValueError, 'Cowardly refusing to fetch %d > %d time steps.\nUse force=True to override.' % (tsmax-tsmin, MAX_TLEN)
+			raise ValueError('Cowardly refusing to fetch %d > %d time steps.\nUse force=True to override.' % (tsmax-tsmin, MAX_TLEN))
 	
 	# Remove no_static if present
 	kwargs.pop('no_static', None)
@@ -845,7 +849,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 				elif year == years[0]:
 					if not static.z_name == static_.z_name or \
 							not static.z_unit == static_.z_unit:
-						print 'WARNING: concatenating vertical levels of different types!'
+						print('WARNING: concatenating vertical levels of different types!')
 						static.z_unit = u'MIXED!'
 					static.z = np.concatenate((static.z, static_.z))
 				i += 1
@@ -914,7 +918,7 @@ def get_aggregate(q, dates, agg, plevs=None, tavg=False, force=False, **kwargs):
 	elif conf.times: 
 		dt0 = conf.times[0]
 	else:
-		raise ValueError, 'Could not determine start date of the data set, either conf.years or conf.times must be provided.'
+		raise ValueError('Could not determine start date of the data set, either conf.years or conf.times must be provided.')
 	
 	# Convert dates to time indexes
 	if type(dates) not in ([np.ndarray, list, tuple, set]):
@@ -933,9 +937,9 @@ def get_aggregate(q, dates, agg, plevs=None, tavg=False, force=False, **kwargs):
 	# Checking max length
 	if tsmax-tsmin > MAX_TLEN:
 		if force:
-			print 'Warning: you requested %d time steps.' % (tsmax-tsmin)
+			print('Warning: you requested %d time steps.' % (tsmax-tsmin))
 		else:
-			raise ValueError, 'Cowardly refusing to fetch %d > %d time steps.\nUse force=True to override.' % (tsmax-tsmin, MAX_TLEN)
+			raise ValueError('Cowardly refusing to fetch %d > %d time steps.\nUse force=True to override.' % (tsmax-tsmin, MAX_TLEN))
 	
 	# Find the position of the year information from a test file name
 	MARKER = '__DYNLIB_T_MARKER__'
@@ -974,7 +978,7 @@ def get_aggregate(q, dates, agg, plevs=None, tavg=False, force=False, **kwargs):
 	# Check if every requested year is covered
 	for yr in years:
 		if yr not in avail_years:
-			raise ValueError, 'Could not find data for year %d' % yr
+			raise ValueError('Could not find data for year %d' % yr)
 	
 	# Seems like we can finally start reading some data
 	
@@ -1123,7 +1127,7 @@ def dts2str(dates, agg=None):
 		so that functionality is needed when handling that reanalysis data set. '''
 
 		if repr_interval < 0:
-			raise ValueError, 'Interval must be a positive integer or zero.'
+			raise ValueError('Interval must be a positive integer or zero.')
 		
 		datestr = '%04d' % date.year
 		if repr_interval >= 1:
@@ -1167,7 +1171,7 @@ def dts2str(dates, agg=None):
 		timestep = agg.interval
 	elif conf.timestep:
 		if type(conf.timestep) == str: 
-			raise NotImplementedError
+			raise NotImplementedError()
 		else:
 			timestep = conf.timestep
 			agg = tagg.get_by_interval(conf.timestep)
@@ -1239,7 +1243,7 @@ def str2dts(periodstr, agg=None, epoch=None):
 		epoch = conf.epoch
 
 	if periodstr.find('..') >= 0:
-		raise ValueError, 'Cannot create list of dates for a period string representing a non-contiguous set of dates'
+		raise ValueError('Cannot create list of dates for a period string representing a non-contiguous set of dates')
 
 	if periodstr.find('-') >= 0:
 		sep = periodstr.find('-')
@@ -1257,7 +1261,7 @@ def str2dts(periodstr, agg=None, epoch=None):
 		else:
 			break
 	if not fstp:
-		raise ValueError, 'The string `%s` could not be parsed into a time.' % (fst)
+		raise ValueError('The string `%s` could not be parsed into a time.' % (fst))
 	
 	agg = tagg.get_by_interval(agg)
 	pagg = getattr(tagg, pagg)

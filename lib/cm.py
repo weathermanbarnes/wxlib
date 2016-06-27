@@ -11,6 +11,8 @@ color maps were originally devised for iveret.gfi.uib.no.
 The standard matplotlib color maps are also available through this module.
 '''
 
+from __future__ import absolute_import, unicode_literals
+
 
 import matplotlib as mpl
 

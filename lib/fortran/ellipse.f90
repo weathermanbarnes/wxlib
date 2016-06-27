@@ -365,7 +365,7 @@ contains
   !@
   !@ Reference: Van der Vorst, H. A. (1992). "Bi-CGSTAB: A Fast and Smoothly Converging Variant 
   !@ of Bi-CG for the Solution of Nonsymmetric Linear Systems". SIAM Journal on Scientific and 
-  !@ Statistical Computing 13: 631–644.
+  !@ Statistical Computing 13: 631-644.
   !@ 
   !@ Parameters
   !@ ----------
