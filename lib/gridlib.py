@@ -360,7 +360,8 @@ class grid_by_nc(grid):
 			
 			# Try to parse the time axis into datetime objects
 			t = self.f.variables[self.t_name] 
-			self.t_parsed = nc.num2date(t[:], units=t.units, calendar=getattr(t, 'calendar', 'standard'))
+			if hasattr(t, 'units'):
+				self.t_parsed = nc.num2date(t[:], units=t.units, calendar=getattr(t, 'calendar', 'standard'))
 
 		return
 
