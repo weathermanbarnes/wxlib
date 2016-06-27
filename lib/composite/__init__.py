@@ -33,23 +33,43 @@ def _add(name, plev, q, dat, mean, hist):
 	return
 
 
-def _get_testdat(time, test_qs, readhooks):
-	''' Retrieve the data used in deciders for testing '''
-
+def _get_dat(time, test_qs, readhooks, no_static=False):
+	''' Retrieve the data used in deciders for testing and for the actual composites '''
+	
+	static = None
 	testdat = {}
+	left2request = {}
 	for test_plev, test_q in test_qs:
 		if not test_q:
 			continue
 	
 		if test_q in readhooks:
-			f, testdat[test_plev, test_q] = readhooks[test_q](time, test_plev, test_q)
+			if test_q in left2request:
+				left2request[test_q].append(test_plev)
+			else:
+				left2request[test_q] = [test_plev, ]
 		else:
-			f, testdat[test_plev, test_q] = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[test_q]}, test_q, no_static=True)
+			if not no_static and not static:
+				f, testdat[test_plev, test_q], static = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[test_q]}, test_q)
+			else:
+				f, testdat[test_plev, test_q] = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[test_q]}, test_q, no_static=True)
 
-		if test_q in LINES:
-			testdat[test_plev, test_q] = utils.mask_lines(testdat[test_plev, test_q], f.variables[LINES[test_q]][::])
+			if test_q in LINES:
+				testdat[test_plev, test_q] = utils.mask_lines(testdat[test_plev, test_q], f.variables[LINES[test_q]][::])
 	
-	return testdat
+	# Request all vertical levels of one variable at once for potential more effective read
+	for test_q in left2request:
+		if not no_static and not static:
+			f, dat_, static = readhooks[test_q](time, left2request[test_q], test_q, static=True)
+		else:
+			f, dat_ = readhooks[test_q](time, left2request[test_q], test_q)
+		for pidx, test_plev in zip(range(len(left2request[test_q])), left2request[test_q]):
+			testdat[test_plev,test_q] = dat_[:,pidx,:,:]
+
+	if no_static:
+		return testdat
+	else:
+		return testdat, static
 
 
 def build(qs, tests, times=None, s=None, readhooks={}):
@@ -119,41 +139,21 @@ def build(qs, tests, times=None, s=None, readhooks={}):
 	
 	test_prev = {}
 	test_cur  = {}
-	test_next = _get_testdat(times[0], test_qs, readhooks)
+	test_next = _get_dat(times[0], test_qs, readhooks, no_static=True)
 	static = None
 	for tidx,time in zip(range(len(times)), times):
 		test_prev = test_cur
 		test_cur  = test_next
 		if not time == times[-1]:
-			test_next = _get_testdat(times[tidx+1], test_qs, readhooks)
+			test_next = _get_dat(times[tidx+1], test_qs, readhooks)
 		else: 
 			test_next = {}
 	
-		dat = {}
-		plev, q = qs[0]
-		if q in readhooks:
-			f, dat[plev,q], static_ = readhooks[q](time, plev, q, static=True)
-		else:
-			f, dat[plev,q], static_ = metopen(conf.file_std % {'time': time, 'plev': plev, 'qf': conf.qf[q]}, q)
+		dat, static_ = _get_dat(time, qs, readhooks)
 		# Inject metadata if missing
 		if not hasattr(static_, 't_parsed'):
 			static_.t_parsed = metio.str2dts(time)
 
-		for plev, q in qs[1:]:
-			if (plev,q) in dat: 
-				continue
-			if (plev,q) in test_cur:
-				dat[plev,q] = test_cur[plev,q]
-				continue
-			
-			if q in readhooks:
-				f, dat[plev,q] = readhooks[q](time, plev, q)
-			else:
-				f, dat[plev,q] = metopen(conf.file_std % {'time': time, 'plev': plev, 'qf': conf.qf[q]}, q, no_static=True)
-
-			if q in LINES:
-				dat[plev,q] = utils.mask_lines(dat[plev,q], f[LINES[q]][::])
-		
 		# Construct static for saving the results, and keep/prepare static_ for the current interval
 		if not static:
 			static = static_

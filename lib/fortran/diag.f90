@@ -50,7 +50,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`div`, :meth:`def_shear`, :meth:`def_stretch`
+  !@ :meth:`vor_curv`, :meth:`div`, :meth:`def_shear`, :meth:`def_stretch`
   subroutine vor(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -63,6 +63,60 @@ contains
     call ddx(dxv,nx,ny,nz,v,dx,dy)
     call ddy(dyu,nx,ny,nz,u,dx,dy)
     res = dxv - dyu
+  end subroutine
+  !
+  !@ Calculate curvature vorticity::
+  !@
+  !@     vor_c = dv/ds
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The u-wind velocity field.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The v-wind velocity field.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated vorticity.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`def_stretch_nat`, :meth:`vor`, :meth:`div`, :meth:`def_shear`, :meth:`def_stretch`
+  subroutine vor_curv(res,nx,ny,nz,u,v,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res, v
+    !f2py depend(nx,ny) dx, dy
+    !
+    real(kind=nr) :: ux(nz,ny,nx), uy(nz,ny,nx), vx(nz,ny,nx), vy(nz,ny,nx), &
+       &             ff2(nz,ny,nx)
+    ! -----------------------------------------------------------------
+    !
+    call grad(ux,uy, nx,ny,nz, u, dx,dy)
+    call grad(vx,vy, nx,ny,nz, v, dx,dy)
+    !
+    ff2 = u(:,:,:)**2_ni + v(:,:,:)**2_ni
+    res = (u*u*vx + u*v*(vy - ux) - v*v*uy) / ff2
   end subroutine
   !
   !@ Calculate divergence::
@@ -248,7 +302,7 @@ contains
   !@
   !@ See Also
   !@ --------
-  !@ :meth:`def_shear`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
+  !@ :meth:`def_shear_nat`, :meth:`def_stretch`,  :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
   subroutine def_stretch_nat(res,nx,ny,nz,u,v,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
@@ -265,6 +319,60 @@ contains
     !
     ff2 = u(:,:,:)**2_ni + v(:,:,:)**2_ni
     res = ( (u*u - v*v)*(ux - vy) + 2.0_nr*u*v*(vx + uy) ) / ff2
+  end subroutine
+  !
+  !@ Calculate shearing deformation in natural coordinates::
+  !@
+  !@    def_shear =  du/dn + dv/ds
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The u-wind velocity field.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The v-wind velocity field.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Calculated shearing deformation.
+  !@
+  !@ See Also
+  !@ --------
+  !@ :meth:`vor_curv`, :meth:`def_stretch_nat`, :meth:`def_shear`, :meth:`def_total`, :meth:`def_angle`, :meth:`vor`, :meth:`div`
+  subroutine def_shear_nat(res,nx,ny,nz,u,v,dx,dy)
+    real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res, v
+    !f2py depend(nx,ny) dx, dy
+    !
+    real(kind=nr) :: ux(nz,ny,nx), uy(nz,ny,nx), vx(nz,ny,nx), vy(nz,ny,nx), &
+       &             ff2(nz,ny,nx)
+    ! -----------------------------------------------------------------
+    !
+    call grad(ux,uy, nx,ny,nz, u, dx,dy)
+    call grad(vx,vy, nx,ny,nz, v, dx,dy)
+    !
+    ff2 = u(:,:,:)**2_ni + v(:,:,:)**2_ni
+    res = ( (u*u - v*v)*(uy + vy) + 2.0_nr*u*v*(vy - ux) ) / ff2
   end subroutine
   !
   !@ Calculate total deformation
@@ -1126,8 +1234,8 @@ contains
   !
   !@ Calculate the frontogenesis function
   !@
-  !@ Calculates both the streching and stirring rates of gradients in a given field.
-  !@ The stretching rate is defined as::
+  !@ Calculates both the streching and stirring rates of horizontal gradients in a 
+  !@ given field. The stretching rate is defined as::
   !@
   !@      1/|grad(dat)| * d/dt(|grad(dat)|)
   !@
@@ -1148,9 +1256,9 @@ contains
   !@ Parameters
   !@ ----------
   !@
-  !@ u : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     U-wind velocity.
-  !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     V-wind velocity.
   !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Input field for the isolines.
@@ -1199,6 +1307,103 @@ contains
     !
     resstretch = -0.5_nr * (divergence - totdef*cos(2_nr*bet))
     resstir = 0.5_nr * (vorticity + totdef*sin(2_nr*bet))
+  end subroutine
+  !
+  !@ Calculate terms in the frontogenesis function
+  !@
+  !@ Calculates the effect of different processes affecting the horizontal gradient of a 
+  !@ given field. 
+  !@  
+  !@ 1. Divergence 
+  !@ 2. Horizontal deformation
+  !@ 3. Tilting/ vertical deformation
+  !@ 4. Differential heating
+  !@
+  !@ The terms (1) and (2) relate to the divergence and deformation terms calculated in the 
+  !@ subroutine :meth:`frontogenesis`.
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ w : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ dat : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Input field for the isolines.
+  !@ heat : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Lagrangian tendency of the input field, for example the diabatic heating rate 
+  !@     if dat is potential temperature.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@ dz : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     The double grid spacing in z-direction to be directly for centered differences.
+  !@     ``dz(t,k,j,i)`` is expected to contain the z-distance between ``(t,k+1,j,i)`` and ``(t,k-1,j,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ 4-tuple of np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Contributions from the four terms in the order given above.
+  subroutine frontogenesis_contributors(tdiv,tdef,ttilt,theat, nx,ny,nz,nt, u,v,w,dat,heat, dx,dy,dz)
+    real(kind=nr), intent(in)  :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), w(nt,nz,ny,nx), &
+                     &            dat(nt,nz,ny,nx), heat(nt,nz,ny,nx),  &
+                     &            dx(ny,nx), dy(ny,nx), dz(nt,nz,ny,nx)
+    real(kind=nr), intent(out) :: tdiv(nt,nz,ny,nx), tdef(nt,nz,ny,nx), ttilt(nt,nz,ny,nx), theat(nt,nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz,nt
+    !f2py depend(nx,ny,nz,nt) v,w,dat,heat, dz
+    !f2py depend(nx,ny) dx, dy
+    !
+    real(kind=nr) :: datx(nt,nz,ny,nx), daty(nt,nz,ny,nx), datz(nt,nz,ny,nx), &
+         &           absgrad(nt,nz,ny,nx), div(nt,nz,ny,nx), &
+         &           def_str(nt,nz,ny,nx), def_she(nt,nz,ny,nx), &
+         &           ux(nt,nz,ny,nx), uy(nt,nz,ny,nx), &
+         &           vx(nt,nz,ny,nx), vy(nt,nz,ny,nx), &
+         &           wx(nt,nz,ny,nx), wy(nt,nz,ny,nx), &
+         &           heatx(nt,nz,ny,nx), heaty(nt,nz,ny,nx)
+    integer(kind=ni) :: n
+    ! -----------------------------------------------------------------
+    !
+    ! Used in all terms
+    call grad_3d(datx,daty,datz, nx,ny,nz,nt, dat, dx,dy,dz)
+    absgrad = sqrt(datx**2_ni + daty**2_ni)
+    !
+    do n = 1_ni,nt
+       ! For horizontal kinematic terms (1) and (2)
+       call grad(ux(n,:,:,:),uy(n,:,:,:), nx,ny,nz, u(n,:,:,:), dx,dy)
+       call grad(vx(n,:,:,:),vy(n,:,:,:), nx,ny,nz, v(n,:,:,:), dx,dy)
+       !
+       ! Vertical kinematic term (3) 
+       call grad(wx(n,:,:,:),wy(n,:,:,:), nx,ny,nz, w(n,:,:,:), dx,dy)
+       !
+       ! Diabatic effects (4)
+       call grad(heatx(n,:,:,:),heaty(n,:,:,:), nx,ny,nz, heat(n,:,:,:), dx,dy)
+    end do
+    !
+    div = ux + vy
+    def_str = ux - vy
+    def_she = vx + uy
+    !
+    tdiv  = -0.5_nr*absgrad * div
+    tdef  = -1.0_nr/absgrad * (0.5_nr*def_str*(datx**2_ni - daty**2_ni) + def_she*datx*daty)
+    ttilt = -1.0_nr/absgrad * (datx*datz*wx + daty*datz*wy)
+    theat =  1.0_nr/absgrad * (datx*heatx + daty*heaty)
+    !
   end subroutine
   !
   !@ Calculate the Okubo-Weiss parameter
@@ -1259,7 +1464,7 @@ contains
   !@ z : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Geopotential on a pressure surface or equivalent potentials on other
   !@     surfaces.
-  !@ lat : np.ndarray with shape (ny,nx) and dtype float64
+  !@ lat : np.ndarray with shape (ny) and dtype float64
   !@     Latitude of the grid point.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.

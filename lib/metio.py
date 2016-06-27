@@ -195,7 +195,7 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 			tried.append(path)
 			continue
 		
-		if q and not no_dtype_conversion:
+		if q and not no_dtype_conversion and not dat.dtype == 'f8':
 			dat = dat.astype('f8')
 
 		if not no_static:

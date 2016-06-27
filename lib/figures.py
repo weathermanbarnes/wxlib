@@ -25,6 +25,7 @@ import scipy.interpolate as intp
 
 import matplotlib.pyplot as plt
 import matplotlib.colors
+from matplotlib.collections import LineCollection
 import mpl_toolkits.basemap
 basemap_version = mpl_toolkits.basemap.__version__
 
@@ -669,6 +670,59 @@ def map_overlay_lines(lines, loff, static, **kwargs):
 		return
 
 	return overlay
+
+
+def map_overlay_clines(lines, cdat, loff, static, **kwargs):
+	''' Overlay colorful lines onto a map
+
+	In comparison with ``map_overlay_lines``, this function takes an additional
+	cdat argument providing the data basis for coloring the lines using a color map.
+	
+	Parameters
+	----------
+	lines : np.ndarray with dimensions (pointindex,infotype)
+		Line position array
+	cdat : np.ndarray with dimensions (pointindex)
+	loff : np.ndarray with dimension (lineindex)
+		Line offset array, a list of starting point indexes
+	static : gridlib.grid
+		Meta information about the data array, like the grid definition
+	
+	Keyword arguments
+	-----------------
+	plot arguments : all contour
+		For a list of valid arguments refer to :ref:`plot configuration`.
+	
+	Returns
+	-------
+	function
+		Overlay as a callable function
+	'''
+
+	kwargs = __line_prepare_config(kwargs)
+
+	lns = __unflatten_fronts_t(lines, loff, minlength=0)
+
+	norm = plt.Normalize()
+	norm.autoscale(cdat)
+
+	def overlay(m, x, y, lon, lat, zorder, mask=None):
+		for ln in lns:
+			xfr, yfr = m(ln[:,0], ln[:,1])
+
+			points = np.array([xfr, yfr]).T.reshape(-1, 1, 2)
+			segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+			lc = LineCollection(segments, array=cdat, 
+					cmap=kwargs.get('cmap'), norm=norm,
+					linewidth=kwargs.get('linewidth'), alpha=kwargs.get('alpha'),
+			)
+			plt.gca().add_collection(lc)
+
+		return
+
+	return overlay
+
 
 
 def map_overlay_dots(lons, lats, static, **kwargs):  
