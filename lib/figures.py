@@ -420,9 +420,10 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 		spacing = kwargs.pop('cb_tickspacing')
 		shrink = kwargs.pop('cb_shrink')
 		expand = kwargs.pop('cb_expand_fig_fraction')
+		padding = kwargs.pop('cb_expand_pad_fraction', 0.2)
 		
-		pad = expand/5
-		frac = 4*expand/5
+		pad = expand * padding
+		frac = expand * (1-padding)
 
 		cb = plt.colorbar(ticks=kwargs.pop('ticks'), orientation=orient, 
 				shrink=shrink, pad=pad, fraction=frac, spacing=spacing)
