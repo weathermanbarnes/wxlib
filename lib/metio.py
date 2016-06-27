@@ -267,8 +267,13 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	s = dat.shape
 	
 	# TODO: Why check against gridsize? Or at least: Why not allowing gridsize to be unset?
-	if not len(s) == 4 or (conf.gridsize and not s[2:] == conf.gridsize):
-		raise NotImplementedError, 'dat does not seem to be a context-conform (t,z,y,x)-array.'
+	if not len(s) == 4:
+		raise NotImplementedError, ('dat does not seem to be a context-conform (t,z,y,x)-array.'
+				'\n Got shape: %s' % s )
+	elif (conf.gridsize and not s[2:] == conf.gridsize):
+		raise NotImplementedError, ('dat does not seem to be a context-conform (t,z,y,x)-array.'
+				'\n Expected 4D with horizontal grid of dimension %s'
+				'\n Got shape: %s' % (conf.gridsize, s) )
 	
 	if not conf.oformat == 'nc':
 		raise NotImplementedError, 'Currently only saving in netCDF implemented in metsave.'
