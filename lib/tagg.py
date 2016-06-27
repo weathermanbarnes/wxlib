@@ -12,7 +12,7 @@ Currently the following aggregation periods exist:
  * ``cal_weekly``: Weeks following the calendar definition
  * ``7d`` or ``weekly``: 7-day intervals starting from the given epoch date, 
    irrespective of the day of the week
- * ``pendad``: Pentads according to their definition
+ * ``pentad``: Pentads according to their definition
  * ``5d``: 5-day intervals starting from the given epoch date
  * ``3d``: 3-day intervals starting from the given epoch date
  * ``2d``: 2-day intervals starting from the given epoch date

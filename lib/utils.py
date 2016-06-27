@@ -35,7 +35,9 @@ def scale(var, cut=slice(None)):
 	var : nc.NetCDFVariable
 	    The variable to be scaled
 	cut : slice
-	    *Optional*, default ``slice(None)``. Limit the request to a given time slice. 
+	    *Optional*, default ``slice(None)``. Limit the request to a given time slice.
+	    The cut is always applied to the first dimension in the dat, so make sure to
+	    use the keyword only with time-dependent data.
 	    With the default data layout, only relevant data needs to be read when only 
 	    a time slice of the entire data is requested. Hence, using cut to limit your 
 	    data request can make reading the data largely more efficient.
@@ -47,10 +49,11 @@ def scale(var, cut=slice(None)):
 	"""
 	
 	# Apply cut first, for speed
-	if len(var.shape) > 2:
-		dat = var[cut,::]
-	else:
-		dat = var[::]
+	#if len(var.shape) >= 2:
+	#	dat = var[cut,::]
+	#else:
+	#	dat = var[::]
+	dat = var[cut]
 	dat = dat.astype('f8')
 
 	# Mask missing and fill values
@@ -186,12 +189,16 @@ def cal_mfv(hist, bins):
 	np.ndarray with 2 dimensions
 	    Most frequently value for each grid point.
 	'''
+        
+        s = hist[-1,:,:].sum()
+        if s > 0:
+		print 'WARNING: hist[-1,:,:].sum() larger than zero!'
 
 	s = hist.shape[1:]
 	mfv = np.zeros(s)
 	for j in range(s[0]):
 		for i in range(s[1]):
-			bi = hist[:,j,i].argmax()
+			bi = hist[:-1,j,i].argmax()
 			mfv[j,i] = (bins[bi+1]+bins[bi])/2.0
 	
 	return mfv
