@@ -766,9 +766,13 @@ def map_overlay_barbs(u, v, static, **kwargs):
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
 
-		try:
-			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
-		except ValueError:
+		if hasattr(m, 'transform_vector'):
+			if lat[0,0] > lat[-1,0]:
+				ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
+			else:
+				ut,vt, xt,yt = m.transform_vector(u_,v_,lon[0,:],lat[:,0], 30, 20, returnxy=True)
+
+		else:
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
 			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
@@ -806,9 +810,9 @@ def map_overlay_quiver(u, v, static, **kwargs):
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
 
-		try:
+		if hasattr(m, 'transform_vector'):
 			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
-		except ValueError:
+		else:
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
 			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
