@@ -13,7 +13,7 @@ These functions have two main aims:
     for example temperatures are by default plotted in a consistent an meaningful way.
 '''
 
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, unicode_literals, division
 
 import copy
 import re
@@ -830,7 +830,7 @@ def map_overlay_barbs(u, v, static, **kwargs):
 
 		else:
 			interval = kwargs.pop('vector_space_interval', 15)
-			slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
+			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
 			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
 		
 		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5, zorder=3)
@@ -870,7 +870,7 @@ def map_overlay_quiver(u, v, static, **kwargs):
 			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
 		else:
 			interval = kwargs.pop('vector_space_interval', 15)
-			slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
+			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
 			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
 		
 		m.quiver(xt, yt, ut, vt, zorder=3, scale=kwargs.pop('quiver_length', None), scale_units='width')
@@ -918,7 +918,7 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 		else:
 			skipx = defdex.shape[1]/Nvecx
 			skipy = defdey.shape[0]/Nvecy
-			slc = (slice(skipy/2,None,skipy), slice(skipx/2,None,skipx))
+			slc = (slice(skipy//2,None,skipy), slice(skipx//2,None,skipx))
 			ut,vt,xt,yt = defdex[slc],defdey[slc],x[slc],y[slc]
 			qscale=72
 

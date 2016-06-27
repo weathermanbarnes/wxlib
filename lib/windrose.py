@@ -269,7 +269,7 @@ class WindroseAxes(PolarAxes):
 		"""
 
 		bins, nbins, nsector, colors, angles, kwargs = self._init_plot(dir, var, **kwargs)
-	   	half = kwargs.pop('halfplot', False)
+		half = kwargs.pop('halfplot', False)
 
 		#closing lines
 		angles = np.hstack((angles, angles[-1]-2*np.pi/nsector))
@@ -286,7 +286,7 @@ class WindroseAxes(PolarAxes):
 	
 		self._update()
 
-	   	if half:
+		if half:
 			self._halfmask()
 
 
@@ -323,7 +323,7 @@ class WindroseAxes(PolarAxes):
 		"""
 
 		bins, nbins, nsector, colors, angles, kwargs = self._init_plot(dir, var, **kwargs)
-	   	half = kwargs.pop('halfplot', False)
+		half = kwargs.pop('halfplot', False)
 		null = kwargs.pop('facecolor', None)
 		null = kwargs.pop('edgecolor', None)
 		
@@ -379,7 +379,7 @@ class WindroseAxes(PolarAxes):
 		"""
 
 		bins, nbins, nsector, colors, angles, kwargs = self._init_plot(dir, var, **kwargs)
-	   	half = kwargs.pop('halfplot', None)
+		half = kwargs.pop('halfplot', None)
 		null = kwargs.pop('facecolor', None)
 		edgecolor = kwargs.pop('edgecolor', None)
 		if edgecolor is not None:
@@ -407,7 +407,7 @@ class WindroseAxes(PolarAxes):
 	
 		self._update()
 		
-	   	if half:
+		if half:
 			self._halfmask()
 
 
@@ -440,9 +440,8 @@ class WindroseAxes(PolarAxes):
 
 		"""
 
-		bins, nbins, nsector, colors, angles, kwargs = self._init_plot(dir, var,
-																	   **kwargs)
-	   	half = kwargs.pop('halfplot', False)
+		bins, nbins, nsector, colors, angles, kwargs = self._init_plot(dir, var, **kwargs)
+		half = kwargs.pop('halfplot', False)
 		null = kwargs.pop('facecolor', None)
 		edgecolor = kwargs.pop('edgecolor', None)
 		if edgecolor is not None:
@@ -466,7 +465,7 @@ class WindroseAxes(PolarAxes):
 	
 		self._update()
 	
-	   	# Mask half of the plot transparently; avoid double-masking
+		# Mask half of the plot transparently; avoid double-masking
 		if half:
 			self._halfmask()
 
@@ -489,7 +488,7 @@ def histogram(dir, var, bins, nsector, normed=False, blowto=False):
 	"""
 
 	if len(var) != len(dir):
-		raise ValueError, "var and dir must have same length"
+		raise ValueError("var and dir must have same length")
 
 	angle = 360./nsector
 

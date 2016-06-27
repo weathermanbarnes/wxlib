@@ -143,7 +143,7 @@ class met_season(tagg):
 		__doc__ = tagg.start.__doc__
 
 		# First month of a the season for a given month m
-		fst_month = ((dti.month / 3) * 3 - 1) % 12 + 1
+		fst_month = ((dti.month // 3) * 3 - 1) % 12 + 1
 		# Is the beginning of the current season in a previous year?
 		fst_year_offset = -1 if fst_month > dti.month else 0
 		return dt(dti.year+fst_year_offset, fst_month, 1)

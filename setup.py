@@ -12,7 +12,7 @@ from distutils.command.build_py import build_py as _build_py
 
 # Determining dynlib version from git
 version = subprocess.check_output("git describe --tags", shell=True)
-version = version.strip()
+version = version.strip().decode('utf8')
 
 # Are there local uncommitted changes?
 changes = subprocess.check_output("git diff", shell=True)
