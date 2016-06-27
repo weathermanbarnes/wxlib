@@ -513,6 +513,467 @@ contains
     end if
   end subroutine
   !
+  !@ Connect 3D features in a fourth dimension by overlap
+  !@
+  !@ The routine returnes list-like arrays of connections between features, as 
+  !@ well as features which are not connected. In direction of the fourth 
+  !@ dimension, if feature come into being they are "born", if they cease to exist
+  !@ they "die". 
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ mask : np.ndarray with shape (nt,nz,ny,nx) and dtype integer
+  !@     Input data field containing object IDs
+  !@ nn : int
+  !@     Maximum number of features, births, deaths or connections.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z-direction.
+  !@ nt : int
+  !@     Grid size in t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nt-1,nn) and dtype int
+  !@     List of features being born. If the fourth dimension is time: Features appearing in later 
+  !@     time steps but not in earlier ones.
+  !@ np.ndarray with shape (nt-1,nn,2) and dtype int
+  !@     The size of the given area, measured in grid points.
+  !@ np.ndarray with shape (nt-1,nn) and dtype int
+  !@     List of dying features. E.g. features appearing in earlier time steps but not in later ones.
+  subroutine connect_4d_from_3d(birth,life,death, nx,ny,nz,nt, nn, dat)
+    integer(kind=ni), intent(in) :: dat(nt,nz,ny,nx), nx,ny,nz,nt, nn
+    integer(kind=ni), intent(out) :: birth(nt-1_ni,nn), life(nt-1_ni,nn,2_ni), &
+       &                             death(nt-1_ni,nn)
+    !f2py depend(nt,nn) birth, life, death
+    !
+    integer(kind=ni) :: exists(nt,nn), i,j,k, m,n, t,t1, nbirth,ndeath
+    logical :: found, found1
+    ! -----------------------------------------------------------------
+    !
+    exists(:,:) = 0_ni
+    !
+    birth(:,:) = 0_ni
+    life(:,:,:) = 0_ni
+    death(:,:) = 0_ni
+    !
+    ! Find connections between time steps
+    do i = 1_ni,nx
+       do j = 1_ni,ny
+          do k = 1_ni,nz
+             do t = 1_ni,nt
+                ! Record which feature IDs exist
+                if ( dat(t,k,j,i) > 0_ni ) then
+                   found = .false.
+                   do n = 1_ni,nn
+                      if ( exists(t,n) == 0_ni ) then
+                         found = .true.
+                         exists(t,n) = dat(t,k,j,i)
+                         exit
+                      else if ( exists(t,n) == dat(t,k,j,i) ) then
+                         found = .true.
+                         exit
+                      end if
+                   end do
+                   if ( .not. found ) then
+                      write(*,*) 'Found more feature IDs then parameter nn allows.'
+                      stop 1
+                   end if
+                end if
+                !
+                ! Record connection between features
+                if ( t < nt ) then
+                   t1 = t + 1_ni
+                   if ( dat(t,k,j,i) > 0_ni .and. dat(t1,k,j,i) > 0_ni ) then
+                      found = .false.
+                      do m = 1_ni,nn
+                         if ( life(t,m,1_ni) == 0_ni ) then
+                            found = .true.
+                            life(t,m,1_ni) = dat(t,k,j,i)
+                            life(t,m,2_ni) = dat(t1,k,j,i)
+                            exit
+                         else if ( life(t,m,1_ni) == dat(t,k,j,i) .and. life(t,m,2_ni) == dat(t1,k,j,i) ) then
+                            found = .true.
+                            exit
+                         end if
+                      end do
+                      if ( .not. found ) then
+                         write(*,*) 'Found more feature connections then parameter nn allows.'
+                         stop 1
+                      end if
+                   end if
+                end if
+             end do
+          end do
+       end do
+    end do
+    !
+    ! Register what's not connected -> births and deaths
+    found = .false.
+    found1 = .false.
+    do t = 1_ni,nt-1_ni
+       ndeath = 0_ni
+       nbirth = 0_ni
+       !
+       t1 = t + 1_ni
+       do n = 1_ni,nn
+          if ( exists(t,n) == 0_ni .and. exists(t1,n) == 0_ni ) exit
+          !
+          found = .false.
+          found1 = .false.
+          do m = 1_ni,nn
+             if ( life(t,m,1_ni) == 0_ni ) then
+                exit
+             else if ( exists(t,n) > 0_ni .and. life(t,m,1_ni) == exists(t,n) ) then
+                !write(*,*) 'Continuation of', exists(t,n), 'by', life(t,m,2_ni)
+                found = .true.
+             end if
+             if ( exists(t1,n) > 0_ni .and. life(t,m,2_ni) == exists(t1,n) ) then
+                found1 = .true.
+             end if
+          end do
+          !
+          !write(*,*) t, n, exists(t, n), found, found1
+          !
+          if ( exists(t,n) > 0_ni .and. .not. found ) then
+             ndeath = ndeath + 1_ni
+             if ( ndeath > nn ) then
+                write(*,*) 'Found more deaths then parameter nn allows.'
+                stop 1
+             end if
+             death(t,ndeath) = exists(t,n)
+          end if
+          !
+          if ( exists(t1,n) > 0_ni .and. .not. found1 ) then
+             nbirth = nbirth + 1_ni
+             if ( nbirth > nn ) then
+                write(*,*) 'Found more births then parameter nn allows.'
+                stop 1
+             end if
+             birth(t,nbirth) = exists(t1,n)
+          end if
+       end do
+    end do
+    !
+  end subroutine
+  !
+  !@ Label connected areas by mask input field
+  !@
+  !@ For a given mask, all connected areas (taking the 26 surrounding grid cells as neighbours),
+  !@ will be labeled by the same integer identifer number. All grid points not belonging to any 
+  !@ masked area will be labeled zero.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ mask : np.ndarray with shape (nz,ny,nx) and dtype bool
+  !@     Input mask field.
+  !@ gsize : np.ndarray with shape (ny,nx)
+  !@     Size of the grid cells.
+  !@ nn : int
+  !@     Maxmimum number of features returned. Will stop with an error if too small.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (ny,nx) and dtype int
+  !@     Connected areas labeled with a unique integer.
+  !@ np.ndarray with shape (nn) and dtype int
+  !@     The size of the given area, measured in grid points.
+  subroutine label_connected_3d(label,sizes, nx,ny,nz, mask, gsize, nn)
+    logical, intent(in) :: mask(nz,ny,nx)
+    real(kind=nr), intent(in) :: gsize(ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz,nn
+    integer(kind=ni), intent(out) :: label(nz,ny,nx)
+    real(kind=nr), intent(out) :: sizes(nn)
+    !f2py depend(nx,ny,nz) label
+    !f2py depend(nx,ny) gsize
+    !
+    integer(kind=ni) :: i,j,k, cnt
+    ! -----------------------------------------------------------------
+    !
+    cnt = 0_ni
+    sizes(:) = 0_ni
+    label(:,:,:) = 0_ni
+    !
+    do i = 1_ni,nx
+       do j = 1_ni,ny
+          do k = 1_ni,nz
+             ! Found a new "feature"
+             if ( mask(k,j,i) .and. label(k,j,i) == 0_ni ) then
+                cnt = cnt + 1_ni
+                if ( cnt > nn ) then
+                   write(*,*) 'Found more features than allowed by input array:', nn
+                   stop 1
+                end if
+                call label_connected_3d_single(label,sizes(cnt), nx,ny,nz, mask, gsize, cnt, i,j,k)
+             end if
+          end do
+       end do
+    end do
+    !
+  end subroutine
+  !
+  !@ Find points belonging to a masked area and label them, using a breadth-first search 
+  !@ implemented via a stack
+  !@
+  !@ This routine is used internally by :meth:`label_connected_2d` and is not
+  !@ intended to be called directly.
+  subroutine label_connected_3d_single(clabel,csize, nx,ny,nz, mask, gsize, cnt, i,j,k)
+    logical, intent(in) :: mask(nz,ny,nx)
+    real(kind=nr), intent(in) :: gsize(ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz, cnt, i,j,k
+    integer(kind=ni), intent(inout) :: clabel(nz,ny,nx)
+    real(kind=nr), intent(inout) :: csize
+    !f2py depend(nx,ny,nz) clabel
+    !f2py depend(nx,ny) gsize
+    !
+    integer(kind=ni) :: si(nx*ny*nz), sj(nx*ny*nz), sk(nx*ny*nz)
+    integer(kind=ni) :: nstack, ii,jj,kk, ci,cj,ck, ax,px,zx,ay,zy,az,zz
+    ! -----------------------------------------------------------------
+    !
+    ! Initialise stack
+    nstack = 1_ni
+    si(nstack) = i
+    sj(nstack) = j
+    sk(nstack) = k
+    !
+    ! Record starting point
+    clabel(k,j,i) = cnt
+    csize = csize + 1_ni
+    !
+    do while ( nstack > 0_ni )
+       ! Remove current point from stack
+       ii = si(nstack)
+       jj = sj(nstack)
+       kk = sk(nstack)
+       nstack = nstack - 1_ni
+       !
+       ! Set index ranges of points to check in the neighbourhood
+       ax = max(ii-1_ni, 1_ni)
+       zx = min(ii+1_ni, nx)
+       ay = max(jj-1_ni, 1_ni)
+       zy = min(jj+1_ni, ny)
+       az = max(kk-1_ni, 1_ni)
+       zz = min(kk+1_ni, nz)
+       !
+       ! If the domain is periodic, this x index should be taken into account as well
+       if ( ii == 1_ni) then
+          px = nx
+       else if ( ii == nx ) then
+          px = 1_ni
+       else 
+          px = 0_ni
+       end if
+       !
+       ! Check neighbours, record them and put them on stack
+       do ci = ax,zx
+          do cj = ay,zy
+             do ck = az,zz
+                if ( mask(ck,cj,ci) .and. clabel(ck,cj,ci) == 0_ni ) then
+                   nstack = nstack + 1_ni
+                   si(nstack) = ci
+                   sj(nstack) = cj
+                   sk(nstack) = ck
+                   csize = csize + gsize(j,i)
+                   clabel(ck,cj,ci) = cnt
+                end if
+             end do
+          end do
+       end do
+       ! Respect periodic boundaries in x
+       if ( grid_cyclic_ew .and. px > 0_ni ) then
+          do cj = ay,zy
+             do ck = az,zz
+                if ( mask(ck,cj,px) .and. clabel(ck,cj,px) == 0_ni ) then
+                   nstack = nstack + 1_ni
+                   si(nstack) = px
+                   sj(nstack) = cj
+                   sk(nstack) = ck
+                   csize = csize + gsize(j,i)
+                   clabel(ck,cj,px) = cnt
+                end if
+             end do
+          end do
+       end if
+    end do
+    !
+  end subroutine
+  !
+  !@ Label connected areas by mask input field
+  !@
+  !@ For a given mask, all connected areas (taking the 8 surrounding grid cells as neighbours),
+  !@ will be labeled by the same integer identifer number. All grid points not belonging to any 
+  !@ masked area will be labeled zero.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ mask : np.ndarray with shape (ny,nx) and dtype bool
+  !@     Input mask field.
+  !@ nn : int
+  !@     Maxmimum number of features returned. Will stop with an error if too small.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (ny,nx) and dtype int
+  !@     Connected areas labeled with a unique integer.
+  !@ np.ndarray with shape (nn) and dtype int
+  !@     The size of the given area, measured in grid points.
+  subroutine label_connected_2d(label,sizes, nx,ny, mask, nn)
+    logical, intent(in) :: mask(ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nn
+    integer(kind=ni), intent(out) :: label(ny,nx), sizes(nn)
+    !f2py depend(nx,ny) label
+    !
+    integer(kind=ni) :: i,j, cnt
+    ! -----------------------------------------------------------------
+    !
+    cnt = 0_ni
+    sizes(:) = 0_ni
+    label(:,:) = 0_ni
+    !
+    do i = 1_ni,nx
+       do j = 1_ni,ny
+          ! Found a new "feature"
+          if ( mask(j,i) .and. label(j,i) == 0_ni ) then
+             cnt = cnt + 1_ni
+             if ( cnt > nn ) then
+                write(*,*) 'Found more features than allowed by input array:', nn
+                stop 1
+             end if
+             call label_connected_2d_single(label,sizes(cnt), nx,ny, mask, cnt, i,j)
+          end if
+       end do
+    end do
+    !
+  end subroutine
+  !
+  !@ Recursively find points belonging to a masked area and label them
+  !@
+  !@ This routine is used internally by :meth:`label_connected_2d` and is not
+  !@ intended to be called directly.
+  recursive subroutine label_connected_2d_single(label,csize, nx,ny, mask, cnt, i,j)
+    logical, intent(in) :: mask(ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny, cnt, i,j
+    integer(kind=ni), intent(inout) :: label(ny,nx), csize
+    !f2py depend(nx,ny) label
+    ! -----------------------------------------------------------------
+    !
+    ! Record current point
+    label(j,i) = cnt
+    csize = csize + 1_ni
+    !
+    ! Look for neighbours
+    ! -> North
+    if ( j > 1_ni ) then
+       if ( mask(j-1_ni,i) .and. label(j-1_ni,i) == 0_ni ) then
+          call label_connected_2d_single(label,csize, nx,ny, mask, cnt, i,j-1_ni)
+       end if
+    end if
+    ! -> South
+    if ( j < ny ) then
+       if ( mask(j+1_ni,i) .and. label(j+1_ni,i) == 0_ni ) then
+          call label_connected_2d_single(label,csize, nx,ny, mask, cnt, i,j+1_ni)
+       end if
+    end if
+    ! -> West
+    if ( i > 1_ni ) then
+       if ( mask(j,i-1_ni) .and. label(j,i-1_ni) == 0_ni ) then
+          call label_connected_2d_single(label,csize, nx,ny, mask, cnt, i-1_ni,j)
+       end if
+       ! North-West
+       if ( j > 1_ni ) then
+          if ( mask(j-1_ni,i-1_ni) .and. label(j-1_ni,i-1_ni) == 0_ni ) then
+             call label_connected_2d_single(label,csize, nx,ny, mask, cnt, i-1_ni,j-1_ni)
+          end if
+       end if
+       ! South-West
+       if ( j < ny ) then
+          if ( mask(j+1_ni,i-1_ni) .and. label(j+1_ni,i-1_ni) == 0_ni ) then
+             call label_connected_2d_single(label,csize, nx,ny, mask, cnt, i-1_ni,j+1_ni)
+          end if
+       end if
+    end if
+    ! -> East
+    if ( i < nx ) then
+       if ( mask(j,i+1_ni) .and. label(j,i+1_ni) == 0_ni ) then
+          call label_connected_2d_single(label,csize, nx,ny, mask, cnt, i+1_ni,j)
+       end if
+       ! North-East
+       if ( j > 1_ni ) then
+          if ( mask(j-1_ni,i+1_ni) .and. label(j-1_ni,i+1_ni) == 0_ni ) then
+             call label_connected_2d_single(label,csize, nx,ny, mask, cnt, i+1_ni,j-1_ni)
+          end if
+       end if
+       ! South-East
+       if ( j < ny ) then
+          if ( mask(j+1_ni,i+1_ni) .and. label(j+1_ni,i+1_ni) == 0_ni ) then
+             call label_connected_2d_single(label,csize, nx,ny, mask, cnt, i+1_ni,j+1_ni)
+          end if
+       end if
+    end if
+    ! -> Periodic boundary West
+    if ( grid_cyclic_ew .and. i == 1_ni ) then
+       if ( mask(j,nx) .and. label(j,nx) == 0_ni ) then
+          call label_connected_2d_single(label,csize, nx,ny, mask, cnt, nx,j)
+       end if
+       ! North-East
+       if ( j > 1_ni ) then
+          if ( mask(j-1_ni,nx) .and. label(j-1_ni,nx) == 0_ni ) then
+             call label_connected_2d_single(label,csize, nx,ny, mask, cnt, nx,j-1_ni)
+          end if
+       end if
+       ! South-East
+       if ( j < ny ) then
+          if ( mask(j+1_ni,nx) .and. label(j+1_ni,nx) == 0_ni ) then
+             call label_connected_2d_single(label,csize, nx,ny, mask, cnt, nx,j+1_ni)
+          end if
+       end if
+    end if
+    ! -> Periodic boundary East
+    if ( grid_cyclic_ew .and. i == nx ) then
+       if ( mask(j,1_ni) .and. label(j,1_ni) == 0_ni ) then
+          call label_connected_2d_single(label,csize, nx,ny, mask, cnt, 1_ni,j)
+       end if
+       ! North-East
+       if ( j > 1_ni ) then
+          if ( mask(j-1_ni,1_ni) .and. label(j-1_ni,1_ni) == 0_ni ) then
+             call label_connected_2d_single(label,csize, nx,ny, mask, cnt, 1_ni,j-1_ni)
+          end if
+       end if
+       ! South-East
+       if ( j < ny ) then
+          if ( mask(j+1_ni,1_ni) .and. label(j+1_ni,1_ni) == 0_ni ) then
+             call label_connected_2d_single(label,csize, nx,ny, mask, cnt, 1_ni,j+1_ni)
+          end if
+       end if
+    end if
+  end subroutine
+  !
   !@ Grow a given mask by including adjacent points N times
   !@
   !@ The masks are grown in 2D, independently of the first dimension.
@@ -573,5 +1034,108 @@ contains
        end do
        tmp(:,:,:) = res(:,:,:)
     end do
+  end subroutine
+  !
+  !@ Fill missing values (=NaNs) by the Poisson equation
+  !@ 
+  !@ The Poisson equation is iteratively solved for all missing values using 
+  !@ the Successive-Over-Relaxation (SOR) algorithm to minimise the the Laplacian.
+  !@
+  !@ The subroutine is based on code provided by Sebastian Schemm.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float
+  !@     Input data containing NaN values
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float
+  !@     A copy of the input data with NaN values replaced.
+  !@ float
+  !@     The maximum correction during the last SOR iteration as a measure of convergence.
+  subroutine fill_nan(res, nx,ny,nz, dat)
+    !TODO: conv temporarily disabled because of f2py intent(out)-bug
+    real(kind=nr), intent(in) :: dat(nz,ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx) !, conv
+    integer(kind=ni), intent(in) :: nz,ny,nx
+    !f2py depend(nx,ny,nz) res
+    !
+    logical :: lfill(nz,ny,nx)
+    real(kind=nr) :: smooth, corr, conv
+    real(kind=nr), parameter :: omega = 1.5_nr
+    integer(kind=ni) :: i,j,k, il,ir,jd,ju, iter
+    integer(kind=ni), parameter :: maxiter = 300_ni
+    ! -----------------------------------------------------------------
+    !
+    ! Create a mask array for where NaN's occur and initialise output,
+    ! using zero as first guess to fill the field
+    do i = 1_ni,nx
+       do j = 1_ni,ny
+          do k = 1_ni,nz
+             lfill(k,j,i) = isnan(dat(k,j,i))
+             if ( lfill(k,j,i) ) then
+                res(k,j,i) = 0.0_nr
+             else
+                res(k,j,i) = dat(k,j,i)
+             endif
+          end do
+       end do
+    end do
+    !
+    ! Apply the Poisson filling - successive over-relaxation (SOR)
+    iter = 0_ni
+    do while ( iter < maxiter )
+       conv = 0.0_nr
+       !
+       ! Loop over all points
+       do i = 1_ni,nx
+          do j = 1_ni,ny
+             do k = 1_ni,nz
+                ! Apply the updating only for specified points
+                if ( lfill(k,j,i) ) then
+                   ! Get neighbouring points - respecting periodicity in x
+                   if ( grid_cyclic_ew ) then
+                      il = i-1_ni
+                      if ( il < 1_ni ) il = nx
+                      ir = i+1_ni
+                      if ( ir > nx ) ir = 1_ni
+                   else
+                      il = max(i-1_ni, 1_ni)
+                      ir = min(i+1_ni, nx)
+                   end if
+                   jd = max(j-1_ni, 1_ni)
+                   ju = min(j+1_ni, ny)
+                   !
+                   ! Update field
+                   smooth = 0.25_nr * (res(k,j,il) + res(k,j,ir) + res(k,ju,i) + res(k,jd,i))
+                   res(k,j,i) = omega * smooth + (1.0_nr - omega) * res(k,j,i)
+                   !
+                   ! Remember maximum change
+                   if ( res(k,j,i) /= 0.0_nr ) then
+                      corr = abs( omega * (smooth - res(k,j,i)) )
+                      if ( corr > conv ) then
+                         conv = corr
+                      endif
+                   endif
+                endif
+                !
+             enddo
+          enddo
+       enddo
+       iter = iter + 1_ni
+    enddo
+    !
   end subroutine
 end module

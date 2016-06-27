@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- encoding: utf-8
 
-from .. import utils 
+from .. import utils, metio
 from ..shorthands import np, dt, td, metopen, metsave_timeless
 from ..settings import conf
 
@@ -33,24 +33,46 @@ def _add(name, plev, q, dat, mean, hist):
 	return
 
 
-def _get_testdat(yr, test_qs):
-	''' Retrieve the data used in deciders for testing '''
-
+def _get_dat(time, test_qs, readhooks, no_static=False):
+	''' Retrieve the data used in deciders for testing and for the actual composites '''
+	
+	static = None
 	testdat = {}
+	left2request = {}
 	for test_plev, test_q in test_qs:
 		if not test_q:
 			continue
 	
-		if test_q in LINES:
-			f, line = metopen(conf.file_std % {'time': yr, 'plev': test_plev, 'qf': conf.qf[test_q]}, test_q, no_static=True)
-			testdat[test_plev, test_q] = utils.mask_lines(line, f.variables[LINES[test_q]][::])
+		if test_q in readhooks:
+			if test_q in left2request:
+				left2request[test_q].append(test_plev)
+			else:
+				left2request[test_q] = [test_plev, ]
 		else:
-			f, testdat[test_plev, test_q] = metopen(conf.file_std % {'time': yr, 'plev': test_plev, 'q': conf.qi[test_q]}, test_q, no_static=True)
+			if not no_static and not static:
+				f, testdat[test_plev, test_q], static = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[test_q]}, test_q)
+			else:
+				f, testdat[test_plev, test_q] = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[test_q]}, test_q, no_static=True)
+
+			if test_q in LINES:
+				testdat[test_plev, test_q] = utils.mask_lines(testdat[test_plev, test_q], f.variables[LINES[test_q]][::])
 	
-	return testdat
+	# Request all vertical levels of one variable at once for potential more effective read
+	for test_q in left2request:
+		if not no_static and not static:
+			f, dat_, static = readhooks[test_q](time, left2request[test_q], test_q, static=True)
+		else:
+			f, dat_ = readhooks[test_q](time, left2request[test_q], test_q)
+		for pidx, test_plev in zip(range(len(left2request[test_q])), left2request[test_q]):
+			testdat[test_plev,test_q] = dat_[:,pidx,:,:]
+
+	if no_static:
+		return testdat
+	else:
+		return testdat, static
 
 
-def build(qs, tests, times=None, s=None):
+def build(qs, tests, times=None, s=None, readhooks={}):
 	''' Compile composites
 	
 	Parameters
@@ -65,6 +87,8 @@ def build(qs, tests, times=None, s=None):
 	    *Optional*, default ``conf.years``. Times or years to base this composite on.
 	s : 2-tuple of int
 	    *Optional*, default ``conf.gridsize``. Grid size for the output arrays.
+	readhooks : dict of callable
+	    *Optional*, default empty. Alternatives used instead of metopen for certain variables.
 
 	Returns
 	-------
@@ -107,39 +131,33 @@ def build(qs, tests, times=None, s=None):
 			for test in flattened_tests:
 				mean[test.name,plev,q] = np.zeros(s)
 	
-	test_qs = []
+	test_qs = set([])
 	for test in flattened_tests:
 		cnt[test.name] = 0
 		if hasattr(test, 'required_qs'):
-			test_qs.append(test.required_qs)
+			test_qs.add(test.required_qs)
 	
 	test_prev = {}
 	test_cur  = {}
-	test_next = _get_testdat(times[0], test_qs)
+	test_next = _get_dat(times[0], test_qs, readhooks, no_static=True)
 	static = None
-	for time in times:
+	for tidx,time in zip(range(len(times)), times):
 		test_prev = test_cur
 		test_cur  = test_next
 		if not time == times[-1]:
-			test_next = _get_testdat(time+1, test_qs)
+			test_next = _get_dat(times[tidx+1], test_qs, readhooks)
 		else: 
 			test_next = {}
 	
-		dat = {}
-		plev, q = qs[0]
-		f, dat[plev,q], static_ = metopen(conf.file_std % {'time': time, 'plev': plev, 'qf': conf.qf[q]}, q)
-		for plev, q in qs[1:]:
-			if (plev,q) in dat: continue
-			
-			f, dat[plev,q] = metopen(conf.file_std % {'time': time, 'plev': plev, 'qf': conf.qf[q]}, q, no_static=True)
+		dat, static_ = _get_dat(time, qs, readhooks)
+		# Inject metadata if missing
+		if not hasattr(static_, 't_parsed'):
+			static_.t_parsed = metio.str2dts(time)
 
-			if q in LINES:
-				dat[plev,q] = utils.mask_lines(dat[plev,q], f[LINES[q]][::])
-		
+		# Construct static for saving the results, and keep/prepare static_ for the current interval
 		if not static:
 			static = static_
 		else:
-			static.t = np.concatenate((static.t, static_.t))
 			static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed))
 		
 		for tidx in range(dat[qs[0]].shape[0]):

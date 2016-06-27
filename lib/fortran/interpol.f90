@@ -45,15 +45,16 @@ contains
   !@ Interpolates all given grid indexes. The given levels must be in acending order
   !@ of the original vertical index direction
   subroutine vert_by_coord(res,nx,ny,nz,nn,dat,datv,levels)
-    real(kind=nr), intent(in)  :: dat(nz,ny,nx), datv(nz,ny,nx), levels(nn)
     real(kind=nr), intent(out) :: res(nn,ny,nx)
+    real(kind=nr), intent(in) :: dat(nz,ny,nx), datv(nz,ny,nx), levels(nn)
     integer(kind=ni), intent(in) :: nx,ny,nz,nn
+    !f2py intent(hide,out) res
+    !####f2py depend(nx,ny,nz) res
+    !####f2py depend(nx,ny) dx, dy
     !
     real(kind=nr) :: idxs(nn)
     integer(kind=ni) :: i,j,ki,ko
     logical :: inverted = .false.
-    !f2py depend(nx,ny,nz) res
-    !f2py depend(nx,ny) dx, dy
     ! -----------------------------------------------------------------
     !
     ! Check if the new vertical coordinate is inverted with respect to the current one
@@ -71,7 +72,7 @@ contains
                    idxs(ko) = nan
                 ! Loop through the input grid until interpolation point is found
                 else
-                   do ki = ki,nz
+                   do ki = ki,nz-1_ni
                       if ( datv(ki,j,i) <= levels(ko) .and. datv(ki+1_ni,j,i) > levels(ko) ) exit
                    end do
                    idxs(ko) = real(ki, nr) + (levels(ko) - datv(ki,j,i))/(datv(ki+1_ni,j,i) - datv(ki,j,i))
@@ -93,7 +94,7 @@ contains
                    idxs(ko) = nan
                 ! Loop through the input grid until interpolation point is found
                 else
-                   do ki = ki,nz
+                   do ki = ki,nz-1_ni
                       if ( datv(ki,j,i) >= levels(ko) .and. datv(ki+1_ni,j,i) < levels(ko) ) exit
                    end do
                    idxs(ko) = real(ki, nr) + (levels(ko) - datv(ki,j,i))/(datv(ki+1_ni,j,i) - datv(ki,j,i))

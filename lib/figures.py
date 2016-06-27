@@ -25,6 +25,7 @@ import scipy.interpolate as intp
 
 import matplotlib.pyplot as plt
 import matplotlib.colors
+from matplotlib.collections import LineCollection
 import mpl_toolkits.basemap
 basemap_version = mpl_toolkits.basemap.__version__
 
@@ -395,7 +396,31 @@ def __contourf_dat(m, x, y, dat, kwargs):
 	scale = kwargs.pop('scale')
 	if scale == 'auto':
 		scale = autoscale(dat, **kwargs)
-	cs = m.contourf(x, y, dat, scale, latlon=True, zorder=1, **kwargs)
+	
+	if kwargs.get('tile'):
+		if not 'edgecolors' in kwargs:
+			kwargs['edgecolors'] = 'none'
+		if not type(kwargs.get('colors')) == type(None) and type(kwargs.get('cmap')) == type(None):
+			if not type(scale) == int:
+				colors = list(kwargs.get('colors'))
+				repeat = len(scale) / len(colors) + 1
+				kwargs['cmap'] = matplotlib.colors.ListedColormap(colors*repeat)
+			else:
+				kwargs['cmap'] = matplotlib.colors.ListedColormap(kwargs.get('colors'))
+		if not type(scale) == int:
+			cmap = plt.get_cmap(kwargs['cmap'])
+			#cmap.set_bad(alpha=0)
+			#cmap.set_over(alpha=0)
+			#cmap.set_under(alpha=0)
+			kwargs['norm'] = matplotlib.colors.BoundaryNorm(scale, cmap.N)
+			kwargs['cmap'] = cmap
+
+		pkwargs = ['cmap', 'norm', 'vmin', 'vmax', 'edgecolors', 'alpha', 'clim', ]
+		pkwargs = { key: kwargs.get(key, None) for key in pkwargs }
+		datm = np.ma.masked_where(np.isnan(dat), dat)
+		cs = m.pcolormesh(x, y, datm, latlon=True, zorder=1, **pkwargs)
+	else:
+		cs = m.contourf(x, y, dat, scale, latlon=True, zorder=1, **kwargs)
 
 	# Maximise contrast, by making sure that the last colors of the colorbar 
 	# actually are identical to the first/last color in the colormap
@@ -609,68 +634,6 @@ def map_overlay_contour(dat, static, **kwargs):
 	return overlay
 
 
-def map_overlay_fronts(fronts, froff, static, **kwargs):  
-	''' Overlay front lines onto a map
-	
-	Parameters
-	----------
-	fronts : np.ndarray with dimensions (fronttype,pointindex,infotype)
-		Front position array
-	fronts : np.ndarray with dimensions (fronttype,frontindex)
-		Front offset array, a list of starting point indexes
-	static : gridlib.grid
-		Meta information about the data array, like the grid definition
-	
-	Keyword arguments
-	-----------------
-	plot arguments : all contour
-		For a list of valid arguments refer to :ref:`plot configuration`.
-	
-	Returns
-	-------
-	function
-		Overlay as a callable function
-	'''
-
-	kwargs = __line_prepare_config(kwargs)
-
-	cfrs = __unflatten_fronts_t(fronts[0], froff[0], minlength=5)
-	wfrs = __unflatten_fronts_t(fronts[1], froff[1], minlength=5)
-	sfrs = __unflatten_fronts_t(fronts[2], froff[2], minlength=5)
-
-	def overlay(m, x, y, lon, lat, zorder, mask=None):
-		# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
-		# TODO: Convert to latlon=True system
-		for cfr in cfrs:
-			if hasattr(m, '__call__'):
-				lonfr = static.x[0,0] + (cfr[:,0]-1)*(static.x[0,1]-static.x[0,0])
-				latfr = static.y[0,0] + (cfr[:,1]-1)*(static.y[1,0]-static.y[0,0])
-				xfr, yfr = m(lonfr, latfr)
-			else:
-				xfr, yfr = cfr[:,0]*50000, cfr[:,1]*50000
-			m.plot(xfr, yfr, 'b-', linewidth=2)
-		for wfr in wfrs:
-			if hasattr(m, '__call__'):
-				lonfr = static.x[0,0] + (wfr[:,0]-1)*(static.x[0,1]-static.x[0,0])
-				latfr = static.y[0,0] + (wfr[:,1]-1)*(static.y[1,0]-static.y[0,0])
-				xfr, yfr = m(lonfr, latfr)
-			else:
-				xfr, yfr = wfr[:,0]*50000, wfr[:,1]*50000
-			m.plot(xfr, yfr, 'r-', linewidth=2)
-		for sfr in sfrs:
-			if hasattr(m, '__call__'):
-				lonfr = static.x[0,0] + (sfr[:,0]-1)*(static.x[0,1]-static.x[0,0])
-				latfr = static.y[0,0] + (sfr[:,1]-1)*(static.y[1,0]-static.y[0,0])
-				xfr, yfr = m(lonfr, latfr)
-			else:
-				xfr, yfr = sfr[:,0]*50000, sfr[:,1]*50000
-			m.plot(xfr, yfr, 'm-', linewidth=2)
-
-		return
-
-	return overlay
-
-
 def map_overlay_lines(lines, loff, static, **kwargs):  
 	''' Overlay lines onto a map
 	
@@ -699,12 +662,9 @@ def map_overlay_lines(lines, loff, static, **kwargs):
 	lns = __unflatten_fronts_t(lines, loff, minlength=0)
 
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
-		# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
 		# TODO: Convert to latlon=True system
 		for ln in lns:
-			lonfr = static.x[0,0] + (ln[:,0]-1)*(static.x[0,1]-static.x[0,0])
-			latfr = static.y[0,0] + (ln[:,1]-1)*(static.y[1,0]-static.y[0,0])
-			xfr, yfr = m(lonfr, latfr)
+			xfr, yfr = m(ln[:,0], ln[:,1])
 			m.plot(xfr, yfr, kwargs['linecolor'], linewidth=kwargs.get('linewidth', 2), 
 					alpha=kwargs.get('alpha', 1))
 
@@ -713,7 +673,60 @@ def map_overlay_lines(lines, loff, static, **kwargs):
 	return overlay
 
 
-def map_overlay_dots(xidxs, yidxs, static, **kwargs):  
+def map_overlay_clines(lines, cdat, loff, static, **kwargs):
+	''' Overlay colorful lines onto a map
+
+	In comparison with ``map_overlay_lines``, this function takes an additional
+	cdat argument providing the data basis for coloring the lines using a color map.
+	
+	Parameters
+	----------
+	lines : np.ndarray with dimensions (pointindex,infotype)
+		Line position array
+	cdat : np.ndarray with dimensions (pointindex)
+	loff : np.ndarray with dimension (lineindex)
+		Line offset array, a list of starting point indexes
+	static : gridlib.grid
+		Meta information about the data array, like the grid definition
+	
+	Keyword arguments
+	-----------------
+	plot arguments : all contour
+		For a list of valid arguments refer to :ref:`plot configuration`.
+	
+	Returns
+	-------
+	function
+		Overlay as a callable function
+	'''
+
+	kwargs = __line_prepare_config(kwargs)
+
+	lns = __unflatten_fronts_t(lines, loff, minlength=0)
+
+	norm = plt.Normalize()
+	norm.autoscale(cdat)
+
+	def overlay(m, x, y, lon, lat, zorder, mask=None):
+		for ln in lns:
+			xfr, yfr = m(ln[:,0], ln[:,1])
+
+			points = np.array([xfr, yfr]).T.reshape(-1, 1, 2)
+			segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+			lc = LineCollection(segments, array=cdat, 
+					cmap=kwargs.get('cmap'), norm=norm,
+					linewidth=kwargs.get('linewidth'), alpha=kwargs.get('alpha'),
+			)
+			plt.gca().add_collection(lc)
+
+		return
+
+	return overlay
+
+
+
+def map_overlay_dots(lons, lats, static, **kwargs):  
 	''' Overlay dots onto a map
 	
 	Parameters
@@ -737,11 +750,8 @@ def map_overlay_dots(xidxs, yidxs, static, **kwargs):
 	kwargs = __line_prepare_config(kwargs)
 
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
-		# TODO: Remove conversion from gridpoint indexes to lon/lat once fixed
 		# TODO: Convert to latlon=True system
-		lonfr = static.x[0,0] + (xidxs - 1)*(static.x[0,1]-static.x[0,0])
-		latfr = static.y[0,0] + (yidxs - 1)*(static.y[1,0]-static.y[0,0])
-		xfr, yfr = m(lonfr, latfr)
+		xfr, yfr = m(lons, lats)
 		m.scatter(xfr, yfr, kwargs.get('linewidth',9), marker='.', edgecolors=kwargs['linecolor'])
 
 		return
@@ -811,9 +821,13 @@ def map_overlay_barbs(u, v, static, **kwargs):
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
 
-		try:
-			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
-		except ValueError:
+		if hasattr(m, 'transform_vector'):
+			if lat[0,0] > lat[-1,0]:
+				ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
+			else:
+				ut,vt, xt,yt = m.transform_vector(u_,v_,lon[0,:],lat[:,0], 30, 20, returnxy=True)
+
+		else:
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
 			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
@@ -851,9 +865,9 @@ def map_overlay_quiver(u, v, static, **kwargs):
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
 
-		try:
+		if hasattr(m, 'transform_vector'):
 			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
-		except ValueError:
+		else:
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval/2,None,interval), slice(interval/2,None,interval))
 			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)

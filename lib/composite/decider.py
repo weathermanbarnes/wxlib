@@ -480,7 +480,7 @@ def matrix(list1, list2):
 	list1: list of decider
 	    First list of deciders to be combined.
 	list2: list of decider
-	    Second list of deciders to be combined.
+	    Second list of deciders to be combined. Each decider in this list makes a resulting category.
 
 	Returns
 	-------
@@ -488,8 +488,16 @@ def matrix(list1, list2):
 	    List of combinations.
 	'''
 
+	# Flatten dicts
+	if type(list1) == dict:
+		list1 = [item for group in list1.values() for item in group]
+	if type(list2) == dict:
+		list2 = [item for group in list2.values() for item in group]
+	
+	# Wrap single deciders in a list
 	if not type(list1) == list: list1 = [list1, ]
 	if not type(list2) == list: list2 = [list2, ]
-	return [item1 & item2 for item2 in list2 for item1 in list1]
+
+	return {item2.name: [item1 & item2 for item1 in list1] for item2 in list2}
 
 # the end

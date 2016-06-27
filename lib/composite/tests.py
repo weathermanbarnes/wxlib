@@ -55,7 +55,7 @@ def get_months():
 	nov = month('Nov', 11)
 	dec = month('Dec', 12)
 
-	return {'months' [jan, feb, mar, apr, mai, jun, jul, aug, sep, oct, nov, dec, ], }
+	return {'months': [jan, feb, mar, apr, mai, jun, jul, aug, sep, oct, nov, dec, ], }
 	
 
 def get_seasons():
@@ -67,7 +67,7 @@ def get_seasons():
 	    Deciders for each season, starting with DJF.
 	'''
 
-	jan, feb, mar, apr, mai, jun, jul, aug, sep, oct, nov, dec = get_months()
+	jan, feb, mar, apr, mai, jun, jul, aug, sep, oct, nov, dec = get_months()['months']
 
 	djf = dec | jan | feb
 	mam = mar | apr | mai
@@ -89,7 +89,7 @@ def get_12_seasons():
 	    Deciders for each 3-month period, starting with DJF.
 	'''
 
-	jan, feb, mar, apr, mai, jun, jul, aug, sep, oct, nov, dec = get_months()
+	jan, feb, mar, apr, mai, jun, jul, aug, sep, oct, nov, dec = get_months()['months']
 
 	djf = dec | jan | feb
 	jfm = jan | feb | mar

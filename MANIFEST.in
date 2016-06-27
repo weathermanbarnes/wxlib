@@ -1,6 +1,6 @@
 include compile
-include lib/fortran/*.f90
-include test/tests
+include lib/fortran/*.f90#
+include lib/tests
 include examples/*.py
 include doc/Makefile
 include doc/source/conf.py
