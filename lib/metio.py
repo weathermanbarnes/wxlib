@@ -339,7 +339,7 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q],
 				'add_offset': off, 'scale_factor': scale})
 	else:
-		ovar = of.createVariable(q, 'f', dims)
+		ovar = of.createVariable(q, dat.dtype, dims)
 		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q]})
 	ovar[::] = dat
 
@@ -349,7 +349,7 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 
 
 # Save dat as a netCDF file, using the metadata in static. 
-def metsave_lines(dat, datoff, static, plev, q, qoff):
+def metsave_lines(dat, datoff, static, plev, q, qoff, additional_axes=[]):
 	''' Save line data in a netCDF file
 
 	A disk-space-effective way to store collections of lines (e.g. front lines, jet axes, ...)
@@ -373,13 +373,17 @@ def metsave_lines(dat, datoff, static, plev, q, qoff):
 	    The variable name identifier, e.g. ``'jetaxis'``.
 	qoff : str
 	    The variable name identifier for the list of offsets, e.g. ``'jaoff'``. 
+	additional_axes : list of dict
+	    List of additional axes, in order, to be placed between time and space.
+	    The dict must have the keys ``'name'`` and ``'data'``, defining the axis name and its
+	    data values. All additional keys will be taken over as attributes for the axis variable.
 	'''
-	if not len(dat.shape) == 3 and len(datoff.shape) == 2:
+	if not len(dat.shape) == (3+len(additional_axes)) and len(datoff.shape) == (2+len(additional_axes)):
 		raise RuntimeError, 'dat and/or datoff have the wrong number of dimensions'
-	if not dat.shape[0] == datoff.shape[0]:
-		raise RuntimeError, 'dat and datoff have different time axes'
-	if not dat.shape[2] == 3:
-		raise RuntimeError, 'dat does not have size 3 in the third dimension'
+	if not dat.shape[:-2] == datoff.shape[:-1]:
+		raise RuntimeError, 'dat and datoff have different axis lengths'
+	if not dat.shape[-1] == 3:
+		raise RuntimeError, 'dat does not have size 3 in the last dimension'
 
 	now = dt.now(pytz.timezone('Europe/Oslo'))
 	of = nc.Dataset(conf.opath+'/'+(conf.file_std % {'time': dts2str(static.t_parsed), 
@@ -388,12 +392,8 @@ def metsave_lines(dat, datoff, static, plev, q, qoff):
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	})
 	
-	# The maximum amount of line points for all time steps
-	#llen = int(datoff.max())
-	llen = dat.shape[1] # Having diffent dimensions for each file makes reading much harder
-	# The maxmimum amount of lines for all time steps
-	#olen = int(np.max([datoff_t.argmin() for datoff_t in datoff[:,1:]]))
-	olen = datoff.shape[1]
+	llen = dat.shape[-2]
+	olen = datoff.shape[-1]
 
 	of.createDimension(static.t_name, dat.shape[0])
 	of.createDimension('pointindex', llen)
@@ -409,6 +409,19 @@ def metsave_lines(dat, datoff, static, plev, q, qoff):
 	olon = of.createVariable(static.x_name, 'f', (static.x_name,))
 	olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
 	olon[:] = static.x[0,:]
+	
+	add_dimnames = ()
+	for dim in additional_axes:
+		if 'name' not in dim or 'data' not in dim:
+			raise ValueError, 'Additional dimensions must have a name and data'
+		of.createDimension(dim['name'], len(dim['data']))
+		odim = of.createVariable(dim['name'], 'f', (dim['name'], ))
+		odim[:] = dim['data']
+		add_dimnames += (dim['name'], ) 
+
+		del dim['name']
+		del dim['data']
+		odim.setncatts(dim)
 
 	ot = of.createVariable(static.t_name, 'i', ('time',))
 	ot.setncatts({'long_name': static.t_name, 'units': static.t_unit})
@@ -423,13 +436,13 @@ def metsave_lines(dat, datoff, static, plev, q, qoff):
 	ooidx.setncatts({'long_name': 'Index of line', 'units': '1'})
 	ooidx[:] = range(olen)
 	
-	oq = of.createVariable(q, 'f', ('time', 'pointindex', 'infotype',))
+	oq = of.createVariable(q, 'f', ('time', ) + add_dimnames + ('pointindex', 'infotype',))
 	oq.setncatts({'long_name': conf.q_long[q], 'units': 'mixed'})
-	oq[::] = dat[:,:llen,:]
+	oq[::] = dat[::]
 
-	oqoff = of.createVariable(qoff, 'i', ('time', 'lineindex',))
+	oqoff = of.createVariable(qoff, 'i', ('time', ) + add_dimnames + ('lineindex',))
 	oqoff.setncatts({'long_name': 'Index of first point of line', 'units': '1'})
-	oqoff[::] = datoff[:,:olen]
+	oqoff[::] = datoff[::]
 
 	of.close()
 
@@ -632,7 +645,7 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q], 'history': history,
 					'add_offset': off, 'scale_factor': scale})
 		else:
-			ovar = f.createVariable(ncvarname, 'f', data_dimensions_)
+			ovar = f.createVariable(ncvarname, dat_.dtype, data_dimensions_)
 			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q], 'history': history})
 	
 		ovar[::] = dat_
@@ -759,7 +772,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	tidxs = map(lambda date: date-dt0, dates)
 	tidxs = map(lambda diff: int(diff.total_seconds()/dts), tidxs)
 	tsmin, tsmax = min(tidxs), max(tidxs)
-	
+
 	# Checking max length
 	if tsmax-tsmin > MAX_TLEN:
 		if force:
@@ -1096,18 +1109,35 @@ def dts2str(dates, agg=None):
 	    Representation of the dates, to be used for example in file names.
 	'''
 
+	def date_format(date, repr_interval):
+		''' Unfortunately datetime.strftime does not support dates before 1900, so
+		need to implement the required formatter myself. 20CR extends to 1851 in V2c,
+		so that functionality is needed when handling that reanalysis data set. '''
+
+		if repr_interval < 0:
+			raise ValueError, 'Interval must be a positive integer or zero.'
+		
+		datestr = '%04d' % date.year
+		if repr_interval >= 1:
+			datestr += '%02d' % date.month
+			if repr_interval >= 2:
+				datestr += '%02d' % date.day
+				if repr_interval >= 3:
+					datestr += '%02d' % date.hour
+
+		return datestr
+
 	# Special cases: Only one datetime object given
 	if type(dates) == dt:
-		return dates.strftime('%Y%m%d%H')
+		return date_format(dates, 3)
 	
 	elif len(dates) == 1:
-		return dates[0].strftime('%Y%m%d%H')
+		return date_format(dates[0], 3)
 		
 	# General case: Several datetime objects given
 	dta = min(dates)
 	dtz = max(dates)
 	
-	repr_intervals = {0: '%Y', 1: '%Y%m', 2: '%Y%m%d', 3: '%Y%m%d%H'}
 	if dta.hour == 0:
 		if dta.day == 1:
 			if dta.month == 1:
@@ -1175,15 +1205,15 @@ def dts2str(dates, agg=None):
 		else:
 			repr_interval = 3
 
-		fst = dta.strftime(repr_intervals[repr_interval])
-		lst = dtz.strftime(repr_intervals[repr_interval])
+		fst = date_format(dta, repr_interval)
+		lst = date_format(dtz, repr_interval)
 		if fst == lst and contiguous:
 			ret = fst
 		else:
 			ret = fst + sep + lst
 
 	else:
-		ret = dta.strftime(repr_intervals[3]) + '..' + dtz.strftime(repr_intervals[3])
+		ret = date_format(dta, 3) + '..' + date_format(dtz, 3)
 
 	return ret
 

@@ -15,6 +15,7 @@ a "static.npz" file that contains the pertinent information for a given data set
 import math
 import copy
 import numpy as np
+import netCDF4 as nc
 from mpl_toolkits.basemap.pyproj import Proj 		# for rotpole projection
 from datetime import datetime as dt, timedelta as td
 
@@ -107,7 +108,7 @@ class grid(object):
 	rebuild_grid = __build_grid
 
 	def new_time(self, dates):
-		''' Make a copy of itself with a new time axis
+		''' Makes a copy of itself with a new time axis
 
 		Parameters
 		----------
@@ -358,7 +359,8 @@ class grid_by_nc(grid):
 				self.t = np.arange(self.nt)
 			
 			# Try to parse the time axis into datetime objects
-                        self._parse_time()
+			t = self.f.variables[self.t_name] 
+			self.t_parsed = nc.num2date(t[:], units=t.units, calendar=getattr(t, 'calendar', 'standard'))
 
 		return
 
