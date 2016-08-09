@@ -152,7 +152,7 @@ def save_fortran_doc(fortran_doc):
 	'''
 
 	f = open('../%s' % PICKLE_FILENAME , 'wb')
-	pickle.dump(fortran_doc, f, protocol=2, fix_imports=True)
+	pickle.dump(fortran_doc, f, protocol=2)
 	f.close()
 
 
