@@ -16,6 +16,7 @@ docutil.takeover(dynfor.utils, 'utils', sys.modules[__name__])
 
 import math
 import numpy as np
+import scipy as sp
 from scipy.special import erfinv
 
 from . import tagg
@@ -532,7 +533,7 @@ def aggregate(dates, dat, agg):
 #
 # Varimax rotation for EOFs as introduced in Kaiser (1958)
 #  -> if raw = False use normal varimax, otherwise raw varimax
-def varimax(phi, raw=False, gamma = 1.0, max_iter = 20, tol = 1e-6):
+def varimax(phi, raw=False, gamma = 1.0, max_iter = 100, tol = 1e-5):
 	''' Varimax rotation for EOFs
 
 	As introduced by Kaiser (1958).
@@ -561,20 +562,23 @@ def varimax(phi, raw=False, gamma = 1.0, max_iter = 20, tol = 1e-6):
 	if not raw:
 		norm = np.sqrt((phi**2).sum(axis=1))
 		phi /= norm[:,np.newaxis]
-
+	
 	p, k = phi.shape
 	R = np.eye(k)
 	d = 0
-	for i in xrange(max_iter):
-		d_old = d
+	for i in range(max_iter):
 		Lambda = np.dot(phi, R)
-		u,s,vh = np.linalg.svd(np.dot(
+		u,s,vh = sp.linalg.svd(np.dot(
 			phi.T, 
 			np.asarray(Lambda)**3 - (gamma/p) * np.dot(Lambda, np.diag(np.diag(np.dot(Lambda.T,Lambda))))
 		))
 		R = np.dot(u,vh)
+		d_old = d
 		d = np.sum(s)
-		if d/d_old < tol: break
+		if d < d_old * (1 + tol):
+			break
+		if i == max_iter - 1:
+			print('WARNING: Max iteration reached without convergence; try fiddeling with tolerance and maximum number of iterations.')
 	
 	rphi = np.dot(phi, R)
 
