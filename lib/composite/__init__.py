@@ -1,25 +1,37 @@
 #!/usr/bin/python
 # -*- encoding: utf-8
 
+from __future__ import absolute_import, unicode_literals, print_function
+
 from .. import utils, metio
-from ..shorthands import np, dt, td, metopen, metsave_timeless
+from ..shorthands import np, dt, td, metopen, metsave_timeless, get_static
 from ..settings import conf
 
 from scipy.io import savemat
+from scipy.interpolate import griddata # interp2d
+
+from mpl_toolkits.basemap.pyproj import Proj
 
 
 # TODO: LINES should be centralised somewhere in the variable definitions!
 LINES = {'fronts': 'froff', 'convl': 'cloff', 'defl': 'dloff', 'vorl': 'vloff', 'jetaxis': 'jaoff'}
 
+# TODO: How to avoid hard-coding the rotated grid dimensions here?
+PROJGRID_Y, PROJGRID_X = np.meshgrid(np.arange(-1000,1001,40)*1e3, np.arange(-1000,1001,40)*1e3)
+PROJGRID_R =  np.sqrt(PROJGRID_X**2 + PROJGRID_Y**2)
+S_PROJGRID = PROJGRID_X.shape
 
 cnt = ('cnt', None, 'Number of time steps contributing to the composite', '1')
 conf.register_variable([cnt, ], [])
 
 
-def _add(name, plev, q, dat, mean, hist):
+def _add(name, plev, q, dat, mean, hist, x_proj=None, y_proj=None, angle=None):
 	''' Add one time step to the composite '''
 
 	if q in conf.q_bins:
+		if not type(rot_center) == type(None):
+			raise NotImplementedError('Binned variables cannot be rotated yet.')
+
 		for bi in range(len(conf.q_bins[q])-1):
 			upper = conf.q_bins[q][bi+1]
 			lower = conf.q_bins[q][bi]
@@ -28,7 +40,22 @@ def _add(name, plev, q, dat, mean, hist):
 			else:
 				hist[name,plev,q][bi,(dat <  upper).__or__(dat >= lower)] += 1
 	else:
-		mean[name,plev,q][:,:] += dat
+		if not type(x_proj) == type(None):
+			
+			# Clockwise rotation (following the convention for wind directions)
+			x_proj_ =  x_proj*np.cos(angle) + y_proj*np.sin(angle)
+			y_proj_ = -x_proj*np.sin(angle) + y_proj*np.cos(angle)
+			r_proj_ = np.sqrt(x_proj_**2 + x_proj_**2)
+
+			mask = (r_proj_ <= 1.5e6)
+
+			mean[name,plev,q][:,:] += griddata((x_proj_[mask], y_proj_[mask]), dat[mask], 
+					(PROJGRID_Y, PROJGRID_X), method='linear' )
+			#interp = interp2d(x_proj_[mask], y_proj_[mask], dat[mask], kind='cubic')
+			#mean[name,plev,q][:,:] += interp(PROJGRID_Y[0,:], PROJGRID_X[:,0])
+
+		else:
+			mean[name,plev,q][:,:] += dat
 
 	return
 
@@ -117,6 +144,8 @@ def build(qs, tests, times=None, s=None, readhooks={}):
 		times = conf.years
 	if type(s) == type(None):
 		s = conf.gridsize
+
+	grid = get_static()
 	
 	mean = {}
 	hist = {}
@@ -125,11 +154,38 @@ def build(qs, tests, times=None, s=None, readhooks={}):
 	for plev, q in qs:
 		if q in conf.q_bins:
 			for test in flattened_tests:
+				if not type(test.rotation_center) == type(None):
+					raise NotImplementedError('Binned variables cannot be rotated yet.')
 				hist[test.name,plev,q] = np.zeros((len(conf.q_bins[q]),)+s)
 				mfv [test.name,plev,q] = np.zeros(s)
 		else:
 			for test in flattened_tests:
-				mean[test.name,plev,q] = np.zeros(s)
+				if not type(test.rotation_center) == type(None):
+					mean[test.name,plev,q] = np.zeros(S_PROJGRID)
+
+					# Setup projection and interpolation
+
+					# <ob_tran> is moving the North Pole to a specific given coordinate.
+					# However, what we need here is to move a specific location to the 
+					# North Pole, which is the inverse transform.
+					# They way it's setup here, it should be it's own inverse transform,
+					# except for potentially a missing offset in the lon_0.
+					rot_proj = Proj(proj='stere', 
+						lon_0=test.rotation_center[0], 
+						lat_0=test.rotation_center[1], 
+					)
+					x_proj, y_proj = rot_proj(grid.x, grid.y)
+
+					r_proj = np.sqrt(x_proj**2 + y_proj**2)
+
+					x_proj[np.abs(r_proj) > 1.0e6] = np.nan
+					y_proj[np.abs(r_proj) > 1.0e6] = np.nan
+
+					# TODO: Where and how to set angle?
+					test.rotargs = (x_proj, y_proj, 0)
+				else:
+					mean[test.name,plev,q] = np.zeros(s)
+					test.rotargs = (None, )*3
 	
 	test_qs = set([])
 	for test in flattened_tests:
@@ -165,7 +221,7 @@ def build(qs, tests, times=None, s=None, readhooks={}):
 			for test in flattened_tests:
 				if test.match(t, tidx, test_prev, test_cur, test_next):
 					for plev, q in qs:
-						_add(test.name, plev, q, dat[plev,q][tidx], mean, hist)
+						_add(test.name, plev, q, dat[plev,q][tidx], mean, hist, *test.rotargs)
 					cnt[test.name] += 1
 
 	del dat
@@ -217,36 +273,55 @@ def save(qs, tests, mean, hist, mfv, cnt, static, s=None):
 	if type(tests) == dict:
 		for groupname, grouped_tests in tests.items():
 			testnames = [test.name for test in grouped_tests]
-			
-			tosave = {}
-			tosave[None,'cnt'] = np.empty((len(grouped_tests),1,1))
-			for teidx, test in zip(range(len(grouped_tests)), grouped_tests):
-				tosave[None,'cnt'][teidx] = cnt[test.name]
+			testrots = [type(test.rotation_center) == type(None) for test in grouped_tests]
+			if not all(testrots):
+				for test in grouped_tests:
+					_save_npz(qs, mean, static, test.name, cnt)
 
-			for plev, q in qs:
-				tosave[plev,q] = np.empty((len(grouped_tests),)+s)
+			else:
+				tosave = {}
+				tosave[None,'cnt'] = np.empty((len(grouped_tests),1,1))
 				for teidx, test in zip(range(len(grouped_tests)), grouped_tests):
-					if q in conf.q_bins:
-						tosave[plev,q][teidx,::] = mfv[test.name,plev,q]
-						tosave[plev,q+'_hist'][teidx,::] = hist[test.name,plev,q]
-					else:
-						tosave[plev,q][teidx,::] = mean[test.name,plev,q]
+					tosave[None,'cnt'][teidx] = cnt[test.name]
 
-			metsave_timeless(tosave, static, groupname, testnames)
+				for plev, q in qs:
+					tosave[plev,q] = np.empty((len(grouped_tests),)+s)
+					for teidx, test in zip(range(len(grouped_tests)), grouped_tests):
+						if q in conf.q_bins:
+							tosave[plev,q][teidx,::] = mfv[test.name,plev,q]
+							tosave[plev,q+'_hist'][teidx,::] = hist[test.name,plev,q]
+						else:
+							tosave[plev,q][teidx,::] = mean[test.name,plev,q]
+
+				metsave_timeless(tosave, static, groupname, testnames)
 	
 	else:
 		for test in tests:
-			tosave = {}
-			for plev, q in qs:
-				if q in conf.q_bins:
-					tosave[plev,q] = mfv[test.name,plev,q]
-					tosave[plev,q+'_hist'] = hist[test.name,plev,q]
-				else:
-					tosave[plev,q] = mean[test.name,plev,q]
+			if not type(test.rotation_center) == type(None):
+				_save_npz(qs, mean, static, test.name, cnt)
 
-			metsave_timeless(tosave, static, test.name, global_atts={'cnt': cnt[test.name]})
+			else:
+				tosave = {}
+				for plev, q in qs:
+					if q in conf.q_bins:
+						tosave[plev,q] = mfv[test.name,plev,q]
+						tosave[plev,q+'_hist'] = hist[test.name,plev,q]
+					else:
+						tosave[plev,q] = mean[test.name,plev,q]
+
+				metsave_timeless(tosave, static, test.name, global_atts={'cnt': cnt[test.name]})
 	
 	return
+
+
+def _save_npz(qs, mean, static, testname, cnt):
+	filename = conf.file_timeless % {'time': metio.dts2str(static.t_parsed), 'name': testname}
+	tosave = {}
+	for plev, q in qs:
+		tosave['%s_%s' % (plev, q)] = mean[testname,plev,q]
+	tosave['cnt'] = cnt[testname]
+	print('Saving as: %s/%s.npz' % (conf.opath, filename))
+	np.savez(conf.opath+'/'+filename+'.npz', **tosave)
 
 
 # the end

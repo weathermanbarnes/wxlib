@@ -16,6 +16,8 @@ given decider, and to create all combinations between two lists of composites
 (e.g. for combining all variability indexes with all seasons).
 '''
 
+from __future__ import absolute_import, unicode_literals, print_function
+
 from copy import copy
 
 from ..settings import conf
@@ -42,8 +44,9 @@ class decider(object):
 	    for the PV2-surface.
 	'''
 
-	def __init__(self, name, q=None, plev=None):
+	def __init__(self, name, q=None, plev=None, rotation_center=None):
 		self.name = name
+		self.rotation_center = rotation_center
 		
 		if q and plev:
 			self.required_qs = (plev, q)
@@ -56,13 +59,36 @@ class decider(object):
 			self.name += '_%s' % q
 
 		return
+
 	
+	def __combine(self, b, ret):
+		''' Combines two decider, incorporates anything shared between __or__ and __and__ '''
+
+		ret.reset = lambda : self.reset() | b.reset()
+		
+		selfrot = not type(self.rotation_center) == type(None)
+		brot = not type(b.rotation_center) == type(None)
+
+		if selfrot and brot:
+			if not self.rotation_center == b.rotation_center:
+				raise TypeError('Cannot combine two deciders with different rotation centers')
+			ret.rotation_center = self.rotation_center
+
+		elif selfrot:
+			ret.rotation_center = self.rotation_center
+
+		elif brot:
+			ret.rotation_center = b.rotation_center
+
+		return ret
+
 	def __or__(self, b):
 		''' Implements the ``deciderA | deciderB`` syntax '''
 
 		ret = decider(self.name+b.name)
 		ret.match = lambda date, tidx, prv, cur, nxt: self.match(date, tidx, prv, cur, nxt) | b.match(date, tidx, prv, cur, nxt)
-		ret.reset = lambda : self.reset() | b.reset()
+
+		ret = self.__combine(b, ret)
 
 		return ret
 
@@ -71,7 +97,8 @@ class decider(object):
 
 		ret = decider(self.name+'@'+b.name)
 		ret.match = lambda date, tidx, prv, cur, nxt: self.match(date, tidx, prv, cur, nxt) & b.match(date, tidx, prv, cur, nxt)
-		ret.reset = lambda : self.reset() | b.reset()
+
+		ret = self.__combine(b, ret)
 
 		return ret
 	
@@ -464,7 +491,7 @@ def timelag(decider, dtidxs, tstep=conf.timestep):
 	    such that they will by default be saved together.
 	'''
 
-	tl_deciders = {decider.name: map(lambda lidx, dtidx: __timelag_one(decider, lidx, dtidx, dtidx*tstep), 
+	tl_deciders = {decider.name: map(lambda (lidx, dtidx): __timelag_one(decider, lidx, dtidx, dtidx*tstep), 
 			zip(range(len(dtidxs)), dtidxs))}
 
 	return tl_deciders

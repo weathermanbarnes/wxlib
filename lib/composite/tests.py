@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
+from __future__ import absolute_import, unicode_literals
+
 from ..shorthands import np, metopen
-from decider import *
+from .decider import *
 
 
 
