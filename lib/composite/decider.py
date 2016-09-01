@@ -16,7 +16,7 @@ given decider, and to create all combinations between two lists of composites
 (e.g. for combining all variability indexes with all seasons).
 '''
 
-from copy import copy
+from copy import deepcopy
 
 from ..settings import conf
 from ..shorthands import np, dt, td, metopen
@@ -433,7 +433,7 @@ class timeofday(decider):
 def __timelag_one(decider, lidx, dtidx, dt):
 	''' Create a time-lagged version of a decider '''
 
-	tl_decider = copy(decider)
+	tl_decider = deepcopy(decider)
 	tl_decider.__match = tl_decider.match
 	def match(date, tidx, prv, cur, nxt):
 		return tl_decider.__match(date-dt, tidx-dtidx, prv, cur, nxt)
