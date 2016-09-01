@@ -88,9 +88,10 @@ $F2PY -m $python_library -h $pysig $filec $files > /dev/null
 sed "s/kind=nc/kind=16/g" $pysig | sed "s/_nc//g" |
 sed "s/kind=nr/kind=8/g" | sed "s/_nr//g" |
 sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" |
-grep -v "nan=" > ${pysig}_tmp
+grep -v "nan=" | 
+sed "s/ :: res/,intent(out) :: res/g" | sed "s/ :: sizes/,intent(out) :: sizes/g" | sed "s/ :: label/,intent(out) :: label/g" |
+sed "s/ :: birth/,intent(out) :: birth/g" | sed "s/ :: life/,intent(out) :: life/g" | sed "s/ :: death/,intent(out) :: death/g" > ${pysig}_tmp
 mv ${pysig}_tmp $pysig
-
 
 # 3. Compiling the fortran modules 
 echo -e "Stage 3: Compiling Fortran shared object using $flagset options."

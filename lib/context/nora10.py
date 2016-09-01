@@ -30,10 +30,10 @@ u = ('u', 'u', 'U component of wind', 'm s**-1')
 v = ('v', 'v', 'V component of wind', 'm s**-1')
 w = ('w', 'w', 'Pressure vertical velocity', 'Pa s**-1')
 
-gh = ('gh', 'Z', 'Geopotential', 'm**2 s**-2')
-pt = ('pt', 'th', 'Potential temperature', 'K')
+gh = ('gh', 'gh', 'Geopotential', 'm**2 s**-2')
+pt = ('pt', 'pt', 'Potential temperature', 'K')
 
-r = ('r', 'r', 'Relative humidity', '%')
+r = ('r', 'r', 'Relative humidity', '1')
 
 slhf = ('slhf', 'slhf', 'Surface latent heat flux', 'J m**-2')
 sshf = ('sshf', 'sshf', 'Surface sensible heat flux', 'J m**-2')
