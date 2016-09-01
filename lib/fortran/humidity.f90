@@ -134,8 +134,6 @@ contains
   !
   !@ Calculate water vapour pressure from relative humidity (liquid surface) and temperature
   !@
-  !@ TODO: Reference for the formula/constants in the formula?
-  !@
   !@ Parameters
   !@ ----------
   !@
