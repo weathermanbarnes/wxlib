@@ -472,7 +472,7 @@ class settings_obj(default_dict):
 	def _add_single_variable(self, q, q_file, q_long, q_units, q_bins):
 		''' Add a single variable to the configurarion '''
 
-		if q_file:
+		if not type(q_file) == type(None):
 			self[self._Q_FILE][q] = q_file
 			self[self._Q][q_file] = q
 		if q_long:
