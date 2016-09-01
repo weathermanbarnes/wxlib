@@ -9,6 +9,9 @@
 #   and helpful error messages in case of such errors, but slows down execution considerably.
 COMPILE_OPTS="productive"
 
+# Choose f2py version (i.e. which python to compile for)
+F2PY="f2py3"
+
 #######################################################################
 # Obs: The order of the files in $files has to reflect the interdepencies!
 base=`pwd`
@@ -28,7 +31,7 @@ python_library="dynfor"
 fortran_library="libdynfor"
 pysig="${precc}/$python_library.pyf"
 
-LIBS='-L/Data/gfi/users/local/lib -lspherepack -lblas -llapack'
+LIBS='-L/home/clemensp/sw/lib -lspherepack -lblas -llapack'
 
 # TODO: Make code ready for -pedantic
 if [ "$COMPILE_OPTS" == 'productive' ]; then
@@ -70,7 +73,7 @@ VERDATE=`git log --format="%ai" --no-walk $VERSION`
 
 sed -e "s/####VERREVI####/$VERREVI/g" $filec |
 sed -e "s/####VERDATE####/$VERDATE/g" | 
-sed -e "s/####FCOMPIL####/f2py version `f2py -v`/g" | 
+sed -e "s/####FCOMPIL####/f2py version `$F2PY -v`/g" | 
 sed -e "s/####FCOMTIM####/`date +'%Y-%m-%d %H:%M:%S %z'`/g" |
 sed -e "s/####FCOMHOS####/`hostname -f`/g" > $precc/$filec
 cp $filek $files $precc
@@ -81,7 +84,7 @@ echo "Stage 2: Creating python signature file"
 
 cd $precc
 
-f2py -m $python_library -h $pysig $filec $files > /dev/null
+$F2PY -m $python_library -h $pysig $filec $files > /dev/null
 sed "s/kind=nc/kind=16/g" $pysig | sed "s/_nc//g" |
 sed "s/kind=nr/kind=8/g" | sed "s/_nr//g" |
 sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" |
@@ -98,8 +101,8 @@ mv $fortran_library.so $baselib
 
 # 4. Compiling the shared object usable from within python
 echo -e "Stage 4: Compiling the python module using $flagset options."
-f2py -c $LIBS --fcompiler=gnu95 $F2PY_OPTS --opt="\"$OPTS\"" $pysig $files $filec $filek > /dev/null
-mv $python_library.so $baselib
+$F2PY -c $LIBS --fcompiler=gnu95 $F2PY_OPTS --opt="\"$OPTS\"" $pysig $files $filec $filek > /dev/null
+mv ${python_library}*.so $baselib
 
 
 # 5. Compiling Fortran documentation
