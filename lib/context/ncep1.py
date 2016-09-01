@@ -3,8 +3,8 @@
 
 from datetime import timedelta as td
 
-from ..settings import def_context, conf
-def_context('ncep1')
+from ..settings import def_context
+conf = def_context('ncep1')
 
 
 

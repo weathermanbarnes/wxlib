@@ -2,8 +2,8 @@
 # -*- encoding: utf-8
 
 import numpy as np
-from ..settings import def_context, conf
-def_context('derived')
+from ..settings import def_context
+conf = def_context('derived', parent='active')
 
 
 

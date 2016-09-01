@@ -30,7 +30,7 @@ from matplotlib.collections import LineCollection
 import mpl_toolkits.basemap
 basemap_version = mpl_toolkits.basemap.__version__
 
-from .settings import conf
+from . import settings as s
 
 from .metio import metopen
 from .utils import concat1, concat1lonlat, __unflatten_fronts_t, sect_gen_points
@@ -271,7 +271,8 @@ def __prepare_config(kwargs):
 
 	plev = kwargs.pop('plev', None)
 	q = kwargs.pop('q', None)
-	kwargs = conf.plotf.merge(plev, q, **kwargs)
+	print(id(s.conf))
+	kwargs = s.conf.plotf.merge(plev, q, **kwargs)
 
 	# cmap might be a function returing the cmap; if so generate it now!
 	if 'cmap' in kwargs and type(kwargs['cmap']) == types.FunctionType:
@@ -285,7 +286,7 @@ def __line_prepare_config(kwargs):
 
 	plev = kwargs.pop('plev', None)
 	q = kwargs.pop('q', None)
-	kwargs = conf.plot.merge(plev, q, **kwargs)
+	kwargs = s.conf.plot.merge(plev, q, **kwargs)
 	
 	return kwargs
 
@@ -306,7 +307,7 @@ def __map_create_mask(static, kwargs):
 	datZ = kwargs.pop('Zdata', None)
 	
 	if plev and not type(datZ) == np.ndarray:
-		f,datZ = metopen(conf.file_agg % {'agg': 'all', 'time': '%d-%d' % (conf.years[0],conf.years[-1]), 'plev': plev, 'q': 'Z'}, 'z', no_static=True)
+		f,datZ = metopen(s.conf.file_agg % {'agg': 'all', 'time': '%d-%d' % (s.conf.years[0],s.conf.years[-1]), 'plev': plev, 'q': 'Z'}, 'z', no_static=True)
 		if f: f.close()
 	if type(datZ) == np.ndarray:
 		datZ = concat1(datZ)
@@ -479,7 +480,7 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 	if kwargs.get('title'):
 		title = kwargs.pop('title')
 		if title == 'auto':
-			title = u'%s @ %s' % (conf.q_long.get(q, q), plev)
+			title = u'%s @ %s' % (s.conf.q_long.get(q, q), plev)
 			if kwargs.get('name'):
 				title += u' for %s' % kwargs.get('name')
 
@@ -493,7 +494,7 @@ def __output(plev, q, kwargs):
 	if kwargs.get('save'):
 		filename = kwargs.pop('save')
 		if filename == 'auto':
-			filename = '%s_%s_%s.%s' % (q, plev, __safename(kwargs.get('name', 'unnamed')), conf.plotformat)
+			filename = '%s_%s_%s.%s' % (q, plev, __safename(kwargs.get('name', 'unnamed')), s.conf.plotformat)
 		if kwargs.get('name_prefix'):
 			filename = '%s_%s' % (kwargs.pop('name_prefix'), filename)
 		
@@ -504,10 +505,10 @@ def __output(plev, q, kwargs):
 			imgstr.seek(0)
 			img = Image.open(imgstr)
 			img_adaptive = img.convert('RGB').convert('P', palette=Image.ADAPTIVE)
-			img_adaptive.save('%s/%s' % (conf.plotpath, filename), format='PNG')
+			img_adaptive.save('%s/%s' % (s.conf.plotpath, filename), format='PNG')
 
 		else:
-			plt.savefig('%s/%s' % (conf.plotpath, filename), dpi=kwargs.pop('fig_dpi'))
+			plt.savefig('%s/%s' % (s.conf.plotpath, filename), dpi=kwargs.pop('fig_dpi'))
 	
 	if kwargs.pop('show'):
 		plt.show()

@@ -10,7 +10,7 @@
 COMPILE_OPTS="productive"
 
 # Choose f2py version (i.e. which python to compile for)
-F2PY="f2py3"
+F2PY="f2py3.5"
 
 #######################################################################
 # Obs: The order of the files in $files has to reflect the interdepencies!
@@ -31,7 +31,7 @@ python_library="dynfor"
 fortran_library="libdynfor"
 pysig="${precc}/$python_library.pyf"
 
-LIBS='-L/home/clemensp/sw/lib -lspherepack -lblas -llapack'
+LIBS='-L/usr/local/lib -lspherepack -lblas -llapack'
 
 # TODO: Make code ready for -pedantic
 if [ "$COMPILE_OPTS" == 'productive' ]; then
@@ -88,9 +88,7 @@ $F2PY -m $python_library -h $pysig $filec $files > /dev/null
 sed "s/kind=nc/kind=16/g" $pysig | sed "s/_nc//g" |
 sed "s/kind=nr/kind=8/g" | sed "s/_nr//g" |
 sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" |
-grep -v "nan=" | 
-sed "s/ :: res/,intent(out) :: res/g" | sed "s/ :: sizes/,intent(out) :: sizes/g" | sed "s/ :: label/,intent(out) :: label/g" |
-sed "s/ :: birth/,intent(out) :: birth/g" | sed "s/ :: life/,intent(out) :: life/g" | sed "s/ :: death/,intent(out) :: death/g" > ${pysig}_tmp
+grep -v "nan=" > ${pysig}_tmp
 mv ${pysig}_tmp $pysig
 
 # 3. Compiling the fortran modules 

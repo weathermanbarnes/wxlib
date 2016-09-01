@@ -6,7 +6,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 from . import utils
 from . import tagg
 from .shorthands import np, dt, get_instantaneous, get_aggregate, metsave_timeless
-from .settings import conf
+from . import settings as s
 
 import pca_module as pca
 
@@ -17,7 +17,7 @@ LINES = {'fronts': 'froff', 'convl': 'cloff', 'defl': 'dloff', 'vorl': 'vloff', 
 
 expvar = ('expvar', None, 'EOF Explained variance', '(0 - 1)')
 ecoeff = ('ecoeff', None, 'EOF expansion coefficients', '1')
-conf.register_variable([expvar, ecoeff, ], [])
+s.conf.register_variable([expvar, ecoeff, ], [])
 
 
 def build(qs, eofs, times=None, agg='cal_month', N=10):
@@ -25,7 +25,7 @@ def build(qs, eofs, times=None, agg='cal_month', N=10):
 	'''
 
 	if type(times) == type(None):
-		times = conf.years
+		times = s.conf.years
 	
 	# TODO: There must be a more general way to do this!
 	dates = [dt(min(times),1,1), dt(max(times),12,31,23,59)]

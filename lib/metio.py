@@ -21,7 +21,7 @@ import calendar
 from datetime import datetime as dt, timedelta as td
 from dateutil.relativedelta import relativedelta as rtd
 
-from .settings import conf
+from . import settings as s
 from . import utils
 from .gridlib import grid_by_nc, grid_by_static
 from . import tagg
@@ -44,7 +44,7 @@ NO_ENDING = 'nc' # ETH compatibility: if the file exists without file ending, tr
 def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversion=False, no_static=False, quiet=False, mode='r'):
 	''' Find and open files by name
 	
-	Uses the conf.datapath list to locale files in a variety of different locations.
+	Uses the s.conf.datapath list to locale files in a variety of different locations.
 	The located files might either be numpy-files, netCDF-files or matlab mat-files. 
 	For each of the file types, metopen returns the requested variable and some meta-
 	information about the variable, if not suppressed.
@@ -165,7 +165,7 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 		raise ValueError('cut must be a 1-dimensional slice object')
 	
 	tried = []
-	for path in conf.datapath:
+	for path in s.conf.datapath:
 		static = None
 
 		if verbose:
@@ -230,7 +230,7 @@ def metdiscover(filename):
 	'''
 
 	found = set([])
-	for path in conf.datapath:
+	for path in s.conf.datapath:
 		_found = glob.glob(path+'/'+filename+'.nc')
 		found.update([os.path.basename(_f[:-3]) for _f in _found])
 
@@ -268,16 +268,16 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	s = dat.shape
 
 	# TODO: Why check against gridsize? Or at least: Why not allowing gridsize to be unset?
-	if not plev == 'sfc' and (not len(s) == 4 or (conf.gridsize and not s[2:] == conf.gridsize)):
+	if not plev == 'sfc' and (not len(s) == 4 or (s.conf.gridsize and not s[2:] == s.conf.gridsize)):
 		raise NotImplementedError('dat does not seem to be a context-conform (t,z,y,x)-array.'
 				'\n Expected 4D with horizontal grid of dimension %s'
-				'\n Got shape: %s' % (conf.gridsize, s) )
-	elif plev == 'sfc' and (not len(s) == 3 or (conf.gridsize and not s[1:] == conf.gridsize)):
+				'\n Got shape: %s' % (s.conf.gridsize, s) )
+	elif plev == 'sfc' and (not len(s) == 3 or (s.conf.gridsize and not s[1:] == s.conf.gridsize)):
 		raise NotImplementedError('dat does not seem to be a context-conform surface (t,y,x)-array.'
 				'\n Expected 3D with horizontal grid of dimension %s'
-				'\n Got shape: %s' % (conf.gridsize, s) )
+				'\n Got shape: %s' % (s.conf.gridsize, s) )
 	
-	if not conf.oformat == 'nc':
+	if not s.conf.oformat == 'nc':
 		raise NotImplementedError('Currently only saving in netCDF implemented in metsave.')
 
 	if not s[0] == len(static.t):
@@ -289,14 +289,14 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	if not s[-1] == len(static.x[0,:]):
 		raise ValueError('x-dimension in data (%s) and static (%s) are not equally long.' % (s[-1], len(static.x[0,:])))
 
-	now = dt.now(pytz.timezone(conf.local_timezone))
+	now = dt.now(pytz.timezone(s.conf.local_timezone))
 	if not agg:
-		of = nc.Dataset(conf.opath+'/'+(conf.file_std % {
-				'time': dts2str(static.t_parsed), 'plev': plev, 'qf': conf.qf[q]})+'.nc', 
+		of = nc.Dataset(s.conf.opath+'/'+(s.conf.file_std % {
+				'time': dts2str(static.t_parsed), 'plev': plev, 'qf': s.conf.qf[q]})+'.nc', 
 			'w', format='NETCDF3_CLASSIC')
 	else:
-		of = nc.Dataset(conf.opath+'/'+(conf.file_agg % { 'agg': agg,
-				'time': dts2str(static.t_parsed, agg), 'plev': plev, 'qf': conf.qf[q]})+'.nc', 
+		of = nc.Dataset(s.conf.opath+'/'+(s.conf.file_agg % { 'agg': agg,
+				'time': dts2str(static.t_parsed, agg), 'plev': plev, 'qf': s.conf.qf[q]})+'.nc', 
 			'w', format='NETCDF3_CLASSIC')
 	of.setncatts({'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
@@ -345,11 +345,11 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 		else:
 			ovar = of.createVariable(q, 'i2', dims)
 
-		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q],
+		ovar.setncatts({'long_name': s.conf.q_long[q], 'units': s.conf.q_units[q],
 				'add_offset': off, 'scale_factor': scale})
 	else:
 		ovar = of.createVariable(q, dat.dtype, dims)
-		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q]})
+		ovar.setncatts({'long_name': s.conf.q_long[q], 'units': s.conf.q_units[q]})
 	ovar[::] = dat
 
 	of.close()
@@ -395,8 +395,8 @@ def metsave_lines(dat, datoff, static, plev, q, qoff, additional_axes=[]):
 		raise RuntimeError('dat does not have size 3 in the last dimension')
 
 	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc.Dataset(conf.opath+'/'+(conf.file_std % {'time': dts2str(static.t_parsed), 
-		'plev': plev, 'qf': conf.qf[q]})+'.nc', 'w', format='NETCDF3_CLASSIC')
+	of = nc.Dataset(s.conf.opath+'/'+(s.conf.file_std % {'time': dts2str(static.t_parsed), 
+		'plev': plev, 'qf': s.conf.qf[q]})+'.nc', 'w', format='NETCDF3_CLASSIC')
 	of.setncatts({'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	})
@@ -446,7 +446,7 @@ def metsave_lines(dat, datoff, static, plev, q, qoff, additional_axes=[]):
 	ooidx[:] = range(olen)
 	
 	oq = of.createVariable(q, 'f', ('time', ) + add_dimnames + ('pointindex', 'infotype',))
-	oq.setncatts({'long_name': conf.q_long[q], 'units': 'mixed'})
+	oq.setncatts({'long_name': s.conf.q_long[q], 'units': 'mixed'})
 	oq[::] = dat[::]
 
 	oqoff = of.createVariable(qoff, 'i', ('time', ) + add_dimnames + ('lineindex',))
@@ -462,8 +462,8 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 		timeseries={}, global_atts={}):
 	''' Save time-independent data like composites or EOFs in a netCDF file
 
-	The data is saved either to an existing file with a matching name in conf.datapath, 
-	or, if such a file does not exist, to a new file in conf.opath.
+	The data is saved either to an existing file with a matching name in s.conf.datapath, 
+	or, if such a file does not exist, to a new file in s.conf.opath.
 
 	Optionally, time information may be retained in time series. Time series may use the ID
 	dimension, if ids set.
@@ -503,17 +503,17 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 	if ids:
 		s = (len(ids), ) + s
 	
-	now = dt.now(pytz.timezone(conf.local_timezone))
+	now = dt.now(pytz.timezone(s.conf.local_timezone))
 	history = '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
-	filename = conf.file_timeless % {'time': dts2str(static.t_parsed), 'name': name}
+	filename = s.conf.file_timeless % {'time': dts2str(static.t_parsed), 'name': name}
 	try:
 		f = metopen(filename, no_static=True, mode='a')
 		print('Saving to existing %s' % filename)
 		new = False
 
 	except ValueError: 
-		f = nc.Dataset(conf.opath+'/'+filename+'.nc', 'w', format='NETCDF4')
-		print('Saving to %s/%s.nc' % (conf.opath, filename))
+		f = nc.Dataset(s.conf.opath+'/'+filename+'.nc', 'w', format='NETCDF4')
+		print('Saving to %s/%s.nc' % (s.conf.opath, filename))
 		new = True
 	
 	# Consistency checks
@@ -654,11 +654,11 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 			else:
 				ovar = f.createVariable(ncvarname, 'i2', data_dimensions_)
 
-			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q], 'history': history,
+			ovar.setncatts({'long_name': prefix+s.conf.q_long[q], 'units': s.conf.q_units[q], 'history': history,
 					'add_offset': off, 'scale_factor': scale})
 		else:
 			ovar = f.createVariable(ncvarname, dat_.dtype, data_dimensions_)
-			ovar.setncatts({'long_name': prefix+conf.q_long[q], 'units': conf.q_units[q], 'history': history})
+			ovar.setncatts({'long_name': prefix+s.conf.q_long[q], 'units': s.conf.q_units[q], 'history': history})
 	
 		ovar[::] = dat_
 
@@ -684,7 +684,7 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 			data_dimensions = ('time', )
 		
 		ovar = f.createVariable(ncvarname, 'f', data_dimensions)
-		ovar.setncatts({'long_name': conf.q_long[q], 'units': conf.q_units[q], 'history': history})
+		ovar.setncatts({'long_name': s.conf.q_long[q], 'units': s.conf.q_units[q], 'history': history})
 		ovar[::] = timeseries[plev,q]
 
 	f.close()
@@ -713,10 +713,10 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
 	    Some meta information about the data, like the grid information.
 	'''
 	
-	if not conf.file_static:
+	if not s.conf.file_static:
 		raise ValueError('Static file must be configured for get_static() to work!')
 
-	fo, oro = metopen(conf.file_static, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, quiet=quiet, no_static=True)
+	fo, oro = metopen(s.conf.file_static, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, quiet=quiet, no_static=True)
 	static = grid_by_static(fo)
 	static.oro = oro[::]
 	fo.close()
@@ -763,18 +763,18 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	'''
 	
 	if not plevs:
-		plevs = conf.plevs
+		plevs = s.conf.plevs
 	elif not type(plevs) == np.ndarray and not type(plevs) == list:
 		plevs = [plevs,]
 	
-	if conf.years:
-		dt0 = dt(conf.years[0],1,1,0)
-	elif conf.times: 
-		dt0 = conf.times[0]
+	if s.conf.years:
+		dt0 = dt(s.conf.years[0],1,1,0)
+	elif s.conf.times: 
+		dt0 = s.conf.times[0]
 	else:
-		raise ValueError('Could not determine start date of the data set, either conf.years or conf.times must be provided.')
+		raise ValueError('Could not determine start date of the data set, either s.conf.years or s.conf.times must be provided.')
 
-	dts = conf.timestep.total_seconds()
+	dts = s.conf.timestep.total_seconds()
 
 	# Convert dates to time indexes
 	if type(dates) not in ([np.ndarray, list, tuple, set]):
@@ -800,7 +800,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	for year in years:
 		# Construct the slice
 		fst = dt(year,1,1,0) - dt0
-		lst = (dt(year+1,1,1,0) - conf.timestep) - dt0
+		lst = (dt(year+1,1,1,0) - s.conf.timestep) - dt0
 		fst = int(fst.total_seconds()/dts)
 		lst = int(lst.total_seconds()/dts) + 1
 
@@ -811,7 +811,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 		# One or more vertical levels?
 		i = 0
 		if type(dat) == type(None):
-			f, d, static = metopen(conf.file_std % {'time': year, 'plev': plevs[0], 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+			f, d, static = metopen(s.conf.file_std % {'time': year, 'plev': plevs[0], 'qf': s.conf.qf[q]}, q, cut=cut, **kwargs)
 			if len(d.shape) == 4 and d.shape[1] > 1:
 				separate_plevs = False
 				s = (1+tsmax-tsmin, ) + d.shape[1:]
@@ -838,7 +838,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 		
 		if separate_plevs:
 			for plev in plevs[i:]:
-				f, d, static_ = metopen(conf.file_std % {'time': year, 'plev': plev, 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+				f, d, static_ = metopen(s.conf.file_std % {'time': year, 'plev': plev, 'qf': s.conf.qf[q]}, q, cut=cut, **kwargs)
 				if len(d.shape) < 4:
 					d = d[:,np.newaxis,::]
 				dat[datcut,i:i+1,::] = d
@@ -855,7 +855,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 				i += 1
 
 		elif i == 0:
-			f, dat[datcut,::], static_ = metopen(conf.file_std % {'time': year, 'plev': plevs[0], 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+			f, dat[datcut,::], static_ = metopen(s.conf.file_std % {'time': year, 'plev': plevs[0], 'qf': s.conf.qf[q]}, q, cut=cut, **kwargs)
 			static.t = np.concatenate((static.t, static_.t[cut]))
 			if type(static.t_parsed) == np.ndarray:
 				static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
@@ -909,16 +909,16 @@ def get_aggregate(q, dates, agg, plevs=None, tavg=False, force=False, **kwargs):
 	'''
 
 	if not plevs:
-		plevs = conf.plevs
+		plevs = s.conf.plevs
 	elif not type(plevs) == np.ndarray and not type(plevs) == list:
 		plevs = [plevs,]
 	
-	if conf.years:
-		dt0 = dt(conf.years[0],1,1,0)
-	elif conf.times: 
-		dt0 = conf.times[0]
+	if s.conf.years:
+		dt0 = dt(s.conf.years[0],1,1,0)
+	elif s.conf.times: 
+		dt0 = s.conf.times[0]
 	else:
-		raise ValueError('Could not determine start date of the data set, either conf.years or conf.times must be provided.')
+		raise ValueError('Could not determine start date of the data set, either s.conf.years or s.conf.times must be provided.')
 	
 	# Convert dates to time indexes
 	if type(dates) not in ([np.ndarray, list, tuple, set]):
@@ -943,16 +943,16 @@ def get_aggregate(q, dates, agg, plevs=None, tavg=False, force=False, **kwargs):
 	
 	# Find the position of the year information from a test file name
 	MARKER = '__DYNLIB_T_MARKER__'
-	testname = conf.file_agg % {'agg': agg, 'time': MARKER, 'plev': plevs[0], 'qf': conf.qf[q]}
+	testname = s.conf.file_agg % {'agg': agg, 'time': MARKER, 'plev': plevs[0], 'qf': s.conf.qf[q]}
 	idx = testname.index(MARKER)
 
 	# Find aggregate file names (multi-year files) that are available on all the requested levels
-	filenames = metdiscover(conf.file_agg % {'agg': agg, 'time': '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]', 
-			'plev': plevs[0], 'qf': conf.qf[q]})
+	filenames = metdiscover(s.conf.file_agg % {'agg': agg, 'time': '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]', 
+			'plev': plevs[0], 'qf': s.conf.qf[q]})
 	for plev in plevs[1:]:
 		filenames = filenames.intersection(
-			metdiscover(conf.file_agg % {'agg': agg, 'time': '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]', 
-					'plev': plev, 'qf': conf.qf[q]})
+			metdiscover(s.conf.file_agg % {'agg': agg, 'time': '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]', 
+					'plev': plev, 'qf': s.conf.qf[q]})
 		)
 	
 	avail_times = [f[idx:idx+9] for f in filenames]
@@ -963,12 +963,12 @@ def get_aggregate(q, dates, agg, plevs=None, tavg=False, force=False, **kwargs):
 				avail_years[yr] = avail_time
 	
 	# Find aggregate file names (single-year files) that are available on all the requested levels
-	filenames2 = metdiscover(conf.file_agg % {'agg': agg, 'time': '[0-9][0-9][0-9][0-9]', 
-			'plev': plevs[0], 'qf': conf.qf[q]})
+	filenames2 = metdiscover(s.conf.file_agg % {'agg': agg, 'time': '[0-9][0-9][0-9][0-9]', 
+			'plev': plevs[0], 'qf': s.conf.qf[q]})
 	for plev in plevs[1:]:
 		filenames2 = filenames2.intersection(
-			metdiscover(conf.file_agg % {'agg': agg, 'time': '[0-9][0-9][0-9][0-9]', 
-					'plev': plev, 'qf': conf.qf[q]})
+			metdiscover(s.conf.file_agg % {'agg': agg, 'time': '[0-9][0-9][0-9][0-9]', 
+					'plev': plev, 'qf': s.conf.qf[q]})
 		)
 	
 	for yr in [int(f[idx:idx+4]) for f in filenames2]:
@@ -1012,14 +1012,14 @@ def get_aggregate(q, dates, agg, plevs=None, tavg=False, force=False, **kwargs):
 		i = 0
 		for plev in plevs:
 			if type(dat) == type(None):
-				f, d, static = metopen(conf.file_agg % {'agg': agg, 'time': time, 'plev': plev, 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+				f, d, static = metopen(s.conf.file_agg % {'agg': agg, 'time': time, 'plev': plev, 'qf': s.conf.qf[q]}, q, cut=cut, **kwargs)
 				s = (tsmax-tsmin, len(plevs), ) + d.shape[1:]
 				dat = np.empty(s, dtype=d.dtype)
 				static.t = static.t[cut]
 				if type(static.t_parsed) == np.ndarray:
 					static.t_parsed = static.t_parsed[cut]
 			else:
-				f, d, static_ = metopen(conf.file_agg % {'agg': agg, 'time': time, 'plev': plev, 'qf': conf.qf[q]}, q, cut=cut, **kwargs)
+				f, d, static_ = metopen(s.conf.file_agg % {'agg': agg, 'time': time, 'plev': plev, 'qf': s.conf.qf[q]}, q, cut=cut, **kwargs)
 				static.t = np.concatenate((static.t, static_.t[cut]))
 				if type(static.t_parsed) == np.ndarray:
 					static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
@@ -1051,12 +1051,12 @@ def dts2str(dates, agg=None):
 	hours, days and month are omitted for the last date if they correspond to the last 
 	time step within their superordinate period. 
 	
-	The calculation of the last time step depends on the ``conf.timestep`` property.
+	The calculation of the last time step depends on the ``s.conf.timestep`` property.
 	For example the last time step of October 2014 in the ERA-Interim data is 18 UTC
 	on 31 October 2014.
 
 	If the given number of dates given matches the number of dates expected for the given 
-	start and end dates with the ``conf.timestep``, the dates are checked wether they are
+	start and end dates with the ``s.conf.timestep``, the dates are checked wether they are
 	contiguous. If yes, the two dates are joined by a minus sign ``'-'``. Otherwise, for a
 	non-contiguous set of dates, the start and end dates are joined by two dots ``'..'``.
 
@@ -1169,12 +1169,12 @@ def dts2str(dates, agg=None):
 	if agg:
 		agg = getattr(tagg, agg)
 		timestep = agg.interval
-	elif conf.timestep:
-		if type(conf.timestep) == str: 
+	elif s.conf.timestep:
+		if type(s.conf.timestep) == str: 
 			raise NotImplementedError()
 		else:
-			timestep = conf.timestep
-			agg = tagg.get_by_interval(conf.timestep)
+			timestep = s.conf.timestep
+			agg = tagg.get_by_interval(s.conf.timestep)
 
 	else:
 		agg = None
@@ -1238,9 +1238,9 @@ def str2dts(periodstr, agg=None, epoch=None):
 
 	# Not defined in in function signature as they should be evaluated on run-time and not in import-time
 	if not agg:
-		agg = conf.timestep
+		agg = s.conf.timestep
 	if not epoch:
-		epoch = conf.epoch
+		epoch = s.conf.epoch
 
 	if periodstr.find('..') >= 0:
 		raise ValueError('Cannot create list of dates for a period string representing a non-contiguous set of dates')

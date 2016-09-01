@@ -3,8 +3,8 @@
 
 import os
 
-from ..settings import def_context, conf
-def_context('ecmwf_fc')
+from ..settings import def_context
+conf = def_context('ecmwf_fc')
 
 
 

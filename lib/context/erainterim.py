@@ -3,8 +3,8 @@
 
 from datetime import datetime as dt, timedelta as td
 
-from ..settings import def_context, conf
-def_context('erainterim')
+from ..settings import def_context
+conf = def_context('erainterim')
 
 
 

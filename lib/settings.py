@@ -46,10 +46,10 @@ from . import cm, proj
 import collections
 
 
-__context__ = set([])
+__context__ = dict()
 
 def in_context(*contexts):
-	''' Check if any of the given contexts is active
+	''' Check if any of the given contexts is loaded
 	
 	Parameters
 	----------
@@ -68,16 +68,113 @@ def in_context(*contexts):
 	
 	return False
 
-def def_context(context):
+def def_context(context, parent=None):
 	''' Define a new context
 
 	Parameters
 	----------
 	context : str
 	    Name of the context to be defined
+	parent : str
+	    Optional: Name of the parent context or the string "active". If given, no 
+	    new set of configuration is created, and the context is expected to operate 
+	    on the same configuration as its parent. If "active", whatever context is 
+	    currently active is used as parent. If no parent given, the newly created 
+	    context is made active immediately.
+	
+	Returns
+	-------
+	settings_obj
+	    The newly created or parent context configuration
 	'''
 
-	__context__.add(context)
+	if parent == 'active':
+		conf_ = conf
+	elif parent:
+		conf_ = __context__[parent]
+	else:
+		conf_ = settings_obj({
+			'q': {}, 		# Given a file name segment, which variable to we expect to find there?
+			'qf': {}, 		# Given a variable name, in which file do we find it?
+			'q_units': {},
+			'q_long': {},
+			'q_bins': {},
+			'datapath': ['.', '/Data/gfi/users/csp001/share/dynlib'], # TODO: Move to users/local as soon as Idar created the folder.
+			'opath': '.',
+			'oformat': 'nc',
+			'plotpath': '.',
+			'plotformat': 'png',
+			'file_std': None,
+			'file_agg': None,
+			'file_ts': None,
+			'file_timeless': None,
+			'file_static': None,
+			'epoch': None,
+			'years': [],
+			'times': [],
+			'timestep': None,
+			'gridsize': None,
+			'local_timezone': 'Europe/Oslo',
+			'plevs': [],
+			'ptlevs': [],
+			'pvlevs': [],
+			'zlevs': [],
+			'mlevs': [],
+			'sfclevs': [],
+			'plot': plot_settings_dict(PLOT_DEFAULTS, MUTEX_GROUPS),
+			'plotf': plot_settings_dict(PLOTF_DEFAULTS, MUTEX_GROUPS),
+		}, [])
+		
+	__context__[context] = conf_
+
+	if not parent:
+		set_active_context(context)
+	
+	return conf_
+
+def get_context(context):
+	return __context__[context]
+
+def set_active_context(context):
+	''' Set the currently active configuration by context name 
+	
+	Parameters
+	----------
+	context : str
+	    Context to be made active
+	'''
+	
+	global conf
+	conf = __context__[context]
+
+def is_active_context(context):
+	''' Query if the given context is currently active
+	
+	Parameters
+	----------
+	context : str
+	    Context to be checked
+	
+	Returns
+	-------
+	bool
+	    ``True'' if the given context is active
+	'''
+	
+	global conf
+	return id(conf) == id(__context__[context])
+
+def get_active_context():
+	''' Get the currently active configuration
+	
+	Returns
+	-------
+	settings_obj
+	    The currently active configuration
+	'''
+	
+	global conf
+	return conf
 
 
 class default_dict(collections.MutableMapping):
@@ -606,36 +703,6 @@ PLOTF_DEFAULTS.update({
 MUTEX_GROUPS = [set(['colors', 'cmap']), ]
 
 
-conf = settings_obj({
-	'q': {}, 		# Given a file name segment, which variable to we expect to find there?
-	'qf': {}, 		# Given a variable name, in which file do we find it?
-	'q_units': {},
-	'q_long': {},
-	'q_bins': {},
-	'datapath': ['.', '/Data/gfi/users/csp001/share/dynlib'], # TODO: Move to users/local as soon as Idar created the folder.
-	'opath': '.',
-	'plotpath': '.',
-	'file_std': None,
-	'file_agg': None,
-	'file_ts': None,
-	'file_timeless': None,
-	'file_static': None,
-	'epoch': None,
-	'years': [],
-	'times': [],
-	'timestep': None,
-	'gridsize': None,
-	'local_timezone': 'Europe/Oslo',
-	'plevs': [],
-	'ptlevs': [],
-	'pvlevs': [],
-	'zlevs': [],
-	'mlevs': [],
-	'sfclevs': [],
-	'plot': plot_settings_dict(PLOT_DEFAULTS, MUTEX_GROUPS),
-	'plotf': plot_settings_dict(PLOTF_DEFAULTS, MUTEX_GROUPS),
-	'plotformat': 'png',
-	'oformat': 'nc',
-}, [])
+conf = def_context('default')
 
 # that's it
