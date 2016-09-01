@@ -18,7 +18,7 @@ from __future__ import absolute_import, unicode_literals, division
 import copy
 import re
 import types
-from io import StringIO
+from io import BytesIO
 from PIL import Image
 
 import numpy as np
@@ -499,7 +499,7 @@ def __output(plev, q, kwargs):
 		
 		# If png: Use adaptive palette to save space
 		if filename[-3:] == 'png':
-			imgstr = StringIO.StringIO()
+			imgstr = BytesIO()
 			plt.savefig(imgstr, format='png', dpi=kwargs.pop('fig_dpi'))
 			imgstr.seek(0)
 			img = Image.open(imgstr)
