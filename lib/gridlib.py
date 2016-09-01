@@ -135,11 +135,11 @@ class grid(object):
 class grid_by_nc(grid):
 	''' Extract the relevant information from a given netCDF file object '''
 
-	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x', ]
+	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x', 'x_1']
 	X_NAME_BEGINSWITH = ['rlon', 'dimx', ]
-	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', ]
+	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', 'y_1']
 	Y_NAME_BEGINSWITH = ['rlat', 'dimy', ]
-	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', ]
+	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'z_1']
 	Z_NAME_BEGINSWITH = ['lev', 'dimz', ]
 	T_NAMES = ['time', 'Time']
 
@@ -263,7 +263,7 @@ class grid_by_nc(grid):
 			self.y = self.f.variables[self.y_name][::]
 			self.x_name = 'longitude'
 			self.y_name = 'latitude'
-		elif self.x_unit == 'degrees' and self.y_unit == 'degrees':
+		elif self.x_unit in ['degrees', 'degree'] and self.y_unit in ['degrees', 'degree']:
 			self.gridtype = 'latlon'
 			self.cyclic_ew = True
 			self.x = self.f.variables[self.x_name][::]
