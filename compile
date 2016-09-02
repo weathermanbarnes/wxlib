@@ -9,8 +9,10 @@
 #   and helpful error messages in case of such errors, but slows down execution considerably.
 COMPILE_OPTS="productive"
 
-# Choose f2py version (i.e. which python to compile for)
-F2PY="f2py3.5"
+# Choose python version to compile for
+PY_VER="3.5"
+F2PY="f2py$PY_VER"
+PYTHON="python$PY_VER"
 
 #######################################################################
 # Obs: The order of the files in $files has to reflect the interdepencies!
@@ -107,7 +109,7 @@ mv ${python_library}*.so $baselib
 # 5. Compiling Fortran documentation
 echo "Stage 5: Compiling the pickled Fortran documentation"
 cd $src
-python $baselib/$doc_extract $filek $filec $files
+$PYTHON $baselib/$doc_extract $filek $filec $files
 
 
 # 6. Compiling Fortran documentation
