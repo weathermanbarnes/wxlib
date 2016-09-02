@@ -133,6 +133,19 @@ def def_context(context, parent=None):
 	return conf_
 
 def get_context(context):
+	''' Get the configuration for the given context
+	
+	Parameters
+	----------
+	context : str
+	    Context queried for configuration
+	
+	Returns
+	-------
+	settings_obj
+	    The currently active configuration
+	'''
+	
 	return __context__[context]
 
 def set_active_context(context):
