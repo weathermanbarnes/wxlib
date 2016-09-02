@@ -463,7 +463,6 @@ contains
     return
   end subroutine
   !
- !
   !@ Calculate the potential temperature from temperature, pressure
   !@
   !@ Formula from AMS Glossary: http://glossary.ametsoc.org/wiki/Potential_temperature
@@ -490,10 +489,6 @@ contains
   !@ -------
   !@ np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Calculated potential temperature in K.
-  !@
-  !@ See Also
-  !@ --------
-  !@ :meth:`theta`, must compile everything again for it to find the theta function?
   subroutine theta(res,nx,ny,nz,temp,pres)
     real(kind=nr), intent(in)  :: temp(nz,ny,nx), pres(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
