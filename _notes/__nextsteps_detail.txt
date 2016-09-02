@@ -1,8 +1,0 @@
-What is to do?
-
-get_composite/		-> New empty proxy functions for new metread_timeless
-get_eof
-
-metread_timeless	-> New function to read EOF/composite files without a time dimension
-
-metsave_timeless	-> New function to save EOF/composite files without a time dimensions
