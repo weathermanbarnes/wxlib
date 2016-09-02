@@ -150,6 +150,8 @@ Currently, the following contexts exist:
    ECWMF forecast archive for the last 2 weeks or so. Currently contains only the deterministic forecast at 0.5° resolution.
 :mod:`dynlib.context.metno_fc`
    AROME2.5 forecast archive for the last 2 weeks or so. 2.5 km resolution covering most of Scandinavia.
+:mod:`dynlib.context.nora10`
+   NORA10 local reanalysis for Norway, 10 km resolution.
 :mod:`dynlib.context.derived`
    Variable definitions for all diagnostics and detected features available in dynlib.
 
@@ -171,12 +173,31 @@ In addition, a few contexts are reserved for future use:
    NCEP/NCAR reanalysis.
 :mod:`dynlib.context.c20r`
    20th century reanalysis.
-:mod:`dynlib.context.nora10`
-   NORA10 local reanalysis for Norway, 10 km resolution.
 :mod:`dynlib.context.bedymo`
    Bedymo model output.
 :mod:`dynlib.context.wrf`
    WRF model output.
+
+
+Context switching
+"""""""""""""""""
+
+Sometimes it can become necessary to operate on data from different data sets. For this case, 
+dynlib supports loading several contexts in parallel, and switching between them.
+
+For loading contexts describing additional data sets, they need to be imported in the same way as 
+the first context was. During the import a new set of configuration is created, and is made 
+/active/. It is the /active/ context that affects how dynlib works. So initially, dynlib will 
+operate on the newly imported data set. 
+
+You can switch between different contexts using
+:meth:`dynlib.settings.set_active_context`.
+
+To query if a given set of configuration is /active/, use
+:meth:`dynlib.settings.is_active_context`. 
+
+Note that there are special contexts, like :mod:`dynlib.context.derived` or anything plot-related, 
+that will not create a new set of configuration, but rather modify the currently active context.
 
 
 Using contexts in your personal settings
