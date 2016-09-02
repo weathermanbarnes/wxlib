@@ -19,6 +19,7 @@ dynlib.humidity
    .. autofunction:: tdew_from_e
    .. autofunction:: te_from_q
    .. autofunction:: thetae_from_q
+   .. autofunction:: theta
 
    Python functions
    ----------------

@@ -20,7 +20,7 @@ import scipy as sp
 from scipy.special import erfinv
 
 from . import tagg
-from . import settings import s
+from . import settings as s
 
 from datetime import datetime as dt, timedelta as td
 import calendar

@@ -16,6 +16,10 @@ dynlib.utils
    .. autofunction:: dynlib.utils.hist2d
    .. autofunction:: dynlib.utils.mask_minimum_connect
    .. autofunction:: dynlib.utils.mask_grow
+   .. autofunction:: dynlib.utils.connect_4d_from_3d
+   .. autofunction:: dynlib.utils.label_connected_3d
+   .. autofunction:: dynlib.utils.label_connected_2d
+   .. autofunction:: dynlib.utils.fill_nan
 
    Python functions
    ----------------
