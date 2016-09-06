@@ -37,8 +37,8 @@ The line offset for time ``tidx`` and line index ``lidx`` gives the point index 
 point belonging to this line. 
 
 Lines following this data format can be direcly overlayed maps, using the 
-``dynlib.figures.map_overlay_lines`` function, and can be converted into mask fields with
-the ``dynlib.utils.mask_lines`` function.
+:func:`dynlib.figures.map_overlay_lines` function, and can be converted into mask fields with
+the :func:`dynlib.utils.mask_lines` function.
 
 
 Time series
