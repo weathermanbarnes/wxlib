@@ -1072,7 +1072,7 @@ contains
     !f2py depend(nx,ny,nz) res
     !
     logical :: lfill(nz,ny,nx)
-    real(kind=nr) :: smooth, corr, conv
+    real(kind=nr) :: smooth, corr
     real(kind=nr), parameter :: omega = 1.5_nr
     integer(kind=ni) :: i,j,k, il,ir,jd,ju, iter
     integer(kind=ni), parameter :: maxiter = 300_ni
