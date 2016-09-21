@@ -12,14 +12,13 @@ a "static.npz" file that contains the pertinent information for a given data set
 '''
 
 
-import math
 import copy
 import numpy as np
 import netCDF4 as nc
 from mpl_toolkits.basemap.pyproj import Proj 		# for rotpole projection
 from datetime import datetime as dt, timedelta as td
 
-
+from . import derivatives
 
 
 class grid(object):
@@ -56,16 +55,21 @@ class grid(object):
 	def _calc_dx_dy_latlon(self):
 		self.dx = np.ones((self.ny, self.nx))*111111.111111
 		self.dy = np.ones((self.ny, self.nx))*111111.111111
-		for xidx in range(self.nx):
-			for yidx in range(1,self.ny-1):
-				dlon = self.x[(xidx+1)%self.nx]-self.x[(xidx-1)%self.nx]
-				if dlon > 180:
-					dlon -= 360
-				elif dlon < -180:
-					dlon += 360
-				self.dx[yidx,xidx] *= dlon*math.cos(math.pi/180.0*self.y[yidx])
-		for yidx in range(1,self.ny-1):
-			self.dy[yidx,:] *= self.y[yidx+1]-self.y[yidx-1]
+
+		dlon = np.ones(self.dx.shape)
+		dlon[:,1:-1] = self.x[np.newaxis,2:]-self.x[np.newaxis,:-2]
+		dlon[:,0] = self.x[np.newaxis,1]-self.x[np.newaxis,-1]
+		if np.any(np.abs(dlon[:,1]/dlon[:,0]-1)  > 1.0e-3):
+			self.cyclic_ew = False
+			dlon[:,0] = 2.0*(self.x[1]-self.x[0])
+			dlon[:,-1] = 2.0*(self.x[-1]-self.x[-2])
+		else:
+			dlon[:,-1] = self.x[np.newaxis,0]-self.x[np.newaxis,-2]
+		dlon[dlon > 180] -= 360.0
+		dlon[dlon < -180] += 360.0
+		self.dx *= dlon * np.cos(np.pi/180.0*self.y[:,np.newaxis])
+
+		self.dy[1:-1,:] *= self.y[2:,np.newaxis]-self.y[:-2,np.newaxis]
 		self.dy[ 0,:] *= 2.0*(self.y[ 1]-self.y[ 0])
 		self.dy[-1,:] *= 2.0*(self.y[-1]-self.y[-2])
 
@@ -129,6 +133,36 @@ class grid(object):
 			for date in dates ])
 
 		return cpy
+
+	def unrotate_vector(self, u, v):
+		''' Express vector components expressed in rotated grid in unrotated grid
+
+		Only active if grid instance represents a rotated grid. Otherwise u and v a returned unchanged.
+
+		Parameters
+		----------
+		u : np.ndarray with 2 or more dimensions
+		    x-component of vector in rotated coordinates
+		v : np.ndarray with 2 or more dimensions
+		    x-component of vector in rotated coordinates
+
+		Returns
+		----------
+		np.ndarray with 2 or more dimensions
+		    x-component of vector in unrotated coordinates
+		np.ndarray with 2 or more dimensions
+		    x-component of vector in unrotated coordinates
+		'''
+
+		if not hasattr(self, 'local_Nx'):
+			return u, v
+		
+		ur = u * self.local_Ny - v * self.local_Nx
+		vr = u * self.local_Nx + v * self.local_Ny
+
+		return ur, vr
+
+
 
 
 # Construct the grid based on the grid information in a nc (netcdf) file
@@ -321,7 +355,7 @@ class grid_by_nc(grid):
 
 		else:
 			raise NotImplementedError('(Yet) Unknown grid type "%s"' % self.gridtype)
-		
+
 		self.rotated = False
 		if self.gridtype == 'latlon':
 			for var in self.f.variables:
@@ -334,10 +368,16 @@ class grid_by_nc(grid):
 							o_lat_p=rot_nplat, 
 							lon_0=180,
 					)
-					self.x, self.y = m(self.x, self.y)
+					self.x, self.y = m(np.ascontiguousarray(self.x), 
+							np.ascontiguousarray(self.y) )
 					self.x *= 180.0/np.pi
 					self.y *= 180.0/np.pi
 					self.rotated = True
+					self.local_Nx, self.local_Ny = derivatives.grad(self.y[np.newaxis,:,:], self.dx, self.dy)
+					self.local_Nx, self.local_Ny = self.local_Nx.squeeze(), self.local_Ny.squeeze()
+					absgrad = np.sqrt(self.local_Nx**2 + self.local_Ny**2)
+					self.local_Nx /= absgrad
+					self.local_Ny /= absgrad
 					break # don't rotate more than once!
 
 		if self.z_name:

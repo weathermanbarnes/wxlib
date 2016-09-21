@@ -13,7 +13,7 @@ These functions have two main aims:
     for example temperatures are by default plotted in a consistent an meaningful way.
 '''
 
-from __future__ import absolute_import, unicode_literals, division
+from __future__ import absolute_import, unicode_literals, division, print_function
 
 import copy
 import re
@@ -271,7 +271,6 @@ def __prepare_config(kwargs):
 
 	plev = kwargs.pop('plev', None)
 	q = kwargs.pop('q', None)
-	print(id(s.conf))
 	kwargs = s.conf.plotf.merge(plev, q, **kwargs)
 
 	# cmap might be a function returing the cmap; if so generate it now!
@@ -405,7 +404,7 @@ def __contourf_dat(m, x, y, dat, kwargs):
 		if not type(kwargs.get('colors')) == type(None) and type(kwargs.get('cmap')) == type(None):
 			if not type(scale) == int:
 				colors = list(kwargs.get('colors'))
-				repeat = len(scale) / len(colors) + 1
+				repeat = len(scale) // len(colors) + 1
 				kwargs['cmap'] = matplotlib.colors.ListedColormap(colors*repeat)
 			else:
 				kwargs['cmap'] = matplotlib.colors.ListedColormap(kwargs.get('colors'))
@@ -421,6 +420,8 @@ def __contourf_dat(m, x, y, dat, kwargs):
 		pkwargs = { key: kwargs.get(key, None) for key in pkwargs }
 		datm = np.ma.masked_where(np.isnan(dat), dat)
 		cs = m.pcolormesh(x, y, datm, latlon=True, zorder=1, **pkwargs)
+	elif kwargs.get('tri'):
+		cs = m.contourf(x.flatten(), y.flatten(), dat.flatten(), scale, latlon=True, zorder=1, **kwargs)
 	else:
 		cs = m.contourf(x, y, dat, scale, latlon=True, zorder=1, **kwargs)
 
@@ -823,13 +824,13 @@ def map_overlay_barbs(u, v, static, **kwargs):
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
 
-		if hasattr(m, 'transform_vector'):
+		try:
 			if lat[0,0] > lat[-1,0]:
 				ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
 			else:
 				ut,vt, xt,yt = m.transform_vector(u_,v_,lon[0,:],lat[:,0], 30, 20, returnxy=True)
 
-		else:
+		except (AttributeError, ValueError):
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
 			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
@@ -867,9 +868,9 @@ def map_overlay_quiver(u, v, static, **kwargs):
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
 
-		if hasattr(m, 'transform_vector'):
+		try:
 			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
-		else:
+		except (AttributeError, ValueError):
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
 			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
@@ -913,15 +914,21 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 		Nvecx = 27
 		Nvecy = 18
 		
-		if hasattr(m, 'transform_vector'):
+		try:
 			ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0], Nvecx, Nvecy, returnxy=True)
 			qscale = 420
-		else:
+		except AttributeError:
 			skipx = defdex.shape[1]/Nvecx
 			skipy = defdey.shape[0]/Nvecy
 			slc = (slice(skipy//2,None,skipy), slice(skipx//2,None,skipx))
 			ut,vt,xt,yt = defdex[slc],defdey[slc],x[slc],y[slc]
 			qscale=72
+		except ValueError:
+			skipx = defdex.shape[1]/Nvecx
+			skipy = defdey.shape[0]/Nvecy
+			slc = (slice(skipy//2,None,skipy), slice(skipx//2,None,skipx))
+			ut,vt,xt,yt = m.rotate_vector(defdex[slc],defdey[slc],lon[slc],lat[slc], returnxy=True)
+			qscale=420
 
 		m.quiver(xt, yt, ut, vt, zorder=4, scale=qscale, alpha=0.85)
 		m.quiver(xt, yt, -ut, -vt, zorder=4, scale=qscale, alpha=0.85)
