@@ -798,6 +798,9 @@ def map_overlay_shading(dat, static, **kwargs):
 def map_overlay_barbs(u, v, static, **kwargs):  
 	''' Overlay wind barbs onto a map
 
+	For rotated grids (as far as supported by gridlib), vectors will be 
+	rotated back automatically.
+
 	Parameters
 	----------
 	u : np.ndarrays with dimensions (y,x)
@@ -823,6 +826,9 @@ def map_overlay_barbs(u, v, static, **kwargs):
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
+
+		# Respect rotated coordinate systems (otherweise returned unchanged)
+		u_, v_ = static.unrotate_vector(u_, v_)
 
 		try:
 			if lat[0,0] > lat[-1,0]:
@@ -839,8 +845,11 @@ def map_overlay_barbs(u, v, static, **kwargs):
 	
 	return overlay
 
-def map_overlay_quiver(u, v, static, **kwargs):  
+def map_overlay_quiver(u, v, static, **kwargs):
 	''' Overlay quiver vectors onto a map
+
+	For rotated grids (as far as supported by gridlib), vectors will be 
+	rotated back automatically.
 
 	Parameters
 	----------
@@ -867,6 +876,9 @@ def map_overlay_quiver(u, v, static, **kwargs):
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
+		
+		# Respect rotated coordinate systems (otherweise returned unchanged)
+		u_, v_ = static.unrotate_vector(u_, v_)
 
 		try:
 			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
@@ -881,6 +893,9 @@ def map_overlay_quiver(u, v, static, **kwargs):
 
 def map_overlay_dilatation(defabs, defang, static, **kwargs):
 	''' Overlay dilatation axes onto a map
+
+	For rotated grids (as far as supported by gridlib), orientations will be 
+	rotated back automatically.
 
 	Parameters
 	----------
@@ -911,24 +926,24 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 		defdex = __map_prepare_dat(defdex, mask, static, copy.copy(kwargs))
 		defdey = __map_prepare_dat(defdey, mask, static, kwargs)
 
-		Nvecx = 27
-		Nvecy = 18
-		
+		# Respect rotated coordinate systems (otherweise returned unchanged)
+		defdex, defdey = static.unrotate_vector(defdex, defdey)
+
 		try:
+			Nvecx = 27
+			Nvecy = 18
 			ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0], Nvecx, Nvecy, returnxy=True)
 			qscale = 420
 		except AttributeError:
-			skipx = defdex.shape[1]/Nvecx
-			skipy = defdey.shape[0]/Nvecy
-			slc = (slice(skipy//2,None,skipy), slice(skipx//2,None,skipx))
+			interval = kwargs.pop('vector_space_interval', 15)
+			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
 			ut,vt,xt,yt = defdex[slc],defdey[slc],x[slc],y[slc]
-			qscale=72
+			qscale = 72
 		except ValueError:
-			skipx = defdex.shape[1]/Nvecx
-			skipy = defdey.shape[0]/Nvecy
-			slc = (slice(skipy//2,None,skipy), slice(skipx//2,None,skipx))
+			interval = kwargs.pop('vector_space_interval', 15)
+			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
 			ut,vt,xt,yt = m.rotate_vector(defdex[slc],defdey[slc],lon[slc],lat[slc], returnxy=True)
-			qscale=420
+			qscale = 840
 
 		m.quiver(xt, yt, ut, vt, zorder=4, scale=qscale, alpha=0.85)
 		m.quiver(xt, yt, -ut, -vt, zorder=4, scale=qscale, alpha=0.85)
