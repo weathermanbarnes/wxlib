@@ -173,7 +173,7 @@ class grid_by_nc(grid):
 	X_NAME_BEGINSWITH = ['rlon', 'dimx', ]
 	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', 'y_1']
 	Y_NAME_BEGINSWITH = ['rlat', 'dimy', ]
-	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'z_1']
+	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'z_1', 'alt']
 	Z_NAME_BEGINSWITH = ['lev', 'dimz', ]
 	T_NAMES = ['time', 'Time']
 
@@ -230,15 +230,15 @@ class grid_by_nc(grid):
 			self.t_name = None
 
 			for d in self.f.dimensions:
-				if d in self.X_NAMES:
+				if matches(d, self.X_NAMES, self.X_NAME_BEGINSWITH):
 					if self.x_name:
 						raise ValueError('Found several possible x-axes (using file)')
 					self.x_name = d
-				if d in self.Y_NAMES:
+				if matches(d, self.Y_NAMES, self.Y_NAME_BEGINSWITH):
 					if self.y:
 						raise ValueError('Found several possible y-axes (using file)')
 					self.y_name = d
-				if d in self.Z_NAMES:
+				if matches(d, self.Z_NAMES, self.Z_NAME_BEGINSWITH):
 					if self.z_name:
 						raise ValueError('Found several possible z-axes (using file)')
 					self.z_name = d

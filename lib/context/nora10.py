@@ -35,6 +35,10 @@ pt = ('pt', 'pt', 'Potential temperature', 'K')
 
 r = ('r', 'r', 'Relative humidity', '1')
 
+pres = ('pres', 'pres', 'Sea-level pressure', 'Pa')
+u10 = ('10u', '10u', '10 metre U wind component', 'm s**-1')
+v10 = ('10v', '10v', '10 metre V wind component', 'm s**-1')
+t2 = ('2t', '2t', '2 metre temperature', 'K')
 slhf = ('slhf', 'slhf', 'Surface latent heat flux', 'J m**-2')
 sshf = ('sshf', 'sshf', 'Surface sensible heat flux', 'J m**-2')
 
@@ -45,6 +49,6 @@ conf.plevs = ['100', '300', '500', '700', '850', '925', '1000', ]
 conf.register_variable([u, v, w, pt, gh, r], conf.plevs)
 
 # 2. No vertical level
-conf.register_variable([oro, slhf, sshf, ], [])
+conf.register_variable([oro, slhf, sshf, pres, u10, v10, t2], [])
 
 # that's it
