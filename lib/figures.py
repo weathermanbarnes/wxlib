@@ -37,6 +37,21 @@ from .utils import concat1, concat1lonlat, __unflatten_fronts_t, sect_gen_points
 from .autoscale import autoscale
 
 
+def _interpolate_for_section(static, dat, xlon, xlat):
+	try:
+		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[::-1,:].T)
+	# If interpolation fails, try again, but this time do not assume a structured mesh
+	except TypeError:
+		points = zip(static.x.flat, static.y.flat)
+		interp = intp.LinearNDInterpolator(points, dat.flatten())
+		points = zip(xlon, xlat)
+		dati = interp(points)
+	# If interpolation successful, get values for given points
+	else:
+		dati = interp.ev(xlon, xlat)
+	
+	return dati
+
 def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	''' Plot a vertical cross section with pressure or log-pressure as the vertical axis
 
@@ -97,14 +112,11 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 
 	dati = np.empty((dat.shape[0], len(xlon),))
 	for i in range(dat.shape[0]):
-		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[i,::-1,:].T)
-		dati[i] = interp.ev(xlon, xlat)
+		dati[i] = _interpolate_for_section(static, dat[i,:,:], xlon, xlat)
 
-	interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], ps[::-1,:].T)
-	psi = interp.ev(xlon, xlat)
+	psi = _interpolate_for_section(static, ps, xlon, xlat)
 	if not type(p) == type(None):
-		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], p[::-1,:].T)
-		pi = interp.ev(xlon, xlat)
+		pi = _interpolate_for_section(static, p, xlon, xlat)
 	
 	# 2a. Plot the inset map
 	xx, xy = m(xlon, xlat)
@@ -113,15 +125,18 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 		__contourf_dat(m, x, y, datmap, kwargs_map)
 	#m.plot(xx, xy, 'w-', linewidth=4)
 	m.plot(xx, xy, 'k-', linewidth=4)
-
+	
 	logp = kwargs.get('logp', False)
 	if logp:
-		z = map(lambda p: np.log(float(p)), static.z)
+		z = np.array([np.log(float(p_)) for p_ in static.z])
 		kwargs['ticks'] = z
-		kwargs['ticklabels'] = static.z
+		kwargs['ticklabels'] = list(static.z)
 	else:
 		z = static.z
-
+	
+	if len(z.shape) > 1:
+		raise Exception('z dimension must be 1-dimensional!')
+	
 	# 2b. Plot the actual cross section
 	if 'sect_axes' in kwargs:
 		plt.sca(kwargs['sect_axes'])
@@ -541,7 +556,6 @@ def __safename(name):
 ###############################################
 # Overlays
 
-# TODO: Should this one take the static object as an argument? If only for consistency in the API.
 def section_overlay_contour(dat, static, **kwargs):
 	''' Overlay contours onto a section
 	
@@ -568,8 +582,7 @@ def section_overlay_contour(dat, static, **kwargs):
 	def overlay(m, xxy, z, xlon, xlat, zorder, mask=None):
 		dati = np.empty((dat.shape[0], len(xlon),))
 		for i in range(dat.shape[0]):
-			interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[i,::-1,:].T)
-			dati[i] = interp.ev(xlon, xlat)
+			dati[i] = _interpolate_for_section(static, dat[i,:,:], xlon, xlat)
 	
 		if type(mask) == np.ndarray:
 			dati[mask] = np.nan
@@ -612,9 +625,15 @@ def map_overlay_contour(dat, static, **kwargs):
 	'''
 
 	kwargs = __line_prepare_config(kwargs)
+	owngrid = kwargs.pop('owngrid', False)
 	
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
-		dat_ = __map_prepare_dat(dat, mask, static, kwargs)
+		if owngrid:
+			mask = __map_create_mask(static, kwargs)
+			dat_ = __map_prepare_dat(dat, mask, static, kwargs)
+			m, x, y, lon, lat = __map_setup(mask, static, kwargs)
+		else:
+			dat_ = __map_prepare_dat(dat, mask, static, kwargs)
 
 		if type(mask) == np.ndarray:
 			dat_[mask] = np.nan
