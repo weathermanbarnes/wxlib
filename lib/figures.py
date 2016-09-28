@@ -315,7 +315,9 @@ def __map_create_mask(static, kwargs):
 	# Potential override by kwarg
 	mask = kwargs.pop('mask', None)
 	if type(mask) == np.ndarray:
-		return concat1(mask)
+		if static.cyclic_ew:
+			mask = concat1(mask)
+		return mask
 
 	plev = kwargs.pop('plev', None)
 	datZ = kwargs.pop('Zdata', None)
@@ -324,8 +326,9 @@ def __map_create_mask(static, kwargs):
 		f,datZ = metopen(s.conf.file_agg % {'agg': 'all', 'time': '%d-%d' % (s.conf.years[0],s.conf.years[-1]), 'plev': plev, 'q': 'Z'}, 'z', no_static=True)
 		if f: f.close()
 	if type(datZ) == np.ndarray:
-		datZ = concat1(datZ)
-		mask = datZ[:,:] < concat1(static.oro[:,:])
+		mask = datZ[:,:] < static.oro[:,:]
+		if static.cyclic_ew:
+			mask = concat1(mask)
 	else:
 		mask = slice(1,0)
 	
