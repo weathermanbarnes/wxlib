@@ -491,7 +491,7 @@ def timelag(decider, dtidxs, tstep=conf.timestep):
 	    such that they will by default be saved together.
 	'''
 
-	tl_deciders = {decider.name: map(lambda (lidx, dtidx): __timelag_one(decider, lidx, dtidx, dtidx*tstep), 
+	tl_deciders = {decider.name: map(lambda lidx, dtidx: __timelag_one(decider, lidx, dtidx, dtidx*tstep), 
 			zip(range(len(dtidxs)), dtidxs))}
 
 	return tl_deciders
