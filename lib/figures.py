@@ -148,9 +148,7 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 
 	# 3. Finish off
 	__decorate(m, xxy, z, xlon, xlat, slice(None), plev, q, kwargs)
-	__output(plev, q, kwargs)
-
-	return
+	return __output(plev, q, kwargs)
 
 # Section using pressure as vertical coordinate are standard, so provide shortcut
 section = section_p
@@ -188,9 +186,7 @@ def map(dat, static, **kwargs):
 
 	# 3. Finish off
 	__decorate(m, x, y, lon, lat, mask, plev, q, kwargs)
-	__output(plev, q, kwargs)
-
-	return
+	return __output(plev, q, kwargs)
 
 
 # Helper functions
@@ -513,6 +509,11 @@ def __output(plev, q, kwargs):
 	
 	if kwargs.pop('show'):
 		plt.show()
+	
+	if kwargs.pop('return'):
+		imgstr = BytesIO()
+		plt.savefig(imgstr, format='png', dpi=kwargs.pop('fig_dpi'))
+		return imgstr
 	
 	return
 
