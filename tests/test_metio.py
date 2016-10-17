@@ -4,8 +4,11 @@
 import unittest
 import doctest
 
-import dynlib.metio as m
+from lib import metio as m
 from datetime import datetime as dt, timedelta as td
+
+
+print(m.__file__)
 
 
 class dts2str(unittest.TestCase):

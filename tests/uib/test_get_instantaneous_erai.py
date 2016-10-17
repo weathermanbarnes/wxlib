@@ -7,25 +7,26 @@ from lib.settings import conf
 import lib.context.erainterim
 import lib.context.plot
 
-
-dat, grid = get_instantaneous('u', dt(1986,4,7,6), plevs=850)
-
-print dat.shape
-print grid.t.shape
-
-print grid.t
-print grid.t_parsed
-
-fig.map(dat, grid, save='erai.png', title=None)
+import unittest
 
 
-dat, grid = get_instantaneous('u', (dt(1988,1,1,0), dt(1989,4,7,6)), plevs=['300', '500', '850'])
-
-print dat.shape
-print grid.t.shape
-
-print grid.t[:5], '...', grid.t[-5:]
-print grid.t_parsed[:5], '...', grid.t_parsed[-5:]
-
+class test_readplot_erai(unittest.TestCase):
+	def test_readplot_single(self):
+		try: 
+			dat, grid = get_instantaneous('u', dt(1986,4,7,6), plevs=850)
+		except:
+			self.fail('Loading single-level/single-time step ERA-Interim data failed')
+		# TODO: Add assertions to check grid
+		try:
+			fig.map(dat.squeeze(), grid, save=False, title=None, show=False)
+		except:
+			self.fail('Plotting ERA-Interim data failed')
+	
+	def test_read_multiple(self):
+		try:
+			dat, grid = get_instantaneous('u', (dt(1988,1,1,0), dt(1989,4,7,6)), plevs=['300', '500', '850'])
+		except:
+			self.fail('Reading multi-level/multi-time step ERA-Interim data failed')
+		# TODO: Add assertions to check grid
 
 #

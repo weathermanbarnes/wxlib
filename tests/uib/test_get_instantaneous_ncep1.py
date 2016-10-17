@@ -7,26 +7,26 @@ from lib.settings import conf
 import lib.context.ncep1
 import lib.context.plot
 
-
-dat, grid = get_instantaneous('uwnd', dt(1986,4,7,6))
-
-print dat.shape
-print grid.t.shape
-
-print grid.t
-print grid.t_parsed
-
-fig.map(dat[2], grid, save='ncep1.png', title=None)
+import unittest
 
 
-dat, grid = get_instantaneous('uwnd', (dt(1948,1,1,0), dt(1949,4,7,6)))
+class test_readplot_ncep1(unittest.TestCase):
+	def test_readplot_single(self):
+		try:
+			dat, grid = get_instantaneous('uwnd', dt(1986,4,7,6))
+		except:
+			self.fail('Loading single time step NCEP data failed')
+		# TODO: Add assertions to check grid
+		try:
+			fig.map(dat[2], grid, save=False, title=None, show=False)
+		except:
+			self.fail('Plotting NCEP data failed')
 
-print dat.shape
-print grid.t.shape
-
-print grid.t[:5], '...', grid.t[-5:]
-print grid.t_parsed[:5], '...', grid.t_parsed[-5:]
-
-
+	def etst_read_multi(self):
+		try:
+			dat, grid = get_instantaneous('uwnd', (dt(1948,1,1,0), dt(1949,4,7,6)))
+		except:
+			self.fail('Loading single time step NCEP data failed')
+		# TODO: Add assertions to check grid
 
 #
