@@ -1,9 +1,9 @@
 #!/usr/bin/env python 
 # -*- encoding: utf-8
 
-import lib.metio as mio
-import lib.context.erainterim
-import lib.context.derived
+import dynlib.metio as mio
+import dynlib.context.erainterim
+import dynlib.context.derived
 import numpy as np
 
 
@@ -19,10 +19,6 @@ mio.metsave_timeless(dat, static, plev='850', name='Testme', ids=['Testme+', 'Te
 
 # Check first
 f = mio.metopen('ei.ans.1979.Testme', mode='r+', no_static=True)
-print f.dimensions.keys()
-print f.variables.keys()
-for group, fg in f.groups.items():
-	print group, fg.variables.keys()
 f.close()
 
 # Save second (append)
@@ -32,10 +28,6 @@ mio.metsave_timeless(dat, static, plev='850', name='Testme', ids=['Testme+', 'Te
 
 # Check second
 f = mio.metopen('ei.ans.1979.Testme', mode='r+', no_static=True)
-print f.dimensions.keys()
-print f.variables.keys()
-for group, fg in f.groups.items():
-	print group, fg.variables.keys()
 f.close()
 
 # Save second (append in new level)
@@ -45,10 +37,6 @@ mio.metsave_timeless(dat, static, plev='300', name='Testme', ids=['Testme+', 'Te
 
 # Check second
 f = mio.metopen('ei.ans.1979.Testme', mode='r+', no_static=True)
-print f.dimensions.keys()
-print f.variables.keys()
-for group, fg in f.groups.items():
-	print group, fg.variables.keys()
 f.close()
 
 #

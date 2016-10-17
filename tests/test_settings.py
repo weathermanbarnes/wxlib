@@ -3,7 +3,7 @@
 
 import unittest
 
-import lib.settings as s
+import dynlib.settings as s
 
 
 # Testing the settings class and instance

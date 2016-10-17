@@ -4,7 +4,7 @@
 import unittest
 import doctest
 
-import lib.metio as m
+import dynlib.metio as m
 from datetime import datetime as dt, timedelta as td
 
 
