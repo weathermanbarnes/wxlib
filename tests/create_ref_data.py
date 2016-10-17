@@ -19,6 +19,38 @@ Rl = dynfor.consts.rl
 ''' Read CFSR grib files and extract relevant base data for dynlib testing '''
 
 
+# Prepare arguments
+def _prepare_args(dat, res, grid, args, slc=slice(None)):
+	fargs = []
+	for var in args:
+		if var == 'dx':
+			fargs.append(grid.dx)
+		elif var == 'dy':
+			fargs.append(grid.dy)
+		elif var == 'lvl':
+			fargs.append(dat[var][slc[1]])
+		elif var == 'fcor':
+			if grid.gridtype == 'latlon':
+				fargs.append(4*np.pi*np.cos(grid.y*np.pi/180.0)/86164)
+			else:
+				fargs.append(dat[var][slc[2:]])
+		elif var == 'lat':
+			if grid.gridtype == 'latlon':
+				fargs.append(grid.y[:,0])
+			else:
+				fargs.append(dat[var][slc[2:3],0])
+		elif type(var) not in [str, ]:
+			fargs.append(var)
+		elif var in dat:
+			fargs.append(dat[var][slc])
+		elif var in res:
+			fargs.append(res[var][slc])
+		else:
+			raise ValueError('Unknown variable %s' % var)
+
+	return fargs
+
+
 def calc(dat, res, grid, diagnostics, slicebylev=True):
 	''' Generic diagnostics calculator 
 	
@@ -26,44 +58,14 @@ def calc(dat, res, grid, diagnostics, slicebylev=True):
 	and takes care of the dimensionality (3D vs 4D) of the expected arguments.
 	'''
 
-	# Prepare arguments
-	def _prepare_args(args, slc=slice(None)):
-		fargs = []
-		for var in args:
-			if var == 'dx':
-				fargs.append(grid.dx)
-			elif var == 'dy':
-				fargs.append(grid.dy)
-			elif var == 'lvl':
-				fargs.append(dat[var][slc[1]])
-			elif var == 'fcor':
-				if grid.gridtype == 'latlon':
-					fargs.append(4*np.pi*np.cos(grid.y*np.pi/180.0)/86164)
-				else:
-					fargs.append(dat[var][slc[2:]])
-			elif var == 'lat':
-				if grid.gridtype == 'latlon':
-					fargs.append(grid.y[:,0])
-				else:
-					fargs.append(dat[var][slc[2:3],0])
-			elif type(var) not in [str, ]:
-				fargs.append(var)
-			elif var in dat:
-				fargs.append(dat[var][slc])
-			elif var in res:
-				fargs.append(res[var][slc])
-			else:
-				raise ValueError('Unknown variable %s' % var)
 
-		return fargs
-	
 	# Do the actual calculations
 	for resname, func, args, fourdee in diagnostics:
 		print('Calculating %s' % str(resname))
 
 		# Does the diagnostic require 4d-input?
 		if fourdee:
-			fargs = _prepare_args(args)
+			fargs = _prepare_args(dat, res, grid, args)
 			res_ = func(*fargs)
 			if type(resname) == tuple:
 				for resname_,res__ in zip(resname,res_):
@@ -81,7 +83,7 @@ def calc(dat, res, grid, diagnostics, slicebylev=True):
 			
 			plen = len(grid.z)
 			for pidx in range(plen):
-				fargs = _prepare_args(args, slc=(slice(None), pidx, slice(None), slice(None)))
+				fargs = _prepare_args(dat, res, grid, args, slc=(slice(None), pidx, slice(None), slice(None)))
 				res_ = func(*fargs)
 				if type(resname) == tuple:
 					for resname_,res__ in zip(resname,res_):
@@ -105,7 +107,7 @@ def calc(dat, res, grid, diagnostics, slicebylev=True):
 			
 			tlen = len(grid.t)
 			for tidx in range(tlen):
-				fargs = _prepare_args(args, slc=(tidx, slice(None), slice(None), slice(None)))
+				fargs = _prepare_args(dat, res, grid, args, slc=(tidx, slice(None), slice(None), slice(None)))
 				res_ = func(*fargs)
 				if type(resname) == tuple:
 					for resname_,res__ in zip(resname,res_):
@@ -137,7 +139,7 @@ def dz(dat):
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+path = '/Users/rewquey/Desktop/dynlib_testdat'
 ifile = 'cdas1.t00z.pgrbh00.grib2'
 gfile = 'cfsr_grid.pickle'
 obfile = 'ref_data_base_%s.npz'
@@ -194,16 +196,16 @@ if __name__ == '__main__':
 	bdat = {}	# Base data (read from grib file)
 	ddat = {}	# Derived data (reference calculations by dynlib)
 
-	f = open(gfile, 'rb')
+	f = open(path + '/' + gfile, 'rb')
 	grid = pickle.load(f)
 	f.close()
 
 	# Read file: Either cached base data, or from grib file
-	f = pygrib.open(ifile)
+	f = pygrib.open(path + '/' + ifile)
 	for surf, (pshort, levs, vars) in base_data.items():
-		if os.path.exists(obfile % pshort):
+		if os.path.exists(path + '/' + obfile % pshort):
 			print('Reading cached data for level %s' % pshort)
-			fc = np.load(obfile % pshort)
+			fc = np.load(path + '/' + obfile % pshort)
 			bdat[pshort] = dict(fc)
 			fc.close()
 		
@@ -238,11 +240,10 @@ if __name__ == '__main__':
 			size = 0
 			recs = 0
 			for var in bdat[pshort]:
-				bdat[pshort][var] = bdat[pshort][var].astype('f4')
 				size += bdat[pshort][var].size * 4
 				recs += bdat[pshort][var].size/720/361
 			print('Saving basic data on %s level (%d fields, %.2fM uncompressed)' % (pshort, recs, size/1024**2))
-			np.savez_compressed(obfile % pshort, **bdat[pshort])
+			np.savez_compressed(path + '/' + obfile % pshort, **bdat[pshort])
 
 		ddat[pshort] = {}
 		
@@ -257,10 +258,9 @@ if __name__ == '__main__':
 		size = 0
 		recs = 0
 		for var in ddat[pshort]:
-			ddat[pshort][var] = ddat[pshort][var].astype('f4')
 			size += ddat[pshort][var].size * 4
 			recs += ddat[pshort][var].size/720/361
 		print('Saving derived data on %s level (%d fields, %.2fM uncompressed)' % (pshort, recs, size/1024**2) )
-		np.savez_compressed(odfile % pshort, **ddat[pshort])
+		np.savez_compressed(path + '/' + odfile % pshort, **ddat[pshort])
 	
 # C'est le fin
