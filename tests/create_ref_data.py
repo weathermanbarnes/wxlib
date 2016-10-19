@@ -5,12 +5,12 @@ import pygrib
 import pickle
 import os.path
 
-from dynlib import dynfor
-import dynlib.derivatives
-import dynlib.detect
-import dynlib.diag
-import dynlib.humidity
-import dynlib.tend
+from lib import dynfor
+import lib.derivatives
+import lib.detect
+import lib.diag
+import lib.humidity
+import lib.tend
 
 
 Rl = dynfor.consts.rl
@@ -160,33 +160,33 @@ base_data = {
 }
 
 # Currently untested: 
-# - dynlib.diag.geop_from_montgp (missing input data)
+# - lib.diag.geop_from_montgp (missing input data)
 diagnostics = { 'pv': [
-		('defang', dynlib.diag.def_angle, ['u', 'v', 'dx', 'dy'], False),
-		('defang_nat', dynlib.diag.def_angle_nat, ['u', 'v', 'dx', 'dy'], False),
+		('defang', lib.diag.def_angle, ['u', 'v', 'dx', 'dy'], False),
+		('defang_nat', lib.diag.def_angle_nat, ['u', 'v', 'dx', 'dy'], False),
 		(('defabs_nat_shearless', 'defang_nat_shearless'), 
-			dynlib.diag.def_nat_shearless, ['u', 'v', 'dx', 'dy'], False),
-		('def_shear', dynlib.diag.def_shear, ['u', 'v', 'dx', 'dy'], False),
-		('def_stretch', dynlib.diag.def_stretch, ['u', 'v', 'dx', 'dy'], False),
-		('defabs', dynlib.diag.def_total, ['u', 'v', 'dx', 'dy'], False),
-		('div', dynlib.diag.div, ['u', 'v', 'dx', 'dy'], False),
-		('pt', dynlib.humidity.theta, ['t', 'pres'], False),
-		(('fge', 'fstir'), dynlib.diag.frontogenesis, ['pt', 'u', 'v', 'dx', 'dy'], False),
-		('isoline_angle', dynlib.diag.isoline_angle, ['pt', 'dx', 'dy'], False),
-		('isoline_to_deformation_angle', dynlib.diag.isoline_to_deformation_angle, ['u', 'v', 'pt', 'dx', 'dy'], False),
-		('okuboweiss', dynlib.diag.okuboweiss, ['u', 'v', 'dx', 'dy'], False),
-		('shear_nat', dynlib.diag.shear_nat, ['u', 'v', 'dx', 'dy'], False),
-		('vor', dynlib.diag.vor, ['u', 'v', 'dx', 'dy'], False),
+			lib.diag.def_nat_shearless, ['u', 'v', 'dx', 'dy'], False),
+		('def_shear', lib.diag.def_shear, ['u', 'v', 'dx', 'dy'], False),
+		('def_stretch', lib.diag.def_stretch, ['u', 'v', 'dx', 'dy'], False),
+		('defabs', lib.diag.def_total, ['u', 'v', 'dx', 'dy'], False),
+		('div', lib.diag.div, ['u', 'v', 'dx', 'dy'], False),
+		('pt', lib.humidity.theta, ['t', 'pres'], False),
+		(('fge', 'fstir'), lib.diag.frontogenesis, ['pt', 'u', 'v', 'dx', 'dy'], False),
+		('isoline_angle', lib.diag.isoline_angle, ['pt', 'dx', 'dy'], False),
+		('isoline_to_deformation_angle', lib.diag.isoline_to_deformation_angle, ['u', 'v', 'pt', 'dx', 'dy'], False),
+		('okuboweiss', lib.diag.okuboweiss, ['u', 'v', 'dx', 'dy'], False),
+		('shear_nat', lib.diag.shear_nat, ['u', 'v', 'dx', 'dy'], False),
+		('vor', lib.diag.vor, ['u', 'v', 'dx', 'dy'], False),
 	], 
 	'p': [
 		('pres', make_pressure, ['lvl', 't'], False),
 		('dp', dz, ['pres'], False),
 		('rho', density, ['t', 'pres'], False),
 		(('accgrad_eigpr', 'accgrad_eigpi', 'accgrad_eigmr', 'accgrad_eigmi'), 
-			dynlib.diag.accgrad_eigs, ['u', 'v', 'gh', 'lat', 'dx', 'dy'], False),
-		('rsr', dynlib.diag.rotation_strain_ratio, ['u', 'v', 'gh', 'fcor', 'dx', 'dy'], False),
-		(('ug', 'vg'), dynlib.diag.uv_geo_from_pot, ['gh', 'lat', 'dx', 'dy'], False),
-		(('defabs3d', 'defaxes3d'), dynlib.diag.def_3d, ['u', 'v', 'w', 'rho', 'dx', 'dy', 'dp', False, False], True),
+			lib.diag.accgrad_eigs, ['u', 'v', 'gh', 'lat', 'dx', 'dy'], False),
+		('rsr', lib.diag.rotation_strain_ratio, ['u', 'v', 'gh', 'fcor', 'dx', 'dy'], False),
+		(('ug', 'vg'), lib.diag.uv_geo_from_pot, ['gh', 'lat', 'dx', 'dy'], False),
+		(('defabs3d', 'defaxes3d'), lib.diag.def_3d, ['u', 'v', 'w', 'rho', 'dx', 'dy', 'dp', False, False], True),
 	],
 }
 
