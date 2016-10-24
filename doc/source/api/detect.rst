@@ -8,7 +8,7 @@ dynlib.detect
    Fortran subroutines
    -------------------
 
-   .. autofunction:: block_by_grad_rev
+   .. autofunction:: block_indicator_grad_rev
    .. autofunction:: convline
    .. autofunction:: defline
    .. autofunction:: front
