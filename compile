@@ -10,7 +10,7 @@
 COMPILE_OPTS="productive"
 
 # Choose python version to compile for
-PY_VER="2.7"
+PY_VER="3.5"
 F2PY="f2py$PY_VER"
 PYTHON="python$PY_VER"
 
@@ -38,7 +38,7 @@ uname=`uname`
 if [ ${host: -6} == 'uib.no' ]; then
 	LIBS='-L/Data/gfi/users/local/lib -lspherepack -lblas -llapack'
 elif [ "$uname" == 'Darwin' ]; then
-	LIBS='-L/usr/local/lib -lspherepack -lblas -llapack'
+	LIBS='-L/usr/lib -L/usr/local/lib -lspherepack -lblas -llapack'
 else
 	echo "Error: Unknown host/ operation system."
 	exit 1

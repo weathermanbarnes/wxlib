@@ -5,6 +5,7 @@ import os
 import os.path
 import subprocess
 import warnings
+import glob
 
 from distutils.core import setup
 from distutils.command.build_py import build_py as _build_py
@@ -32,7 +33,8 @@ class build_py(_build_py):
 	def run(self):
 		subprocess.call("./compile", shell=True)
 		_build_py.run(self)
-		self.copy_file('lib/dynfor.so', os.path.join(self.build_lib, 'dynlib/dynfor.so'), preserve_mode=True)
+		for fname in glob.glob('lib/dynfor*.so'):
+			self.copy_file(fname, os.path.join(self.build_lib, 'dyn'+fname), preserve_mode=True)
 		self.copy_file('lib/.dynfor_doc.pickle', os.path.join(self.build_lib, 'dynlib/.dynfor_doc.pickle'), preserve_mode=True)
 
 		return

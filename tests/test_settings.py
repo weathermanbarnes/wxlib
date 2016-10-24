@@ -3,7 +3,7 @@
 
 import unittest
 
-import lib.settings as s
+from lib import settings as s
 
 
 # Testing the settings class and instance

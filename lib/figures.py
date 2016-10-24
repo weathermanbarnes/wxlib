@@ -163,9 +163,7 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 
 	# 3. Finish off
 	__decorate(m, xxy, z, xlon, xlat, slice(None), plev, q, kwargs)
-	__output(plev, q, kwargs)
-
-	return
+	return __output(plev, q, kwargs)
 
 # Section using pressure as vertical coordinate are standard, so provide shortcut
 section = section_p
@@ -203,9 +201,7 @@ def map(dat, static, **kwargs):
 
 	# 3. Finish off
 	__decorate(m, x, y, lon, lat, mask, plev, q, kwargs)
-	__output(plev, q, kwargs)
-
-	return
+	return __output(plev, q, kwargs)
 
 
 # Helper functions
@@ -510,6 +506,7 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 def __output(plev, q, kwargs):
 	''' Save and/or show the plot '''
 
+	dpi = kwargs.pop('fig_dpi')
 	if kwargs.get('save'):
 		filename = kwargs.pop('save')
 		if filename == 'auto':
@@ -520,17 +517,22 @@ def __output(plev, q, kwargs):
 		# If png: Use adaptive palette to save space
 		if filename[-3:] == 'png':
 			imgstr = BytesIO()
-			plt.savefig(imgstr, format='png', dpi=kwargs.pop('fig_dpi'))
+			plt.savefig(imgstr, format='png', dpi=dpi)
 			imgstr.seek(0)
 			img = Image.open(imgstr)
 			img_adaptive = img.convert('RGB').convert('P', palette=Image.ADAPTIVE)
 			img_adaptive.save('%s/%s' % (s.conf.plotpath, filename), format='PNG')
 
 		else:
-			plt.savefig('%s/%s' % (s.conf.plotpath, filename), dpi=kwargs.pop('fig_dpi'))
+			plt.savefig('%s/%s' % (s.conf.plotpath, filename), dpi=dpi)
 	
 	if kwargs.pop('show'):
 		plt.show()
+	
+	if kwargs.pop('_return'):
+		imgstr = BytesIO()
+		plt.savefig(imgstr, format='png', dpi=dpi)
+		return imgstr
 	
 	return
 

@@ -207,7 +207,7 @@ def Nday_factory(N):
 		def start(self, dti):
 			__doc__ = tagg.start.__doc__
 
-			return self.epoch + td(((dti - self.epoch).days / N) * N)
+			return self.epoch + td(((dti - self.epoch).days // N) * N)
 	
 
 	return new
@@ -220,7 +220,7 @@ def Nhour_factory(N):
 		def start(self, dti):
 			__doc__ = tagg.start.__doc__
 
-			return self.epoch + td(0, (int((dti - self.epoch).total_seconds()) / (N*3600)) * N*3600)
+			return self.epoch + td(0, (int((dti - self.epoch).total_seconds()) // (N*3600)) * N*3600)
 	
 
 	return new

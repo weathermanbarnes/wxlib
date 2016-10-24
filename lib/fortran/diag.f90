@@ -1285,7 +1285,7 @@ contains
   !@     The streching and stirring component of the generalised frontogenesis function.
   subroutine frontogenesis(resstretch,resstir,nx,ny,nz,u,v,dat,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: resstretch(nz,ny,nx),resstir(nz,ny,nx)
+    real(kind=nr), intent(out) :: resstretch(nz,ny,nx), resstir(nz,ny,nx)
     real(kind=nr) :: bet(nz,ny,nx),totdef(nz,ny,nx),divergence(nz,ny,nx),vorticity(nz,ny,nx)
     integer(kind=ni) :: nx,ny,nz
     !f2py depend(nx,ny,nz) resstretch,resstir,v,dat
