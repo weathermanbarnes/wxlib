@@ -1,3 +1,15 @@
+Version 0.40.0
+==============
+
+ * Self-testing diagnostic functions, python utilities and plotting
+
+ * Some new diagnostics
+
+   - blocking_by_grad_rev is now a python function to calculate blocking, 
+     instead of a Fortran function calculating the blocking indicator field
+   - the Fortran function is now called blocking_indicator_grad_rev
+
+
 Version 0.30.0
 ==============
 
