@@ -66,7 +66,7 @@ contains
   !@     Absolute y-gradient cyclonic reversals (no threshold test applied).
   !@ np.ndarray with shape (nz,ny,nx) and dtype int8
   !@     Flag for points testes for reversals.
-  subroutine rwb_indicator_grad_rev(resa,resc,resai,resci,resaiy,resciy,tested,nx,ny,nz, &
+  subroutine rwb_by_grad_rev(resa,resc,resai,resci,resaiy,resciy,tested,nx,ny,nz, &
        pv,mask,latitudes,ddythres,dx,dy)
     real(kind=nr), intent(in)  :: pv(nz,ny,nx), latitudes(ny), ddythres, dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: resai(nz,ny,nx), resci(nz,ny,nx), & 
@@ -456,7 +456,7 @@ contains
   !@     Local block intensity indicator field. Maxima in this field are blocking centers 
   !@     that can be tracked in time and space to verify the minimum persistence and 
   !@     stationarity requirements.
-  subroutine block_by_grad_rev(res, nx,ny,nz, dat, dx,dy)
+  subroutine block_indicator_grad_rev(res, nx,ny,nz, dat, dx,dy)
     use consts
     !
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)

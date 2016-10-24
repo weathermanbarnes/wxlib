@@ -4,11 +4,13 @@ from __future__ import absolute_import, unicode_literals, division, print_functi
 
 import sys
 import pickle
+import numpy as np
+from datetime import datetime as dt, timedelta as td
 
 from . import dynfor
 from . import docutil
 from . import settings as s
-from .metio import metopen
+from .metio import metopen, metsave
 
 # Take over the contents of dynfor.diag to this module and inject documentation from the Fortran sources
 docutil.takeover(dynfor.detect, 'detect', sys.modules[__name__])
@@ -62,19 +64,19 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 		# Stage 1: Load base data, calculate and save blocking indicator
 		f, dat, grid = metopen(s.conf.file_std % {'time': year, 'plev': plev, 'qf': s.conf.qf[q]}, q)
 		dat = dat.squeeze()
-		bi = dynlib.detect.block_indicator_grad_rev(dat, grid.dx, grid.dy)
+		bi = dynfor.detect.block_indicator_grad_rev(dat, grid.dx, grid.dy)
 		metsave(bi[:,np.newaxis,:,:], grid, q=Q_BI, plev=plev)
 		tlen += bi.shape[0]
 		
 		# Translate thresholds from degrees to grid point indexes
 		if year == s.conf.years[0]:
-			j0 = grid.y.index(lat_band[0])
-			j1 = grid.y.index(lat_band[1])
+			j0 = np.argwhere(grid.y[:,0] == lat_band[0])[0,0]
+			j1 = np.argwhere(grid.y[:,0] == lat_band[1])[0,0]
 			if j0 > j1: 
 				j1, j0 = j0, j1
 
-			dx = sorted(grid.dx.flat)[nx*ny//2]
-			dy = sorted(grid.dy.flat)[nx*ny//2]
+			dx = abs(sorted(grid.x[0,1:]-grid.x[0,:-1])[nx//2])
+			dy = abs(sorted(grid.y[1:,0]-grid.y[:-1,0])[ny//2])
 
 			djl_max, dil_max = local_move[0]/dy, local_move[1]/dx
 			djt_max, dit_max = total_move[0]/dy, total_move[1]/dx
@@ -82,24 +84,28 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 		# Stage 2: Connect in time
 		bi = bi[:,j0:j1,:]
 	
-		# Identify local maxima with bi > 0
-		maxima = (ndf.maximum_filter(bi, size=(1,3,3), mode='wrap') == bi)
-		maxima[bi <= 0] = False
+		# Identify local extrema with the appropriate sign, special treatment for pv as it increases with latitude
+		if q == 'pv':
+			extrema = (ndf.minimum_filter(bi, size=(1,3,3), mode='wrap') == bi)
+			extrema[bi >= 0] = False
+		else:
+			extrema = (ndf.maximum_filter(bi, size=(1,3,3), mode='wrap') == bi)
+			extrema[bi <= 0] = False
 
-		# Remove local maxima directly at the border of the considered domain
-		maxima[:,0,:] = False
-		maxima[:,-1,:] = False
+		# Remove local extrema directly at the border of the considered domain
+		extrema[:,0,:] = False
+		extrema[:,-1,:] = False
 
 		# Joining into block objects
-		for tidx in xrange(bi.shape[0]):
+		for tidx in range(bi.shape[0]):
 			done = {}
 			curblocks = {}
 			# From mask to grid point indexes
-			maxpos = np.argwhere(maxima[tidx,:,:] > 0)
+			expos = np.argwhere(extrema[tidx,:,:] > 0)
 			for prevpos, blocknr in prevblocks.items():
 				initpos = blocks[blocknr]['pos'][0]
 				dij2 = 9999999
-				for pos in maxpos:
+				for pos in expos:
 					pos = tuple(pos)
 					# Movement since last
 					djl = abs(pos[0]-prevpos[0])
@@ -130,7 +136,7 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 					blocks[blocknr]['blockidx'].append(bi[tidx,savepos[0],savepos[1]])
 
 			# Save new blocks
-			for pos in maxpos:
+			for pos in expos:
 				pos = tuple(pos)
 				if not pos in done:
 					blocks.append({
@@ -144,7 +150,8 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 
 	# Save information on time connection
 	filename = s.conf.opath+'/'+(s.conf.file_timeless % 
-			(str(s.conf.years[0])+'-'+str(s.conf.years[-1]), Q_BLOCK))+'.pickle'
+			{'time': str(s.conf.years[0])+'-'+str(s.conf.years[-1]), 
+			 'name': plev+'.'+Q_BLOCK})+'.pickle'
 	fsave = file(filename, 'w')
 	pickle.dump(blocks, fsave)
 	fsave.close()
@@ -152,7 +159,7 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 	# Create an list of seeds.
 	print('Stage 3: Applying minimum duration criterion and write out block masks')
 	seeds = []
-	dates = [dt(years[0],1,1) + dtd*tidx for tidx in range(tlen)]
+	dates = [dt(s.conf.years[0],1,1) + dtd*tidx for tidx in range(tlen)]
 	for tidx in range(tlen):
 		seeds.append([])
 	for block in blocks:
@@ -165,6 +172,7 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 
 	offset = 0
 	# Make sure to use the data saved previously, not anything else!
+	datapath_ = s.conf.datapath
 	s.conf.datapath = [s.conf.opath, ]
 	for year in s.conf.years:
 		# Open nc file
@@ -178,15 +186,19 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 		for tidx in range(bi.shape[0]):
 			if len(seeds[tidx+offset]) > 0:
 				#print tidx, len(seeds[tidx+offset]), seeds[tidx+offset]
-				blockmask[tidx,j0:j1,:] = dynlib.utils.mask_minimum_connect(
+				blockmask[tidx,j0:j1,:] = dynfor.utils.mask_minimum_connect(
 						bi[tidx,:,:], 
 						np.array(seeds[tidx+offset], dtype='i4'), 
 						0.0
 				)
 
 		offset += bi.shape[0]
-
+		
+		blockmask = blockmask.astype('i1')
 		metsave(blockmask[:,np.newaxis,:,:], grid, q=Q_BLOCK, plev=plev, compress_to_short=False)
+	
+	# Restore previous data path
+	s.conf.datapath = datapath_
 
 
 #
