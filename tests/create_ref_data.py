@@ -139,7 +139,7 @@ def dz(dat):
 
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-path = '/Users/rewquey/Desktop/dynlib_testdat'
+path = '/data/sci/devel/prj/dynlib_testdat'
 ifile = 'cdas1.t00z.pgrbh00.grib2'
 gfile = 'cfsr_grid.pickle'
 obfile = 'ref_data_base_%s.npz'

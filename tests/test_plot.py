@@ -24,9 +24,9 @@ def make_test_plot_func(name, func):
 		imgdata = np.array(img.getdata())
 		imgrefdata = np.array(imgref.getdata())
 
-		if not np.all(imgdata == imgrefdata):
-			img.save('test_mismatch_%s_new.png' % name)
-			imgref.save('test_mismatch_%s_ref.png' % name)
+		#if not np.all(imgdata == imgrefdata):
+		#	img.save('test_mismatch_%s_new.png' % name)
+		#	imgref.save('test_mismatch_%s_ref.png' % name)
 
 		nptest.assert_array_equal(imgdata, imgrefdata)
 
