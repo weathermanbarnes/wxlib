@@ -17,6 +17,7 @@ docutil.takeover(dynfor.utils, 'utils', sys.modules[__name__])
 import math
 import numpy as np
 import scipy as sp
+import scipy.interpolate as intp
 from scipy.special import erfinv
 
 from . import tagg
@@ -227,6 +228,35 @@ def __unflatten_fronts_t(fronts, froff, minlength):
 	fronts = filter(lambda lst: len(lst) >= minlength, fronts)
 
 	return fronts
+
+def unflatten_lines(lines, loff, static):
+	''' Convert dynlib line format into a list of lines 
+
+	Line coordinates (grid point indexes) are converted actual coordinates like lat/lon.
+	
+	'''
+
+	xlen = static.x.shape[1]
+	ylen = static.y.shape[0]
+	intpx = intp.RectBivariateSpline(range(1,xlen+1), range(1,ylen+1), static.x.T)
+	intpy = intp.RectBivariateSpline(range(1,xlen+1), range(1,ylen+1), static.y.T)
+
+	lines_ = []
+	for i in range(loff.shape[0]-1):
+		line = lines[loff[i]:loff[i+1],:]
+		if line.shape[0] < 1:
+			break
+		line_ = np.empty(line.shape)
+		
+		# Interpolate x and y coordinates at (fractional) grid point indexes
+		line_[:,0] = intpx.ev(line[:,0], line[:,1])
+		line_[:,1] = intpy.ev(line[:,0], line[:,1])
+		# Copy over additional info
+		line_[:,2:] = line[:,2:]
+
+		lines_.append(line_)
+
+	return lines_
 
 #
 # return a 3d boolean array where frontal points are True, elsewere False

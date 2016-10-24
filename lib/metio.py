@@ -812,6 +812,10 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 		i = 0
 		if type(dat) == type(None):
 			f, d, static = metopen(se.conf.file_std % {'time': year, 'plev': plevs[0], 'qf': se.conf.qf[q]}, q, cut=cut, **kwargs)
+			# Inject meta data for npy files
+			if not f:
+				static.t = np.arange(d.shape[0])*dts/3600
+				static.t_parsed = [dt(year,1,1)+i*se.conf.timestep for i in range(d.shape[0])]
 			if len(d.shape) == 4 and d.shape[1] > 1:
 				separate_plevs = False
 				s = (1+tsmax-tsmin, ) + d.shape[1:]

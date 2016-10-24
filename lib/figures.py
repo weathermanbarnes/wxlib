@@ -33,7 +33,7 @@ basemap_version = mpl_toolkits.basemap.__version__
 from . import settings as s
 
 from .metio import metopen
-from .utils import concat1, concat1lonlat, __unflatten_fronts_t, sect_gen_points
+from .utils import concat1, concat1lonlat, unflatten_lines, sect_gen_points
 from .autoscale import autoscale
 
 
@@ -684,7 +684,7 @@ def map_overlay_lines(lines, loff, static, **kwargs):
 
 	kwargs = __line_prepare_config(kwargs)
 
-	lns = __unflatten_fronts_t(lines, loff, minlength=0)
+	lns = unflatten_lines(lines, loff, static)
 
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		# TODO: Convert to latlon=True system
@@ -727,7 +727,7 @@ def map_overlay_clines(lines, cdat, loff, static, **kwargs):
 
 	kwargs = __line_prepare_config(kwargs)
 
-	lns = __unflatten_fronts_t(lines, loff, minlength=0)
+	lns = unflatten_lines(lines, loff, minlength=0)
 
 	norm = plt.Normalize()
 	norm.autoscale(cdat)
