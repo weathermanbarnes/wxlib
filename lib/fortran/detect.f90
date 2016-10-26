@@ -773,12 +773,15 @@ contains
   !@
   !@ Returns
   !@ -------
-  !@ 
   !@ np.ndarray with shape (nz,no,3) and dtype float64
   !@     List of points points belonging to front lines for each time step. For each point, 
   !@     (0) the j-index, (1) the i-index and (2) the TFP is saved.
   !@ np.ndarray with shape (nz,nf) and dtype float64
   !@     List of point indexes marking the beginning of front lines within the point array.
+  !@
+  !@ See also
+  !@ --------
+  !@ :meth:`frontalzone_smallscale`, :meth:`frontalzone_largescale`
   subroutine frontline(fr,froff,nx,ny,nz,no,nf,dat,u,v,dx,dy)
     use config
     use detect_lines
