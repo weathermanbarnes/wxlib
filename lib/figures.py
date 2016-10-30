@@ -529,7 +529,7 @@ def __output(plev, q, kwargs):
 	if kwargs.pop('show'):
 		plt.show()
 	
-	if kwargs.pop('_return'):
+	if kwargs.pop('_return', False):
 		imgstr = BytesIO()
 		plt.savefig(imgstr, format='png', dpi=dpi)
 		return imgstr
