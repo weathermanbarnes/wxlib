@@ -22,8 +22,8 @@ if len(changes) > 0:
 	version += '+'
 
 precc = 'lib/fortran/.precc'
-fortran_modules = ['kind', 'config', 'consts', 'derivatives', 'detect', 'detect_fronts', 'detect_rwb_contour',
-		   'diag', 'ellipse', 'humidity', 'stat', 'utils']
+fortran_modules = ['kind', 'config', 'consts', 'derivatives', 'detect', 'detect_lines', 'detect_rwb_contour',
+		   'diag', 'ellipse', 'thermodyn', 'stat', 'utils']
 fortran_modules = ['%s/%s.mod' % (precc, mod) for mod in fortran_modules]
 
 # Override the build_py class to 

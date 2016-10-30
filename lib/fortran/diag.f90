@@ -6,7 +6,7 @@
 !@ 
 !@ This module contains diagnostic functions useful for analysing the wind
 !@ field. For diagnostics relating to thermodynamic variables, refer to the
-!@ :mod:`dynlib.humidity` module.
+!@ :mod:`dynlib.thermodyn` module.
 module diag
   use kind
   use config

@@ -22,7 +22,8 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 
 	The procedure involves three main steps:
 	 
-	 1. Find instantaneous regions with reversed gradients
+	 1. Find instantaneous regions with reversed gradients (done by 
+	    :meth:`block_indicator_grad_rev`)
 	 2. Connext these regions in time and apply stationarity criteria
 	 3. Mask those regions with reversed gradients that fullfil the criteria in step 2
 	
@@ -199,6 +200,139 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 	
 	# Restore previous data path
 	s.conf.datapath = datapath_
+
+
+def frontalzone_largescale(tfp, dx, dy):
+	''' Detect frontal zones as coherent areas with strong TFP gradients
+	
+	The large-scale version of this function (applicable for example to ERA-Interim data)
+	uses only the large-scale gradient threshold. 
+
+	The gradient threshold can be set by ``dynfor.config.tfp_mingrad_largescale``,
+	the minimum size of the frontal zones by ``dynfor.config.tfp_grad_minsize``.
+
+	Parameters
+	----------
+
+	tfp : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+	    Thermal front parameter (TFP) field, typically potential or equivalent potential 
+	    temperature.
+	dx : np.ndarray with shape (ny,nx) and dtype float64
+	    The double grid spacing in x-direction to be directly for centered differences.
+	    ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``. 
+	dy : np.ndarray with shape (ny,nx) and dtype float64
+	    The double grid spacing in y-direction to be directly for centered differences.
+	    ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+	
+	Returns
+	-------
+	np.ndarray with shape (nz,ny,nx) and dtype int32
+	    Detected frontal zones labeled with object IDs > 0, zero everywhere else.
+
+	See also
+	--------
+	:meth:`frontalzone_smallscale`, :meth:`frontline`
+	'''
+
+	thres = dynfor.config.tfp_mingrad_largescale		# 4.5e-5
+	min_size = dynfor.config.minsize			# 75000.0e+6
+	cellsize = dx*dy/4.0
+
+	labels = np.empty(tfp.shape, dtype='i4')
+	for tidx in range(mask.shape[0]):
+		ddx, ddy = dynfor.derivatives.grad(tfp[tidx,:,:,:], dx, dy)
+		tfp_grad = np.sqrt(ddx**2 + ddy**2)
+		mask = tfp_grad > thres
+
+		labels_, sizes = dynfor.utils.label_connected_3d(mask, cellsize, 1000)
+		for n, size in zip(range(1,len(sizes)+1), sizes):
+			if size == 0:
+				break
+
+			if size < (mask.shape[1]*min_size):
+				labels_[labels_ == n] = 0
+				continue
+			
+			sizes_lev = []
+			for pidx in range(mask.shape[1]):
+				labels_lev = labels_[pidx,:,:]
+				sizes_lev.append(labels_lev[labels_lev == n].sum()/n)
+
+		labels[tidx,:,:,:] = labels_
+
+	return labels
+
+
+def frontalzone_smallscale(tfp, dx, dy):
+	''' Detect frontal zones as coherent areas with strong TFP gradients
+	
+	The small-scale version of this function (applicable for example to NORA10 data)
+	uses a combination of a large-scale gradient threshold for a smoothed TFP field
+	and a small-scale gradient threshold for the unfiltered TFP field.
+
+	The gradient thresholds can be set by ``dynfor.config.tfp_mingrad_largescale``,
+	and ``dynfor.config.tfp_mingrad_smallscale``, the minimum size of the frontal 
+	zones by ``dynfor.config.tfp_grad_minsize`` and the amount of smoothing by
+	``dynfor.config.nsmooth``.
+
+	Parameters
+	----------
+
+	tfp : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+	    Thermal front parameter (TFP) field, typically potential or equivalent potential 
+	    temperature.
+	dx : np.ndarray with shape (ny,nx) and dtype float64
+	    The double grid spacing in x-direction to be directly for centered differences.
+	    ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``. 
+	dy : np.ndarray with shape (ny,nx) and dtype float64
+	    The double grid spacing in y-direction to be directly for centered differences.
+	    ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+	
+	Returns
+	-------
+	np.ndarray with shape (nz,ny,nx) and dtype int32
+	    Detected frontal zones labeled with object IDs > 0, zero everywhere else.
+
+	See also
+	--------
+	:meth:`frontalzone_largescale`, :meth:`frontline`
+	'''
+
+	nsmooth = dynfor.config.nsmooth
+	thres_ls = dynfor.config.tfp_mingrad_largescale		# 4.5e-5
+	thres_ss = dynfor.config.tfp_mingrad_smallscale		# 7.5e-5
+	min_size = dynfor.config.minsize			# 75000.0e+6
+	cellsize = dx*dy/4.0
+
+	labels = np.empty(tfp.shape, dtype='i4')
+	for tidx in range(mask.shape[0]):
+		ddx, ddy = dynfor.derivatives.grad(tfp[tidx,:,:,:], dx, dy)
+		tfp_grad = np.sqrt(ddx**2 + ddy**2)
+	
+		tfps = dynfor.utils.smooth(tfp[tidx,:,:,:], nsmooth)
+		ddx, ddy = dynfor.derivatives.grad(tfps, dx, dy)
+		tfps_grad = np.sqrt(ddx**2 + ddy**2)
+
+		mask = tfp_grad > thres_ss & tfps_grad > thres_ls
+
+		labels_, sizes = dynfor.utils.label_connected_3d(mask, cellsize, 1000)
+		for n, size in zip(range(1,len(sizes)+1), sizes):
+			if size == 0:
+				break
+
+			if size < (mask.shape[1]*min_size):
+				labels_[labels_ == n] = 0
+				continue
+			
+			sizes_lev = []
+			for pidx in range(mask.shape[1]):
+				labels_lev = labels_[pidx,:,:]
+				sizes_lev.append(labels_lev[labels_lev == n].sum()/n)
+
+		labels[tidx,:,:,:] = labels_
+
+	return labels
+
 
 
 #

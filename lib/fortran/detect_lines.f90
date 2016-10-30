@@ -2,9 +2,9 @@
 ! 		DynLib -- Helper functions for front detection
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
-! Module adopted from code by Gareth Berry
+! Module originally adopted from code by Gareth Berry
 ! Module maintained by Clemens Spensberger
-module detect_fronts
+module detect_lines
   use kind
   use config
   use consts

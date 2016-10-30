@@ -1,9 +1,9 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! 		DynLib -- humidity conversions 
+! 		DynLib -- Thermodynamic calculations and humidity conversions
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
 ! Module maintained by Clemens Spensberger (csp001@uib.no)
-module humidity
+module thermodyn
   use kind
   use config
   use consts
@@ -463,15 +463,11 @@ contains
     return
   end subroutine
   !
-  !@ Calculate the potential temperature from temperature, pressure
-  !@
-  !@ Formula from AMS Glossary: http://glossary.ametsoc.org/wiki/Potential_temperature
+  !@ Calculate the Exner function
   !@
   !@ Parameters
   !@ ----------
   !@
-  !@ temp : np.ndarray with shape (nz,ny,nx) and dtype float64
-  !@     Temperature in K.
   !@ p : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Pressure in Pa.
   !@
@@ -488,15 +484,15 @@ contains
   !@ Returns
   !@ -------
   !@ np.ndarray with shape (nz,ny,nx) and dtype float64
-  !@     Calculated potential temperature in K.
-  subroutine theta(res,nx,ny,nz,temp,pres)
-    real(kind=nr), intent(in)  :: temp(nz,ny,nx), pres(nz,ny,nx)
+  !@     Exner function for the given pressure
+  subroutine exner(res,nx,ny,nz,pres)
+    real(kind=nr), intent(in)  :: pres(nz,ny,nx)
     real(kind=nr), intent(out) :: res(nz,ny,nx)
     integer(kind=ni) :: nx,ny,nz
-    !f2py depend(nx,ny,nz) res, pres
+    !f2py depend(nx,ny,nz) res
     !
     ! -----------------------------------------------------------------
-    res(:,:,:) = temp(:,:,:) * ((p0/pres(:,:,:))**(Rl/cp))
+    res(:,:,:) = (pres(:,:,:)/p0)**(Rl/cp)
     !
     return
   end subroutine

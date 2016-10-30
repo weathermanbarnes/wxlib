@@ -540,20 +540,17 @@ contains
   !@     Grid size in y-direction.
   !@ nz : int
   !@     Grid size in z- or t-direction.
-  !@ no : int
-  !@     Maximum number of points in all lines.
-  !@ nf : int
-  !@     Maximum number of lines.
   !@
   !@ Returns
   !@ -------
+  !@ 
   !@ np.ndarray with shape (nz,no,3) and dtype float64
   !@     List of points points belonging to jet axes for each time step. For each point, 
   !@     (0) the j-index, (1) the i-index and (2) the wind speed is saved.
   !@ np.ndarray with shape (nz,nf) and dtype float64
-  !@     List of point indexes marking the beginning of jet axes within the ``ja`` array.
+  !@     List of point indexes marking the beginning of jet axes within the point array.
   subroutine jetaxis(ja,jaoff,nx,ny,nz,no,nf,u,v,dx,dy)
-    use detect_fronts
+    use detect_lines
     use utils, only: smooth_xy
     use consts
     !
@@ -644,7 +641,7 @@ contains
   !@ np.ndarray with shape (nz,nf) and dtype float64
   !@     List of point indexes marking the beginning of jet axes within the ``ja`` array.
   subroutine jetaxis_ff_thres(ja,jaoff,nx,ny,nz,no,nf,u,v,dx,dy)
-    use detect_fronts
+    use detect_lines
     use utils, only: smooth_xy
     use consts
     !
@@ -733,15 +730,61 @@ contains
     return
   end subroutine
   !
-  !@ Front detection after G. Berry et al, based on the frontal detection
-  !@ algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
-  !@ temperature as dat
+  !@ Front line detection after Berry et al. (2007)
   !@ 
-  !@ *Note*: Routine not sufficiently tested for general applicability! More thorough 
-  !@ documentation will be added once properly tested.
-  subroutine front(fr,froff,nx,ny,nz,no,nf,dat,u,v,dx,dy)
+  !@ The scheme is based on the frontal detection algorithm by Hewson (1998) 
+  !@ which uses the Laplacian of the equivalent potential temperature as dat
+  !@ 
+  !@ The algorithm was developed with ERA40 data of 2.5x2.5 degree resolution, 
+  !@ so some smoothing might be necessary to obtain useful results for other
+  !@ data sets. Smoothing can be done within this function if configured by  
+  !@ the ``dynfor.consts.nsmooth`` parameter.
+  !@ 
+  !@ The front intensity threshold can be overridden via 
+  !@ ``dynfor.consts.frint_thres``.
+  !@ The front movement threshold to separate between warm, stationary and cold
+  !@ fronts can be set via ``dynfor.consts.frspd_thres``.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@ 
+  !@ no : integer
+  !@     Maximum number of points along all front lines combined, 
+  !@     determinining the output array size
+  !@ nf : integer
+  !@     Maximum number of front lines, determining the output array size
+  !@ dat : np.ndarray with shape (nz,ny,nx)
+  !@     Thermal frontal parameter (TFP), often potential or equivalent 
+  !@     potential temperature
+  !@ u : np.ndarray with shape (nz,ny,nx)
+  !@     Wind velocity component u
+  !@ v : np.ndarray with shape (nz,ny,nx)
+  !@     Wind velocity component v
+  !@ 
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,no,3) and dtype float64
+  !@     List of points points belonging to front lines for each time step. For each point, 
+  !@     (0) the j-index, (1) the i-index and (2) the TFP is saved.
+  !@ np.ndarray with shape (nz,nf) and dtype float64
+  !@     List of point indexes marking the beginning of front lines within the point array.
+  !@
+  !@ See also
+  !@ --------
+  !@ :meth:`frontalzone_smallscale`, :meth:`frontalzone_largescale`
+  subroutine frontline(fr,froff,nx,ny,nz,no,nf,dat,u,v,dx,dy)
     use config
-    use detect_fronts
+    use detect_lines
     use utils, only: smooth_xy
     !
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
@@ -812,7 +855,7 @@ contains
   !@ documentation will be added once properly tested.
   subroutine convline(fr,froff,nx,ny,nz,no,nf,u,v,dx,dy)
     use config
-    use detect_fronts
+    use detect_lines
     use utils, only: smooth_xy
     !
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), & 
@@ -869,7 +912,7 @@ contains
   !@ documentation will be added once properly tested.
   subroutine vorline(fr,froff,nx,ny,nz,no,nf,u,v,dx,dy)
     use config
-    use detect_fronts
+    use detect_lines
     use utils, only: smooth_xy
     !
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), & 
@@ -924,7 +967,7 @@ contains
   !@ documentation will be added once properly tested.
   subroutine defline(fr,froff,nx,ny,nz,no,nf,u,v,dx,dy)
     use config
-    use detect_fronts
+    use detect_lines
     use utils, only: smooth_xy
     !
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), & 
