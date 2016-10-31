@@ -2,6 +2,7 @@
 # -*- encoding: utf-8
 
 import os
+import os.path
 
 from ..settings import def_context
 conf = def_context('ecmwf_fc')
@@ -12,9 +13,10 @@ conf = def_context('ecmwf_fc')
 # ================
 
 _PATH = '/Data/gfi/metno/ecmwf'
-conf.times = [t for t in os.listdir(_PATH) if os.path.isdir(os.path.join(_PATH,t))]
+if os.path.exists(_PATH):
+	conf.times = [t for t in os.listdir(_PATH) if os.path.isdir(os.path.join(_PATH,t))]
+	conf.datapath.insert(1, _PATH)
 conf.file_std = '%(time)d/ec.for.%(time)d.%(plev)s.%(q)s'
-conf.datapath.insert(1, _PATH)
 
 # Variable definitions
 # ====================
