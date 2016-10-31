@@ -238,10 +238,10 @@ def frontalzone_largescale(tfp, dx, dy):
 
 	thres = dynfor.config.tfp_mingrad_largescale		# 4.5e-5
 	min_size = dynfor.config.minsize			# 75000.0e+6
-	cellsize = dx*dy/4.0
+	cellsize = np.abs(dx)*np.abs(dy)/4.0
 
 	labels = np.empty(tfp.shape, dtype='i4')
-	for tidx in range(mask.shape[0]):
+	for tidx in range(tfp.shape[0]):
 		ddx, ddy = dynfor.derivatives.grad(tfp[tidx,:,:,:], dx, dy)
 		tfp_grad = np.sqrt(ddx**2 + ddy**2)
 		mask = tfp_grad > thres
@@ -251,12 +251,12 @@ def frontalzone_largescale(tfp, dx, dy):
 			if size == 0:
 				break
 
-			if size < (mask.shape[1]*min_size):
+			if size < (mask.shape[0]*min_size):
 				labels_[labels_ == n] = 0
 				continue
 			
 			sizes_lev = []
-			for pidx in range(mask.shape[1]):
+			for pidx in range(mask.shape[0]):
 				labels_lev = labels_[pidx,:,:]
 				sizes_lev.append(labels_lev[labels_lev == n].sum()/n)
 
@@ -304,30 +304,30 @@ def frontalzone_smallscale(tfp, dx, dy):
 	thres_ls = dynfor.config.tfp_mingrad_largescale		# 4.5e-5
 	thres_ss = dynfor.config.tfp_mingrad_smallscale		# 7.5e-5
 	min_size = dynfor.config.minsize			# 75000.0e+6
-	cellsize = dx*dy/4.0
+	cellsize = np.abs(dx)*np.abs(dy)/4.0
 
 	labels = np.empty(tfp.shape, dtype='i4')
-	for tidx in range(mask.shape[0]):
+	for tidx in range(tfp.shape[0]):
 		ddx, ddy = dynfor.derivatives.grad(tfp[tidx,:,:,:], dx, dy)
 		tfp_grad = np.sqrt(ddx**2 + ddy**2)
 	
-		tfps = dynfor.utils.smooth(tfp[tidx,:,:,:], nsmooth)
+		tfps = dynfor.utils.smooth_xy(tfp[tidx,:,:,:], nsmooth)
 		ddx, ddy = dynfor.derivatives.grad(tfps, dx, dy)
 		tfps_grad = np.sqrt(ddx**2 + ddy**2)
 
-		mask = tfp_grad > thres_ss & tfps_grad > thres_ls
+		mask = (tfp_grad > thres_ss) & (tfps_grad > thres_ls)
 
 		labels_, sizes = dynfor.utils.label_connected_3d(mask, cellsize, 1000)
 		for n, size in zip(range(1,len(sizes)+1), sizes):
 			if size == 0:
 				break
 
-			if size < (mask.shape[1]*min_size):
+			if size < (mask.shape[0]*min_size):
 				labels_[labels_ == n] = 0
 				continue
 			
 			sizes_lev = []
-			for pidx in range(mask.shape[1]):
+			for pidx in range(mask.shape[0]):
 				labels_lev = labels_[pidx,:,:]
 				sizes_lev.append(labels_lev[labels_lev == n].sum()/n)
 
