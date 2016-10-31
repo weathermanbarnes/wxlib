@@ -65,6 +65,9 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 		# Stage 1: Load base data, calculate and save blocking indicator
 		f, dat, grid = metopen(s.conf.file_std % {'time': year, 'plev': plev, 'qf': s.conf.qf[q]}, q)
 		dat = dat.squeeze()
+		if year == s.conf.years[0]:
+			dynfor.config.grid_cyclic_ew = grid.cyclic_ew
+			print(grid.cyclic_ew)
 		bi = dynfor.detect.block_indicator_grad_rev(dat, grid.dx, grid.dy)
 		metsave(bi[:,np.newaxis,:,:], grid, q=Q_BI, plev=plev)
 		tlen += bi.shape[0]
@@ -170,7 +173,7 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 				pos = block['pos'][dtidx]
 				# convert to Fortran indexes
 				seeds[tidx0+dtidx].append([pos[0]+1, pos[1]+1])
-
+	
 	offset = 0
 	# Make sure to use the data saved previously, not anything else!
 	datapath_ = s.conf.datapath
@@ -186,7 +189,6 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 
 		for tidx in range(bi.shape[0]):
 			if len(seeds[tidx+offset]) > 0:
-				#print tidx, len(seeds[tidx+offset]), seeds[tidx+offset]
 				blockmask[tidx,j0:j1,:] = dynfor.utils.mask_minimum_connect(
 						bi[tidx,:,:], 
 						np.array(seeds[tidx+offset], dtype='i4'), 

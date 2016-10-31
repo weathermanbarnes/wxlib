@@ -57,14 +57,14 @@ class grid(object):
 		self.dy = np.ones((self.ny, self.nx))*111111.111111
 
 		dlon = np.ones(self.dx.shape)
-		dlon[:,1:-1] = self.x[np.newaxis,2:]-self.x[np.newaxis,:-2]
-		dlon[:,0] = self.x[np.newaxis,1]-self.x[np.newaxis,-1]
+		dlon[:,1:-1] = (self.x[np.newaxis,2:]-self.x[np.newaxis,:-2]) % 360.0
+		dlon[:,0] = (self.x[np.newaxis,1]-self.x[np.newaxis,-1]) % 360.0
 		if np.any(np.abs(dlon[:,1]/dlon[:,0]-1)  > 1.0e-3):
 			self.cyclic_ew = False
 			dlon[:,0] = 2.0*(self.x[1]-self.x[0])
 			dlon[:,-1] = 2.0*(self.x[-1]-self.x[-2])
 		else:
-			dlon[:,-1] = self.x[np.newaxis,0]-self.x[np.newaxis,-2]
+			dlon[:,-1] = (self.x[np.newaxis,0]-self.x[np.newaxis,-2]) % 360.0
 		dlon[dlon > 180] -= 360.0
 		dlon[dlon < -180] += 360.0
 		self.dx *= dlon * np.cos(np.pi/180.0*self.y[:,np.newaxis])

@@ -109,6 +109,8 @@ def unscale(var):
 	off   = +32766.5*scale + minv
 
 	res = np.round((var[::] - off)/scale)
+	# Avoid integer overflow due to roundoff error
+	res[res > 32737] = 32737
 
 	res[np.isnan(res)] = missing
 
