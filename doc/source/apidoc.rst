@@ -13,6 +13,7 @@ Functions
    api/detect
    api/diag
    api/ellipse
+   api/interpol
    api/sphere
    api/stats
    api/tend

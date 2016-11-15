@@ -124,8 +124,8 @@ class grid(object):
 		    Copy of the grid object with a new time axis
 		'''
 		
-		if type(self.t_parsed) == type(None):
-			raise TypeError('No (parsable) time axis to be replaced in this grid object!')
+		if not hasattr(self, 't_epoch') or not hasattr(self, 't_interval_unit'):
+			raise TypeError('Need a reference date and time interval!')
 
 		cpy = copy.copy(self)
 		cpy.t_parsed = dates
@@ -389,19 +389,23 @@ class grid_by_nc(grid):
 		if self.t_name:
 			self.nt = len(self.f.dimensions[self.t_name])
 			if not self.nt and not self.v: 
-				raise RuntimeError('grid_by_nc needs one specific variable for extracing the length of the netcdf-unlimited time dimension')
+				self.nt = 0
 			elif not self.nt:
-				timedim = self.v.dimensions.index(self.t_name)
-				self.nt = self.v.shape[timedim]
+				if self.t_name in self.v.dimensions:
+					timedim = self.v.dimensions.index(self.t_name)
+					self.nt = self.v.shape[timedim]
+				else:
+					self.nt = 0
 			if self.t_name in self.f.variables:
 				self.t = self.f.variables[self.t_name][::]
+
+				# Try to parse the time axis into datetime objects
+				t = self.f.variables[self.t_name] 
+				if hasattr(t, 'units'):
+					self.t_parsed = nc.num2date(t[:], units=t.units, calendar=getattr(t, 'calendar', 'standard'))
 			else:
 				self.t = np.arange(self.nt)
-			
-			# Try to parse the time axis into datetime objects
-			t = self.f.variables[self.t_name] 
-			if hasattr(t, 'units'):
-				self.t_parsed = nc.num2date(t[:], units=t.units, calendar=getattr(t, 'calendar', 'standard'))
+				self.t_parsed = None
 
 		return
 

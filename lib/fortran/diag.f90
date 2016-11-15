@@ -1714,4 +1714,64 @@ contains
     !
   end subroutine
   !
+  !@ Integrate hydrostasy to calculate from given surface value
+  !@
+  !@ Uses ideal gas law and assumes hydrostasy, such that d(phi)/d(p) = - RT/p.
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ t : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     3D temperature field.
+  !@ p : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     3D pressure field.
+  !@ ps : np.ndarray with shape (nt,ny,nx) and dtype float64
+  !@     Surface pressure.
+  !@ phis : np.ndarray with shape (nt,ny,nx) and dtype float64
+  !@     Surface geopotential.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z-direction.
+  !@ nt : int
+  !@     Grid size in t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Geopotential.
+  subroutine z_from_hydrostasy(phi, nx,ny,nz,nt, t, p, ps, phis)
+    use consts
+    !
+    real(kind=nr), intent(in) :: t(nt,nz,ny,nx), p(nt,nz,ny,nx), ps(nt,ny,nx), phis(ny,nx)
+    real(kind=nr), intent(out) :: phi(nt,nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz,nt
+    !f2py depend(nt,nz,ny,nx) :: p, phi
+    !f2py depend(nt,ny,nx) :: ps
+    !f2py depend(ny,nx) :: phis
+    !
+    real(kind=nr) :: pstag(ny,nx)
+    integer(kind=ni) :: n,k
+    ! -----------------------------------------------------------------
+    !
+    do n = 1_ni,nt
+       ! Integrate from surface to first model level
+       phi(n,nz,:,:) = phis(:,:) + Rl*t(n,nz,:,:)*(log(ps(n,:,:)) - log(p(n,nz,:,:)))
+       ! Integrate upwards
+       do k = nz-1_ni,1_ni,-1_ni
+          pstag(:,:) = (p(n,k+1_ni,:,:) + p(n,k,:,:))/2.0_nr
+          ! Assuming constant temperatures in the respective lower and upper halfs of the grid cells
+          phi(n,k,:,:) = phi(n,k+1_ni,:,:) + Rl*t(n,k+1_ni,:,:)*(log(p(n,k+1_ni,:,:)) - log(pstag(:,:))) & 
+                              &            + Rl*t(n,k,:,:)*(log(pstag(:,:)) - log(p(n,k,:,:)))
+       end do
+    end do
+    !
+  end subroutine
+  !
 end module
