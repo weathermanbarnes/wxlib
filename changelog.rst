@@ -8,6 +8,8 @@ Version 0.40.0
    - blocking_by_grad_rev is now a python function to calculate blocking, 
      instead of a Fortran function calculating the blocking indicator field
    - the Fortran function is now called blocking_indicator_grad_rev
+ 
+ * Renamed humidity module to thermodyn
 
 
 Version 0.30.0

@@ -1182,6 +1182,8 @@ def dts2str(dates, agg=None):
 
 	else:
 		agg = None
+
+	dates = set(dates)
 	
 	# If an aggregation interval is available, find out if the given dates are contiguous 
 	# and simplify the date representation accordingly
