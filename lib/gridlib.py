@@ -178,7 +178,8 @@ class grid_by_nc(grid):
 	T_NAMES = ['time', 'Time']
 
 	ROT_POLES = {
-		'rotated_pole': ('grid_north_pole_longitude', 'grid_north_pole_latitude'),  # name convention in NORA10
+		'rotated_pole': ('grid_north_pole_longitude', 'grid_north_pole_latitude'),  # name convention in NORA10 and dynlib
+		'projection_3': ('grid_north_pole_longitude', 'grid_north_pole_latitude'),  # name in NORA10 altitude file
 	}
 
 	def __init__(self, ncfile, ncvar=None):
@@ -368,6 +369,10 @@ class grid_by_nc(grid):
 							o_lat_p=rot_nplat, 
 							lon_0=180,
 					)
+					self.rot_np = (rot_nplat, rot_nplon)
+					self.rot_x_name, self.rot_y_name = 'rlon', 'rlat'
+					self.rot_x_longname, self.rot_y_longname = 'rotated_longitude', 'rotated_latitude'
+					self.rot_x, self.rot_y = self.x, self.y
 					self.x, self.y = m(np.ascontiguousarray(self.x), 
 							np.ascontiguousarray(self.y) )
 					self.x *= 180.0/np.pi

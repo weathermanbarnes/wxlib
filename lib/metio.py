@@ -302,11 +302,19 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	})
 
-	of.createDimension('time', s[0])
+	of.createDimension('time', None)
 	if not plev == 'sfc':
 		of.createDimension(static.z_name, s[1])
-	of.createDimension(static.y_name, s[-2])
-	of.createDimension(static.x_name, s[-1])
+	
+	if static.rotated:
+		y_name = static.rot_y_name
+		x_name = static.rot_x_name
+	else:
+		y_name = static.y_name
+		x_name = static.x_name
+	
+	of.createDimension(y_name, s[-2])
+	of.createDimension(x_name, s[-1])
 
 	if not plev == 'sfc':
 		known_vertical_level_units = {
@@ -325,15 +333,38 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 		olev = of.createVariable(static.z_name, 'f', (static.z_name,))
 		olev.setncatts({'long_name': z_name, 'units': static.z_unit, 'axis': 'Z', 'positive': z_positive})
 		olev[::] = static.z[:]
-		dims = ('time', static.z_name, static.y_name, static.x_name,)
+		dims = ('time', static.z_name, y_name, x_name,)
 	else:
-		dims = ('time', static.y_name, static.x_name,)
-	olat = of.createVariable(static.y_name, 'f', (static.y_name,))
-	olat.setncatts({'long_name': static.y_name, 'units': static.y_unit, 'axis': 'Y'})
-	olat[::] = static.y[:,0]
-	olon = of.createVariable(static.x_name, 'f', (static.x_name,))
-	olon.setncatts({'long_name': static.x_name, 'units': static.x_unit, 'axis': 'X'})
-	olon[::] = static.x[0,:]
+		dims = ('time', y_name, x_name,)
+	
+	if static.rotated:
+		olat = of.createVariable(static.rot_y_name, 'f', (y_name,))
+		olat.setncatts({'long_name': static.rot_y_longname, 'units': static.y_unit, 'axis': 'Y'})
+		olat[::] = static.rot_y[:,0]
+		olon = of.createVariable(static.rot_x_name, 'f', (x_name,))
+		olon.setncatts({'long_name': static.rot_x_longname, 'units': static.x_unit, 'axis': 'X'})
+		olon[::] = static.rot_x[0,:]
+
+		olat = of.createVariable(static.y_name, 'f', (y_name, x_name,))
+		olat.setncatts({'long_name': static.y_name, 'units': static.y_unit})
+		olat[::] = static.y
+		olon = of.createVariable(static.x_name, 'f', (y_name, x_name,))
+		olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
+		olon[::] = static.x
+
+		orot = of.createVariable('rotated_pole', 'i', ())
+		orot.setncatts({
+			'grid_north_pole_longitude': static.rot_np[1], 
+			'grid_north_pole_latitude': static.rot_np[0],
+		})
+
+	else:
+		olat = of.createVariable(static.y_name, 'f', (y_name,))
+		olat.setncatts({'long_name': static.y_name, 'units': static.y_unit, 'axis': 'Y'})
+		olat[::] = static.y[:,0]
+		olon = of.createVariable(static.x_name, 'f', (x_name,))
+		olon.setncatts({'long_name': static.x_name, 'units': static.x_unit, 'axis': 'X'})
+		olon[::] = static.x[0,:]
 	
 	if compress_to_short:
 		dat, scale, off, fill = utils.unscale(dat)
@@ -345,11 +376,14 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 		else:
 			ovar = of.createVariable(q, 'i2', dims)
 
-		ovar.setncatts({'long_name': se.conf.q_long[q], 'units': se.conf.q_units[q],
-				'add_offset': off, 'scale_factor': scale})
+		ovar.setncatts({'add_offset': off, 'scale_factor': scale})
 	else:
 		ovar = of.createVariable(q, dat.dtype, dims)
-		ovar.setncatts({'long_name': se.conf.q_long[q], 'units': se.conf.q_units[q]})
+	
+	ovar.setncatts({'long_name': se.conf.q_long[q], 'units': se.conf.q_units[q]})
+	# Add some attributes to make ncview display the rotated grid correctly
+	if static.rotated:
+		ovar.setncatts({'grid_mapping': 'rotated_pole', 'coordinates': static.x_name+' '+static.y_name})
 	ovar[::] = dat
 
 	of.close()
