@@ -38,10 +38,12 @@ sp = ('sp', 'sp', 'Surface pressure', 'Pa')
 u10 = ('u10', 'u10', '10 metre U wind component', 'm s**-1')
 v10 = ('v10', 'v10', '10 metre V wind component', 'm s**-1')
 t2m = ('t2m', 't2m', '2 metre temperature', 'K')
+t0m = ('t0m', 't0m', 'Surface temperature', 'K')
 slhf = ('slhf', 'slhf', 'Surface latent heat flux', 'J m**-2')
 sshf = ('sshf', 'sshf', 'Surface sensible heat flux', 'J m**-2')
 cp = ('cp', 'cp', 'Convective precipitation', 'mm')
 lsp = ('lsp', 'lsp', 'Large-scale precipitation', 'mm')
+ci = ('ci', 'ci', 'Sea-ice cover', '(0 - 1)')
 
 oro = ('oro', None, 'Surface geopotential', 'm**2 s**-2')
 
@@ -49,7 +51,10 @@ oro = ('oro', None, 'Surface geopotential', 'm**2 s**-2')
 conf.plevs = ['100', '300', '500', '700', '850', '925', '1000', ]
 conf.register_variable([u, v, w, t, z, q], conf.plevs)
 
-# 2. No vertical level
-conf.register_variable([oro, slhf, sshf, msl, sp, u10, v10, t2m, cp, lsp], [])
+# 2. Surface variables
+conf.register_variable([slhf, sshf, msl, sp, u10, v10, t2m, t0m, cp, lsp, ci], ['sfc', ])
+
+# 3. No vertical level
+conf.register_variable([oro, ], [])
 
 # that's it
