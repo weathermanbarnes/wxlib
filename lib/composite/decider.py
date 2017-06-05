@@ -491,8 +491,8 @@ def timelag(decider, dtidxs, tstep=conf.timestep):
 	    such that they will by default be saved together.
 	'''
 
-	tl_deciders = {decider.name: map(lambda (lidx, dtidx): __timelag_one(decider, lidx, dtidx, dtidx*tstep), 
-			zip(range(len(dtidxs)), dtidxs))}
+	tl_deciders = {decider.name: [__timelag_one(decider, lidx, dtidx, dtidx*tstep) 
+		for lidx, dtidx in zip(range(len(dtidxs)), dtidxs) ]}
 
 	return tl_deciders
 
@@ -520,6 +520,8 @@ def matrix(list1, list2):
 		list1 = [item for group in list1.values() for item in group]
 	if type(list2) == dict:
 		list2 = [item for group in list2.values() for item in group]
+	if len(list1) == 0 or len(list2) == 0:
+		return {}
 	
 	# Wrap single deciders in a list
 	if not type(list1) == list: list1 = [list1, ]

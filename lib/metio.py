@@ -586,7 +586,7 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 		olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
 		olon[::] = static.x[0,:]
 
-	for plev, q_ in dat:
+	for plev, q_ in datdict:
 		# Finding 
 		if plev:
 			if plev in f.groups and q_ in f.groups[plev].variables:
@@ -624,7 +624,7 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 			q = q_
 			prefix = ''
 		
-		s_ = dat[plev,q_].shape
+		s_ = datdict[plev,q_].shape
 		if not len(s_) == len(data_dimensions):
 			raise ValueError('Data for (%s,%s) does not have the required number of dimensions. '
 					'Expected: %d, got: %d.' % (
@@ -638,10 +638,10 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 				squeezeme = True
 
 		if squeezeme:
-			dat_ = dat[plev,q_].squeeze()
+			dat_ = datdict[plev,q_].squeeze()
 			compress_to_short_ = False
 		else: 
-			dat_ = dat[plev,q_]
+			dat_ = datdict[plev,q_]
 			compress_to_short_ = compress_to_short
 
 		if compress_to_short_:
@@ -1178,6 +1178,8 @@ def dts2str(dates, agg=None):
 
 	else:
 		agg = None
+	
+	dates = set(dates)
 	
 	# If an aggregation interval is available, find out if the given dates are contiguous 
 	# and simplify the date representation accordingly
