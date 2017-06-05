@@ -1065,15 +1065,14 @@ contains
   !@     A copy of the input data with NaN values replaced.
   !@ float
   !@     The maximum correction during the last SOR iteration as a measure of convergence.
-  subroutine fill_nan(res, nx,ny,nz, dat)
-    !TODO: conv temporarily disabled because of f2py intent(out)-bug
+  subroutine fill_nan(res, conv, nx,ny,nz, dat)
     real(kind=nr), intent(in) :: dat(nz,ny,nx)
-    real(kind=nr), intent(out) :: res(nz,ny,nx) !, conv
+    real(kind=nr), intent(out) :: res(nz,ny,nx), conv
     integer(kind=ni), intent(in) :: nz,ny,nx
     !f2py depend(nx,ny,nz) res
     !
     logical :: lfill(nz,ny,nx)
-    real(kind=nr) :: smooth, corr, conv
+    real(kind=nr) :: smooth, corr
     real(kind=nr), parameter :: omega = 1.5_nr
     integer(kind=ni) :: i,j,k, il,ir,jd,ju, iter
     integer(kind=ni), parameter :: maxiter = 300_ni

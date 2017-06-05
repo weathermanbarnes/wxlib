@@ -2,7 +2,7 @@
 # -*- encoding: utf-8
 
 from ...settings import def_context
-def_context('plot.anomaly')
+def_context('plot.anomaly', parent='plot')
 
 
 conf.plot[None,None,'scale_symmetric_zero'] = True

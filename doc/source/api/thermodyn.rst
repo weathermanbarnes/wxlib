@@ -1,7 +1,7 @@
-dynlib.humidity
-===============
+dynlib.thermodyn
+================
 
-.. automodule:: dynlib.humidity
+.. automodule:: dynlib.thermodyn
    :members:
    :undoc-members:
    
@@ -19,6 +19,7 @@ dynlib.humidity
    .. autofunction:: tdew_from_e
    .. autofunction:: te_from_q
    .. autofunction:: thetae_from_q
+   .. autofunction:: exner
 
    Python functions
    ----------------

@@ -13,10 +13,11 @@ Functions
    api/detect
    api/diag
    api/ellipse
-   api/humidity
+   api/interpol
    api/sphere
    api/stats
    api/tend
+   api/thermodyn
    api/utils
 
 

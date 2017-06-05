@@ -12,14 +12,13 @@ a "static.npz" file that contains the pertinent information for a given data set
 '''
 
 
-import math
 import copy
 import numpy as np
 import netCDF4 as nc
 from mpl_toolkits.basemap.pyproj import Proj 		# for rotpole projection
 from datetime import datetime as dt, timedelta as td
 
-
+from . import derivatives
 
 
 class grid(object):
@@ -56,16 +55,21 @@ class grid(object):
 	def _calc_dx_dy_latlon(self):
 		self.dx = np.ones((self.ny, self.nx))*111111.111111
 		self.dy = np.ones((self.ny, self.nx))*111111.111111
-		for xidx in range(self.nx):
-			for yidx in range(1,self.ny-1):
-				dlon = self.x[(xidx+1)%self.nx]-self.x[(xidx-1)%self.nx]
-				if dlon > 180:
-					dlon -= 360
-				elif dlon < -180:
-					dlon += 360
-				self.dx[yidx,xidx] *= dlon*math.cos(math.pi/180.0*self.y[yidx])
-		for yidx in range(1,self.ny-1):
-			self.dy[yidx,:] *= self.y[yidx+1]-self.y[yidx-1]
+
+		dlon = np.ones(self.dx.shape)
+		dlon[:,1:-1] = (self.x[np.newaxis,2:]-self.x[np.newaxis,:-2]) % 360.0
+		dlon[:,0] = (self.x[np.newaxis,1]-self.x[np.newaxis,-1]) % 360.0
+		if np.any(np.abs(dlon[:,1]/dlon[:,0]-1)  > 1.0e-3):
+			self.cyclic_ew = False
+			dlon[:,0] = 2.0*(self.x[1]-self.x[0])
+			dlon[:,-1] = 2.0*(self.x[-1]-self.x[-2])
+		else:
+			dlon[:,-1] = (self.x[np.newaxis,0]-self.x[np.newaxis,-2]) % 360.0
+		dlon[dlon > 180] -= 360.0
+		dlon[dlon < -180] += 360.0
+		self.dx *= dlon * np.cos(np.pi/180.0*self.y[:,np.newaxis])
+
+		self.dy[1:-1,:] *= self.y[2:,np.newaxis]-self.y[:-2,np.newaxis]
 		self.dy[ 0,:] *= 2.0*(self.y[ 1]-self.y[ 0])
 		self.dy[-1,:] *= 2.0*(self.y[-1]-self.y[-2])
 
@@ -120,8 +124,8 @@ class grid(object):
 		    Copy of the grid object with a new time axis
 		'''
 		
-		if type(self.t_parsed) == type(None):
-			raise TypeError('No (parsable) time axis to be replaced in this grid object!')
+		if not hasattr(self, 't_epoch') or not hasattr(self, 't_interval_unit'):
+			raise TypeError('Need a reference date and time interval!')
 
 		cpy = copy.copy(self)
 		cpy.t_parsed = dates
@@ -129,6 +133,36 @@ class grid(object):
 			for date in dates ])
 
 		return cpy
+
+	def unrotate_vector(self, u, v):
+		''' Express vector components expressed in rotated grid in unrotated grid
+
+		Only active if grid instance represents a rotated grid. Otherwise u and v a returned unchanged.
+
+		Parameters
+		----------
+		u : np.ndarray with 2 or more dimensions
+		    x-component of vector in rotated coordinates
+		v : np.ndarray with 2 or more dimensions
+		    x-component of vector in rotated coordinates
+
+		Returns
+		----------
+		np.ndarray with 2 or more dimensions
+		    x-component of vector in unrotated coordinates
+		np.ndarray with 2 or more dimensions
+		    x-component of vector in unrotated coordinates
+		'''
+
+		if not hasattr(self, 'local_Nx'):
+			return u, v
+		
+		ur = u * self.local_Ny - v * self.local_Nx
+		vr = u * self.local_Nx + v * self.local_Ny
+
+		return ur, vr
+
+
 
 
 # Construct the grid based on the grid information in a nc (netcdf) file
@@ -139,12 +173,13 @@ class grid_by_nc(grid):
 	X_NAME_BEGINSWITH = ['rlon', 'dimx', ]
 	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', 'y_1']
 	Y_NAME_BEGINSWITH = ['rlat', 'dimy', ]
-	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'z_1']
+	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'z_1', 'alt']
 	Z_NAME_BEGINSWITH = ['lev', 'dimz', ]
 	T_NAMES = ['time', 'Time']
 
 	ROT_POLES = {
-		'rotated_pole': ('grid_north_pole_longitude', 'grid_north_pole_latitude'),  # name convention in NORA10
+		'rotated_pole': ('grid_north_pole_longitude', 'grid_north_pole_latitude'),  # name convention in NORA10 and dynlib
+		'projection_3': ('grid_north_pole_longitude', 'grid_north_pole_latitude'),  # name in NORA10 altitude file
 	}
 
 	def __init__(self, ncfile, ncvar=None):
@@ -196,15 +231,15 @@ class grid_by_nc(grid):
 			self.t_name = None
 
 			for d in self.f.dimensions:
-				if d in self.X_NAMES:
+				if matches(d, self.X_NAMES, self.X_NAME_BEGINSWITH):
 					if self.x_name:
 						raise ValueError('Found several possible x-axes (using file)')
 					self.x_name = d
-				if d in self.Y_NAMES:
+				if matches(d, self.Y_NAMES, self.Y_NAME_BEGINSWITH):
 					if self.y:
 						raise ValueError('Found several possible y-axes (using file)')
 					self.y_name = d
-				if d in self.Z_NAMES:
+				if matches(d, self.Z_NAMES, self.Z_NAME_BEGINSWITH):
 					if self.z_name:
 						raise ValueError('Found several possible z-axes (using file)')
 					self.z_name = d
@@ -321,7 +356,7 @@ class grid_by_nc(grid):
 
 		else:
 			raise NotImplementedError('(Yet) Unknown grid type "%s"' % self.gridtype)
-		
+
 		self.rotated = False
 		if self.gridtype == 'latlon':
 			for var in self.f.variables:
@@ -334,10 +369,20 @@ class grid_by_nc(grid):
 							o_lat_p=rot_nplat, 
 							lon_0=180,
 					)
-					self.x, self.y = m(self.x, self.y)
+					self.rot_np = (rot_nplat, rot_nplon)
+					self.rot_x_name, self.rot_y_name = 'rlon', 'rlat'
+					self.rot_x_longname, self.rot_y_longname = 'rotated_longitude', 'rotated_latitude'
+					self.rot_x, self.rot_y = self.x, self.y
+					self.x, self.y = m(np.ascontiguousarray(self.x), 
+							np.ascontiguousarray(self.y) )
 					self.x *= 180.0/np.pi
 					self.y *= 180.0/np.pi
 					self.rotated = True
+					self.local_Nx, self.local_Ny = derivatives.grad(self.y[np.newaxis,:,:], self.dx, self.dy)
+					self.local_Nx, self.local_Ny = self.local_Nx.squeeze(), self.local_Ny.squeeze()
+					absgrad = np.sqrt(self.local_Nx**2 + self.local_Ny**2)
+					self.local_Nx /= absgrad
+					self.local_Ny /= absgrad
 					break # don't rotate more than once!
 
 		if self.z_name:
@@ -349,19 +394,23 @@ class grid_by_nc(grid):
 		if self.t_name:
 			self.nt = len(self.f.dimensions[self.t_name])
 			if not self.nt and not self.v: 
-				raise RuntimeError('grid_by_nc needs one specific variable for extracing the length of the netcdf-unlimited time dimension')
+				self.nt = 0
 			elif not self.nt:
-				timedim = self.v.dimensions.index(self.t_name)
-				self.nt = self.v.shape[timedim]
+				if self.t_name in self.v.dimensions:
+					timedim = self.v.dimensions.index(self.t_name)
+					self.nt = self.v.shape[timedim]
+				else:
+					self.nt = 0
 			if self.t_name in self.f.variables:
 				self.t = self.f.variables[self.t_name][::]
+
+				# Try to parse the time axis into datetime objects
+				t = self.f.variables[self.t_name] 
+				if hasattr(t, 'units'):
+					self.t_parsed = nc.num2date(t[:], units=t.units, calendar=getattr(t, 'calendar', 'standard'))
 			else:
 				self.t = np.arange(self.nt)
-			
-			# Try to parse the time axis into datetime objects
-			t = self.f.variables[self.t_name] 
-			if hasattr(t, 'units'):
-				self.t_parsed = nc.num2date(t[:], units=t.units, calendar=getattr(t, 'calendar', 'standard'))
+				self.t_parsed = None
 
 		return
 

@@ -17,10 +17,11 @@ docutil.takeover(dynfor.utils, 'utils', sys.modules[__name__])
 import math
 import numpy as np
 import scipy as sp
+import scipy.interpolate as intp
 from scipy.special import erfinv
 
 from . import tagg
-from .settings import conf
+from . import settings as s
 
 from datetime import datetime as dt, timedelta as td
 import calendar
@@ -108,6 +109,8 @@ def unscale(var):
 	off   = +32766.5*scale + minv
 
 	res = np.round((var[::] - off)/scale)
+	# Avoid integer overflow due to roundoff error
+	res[res > 32737] = 32737
 
 	res[np.isnan(res)] = missing
 
@@ -198,10 +201,10 @@ def cal_mfv(hist, bins):
 	if s > 0:
 		print('WARNING: hist[-1,:,:].sum() larger than zero!')
 
-	s = hist.shape[1:]
-	mfv = np.zeros(s)
-	for j in range(s[0]):
-		for i in range(s[1]):
+	shape = hist.shape[1:]
+	mfv = np.zeros(shape)
+	for j in range(shape[0]):
+		for i in range(shape[1]):
 			bi = hist[:-1,j,i].argmax()
 			mfv[j,i] = (bins[bi+1]+bins[bi])/2.0
 	
@@ -228,31 +231,60 @@ def __unflatten_fronts_t(fronts, froff, minlength):
 
 	return fronts
 
+def unflatten_lines(lines, loff, static):
+	''' Convert dynlib line format into a list of lines 
+
+	Line coordinates (grid point indexes) are converted actual coordinates like lat/lon.
+	
+	'''
+
+	xlen = static.x.shape[1]
+	ylen = static.y.shape[0]
+	intpx = intp.RectBivariateSpline(range(1,xlen+1), range(1,ylen+1), static.x.T)
+	intpy = intp.RectBivariateSpline(range(1,xlen+1), range(1,ylen+1), static.y.T)
+
+	lines_ = []
+	for i in range(loff.shape[0]-1):
+		line = lines[loff[i]:loff[i+1],:]
+		if line.shape[0] < 1:
+			break
+		line_ = np.empty(line.shape)
+		
+		# Interpolate x and y coordinates at (fractional) grid point indexes
+		line_[:,0] = intpx.ev(line[:,0], line[:,1])
+		line_[:,1] = intpy.ev(line[:,0], line[:,1])
+		# Copy over additional info
+		line_[:,2:] = line[:,2:]
+
+		lines_.append(line_)
+
+	return lines_
+
 #
 # return a 3d boolean array where frontal points are True, elsewere False
-def mask_fronts(fronts, froff, s=conf.gridsize):
+def mask_fronts(fronts, froff, shape=s.conf.gridsize):
 	''' To be made obsolete by saving cold/warm/stat fronts separately as lines in the standard-dynlib way 
 	
 	See also
 	--------
 	``mask_lines``, ``smear_lines``.
 	'''
-	masks = [np.zeros((len(fronts), s[0], s[1]), dtype='bool'),
-		 np.zeros((len(fronts), s[0], s[1]), dtype='bool'),
-		 np.zeros((len(fronts), s[0], s[1]), dtype='bool') ]
+	masks = [np.zeros((len(fronts), shape[0], shape[1]), dtype='bool'),
+		 np.zeros((len(fronts), shape[0], shape[1]), dtype='bool'),
+		 np.zeros((len(fronts), shape[0], shape[1]), dtype='bool') ]
 
 	for t in range(len(fronts)):
 		for f in range(3):
 			for n in range(froff[t,f].max()):
 				# python starts counting at zero, unlike fortran
 				j = round(fronts[t,f,n,1] -1)
-				i = round(fronts[t,f,n,0] -1) % s[1]
+				i = round(fronts[t,f,n,0] -1) % shape[1]
 				masks[f][t,j,i] = True
 
 	return masks
 
 
-def mask_lines_with_data(lines, loff, dat=None, s=None):
+def mask_lines_with_data(lines, loff, dat=None, shape=None):
 	''' Mask lines in a gridded map
 
 	Instead of returning the value ``1`` for grid points containing a line, 
@@ -273,7 +305,7 @@ def mask_lines_with_data(lines, loff, dat=None, s=None):
 	    List of point indexes for the first points of each line
 	dat : np.ndarray with dimensions (y,x)
 	    Optional: Data to be used for marking on the map
-	s : 2-tuple of int
+	shape : 2-tuple of int
 	    Optional: Grid dimensions
 	
 	Returns
@@ -282,16 +314,16 @@ def mask_lines_with_data(lines, loff, dat=None, s=None):
 	    Gridded map of lines
 	'''
 
-	if type(s) == type(None):
-		s = conf.gridsize
+	if type(shape) == type(None):
+		shape = s.conf.gridsize
 
-	mask = np.zeros((lines.shape[0], s[0], s[1]))
+	mask = np.zeros((lines.shape[0], shape[0], shape[1]))
 
 	for t in range(lines.shape[0]):
 		for n in range(loff[t].max()):
 			# python starts counting at zero, unlike fortran
 			j = round(lines[t,n,1] -1)
-			i = round(lines[t,n,0] -1) % s[1]
+			i = round(lines[t,n,0] -1) % shape[1]
 			if type(dat) == np.ndarray:
 				mask[t,j,i] = dat[t,j,i]
 			else:
@@ -319,7 +351,7 @@ def mk_gauss(x0,stddev):
 	return lambda x: np.exp(-0.5*(x-x0)**2/stddev**2)/(np.sqrt(2*np.pi)*stddev)
 
 
-def smear_lines(lines, loff, s=None):
+def smear_lines(lines, loff, shape=None):
 	''' Mask lines in a gridded map and then smooth slightly
 
 	Grid points containing a line will be marked with the value ``1``,
@@ -337,7 +369,7 @@ def smear_lines(lines, loff, s=None):
 	    Lines to be marked on the map
 	loff : np.array with dimensions (lineindex)
 	    List of point indexes for the first points of each line
-	s : 2-tuple of int
+	shape : 2-tuple of int
 	    Optional: Grid dimensions
 	
 	Returns
@@ -346,15 +378,15 @@ def smear_lines(lines, loff, s=None):
 	    Gridded map of lines
 	'''
 
-	if type(s) == type(None):
-		s = conf.gridsize
+	if type(shape) == type(None):
+		shape = s.conf.gridsize
 	
 	filtr_len = 5
 	filtr_func = mk_gauss(0, 1)
 	filtr = np.array(map(filtr_func, range(-filtr_len,filtr_len+1)))
 	filtr /= sum(filtr)
 
-	mask = dynfor.utils.mask_lines(s[1], s[0], lines, loff)
+	mask = dynfor.utils.mask_lines(shape[1], shape[0], lines, loff)
 		
 	return dynfor.utils.filter_xy(mask, filtr)
 
@@ -516,11 +548,11 @@ def aggregate(dates, dat, agg):
 	outlen = len(tslc)
 
 	# 2. Initialising the output array
-	s = list(dat.shape)
-	s[0] = outlen
-	s = tuple(s)
+	shape = list(dat.shape)
+	shape[0] = outlen
+	shape = tuple(shape)
 
-	dat_out = np.empty(s)
+	dat_out = np.empty(shape)
 	
 	# 3. Doing the actual calculations
 	for i in xrange(outlen):

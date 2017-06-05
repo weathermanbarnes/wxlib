@@ -6,7 +6,7 @@
 !@ 
 !@ This module contains diagnostic functions useful for analysing the wind
 !@ field. For diagnostics relating to thermodynamic variables, refer to the
-!@ :mod:`dynlib.humidity` module.
+!@ :mod:`dynlib.thermodyn` module.
 module diag
   use kind
   use config
@@ -1285,7 +1285,7 @@ contains
   !@     The streching and stirring component of the generalised frontogenesis function.
   subroutine frontogenesis(resstretch,resstir,nx,ny,nz,u,v,dat,dx,dy)
     real(kind=nr), intent(in)  :: u(nz,ny,nx), v(nz,ny,nx), dat(nz,ny,nx), dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: resstretch(nz,ny,nx),resstir(nz,ny,nx)
+    real(kind=nr), intent(out) :: resstretch(nz,ny,nx), resstir(nz,ny,nx)
     real(kind=nr) :: bet(nz,ny,nx),totdef(nz,ny,nx),divergence(nz,ny,nx),vorticity(nz,ny,nx)
     integer(kind=ni) :: nx,ny,nz
     !f2py depend(nx,ny,nz) resstretch,resstir,v,dat
@@ -1711,6 +1711,66 @@ contains
     ! -----------------------------------------------------------------
     !
     w = -omega / (g * rho)
+    !
+  end subroutine
+  !
+  !@ Integrate hydrostasy to calculate from given surface value
+  !@
+  !@ Uses ideal gas law and assumes hydrostasy, such that d(phi)/d(p) = - RT/p.
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ t : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     3D temperature field.
+  !@ p : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     3D pressure field.
+  !@ ps : np.ndarray with shape (nt,ny,nx) and dtype float64
+  !@     Surface pressure.
+  !@ phis : np.ndarray with shape (nt,ny,nx) and dtype float64
+  !@     Surface geopotential.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z-direction.
+  !@ nt : int
+  !@     Grid size in t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Geopotential.
+  subroutine z_from_hydrostasy(phi, nx,ny,nz,nt, t, p, ps, phis)
+    use consts
+    !
+    real(kind=nr), intent(in) :: t(nt,nz,ny,nx), p(nt,nz,ny,nx), ps(nt,ny,nx), phis(ny,nx)
+    real(kind=nr), intent(out) :: phi(nt,nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz,nt
+    !f2py depend(nt,nz,ny,nx) :: p, phi
+    !f2py depend(nt,ny,nx) :: ps
+    !f2py depend(ny,nx) :: phis
+    !
+    real(kind=nr) :: pstag(ny,nx)
+    integer(kind=ni) :: n,k
+    ! -----------------------------------------------------------------
+    !
+    do n = 1_ni,nt
+       ! Integrate from surface to first model level
+       phi(n,nz,:,:) = phis(:,:) + Rl*t(n,nz,:,:)*(log(ps(n,:,:)) - log(p(n,nz,:,:)))
+       ! Integrate upwards
+       do k = nz-1_ni,1_ni,-1_ni
+          pstag(:,:) = (p(n,k+1_ni,:,:) + p(n,k,:,:))/2.0_nr
+          ! Assuming constant temperatures in the respective lower and upper halfs of the grid cells
+          phi(n,k,:,:) = phi(n,k+1_ni,:,:) + Rl*t(n,k+1_ni,:,:)*(log(p(n,k+1_ni,:,:)) - log(pstag(:,:))) & 
+                              &            + Rl*t(n,k,:,:)*(log(pstag(:,:)) - log(p(n,k,:,:)))
+       end do
+    end do
     !
   end subroutine
   !

@@ -6,12 +6,13 @@
 !@ 
 !@ This module contains diagnostic functions useful for analysing the wind
 !@ field. For diagnostics relating to thermodynamic variables, refer to the
-!@ :mod:`dynlib.humidity` module.
+!@ :mod:`dynlib.thermodyn` module.
 !@
 !@ This module contains those diagnostics that depend on tendencies
 module diag_tend
   use kind
   use config
+  use consts
   use derivatives
   use tend
   !
@@ -24,8 +25,6 @@ contains
   !@ Their effective rotation takes into account both vorticity and rotation of the axis 
   !@ of dilatation.
   !@ 
-  !@ TODO: Do you need to assume z=mont, or does the same routine work also on pressure levels?
-  !@ 
   !@ Parameters
   !@ ----------
   !@
@@ -34,7 +33,7 @@ contains
   !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     V-wind velocity.
   !@ mont : np.ndarray with shape (nz,ny,nx) and dtype float64
-  !@     Montgomery potential on an isentropic surface.
+  !@     Montgomery potential on an isentropic surface or geopotential on pressure surface.
   !@ fcor : np.ndarray with shape (ny,nx) and dtype float64
   !@     Latitude of the grid point.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
@@ -88,7 +87,7 @@ contains
   !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     V-wind velocity.
   !@ mont : np.ndarray with shape (nz,ny,nx) and dtype float64
-  !@     Montgomery potential on an isentropic surface.
+  !@     Montgomery potential on an isentropic surface or geopotential in pressure surface.
   !@ lat : np.ndarray with shape (ny,nx) and dtype float64
   !@     Latitude of the grid point.
   !@ dx : np.ndarray with shape (ny,nx) and dtype float64
@@ -146,7 +145,7 @@ contains
        do j=2_ni,ny-1_ni
           do k=1_ni,nz  
             tem=gamma(k,j,i)%t
-            !call dgeev('N','N',2,tem,2,eigensr,eigensi,dummy1,2,dummy2,2,dummy3,6,dummy4)
+            call dgeev('N','N',2,tem,2,eigensr,eigensi,dummy1,2,dummy2,2,dummy3,6,dummy4)
             !like eigens(1:2) = eig(gamma(k,j,i)%t)
             respr(k,j,i)=eigensr(1) 
             respi(k,j,i)=eigensi(1) 
@@ -156,15 +155,16 @@ contains
        end do
     end do
     !
-    ! TODO: Should this be a NaN??
-    respr(:,(/1,ny/),:)=0._nr
-    !respr(:,:,(/1,nx/))=0._nr
-    resmr(:,(/1,ny/),:)=0._nr
-    !resmr(:,:,(/1,nx/))=0._nr
-    respi(:,(/1,ny/),:)=0._nr
-    !respi(:,:,(/1,nx/))=0._nr
-    resmi(:,(/1,ny/),:)=0._nr
-    !resmi(:,:,(/1,nx/))=0._nr
+    respr(:,(/1,ny/),:)=nan
+    resmr(:,(/1,ny/),:)=nan
+    respi(:,(/1,ny/),:)=nan
+    resmi(:,(/1,ny/),:)=nan
+    if ( .not. grid_cyclic_ew ) then
+       resmi(:,:,(/1,nx/))=nan
+       respi(:,:,(/1,nx/))=nan
+       resmr(:,:,(/1,nx/))=nan
+       respr(:,:,(/1,nx/))=nan
+    end if
   end subroutine
   !
 end module

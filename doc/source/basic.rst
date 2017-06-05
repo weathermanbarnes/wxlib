@@ -150,6 +150,8 @@ Currently, the following contexts exist:
    ECWMF forecast archive for the last 2 weeks or so. Currently contains only the deterministic forecast at 0.5° resolution.
 :mod:`dynlib.context.metno_fc`
    AROME2.5 forecast archive for the last 2 weeks or so. 2.5 km resolution covering most of Scandinavia.
+:mod:`dynlib.context.nora10`
+   NORA10 local reanalysis for Norway, 10 km resolution.
 :mod:`dynlib.context.derived`
    Variable definitions for all diagnostics and detected features available in dynlib.
 
@@ -171,12 +173,78 @@ In addition, a few contexts are reserved for future use:
    NCEP/NCAR reanalysis.
 :mod:`dynlib.context.c20r`
    20th century reanalysis.
-:mod:`dynlib.context.nora10`
-   NORA10 local reanalysis for Norway, 10 km resolution.
 :mod:`dynlib.context.bedymo`
    Bedymo model output.
 :mod:`dynlib.context.wrf`
    WRF model output.
+
+
+Context switching
+"""""""""""""""""
+
+Sometimes it can become necessary to operate on data from different data sets. For this case, 
+dynlib supports loading several contexts in parallel, and switching between them.
+
+For loading contexts describing additional data sets, they need to be imported in the same way as 
+the first context was. During the import a new set of configuration is created, and is made 
+/active/. It is the /active/ context that affects how dynlib works. So initially, dynlib will 
+operate on the newly imported data set. 
+
+You can switch between different contexts using
+:func:`dynlib.settings.set_active_context`.
+
+To query if a given set of configuration is /active/, use
+:func:`dynlib.settings.is_active_context`. 
+
+Note that there are special contexts, like :mod:`dynlib.context.derived` or anything plot-related, 
+that will not create a new set of configuration, but rather modify the currently active context.
+
+
+Configuration variables
+"""""""""""""""""""""""
+
+Here is a comprehensive overview over the configuration variables that can be defined for each context.
+Note that some configuration variables are managed internally using API functions and should not be 
+edited manually. Those will be adapted automatically when registering variables and vertical levels
+via :func:`dynlib.settings.settings_obj.register_variable`. 
+
+While the plot configuration can of course be edited manually (see :ref:`plot configuration`), the 
+:class:`dynlib.settings.plot_settings_dict` object itself should not. The available variable/vertical 
+level-combinations are again managed through registering variables.
+
+=============================== ======= =============================== ======================= =======================
+Name                            Edit	Type				Default                 Description
+=============================== ======= =============================== ======================= =======================
+datapath	        	✓	list of string			``['.', ]``			List of directory to be searched for data input files.
+epoch		        	✓	datetime						Reference time for the data set, typically first available time step. Used for example to anchor aggregation periods.
+file_agg	        	✓	string							File naming convention for time-aggregated input files.
+file_static	        	✓	string							File name of the static fields file.
+file_std	        	✓	string							File naming convention for standard input files.
+file_timeless	        	✓	string							File naming convention for input files without time dimension (e.g. composites, eofs).
+file_ts			      	✓	string							File naming convention for time series files.
+gridsize	        	✓	2-tuple of int			``(, )``			Grid dimension of the data set.
+local_timezone	        	✓	string				``'Europe/Oslo'``		Local time zone identifier. Used for the time information in the changelog of data output files.
+mlevs		         		list of string			``[]``			Model levels on which data is available.
+oformat		        	✓	string				``'nc'``			In which format to save the output. Currently only supprted: ``'nc'`` for netCDF output.
+opath		        	✓	string				``'.'``			Where to save data output files.
+plevs		         		list of string			``[]``			Pressure levels on which data is available.
+plot				(✓)	:class:`plot_settings_dict`				Line/contour plot configuration. See :ref:`plot configuration` for details.
+plotf				(✓)	:class:`plot_settings_dict`				Shading/filled-contour plot configuration. See :ref:`plot configuration` for details.
+plotformat			✓	string				``'png'``			In which format to save plots. All graphics extensions supprted by matplotlib can be supplied.
+plotpath			✓	string				``'.'``			Where to save plots.
+ptlevs		         		list of string			``[]``			Potential temperature levels on which data is available.
+pvlevs		         		list of string			``[]``			Potential vorticity levels on which data is available.
+q		         		dict				``{}``			Mapping from file name segment to variable name.
+qf		         		dict				``{}``			Mapping from variable name to file name segment.
+q_bins		         		dict				``{}``			If binned variable: Mapping from variable name to list of bin boundaries.
+q_long		         		dict				``{}``			Mapping from variable name to long variable name.
+q_units		         		dict				``{}``			Mapping from variable name to unit description.
+sfclevs		         		list of string			``[]``			Surface levels on which data is available.
+times		        	✓	list of int			``[]``			List of time steps available in the data set. See also: ``years``.
+timestep	        	✓	timedelta or :class:`tagg`	``[]``			Time step of the data set.
+years		        	✓	list of int			``[]``			List of years available in the data set. See also: ``times``.
+zlevs		         		list of string			``[]``			Height levels on which data is available.
+=============================== ======= =============================== ======================= =======================
 
 
 Using contexts in your personal settings

@@ -13,7 +13,7 @@ These functions have two main aims:
     for example temperatures are by default plotted in a consistent an meaningful way.
 '''
 
-from __future__ import absolute_import, unicode_literals, division
+from __future__ import absolute_import, unicode_literals, division, print_function
 
 import copy
 import re
@@ -30,12 +30,27 @@ from matplotlib.collections import LineCollection
 import mpl_toolkits.basemap
 basemap_version = mpl_toolkits.basemap.__version__
 
-from .settings import conf
+from . import settings as s
 
 from .metio import metopen
-from .utils import concat1, concat1lonlat, __unflatten_fronts_t, sect_gen_points
+from .utils import concat1, concat1lonlat, unflatten_lines, sect_gen_points
 from .autoscale import autoscale
 
+
+def _interpolate_for_section(static, dat, xlon, xlat):
+	try:
+		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[::-1,:].T)
+	# If interpolation fails, try again, but this time do not assume a structured mesh
+	except TypeError:
+		points = zip(static.x.flat, static.y.flat)
+		interp = intp.LinearNDInterpolator(points, dat.flatten())
+		points = zip(xlon, xlat)
+		dati = interp(points)
+	# If interpolation successful, get values for given points
+	else:
+		dati = interp.ev(xlon, xlat)
+	
+	return dati
 
 def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	''' Plot a vertical cross section with pressure or log-pressure as the vertical axis
@@ -97,14 +112,11 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 
 	dati = np.empty((dat.shape[0], len(xlon),))
 	for i in range(dat.shape[0]):
-		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[i,::-1,:].T)
-		dati[i] = interp.ev(xlon, xlat)
+		dati[i] = _interpolate_for_section(static, dat[i,:,:], xlon, xlat)
 
-	interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], ps[::-1,:].T)
-	psi = interp.ev(xlon, xlat)
+	psi = _interpolate_for_section(static, ps, xlon, xlat)
 	if not type(p) == type(None):
-		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], p[::-1,:].T)
-		pi = interp.ev(xlon, xlat)
+		pi = _interpolate_for_section(static, p, xlon, xlat)
 	
 	# 2a. Plot the inset map
 	xx, xy = m(xlon, xlat)
@@ -113,15 +125,18 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 		__contourf_dat(m, x, y, datmap, kwargs_map)
 	#m.plot(xx, xy, 'w-', linewidth=4)
 	m.plot(xx, xy, 'k-', linewidth=4)
-
+	
 	logp = kwargs.get('logp', False)
 	if logp:
-		z = map(lambda p: np.log(float(p)), static.z)
+		z = np.array([np.log(float(p_)) for p_ in static.z])
 		kwargs['ticks'] = z
-		kwargs['ticklabels'] = static.z
+		kwargs['ticklabels'] = list(static.z)
 	else:
 		z = static.z
-
+	
+	if len(z.shape) > 1:
+		raise Exception('z dimension must be 1-dimensional!')
+	
 	# 2b. Plot the actual cross section
 	if 'sect_axes' in kwargs:
 		plt.sca(kwargs['sect_axes'])
@@ -148,9 +163,7 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 
 	# 3. Finish off
 	__decorate(m, xxy, z, xlon, xlat, slice(None), plev, q, kwargs)
-	__output(plev, q, kwargs)
-
-	return
+	return __output(plev, q, kwargs)
 
 # Section using pressure as vertical coordinate are standard, so provide shortcut
 section = section_p
@@ -188,9 +201,7 @@ def map(dat, static, **kwargs):
 
 	# 3. Finish off
 	__decorate(m, x, y, lon, lat, mask, plev, q, kwargs)
-	__output(plev, q, kwargs)
-
-	return
+	return __output(plev, q, kwargs)
 
 
 # Helper functions
@@ -271,7 +282,7 @@ def __prepare_config(kwargs):
 
 	plev = kwargs.pop('plev', None)
 	q = kwargs.pop('q', None)
-	kwargs = conf.plotf.merge(plev, q, **kwargs)
+	kwargs = s.conf.plotf.merge(plev, q, **kwargs)
 
 	# cmap might be a function returing the cmap; if so generate it now!
 	if 'cmap' in kwargs and type(kwargs['cmap']) == types.FunctionType:
@@ -285,7 +296,7 @@ def __line_prepare_config(kwargs):
 
 	plev = kwargs.pop('plev', None)
 	q = kwargs.pop('q', None)
-	kwargs = conf.plot.merge(plev, q, **kwargs)
+	kwargs = s.conf.plot.merge(plev, q, **kwargs)
 	
 	return kwargs
 
@@ -300,17 +311,20 @@ def __map_create_mask(static, kwargs):
 	# Potential override by kwarg
 	mask = kwargs.pop('mask', None)
 	if type(mask) == np.ndarray:
-		return concat1(mask)
+		if static.cyclic_ew:
+			mask = concat1(mask)
+		return mask
 
 	plev = kwargs.pop('plev', None)
 	datZ = kwargs.pop('Zdata', None)
 	
 	if plev and not type(datZ) == np.ndarray:
-		f,datZ = metopen(conf.file_agg % {'agg': 'all', 'time': '%d-%d' % (conf.years[0],conf.years[-1]), 'plev': plev, 'q': 'Z'}, 'z', no_static=True)
+		f,datZ = metopen(s.conf.file_agg % {'agg': 'all', 'time': '%d-%d' % (s.conf.years[0],s.conf.years[-1]), 'plev': plev, 'q': 'Z'}, 'z', no_static=True)
 		if f: f.close()
 	if type(datZ) == np.ndarray:
-		datZ = concat1(datZ)
-		mask = datZ[:,:] < concat1(static.oro[:,:])
+		mask = datZ[:,:] < static.oro[:,:]
+		if static.cyclic_ew:
+			mask = concat1(mask)
 	else:
 		mask = slice(1,0)
 	
@@ -407,7 +421,7 @@ def __contourf_dat(m, x, y, dat, kwargs):
 		if not type(kwargs.get('colors')) == type(None) and type(kwargs.get('cmap')) == type(None):
 			if not type(scale) == int:
 				colors = list(kwargs.get('colors'))
-				repeat = len(scale) / len(colors) + 1
+				repeat = len(scale) // len(colors) + 1
 				kwargs['cmap'] = matplotlib.colors.ListedColormap(colors*repeat)
 			else:
 				kwargs['cmap'] = matplotlib.colors.ListedColormap(kwargs.get('colors'))
@@ -423,6 +437,8 @@ def __contourf_dat(m, x, y, dat, kwargs):
 		pkwargs = { key: kwargs.get(key, None) for key in pkwargs }
 		datm = np.ma.masked_where(np.isnan(dat), dat)
 		cs = m.pcolormesh(x, y, datm, latlon=True, zorder=1, **pkwargs)
+	elif kwargs.get('tri'):
+		cs = m.contourf(x.flatten(), y.flatten(), dat.flatten(), scale, latlon=True, zorder=1, **kwargs)
 	else:
 		cs = m.contourf(x, y, dat, scale, latlon=True, zorder=1, **kwargs)
 	
@@ -484,7 +500,7 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 	if kwargs.get('title'):
 		title = kwargs.pop('title')
 		if title == 'auto':
-			title = u'%s @ %s' % (conf.q_long.get(q, q), plev)
+			title = u'%s @ %s' % (s.conf.q_long.get(q, q), plev)
 			if kwargs.get('name'):
 				title += u' for %s' % kwargs.get('name')
 
@@ -495,27 +511,33 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 def __output(plev, q, kwargs):
 	''' Save and/or show the plot '''
 
+	dpi = kwargs.pop('fig_dpi')
 	if kwargs.get('save'):
 		filename = kwargs.pop('save')
 		if filename == 'auto':
-			filename = '%s_%s_%s.%s' % (q, plev, __safename(kwargs.get('name', 'unnamed')), conf.plotformat)
+			filename = '%s_%s_%s.%s' % (q, plev, __safename(kwargs.get('name', 'unnamed')), s.conf.plotformat)
 		if kwargs.get('name_prefix'):
 			filename = '%s_%s' % (kwargs.pop('name_prefix'), filename)
 		
 		# If png: Use adaptive palette to save space
 		if filename[-3:] == 'png':
 			imgstr = BytesIO()
-			plt.savefig(imgstr, format='png', dpi=kwargs.pop('fig_dpi'))
+			plt.savefig(imgstr, format='png', dpi=dpi)
 			imgstr.seek(0)
 			img = Image.open(imgstr)
 			img_adaptive = img.convert('RGB').convert('P', palette=Image.ADAPTIVE)
-			img_adaptive.save('%s/%s' % (conf.plotpath, filename), format='PNG')
+			img_adaptive.save('%s/%s' % (s.conf.plotpath, filename), format='PNG')
 
 		else:
-			plt.savefig('%s/%s' % (conf.plotpath, filename), dpi=kwargs.pop('fig_dpi'))
+			plt.savefig('%s/%s' % (s.conf.plotpath, filename), dpi=dpi)
 	
 	if kwargs.pop('show'):
 		plt.show()
+	
+	if kwargs.pop('_return', False):
+		imgstr = BytesIO()
+		plt.savefig(imgstr, format='png', dpi=dpi)
+		return imgstr
 	
 	return
 
@@ -544,7 +566,6 @@ def __safename(name):
 ###############################################
 # Overlays
 
-# TODO: Should this one take the static object as an argument? If only for consistency in the API.
 def section_overlay_contour(dat, static, **kwargs):
 	''' Overlay contours onto a section
 	
@@ -571,8 +592,7 @@ def section_overlay_contour(dat, static, **kwargs):
 	def overlay(m, xxy, z, xlon, xlat, zorder, mask=None):
 		dati = np.empty((dat.shape[0], len(xlon),))
 		for i in range(dat.shape[0]):
-			interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[i,::-1,:].T)
-			dati[i] = interp.ev(xlon, xlat)
+			dati[i] = _interpolate_for_section(static, dat[i,:,:], xlon, xlat)
 	
 		if type(mask) == np.ndarray:
 			dati[mask] = np.nan
@@ -620,9 +640,15 @@ def map_overlay_contour(dat, static, **kwargs):
 		x_, y_ = static.x, static.y
 	
 	kwargs = __line_prepare_config(kwargs)
+	owngrid = kwargs.pop('owngrid', False)
 	
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
-		dat_ = __map_prepare_dat(dat, mask, static, kwargs)
+		if owngrid:
+			mask = __map_create_mask(static, kwargs)
+			dat_ = __map_prepare_dat(dat, mask, static, kwargs)
+			m, x, y, lon, lat = __map_setup(mask, static, kwargs)
+		else:
+			dat_ = __map_prepare_dat(dat, mask, static, kwargs)
 
 		if type(mask) == np.ndarray:
 			dat_[mask] = np.nan
@@ -671,7 +697,7 @@ def map_overlay_lines(lines, loff, static, **kwargs):
 
 	kwargs = __line_prepare_config(kwargs)
 
-	lns = __unflatten_fronts_t(lines, loff, minlength=0)
+	lns = unflatten_lines(lines, loff, static)
 
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		# TODO: Convert to latlon=True system
@@ -714,7 +740,7 @@ def map_overlay_clines(lines, cdat, loff, static, **kwargs):
 
 	kwargs = __line_prepare_config(kwargs)
 
-	lns = __unflatten_fronts_t(lines, loff, minlength=0)
+	lns = unflatten_lines(lines, loff, minlength=0)
 
 	norm = plt.Normalize()
 	norm.autoscale(cdat)
@@ -807,6 +833,9 @@ def map_overlay_shading(dat, static, **kwargs):
 def map_overlay_barbs(u, v, static, **kwargs):  
 	''' Overlay wind barbs onto a map
 
+	For rotated grids (as far as supported by gridlib), vectors will be 
+	rotated back automatically.
+
 	Parameters
 	----------
 	u : np.ndarrays with dimensions (y,x)
@@ -833,13 +862,16 @@ def map_overlay_barbs(u, v, static, **kwargs):
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
 
-		if hasattr(m, 'transform_vector'):
+		# Respect rotated coordinate systems (otherweise returned unchanged)
+		u_, v_ = static.unrotate_vector(u_, v_)
+
+		try:
 			if lat[0,0] > lat[-1,0]:
 				ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
 			else:
 				ut,vt, xt,yt = m.transform_vector(u_,v_,lon[0,:],lat[:,0], 30, 20, returnxy=True)
 
-		else:
+		except (AttributeError, ValueError):
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
 			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
@@ -848,8 +880,11 @@ def map_overlay_barbs(u, v, static, **kwargs):
 	
 	return overlay
 
-def map_overlay_quiver(u, v, static, **kwargs):  
+def map_overlay_quiver(u, v, static, **kwargs):
 	''' Overlay quiver vectors onto a map
+
+	For rotated grids (as far as supported by gridlib), vectors will be 
+	rotated back automatically.
 
 	Parameters
 	----------
@@ -876,10 +911,13 @@ def map_overlay_quiver(u, v, static, **kwargs):
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
+		
+		# Respect rotated coordinate systems (otherweise returned unchanged)
+		u_, v_ = static.unrotate_vector(u_, v_)
 
-		if hasattr(m, 'transform_vector'):
+		try:
 			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
-		else:
+		except (AttributeError, ValueError):
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
 			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
@@ -890,6 +928,9 @@ def map_overlay_quiver(u, v, static, **kwargs):
 
 def map_overlay_dilatation(defabs, defang, static, **kwargs):
 	''' Overlay dilatation axes onto a map
+
+	For rotated grids (as far as supported by gridlib), orientations will be 
+	rotated back automatically.
 
 	Parameters
 	----------
@@ -920,18 +961,24 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 		defdex = __map_prepare_dat(defdex, mask, static, copy.copy(kwargs))
 		defdey = __map_prepare_dat(defdey, mask, static, kwargs)
 
-		Nvecx = 27
-		Nvecy = 18
-		
-		if hasattr(m, 'transform_vector'):
+		# Respect rotated coordinate systems (otherweise returned unchanged)
+		defdex, defdey = static.unrotate_vector(defdex, defdey)
+
+		try:
+			Nvecx = 27
+			Nvecy = 18
 			ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0], Nvecx, Nvecy, returnxy=True)
 			qscale = 420
-		else:
-			skipx = defdex.shape[1]/Nvecx
-			skipy = defdey.shape[0]/Nvecy
-			slc = (slice(skipy//2,None,skipy), slice(skipx//2,None,skipx))
+		except AttributeError:
+			interval = kwargs.pop('vector_space_interval', 15)
+			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
 			ut,vt,xt,yt = defdex[slc],defdey[slc],x[slc],y[slc]
-			qscale=72
+			qscale = 72
+		except ValueError:
+			interval = kwargs.pop('vector_space_interval', 15)
+			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
+			ut,vt,xt,yt = m.rotate_vector(defdex[slc],defdey[slc],lon[slc],lat[slc], returnxy=True)
+			qscale = 840
 
 		m.quiver(xt, yt, ut, vt, zorder=4, scale=qscale, alpha=0.85)
 		m.quiver(xt, yt, -ut, -vt, zorder=4, scale=qscale, alpha=0.85)

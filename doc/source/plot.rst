@@ -87,8 +87,9 @@ Dynlib plots can be customised by a large number of keyword arguments. Here is a
 Name                            Line    Fill    Type                    Default                 Description
 =============================== ======= ======= ======================= ======================= =======================
 alpha		         	✓       ✓       float                   1.0			Opacity of the layer, 1.0 is fully opaque, 0.0 fully transparent.
-cb_disable		        ✓  	✓ 	bool		        ``False``		Do not add a colorbar to the plot. 
+cb_disabled		        ✓  	✓ 	bool		        ``False``		Do not add a colorbar to the plot. 
 cb_expand_fig_fraction		✓ 	✓	float			0.1			Fraction of the figure height or width to extend the figure by, to make room for the colorbar.
+cb_label                        ✓ 	✓	list of string                                  Labels for the color bar.
 cb_orientation  		✓ 	✓ 	string			``'vertical'``		Orientation of the color bar. 
 cb_tickspacing  		✓ 	✓ 	string			``'proportional'``	Spacing policy for ticks at the colorbar. Either ``'proportional'`` or ``'uniform'``.
 cb_shrink			✓ 	✓	float			0.8			Fraction of the figure height or width covered by the colorbar.
@@ -130,6 +131,7 @@ scale_symmetric_zero 	        ✓ 	✓ 	bool 		        ``False`` 	        If sca
 show			        ✓ 	✓ 	bool 		        ``True`` 	        Show the plot in a window. 
 ticks			        ✓ 	✓ 	list 		  		                Where to put the ticks on the colorbar. 
 ticklabels		        ✓ 	✓ 	list 		  		                How to label the ticks. 
+tile                             	✓       bool                    ``False``               Use pcolormesh instead of contourf to plot the shading, having only one solid color per grid cell.
 title			        ✓ 	✓ 	string 		  	``'auto'``		Title for the plot. If ``'auto'`` the plot title is determined automatically from q, plev and name.
 Zdata			        ✓ 	✓ 	numpy.ndarray 	 	                        2D geopotential height field, used for masking intersections with orography. 
 =============================== ======= ======= ======================= ======================= =======================

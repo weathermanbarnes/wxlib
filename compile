@@ -9,8 +9,10 @@
 #   and helpful error messages in case of such errors, but slows down execution considerably.
 COMPILE_OPTS="productive"
 
-# Choose f2py version (i.e. which python to compile for)
-F2PY="f2py3"
+# Choose python version to compile for
+PY_VER=""
+F2PY="f2py$PY_VER"
+PYTHON="python$PY_VER"
 
 #######################################################################
 # Obs: The order of the files in $files has to reflect the interdepencies!
@@ -23,7 +25,7 @@ work="$base/examples"
 doc="$base/doc"
 doc_extract=".compile_fortran_doc.py"
 
-files="config.f90 derivatives.f90 interpol.f90 ellipse.f90 utils.f90 humidity.f90 diag.f90 detect_rwb_contour.f90 detect_fronts.f90 detect.f90 sphere.f90 stat.f90 tend.f90 diag_tend.f90"
+files="config.f90 derivatives.f90 interpol.f90 ellipse.f90 utils.f90 thermodyn.f90 diag.f90 detect_rwb_contour.f90 detect_lines.f90 detect.f90 sphere.f90 stat.f90 tend.f90 diag_tend.f90"
 filec="const.f90"
 filek="kind.f90"
 
@@ -31,7 +33,16 @@ python_library="dynfor"
 fortran_library="libdynfor"
 pysig="${precc}/$python_library.pyf"
 
-LIBS='-L/home/clemensp/sw/lib -lspherepack -lblas -llapack'
+host=`hostname -f`
+uname=`uname`
+if [ ${host: -6} == 'uib.no' ]; then
+	LIBS='-L/Data/gfi/users/local/lib -lspherepack -lblas -llapack'
+elif [ "$uname" == 'Darwin' ]; then
+	LIBS='-L/usr/lib -L/usr/local/lib -lspherepack -lblas -llapack'
+else
+	echo "Error: Unknown host/ operation system."
+	exit 1
+fi
 
 # TODO: Make code ready for -pedantic
 if [ "$COMPILE_OPTS" == 'productive' ]; then
@@ -91,7 +102,6 @@ sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" |
 grep -v "nan=" > ${pysig}_tmp
 mv ${pysig}_tmp $pysig
 
-
 # 3. Compiling the fortran modules 
 echo -e "Stage 3: Compiling Fortran shared object using $flagset options."
 gfortran $OPTS $LIBS -c $filek $filec $files 
@@ -108,7 +118,7 @@ mv ${python_library}*.so $baselib
 # 5. Compiling Fortran documentation
 echo "Stage 5: Compiling the pickled Fortran documentation"
 cd $src
-python $baselib/$doc_extract $filek $filec $files
+$PYTHON $baselib/$doc_extract $filek $filec $files
 
 
 # 6. Compiling Fortran documentation

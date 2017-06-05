@@ -5,6 +5,7 @@ import os
 import os.path
 import subprocess
 import warnings
+import glob
 
 from distutils.core import setup
 from distutils.command.build_py import build_py as _build_py
@@ -21,8 +22,8 @@ if len(changes) > 0:
 	version += '+'
 
 precc = 'lib/fortran/.precc'
-fortran_modules = ['kind', 'config', 'consts', 'derivatives', 'detect', 'detect_fronts', 'detect_rwb_contour',
-		   'diag', 'ellipse', 'humidity', 'stat', 'utils']
+fortran_modules = ['kind', 'config', 'consts', 'derivatives', 'detect', 'detect_lines', 'detect_rwb_contour',
+		   'diag', 'ellipse', 'thermodyn', 'sphere', 'stat', 'utils']
 fortran_modules = ['%s/%s.mod' % (precc, mod) for mod in fortran_modules]
 
 # Override the build_py class to 
@@ -32,7 +33,8 @@ class build_py(_build_py):
 	def run(self):
 		subprocess.call("./compile", shell=True)
 		_build_py.run(self)
-		self.copy_file('lib/dynfor.so', os.path.join(self.build_lib, 'dynlib/dynfor.so'), preserve_mode=True)
+		for fname in glob.glob('lib/dynfor*.so'):
+			self.copy_file(fname, os.path.join(self.build_lib, 'dyn'+fname), preserve_mode=True)
 		self.copy_file('lib/.dynfor_doc.pickle', os.path.join(self.build_lib, 'dynlib/.dynfor_doc.pickle'), preserve_mode=True)
 
 		return

@@ -1,9 +1,9 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! 		DynLib -- humidity conversions 
+! 		DynLib -- Thermodynamic calculations and humidity conversions
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
 ! Module maintained by Clemens Spensberger (csp001@uib.no)
-module humidity
+module thermodyn
   use kind
   use config
   use consts
@@ -463,4 +463,37 @@ contains
     return
   end subroutine
   !
+  !@ Calculate the Exner function
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ p : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Pressure in Pa.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Exner function for the given pressure
+  subroutine exner(res,nx,ny,nz,pres)
+    real(kind=nr), intent(in)  :: pres(nz,ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) res
+    !
+    ! -----------------------------------------------------------------
+    res(:,:,:) = (pres(:,:,:)/p0)**(Rl/cp)
+    !
+    return
+  end subroutine
 end module

@@ -4,7 +4,7 @@
 import numpy as np
 
 from ...settings import def_context, in_context, conf, cm
-def_context('plot')
+def_context('plot', parent='active')
 
 
 if in_context('erainterim'): 

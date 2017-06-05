@@ -1,5 +1,36 @@
-Newsettings changelog
-=====================
+Version 0.40.0
+==============
+
+ * Self-testing diagnostic functions, python utilities and plotting
+
+ * Some new diagnostics
+
+   - blocking_by_grad_rev is now a python function to calculate blocking, 
+     instead of a Fortran function calculating the blocking indicator field
+   - the Fortran function is now called blocking_indicator_grad_rev
+ 
+ * Renamed humidity module to thermodyn
+
+
+Version 0.30.0
+==============
+
+Key additions
+-------------
+
+ * Python 3 support
+
+ * Context switches
+
+ * Some new diagnostics and utilities, for example:
+   
+   - Filling NaN-values (-> Sebastian)
+   - Labelling connected regions to define objects
+   - Potential temperature from temperature and pressure (-> Lars)
+
+
+Version 0.20.0 "Newsettings"
+============================
 
 Key backwards incompatible changes
 ----------------------------------
