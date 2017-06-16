@@ -15,7 +15,10 @@ a "static.npz" file that contains the pertinent information for a given data set
 import copy
 import numpy as np
 import netCDF4 as nc
-from mpl_toolkits.basemap.pyproj import Proj 		# for rotpole projection
+try:
+	from mpl_toolkits.basemap.pyproj import Proj 		# for rotpole projection
+except:
+	from pyproj import Proj
 from datetime import datetime as dt, timedelta as td
 
 from . import derivatives
@@ -56,22 +59,27 @@ class grid(object):
 		self.dx = np.ones((self.ny, self.nx))*111111.111111
 		self.dy = np.ones((self.ny, self.nx))*111111.111111
 
+		if len(self.x.shape) == 1:
+			slc = np.newaxis
+		else:
+			slc = slice(None)
+
 		dlon = np.ones(self.dx.shape)
-		dlon[:,1:-1] = (self.x[np.newaxis,2:]-self.x[np.newaxis,:-2]) % 360.0
-		dlon[:,0] = (self.x[np.newaxis,1]-self.x[np.newaxis,-1]) % 360.0
+		dlon[:,1:-1] = (self.x[slc,2:]-self.x[slc,:-2]) % 360.0
+		dlon[:,0] = (self.x[slc,1]-self.x[slc,-1]) % 360.0
 		if np.any(np.abs(dlon[:,1]/dlon[:,0]-1)  > 1.0e-3):
 			self.cyclic_ew = False
-			dlon[:,0] = 2.0*(self.x[1]-self.x[0])
-			dlon[:,-1] = 2.0*(self.x[-1]-self.x[-2])
+			dlon[:,0] = 2.0*(self.x[slc,1]-self.x[slc,0])
+			dlon[:,-1] = 2.0*(self.x[slc,-1]-self.x[slc,-2])
 		else:
-			dlon[:,-1] = (self.x[np.newaxis,0]-self.x[np.newaxis,-2]) % 360.0
+			dlon[:,-1] = (self.x[slc,0]-self.x[slc,-2]) % 360.0
 		dlon[dlon > 180] -= 360.0
 		dlon[dlon < -180] += 360.0
-		self.dx *= dlon * np.cos(np.pi/180.0*self.y[:,np.newaxis])
+		self.dx *= dlon * np.cos(np.pi/180.0*self.y[:,slc])
 
-		self.dy[1:-1,:] *= self.y[2:,np.newaxis]-self.y[:-2,np.newaxis]
-		self.dy[ 0,:] *= 2.0*(self.y[ 1]-self.y[ 0])
-		self.dy[-1,:] *= 2.0*(self.y[-1]-self.y[-2])
+		self.dy[1:-1,:] *= self.y[2:,slc]-self.y[:-2,slc]
+		self.dy[ 0,:] *= 2.0*(self.y[ 1,slc]-self.y[ 0,slc])
+		self.dy[-1,:] *= 2.0*(self.y[-1,slc]-self.y[-2,slc])
 
 		return
 
@@ -223,8 +231,22 @@ class grid_by_nc(grid):
 					if self.t_name:
 						raise ValueError('Found several possible t-axes (using variable)')
 					self.t_name = d
+			
+			# In case of irregular grids, coordinates might be given as separate coordinate variables
+			if not self.x_name or not self.y_name:
+				for cv in self.f.variables:
+					if matches(cv, self.X_NAMES, self.X_NAME_BEGINSWITH):
+						if self.x_name:
+							raise ValueError('Found several possible x-axes (scanning for separate coordinate variables)')
+						if self.f.variables[cv].dimensions == self.v.dimensions[-2:]:
+							self.x_name = cv
+					if matches(cv, self.Y_NAMES, self.Y_NAME_BEGINSWITH):
+						if self.y_name:
+							raise ValueError('Found several possible y-axes (scanning for separate coordinate variables)')
+						if self.f.variables[cv].dimensions == self.v.dimensions[-2:]:
+							self.y_name = cv
 
-		if not self.x_name or not self.y_name or not self.z_name or not self.t_name:
+		if not self.x_name or not self.y_name:
 			self.x_name = None
 			self.y_name = None
 			self.z_name = None
@@ -281,8 +303,18 @@ class grid_by_nc(grid):
 		else:
 			self.t_unit = None
 		
-		self.nx = len(self.f.dimensions[self.x_name])
-		self.ny = len(self.f.dimensions[self.y_name])
+		self.nx = self.f.variables[self.x_name].shape
+		if len(self.nx) == 1:
+			self.nx = self.nx[0]
+		elif len(self.nx) == 2:
+			self.nx = self.nx[1]
+		else:
+			raise ValueError('x coordinate variable has incompatible shape: %s' % self.nx)
+		self.ny = self.f.variables[self.y_name].shape
+		if len(self.ny) in [1,2]:
+			self.ny = self.ny[0]
+		else:
+			raise ValueError('y coordinate variable has incompatible shape: %s' % self.ny)
 
 		if self.x_unit == 'degrees_E' and self.y_unit == 'degrees_N':
 			self.gridtype = 'latlon'
@@ -337,8 +369,9 @@ class grid_by_nc(grid):
 			
 		if self.gridtype == 'latlon':
 			self._calc_dx_dy_latlon()
-			self.x = np.tile(self.x, (self.ny,1))
-			self.y = np.tile(self.y, (self.nx,1)).T
+			if len(self.x.shape) == 1:
+				self.x = np.tile(self.x, (self.ny,1))
+				self.y = np.tile(self.y, (self.nx,1)).T
 
 		elif self.gridtype == 'idx':
 			self.dx = np.ones((self.ny, self.nx))*2

@@ -26,7 +26,9 @@ from . import utils
 from .gridlib import grid_by_nc, grid_by_static
 from . import tagg
 from . import dynfor
-dynlib_version = ''.join([x.decode('ascii') for x in dynfor.consts.version]).strip()
+
+from . import version
+#dynlib_version = ''.join([x.decode('ascii') for x in dynfor.consts.version]).strip()
 
 
 
@@ -135,6 +137,7 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 	def handle_nc(filepath):
 		f = nc.Dataset(filepath, mode)
 		f.set_auto_scale(False)
+		f.set_auto_mask(False)
 		if q:
 			var = f.variables[q]
 			if q not in f.variables:
