@@ -208,7 +208,7 @@ contains
     integer(kind=ni) :: nx,ny,nz
     !f2py depend(nx,ny,nz) res
     ! -----------------------------------------------------------------
-    res(:,:,:) = 243.5_nr*log(e(:,:,:)/6.112_nr)  / (17.67_nr - log(e(:,:,:)/6.112_nr)) + 273.15_nr
+    res(:,:,:) = 243.5_nr*log(e(:,:,:)/611.2_nr)  / (17.67_nr - log(e(:,:,:)/6.112_nr)) + 273.15_nr
     !
     return
   end subroutine
