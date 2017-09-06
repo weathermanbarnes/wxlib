@@ -177,13 +177,18 @@ class grid(object):
 class grid_by_nc(grid):
 	''' Extract the relevant information from a given netCDF file object '''
 
-	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x', 'x_1']
+	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x', 'x_1', 'x (stag)']
 	X_NAME_BEGINSWITH = ['rlon', 'dimx', ]
-	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', 'y_1']
+	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', 'y_1', 'y (stag)']
 	Y_NAME_BEGINSWITH = ['rlat', 'dimy', ]
-	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'z_1', 'alt']
+	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'z_1', 'alt', 'z (stag)']
 	Z_NAME_BEGINSWITH = ['lev', 'dimz', ]
 	T_NAMES = ['time', 'Time']
+
+	X_IRREGULAR_NAMES = X_NAMES
+	X_IRREGULAR_NAME_BEGINSWITH = X_NAME_BEGINSWITH
+	Y_IRREGULAR_NAMES = Y_NAMES
+	Y_IRREGULAR_NAME_BEGINSWITH = Y_NAME_BEGINSWITH
 
 	ROT_POLES = {
 		'rotated_pole': ('grid_north_pole_longitude', 'grid_north_pole_latitude'),  # name convention in NORA10 and dynlib
@@ -217,32 +222,36 @@ class grid_by_nc(grid):
 			for d in self.v.dimensions:
 				if matches(d, self.X_NAMES, self.X_NAME_BEGINSWITH):
 					if self.x_name:
-						raise ValueError('Found several possible x-axes (using variable)')
+						raise ValueError('Found several possible x-axes: %s, %s (using variable)' % (self.x_name, d))
 					self.x_name = d
 				if matches(d, self.Y_NAMES, self.Y_NAME_BEGINSWITH):
 					if self.y:
-						raise ValueError('Found several possible y-axes (using variable)')
+						raise ValueError('Found several possible y-axes: %s, %s (using variable)' % (self.y_name, d))
 					self.y_name = d
 				if matches(d, self.Z_NAMES, self.Z_NAME_BEGINSWITH):
 					if self.z_name:
-						raise ValueError('Found several possible z-axes (using variable)')
+						raise ValueError('Found several possible z-axes: %s, %s (using variable)' % (self.z_name, d))
 					self.z_name = d
 				if d in self.T_NAMES:
 					if self.t_name:
-						raise ValueError('Found several possible t-axes (using variable)')
+						raise ValueError('Found several possible t-axes: %s, %s (using variable)' % (self.t_name, d))
 					self.t_name = d
 			
 			# In case of irregular grids, coordinates might be given as separate coordinate variables
 			if not self.x_name or not self.y_name:
 				for cv in self.f.variables:
-					if matches(cv, self.X_NAMES, self.X_NAME_BEGINSWITH):
+					if matches(cv, self.X_IRREGULAR_NAMES, self.X_IRREGULAR_NAME_BEGINSWITH):
+						if cv == self.x_name:
+							continue
 						if self.x_name:
-							raise ValueError('Found several possible x-axes (scanning for separate coordinate variables)')
+							raise ValueError('Found several possible x-axes: %s, %s (scanning for separate coordinate variables)' % (self.x_name, cv))
 						if self.f.variables[cv].dimensions == self.v.dimensions[-2:]:
 							self.x_name = cv
-					if matches(cv, self.Y_NAMES, self.Y_NAME_BEGINSWITH):
+					if matches(cv, self.Y_IRREGULAR_NAMES, self.Y_IRREGULAR_NAME_BEGINSWITH):
+						if cv == self.y_name:
+							continue
 						if self.y_name:
-							raise ValueError('Found several possible y-axes (scanning for separate coordinate variables)')
+							raise ValueError('Found several possible y-axes: %s, %s (scanning for separate coordinate variables)' % (self.y_name, cv))
 						if self.f.variables[cv].dimensions == self.v.dimensions[-2:]:
 							self.y_name = cv
 
@@ -255,19 +264,19 @@ class grid_by_nc(grid):
 			for d in self.f.dimensions:
 				if matches(d, self.X_NAMES, self.X_NAME_BEGINSWITH):
 					if self.x_name:
-						raise ValueError('Found several possible x-axes (using file)')
+						raise ValueError('Found several possible x-axes: %s, %s (using file)' % (self.x_name, d))
 					self.x_name = d
 				if matches(d, self.Y_NAMES, self.Y_NAME_BEGINSWITH):
 					if self.y:
-						raise ValueError('Found several possible y-axes (using file)')
+						raise ValueError('Found several possible y-axes: %s, %s (using file)' % (self.y_name, d))
 					self.y_name = d
 				if matches(d, self.Z_NAMES, self.Z_NAME_BEGINSWITH):
 					if self.z_name:
-						raise ValueError('Found several possible z-axes (using file)')
+						raise ValueError('Found several possible z-axes: %s, %s (using file)' % (self.z_name, d))
 					self.z_name = d
 				if d in self.T_NAMES:
 					if self.t_name:
-						raise ValueError('Found several possible t-axes (using file)')
+						raise ValueError('Found several possible t-axes: %s, %s (using file)' % (self.t_name, d))
 					self.t_name = d
 		
 		if not self.x_name:
