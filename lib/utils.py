@@ -322,8 +322,8 @@ def mask_lines_with_data(lines, loff, dat=None, shape=None):
 	for t in range(lines.shape[0]):
 		for n in range(loff[t].max()):
 			# python starts counting at zero, unlike fortran
-			j = round(lines[t,n,1] -1)
-			i = round(lines[t,n,0] -1) % shape[1]
+			j = int(round(lines[t,n,1] -1))
+			i = int(round(lines[t,n,0] -1)) % shape[1]
 			if type(dat) == np.ndarray:
 				mask[t,j,i] = dat[t,j,i]
 			else:
@@ -360,7 +360,6 @@ def smear_lines(lines, loff, shape=None):
 	Notes
 	-----
 	
-	 * Grid size should become a parameter in the configuration
 	 * Make the filter configurable
 
 	Parameters
@@ -370,7 +369,7 @@ def smear_lines(lines, loff, shape=None):
 	loff : np.array with dimensions (lineindex)
 	    List of point indexes for the first points of each line
 	shape : 2-tuple of int
-	    Optional: Grid dimensions
+	    Optional: Grid dimensions, defaults to conf.gridsize
 	
 	Returns
 	-------
