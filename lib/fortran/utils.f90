@@ -327,7 +327,6 @@ contains
           end do
        end if
     end do
-    !
   end subroutine
   !
   !@ Make a 2d-histogram based on given linear ranges
