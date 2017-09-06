@@ -670,6 +670,7 @@ PLOT_DEFAULTS = {
 	'oroscale': (9810., 19620., 29430., 39240., 49050., 58860., 68670., 78480.),
 	'overlays': (), 
 	'save': '', 
+	'section_hor_resolution': 25000.0,
 	'scale': 'auto', 
 	'scale_exceed_percentiles': (0.01, 0.99),
 	'scale_intervals': (1,2,3,5,10,),

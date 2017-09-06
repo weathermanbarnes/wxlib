@@ -26,6 +26,7 @@ defanr = ('defanr', 'defanr', 'Deformation angle (natural coordinates)', 'rad', 
 rsr = ('rsr', 'rsr', 'Rotation-strain ratio', '1')
 ow = ('ow', 'ow', 'Okubo-Weiss parameter', 's**-2')
 
+pt = ('pt', 'pt', 'Potential temperature', 'K')
 eqpt = ('eqpt', 'eqpt', 'Equivalent potential temperature', 'K')
 
 cfront = ('cfront', 'cfront', 'Cold front lines')
@@ -75,7 +76,7 @@ block = ('block', 'block', 'Block mask', '1')
 # The vertical levels on which any of these variables are available depends 
 # on the application, and must hence be defined in the user settings.
 conf.register_variable([ff, dd, vo, div, defabs, defang, defanr, rsr, ow, 
-	eqpt, 
+	pt, eqpt, 
 	cfront, cfroff, wfront, wfroff, sfront, sfroff, 
 	vorl, vloff, convl, cloff, defl, dloff, 
 	grad_shear, jetaxis, jaoff, jetaxis_freq, 
