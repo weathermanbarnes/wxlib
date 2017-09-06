@@ -26,6 +26,7 @@ dynlib.diag
    .. autofunction:: okuboweiss
    .. autofunction:: rotation_strain_ratio
    .. autofunction:: shear_nat
+   .. autofunction:: streamline_radius
    .. autofunction:: uv_geo_from_pot
    .. autofunction:: vor
 

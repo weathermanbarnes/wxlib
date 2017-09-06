@@ -87,7 +87,7 @@ Dynlib plots can be customised by a large number of keyword arguments. Here is a
 Name                            Line    Fill    Type                    Default                 Description
 =============================== ======= ======= ======================= ======================= =======================
 alpha		         	✓       ✓       float                   1.0			Opacity of the layer, 1.0 is fully opaque, 0.0 fully transparent.
-cb_disabled		        ✓  	✓ 	bool		        ``False``		Do not add a colorbar to the plot. 
+cb_disable		        ✓  	✓ 	bool		        ``False``		Do not add a colorbar to the plot. 
 cb_expand_fig_fraction		✓ 	✓	float			0.1			Fraction of the figure height or width to extend the figure by, to make room for the colorbar.
 cb_label                        ✓ 	✓	list of string                                  Labels for the color bar.
 cb_orientation  		✓ 	✓ 	string			``'vertical'``		Orientation of the color bar. 
