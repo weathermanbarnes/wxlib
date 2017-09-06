@@ -106,6 +106,12 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 		plt.subplot(212)
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
+	# Allow both homogenously increasing as well as homogeneously decreasing y axis coordinates
+	if y[0,0] > y[1,0]:
+		yslc = slice(None,None,-1)
+	else:
+		yslc = slice(None)
+	
 	# 1b. Create and interpolate points of the cross section
 	xlon, xlat, xxy = sect_gen_points(sect, m, kwargs.pop('section_hor_resolution'))
 
@@ -118,11 +124,13 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 		pi = _interpolate_for_section(static, p, xlon, xlat)
 	
 	# 2a. Plot the inset map
-	xx, xy = m(xlon, xlat)
-	if not type(datmap) == type(None):
+	if not m or type(m) == type(plt):
+		xx, xy = xlon, xlat
+	else:
+		xx, xy = m(xlon, xlat)
+	if not type(datmap) == type(None): 
 		datmap = __map_prepare_dat(datmap, mask, static, kwargs_map)
-		__contourf_dat(m, x, y, datmap, kwargs_map)
-	#m.plot(xx, xy, 'w-', linewidth=4)
+		__contourf_dat(m, x, y, datmap, q, kwargs_map)
 	m.plot(xx, xy, 'k-', linewidth=4)
 	
 	logp = kwargs.get('logp', False)
@@ -133,9 +141,15 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	else:
 		z = static.z
 	
+	# If pressure varies horizontally it needs to be interpolated as well
 	if len(z.shape) > 1:
-		raise Exception('z dimension must be 1-dimensional!')
-	
+		zi = np.empty((z.shape[0], len(xlon),))
+		for k in range(z.shape[0]):
+			interp = intp.RectBivariateSpline(static.x[0,:], static.y[yslc,0], z[k,yslc,:].T)
+			zi[k] = interp.ev(xlon, xlat)
+
+		z = zi
+
 	# 2b. Plot the actual cross section
 	if 'section_axes' in kwargs:
 		plt.sca(kwargs['section_axes'])
@@ -145,7 +159,11 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	if kwargs.get('hook'):
 		dati = kwargs.pop('hook')(dati)
 	xxy = np.array(xxy)
-	__contourf_dat(plt, xxy/1e3, z, dati, kwargs)
+	if len(xxy.shape) < len(z.shape):
+		xxy_ = np.tile(xxy, (z.shape[0], 1))
+	else:
+		xxy_ = xxy
+	__contourf_dat(plt, xxy_/1e3, z, dati, q, kwargs)
 	if not type(p) == type(None):
 		if logp:
 			plt.plot(xxy/1e3, np.log(pi), 'g-', linewidth=2)
@@ -156,13 +174,14 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 		plt.fill_between(xxy/1e3, np.log(psi), np.log(1100.0), color='k')
 	else:
 		plt.fill_between(xxy/1e3, psi, 1100.0, color='k')
-	plt.ylim(float(z[-1]), float(z[0]))
+	plt.ylim(z.max(), z.min())
 	plt.ylabel('Pressure [hPa]')
 	plt.xlabel('Distance along section [km]')
 
 	# 3. Finish off
-	__decorate(m, xxy, z, xlon, xlat, slice(None), plev, q, kwargs)
+	__decorate(m, xxy_, z, xlon, xlat, slice(None), plev, q, kwargs)
 	return __output(plev, q, kwargs)
+
 
 # Section using pressure as vertical coordinate are standard, so provide shortcut
 section = section_p
@@ -187,6 +206,9 @@ def map(dat, static, **kwargs):
 		For a list of valid arguments refer to :ref:`plot configuration`.
 	'''
 
+	if hasattr(plt, '__dynlib_latest_cs'):
+		delattr(plt, '__dynlib_latest_cs')
+
 	# 1. Prepare
 	plev, q, kwargs = __prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
@@ -196,7 +218,7 @@ def map(dat, static, **kwargs):
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
 	# 2. Plot the actual data
-	__contourf_dat(m, x, y, dat, kwargs)
+	__contourf_dat(m, x, y, dat, q, kwargs)
 
 	# 3. Finish off
 	__decorate(m, x, y, lon, lat, mask, plev, q, kwargs)
@@ -247,13 +269,13 @@ def setup(**kwargs):
 	# Use the aspect ratio of the projection (if given, otherwise 1.5 is used) 
 	# to find a good image size
 	if type(figsize) == int or type(figsize) == float:
-		aspect = getattr(kwargs.get('m'),'aspect', 1.5)
+		aspect = kwargs.get('aspect', getattr(kwargs.get('m'), 'aspect', 1.5))
 		height = round(np.sqrt(figsize/aspect),1)
 		figsize = (aspect*height, height)
 
 	elif not type(figsize) == tuple: 
 		raise ValueError("fig_size must be either the string 'auto', a number or a tuple.")
-
+	
 	# Adapt figure size automatically if a color bar is added
 	if not kwargs.get('cb_disable'): 
 		expand = kwargs.get('cb_expand_fig_fraction')
@@ -398,12 +420,14 @@ def __map_setup(mask, static, kwargs):
 	if orocolor:
 		m.contour(x, y, concat(static.oro), kwargs.pop('oroscale'), latlon=True, colors=orocolor, 
 				alpha=kwargs.pop('oroalpha'), zorder=2)
+		plt.gca().set_aspect('equal')
 	if type(mask) == np.ndarray:
 		m.contourf(x, y, mask, latlon=True, colors=kwargs.pop('maskcolor'))
+		plt.gca().set_aspect('equal')
 	
 	return m, x, y, lon, lat
 
-def __contourf_dat(m, x, y, dat, kwargs):
+def __contourf_dat(m, x, y, dat, q, kwargs):
 	''' Plot the actual data '''
 
 	hatch = kwargs.pop('hatches')
@@ -437,6 +461,8 @@ def __contourf_dat(m, x, y, dat, kwargs):
 		cs = m.contourf(x.flatten(), y.flatten(), dat.flatten(), scale, latlon=True, zorder=1, **kwargs)
 	else:
 		cs = m.contourf(x, y, dat, scale, latlon=True, zorder=1, **kwargs)
+	
+	plt.gca().set_aspect('equal')
 
 	# Maximise contrast, by making sure that the last colors of the colorbar 
 	# actually are identical to the first/last color in the colormap
@@ -451,41 +477,46 @@ def __contourf_dat(m, x, y, dat, kwargs):
 		else:
 			cs.set_clim((scale[0]+scale[1])/2.0, (scale[-2]+scale[-1])/2.0)
 	
+	if not kwargs.get('cb_disable'):
+		plt.__dynlib_latest_cs = cs
+		plt.__dynlib_latest_cs_kwargs = kwargs
+		plt.__dynlib_latest_cs_q = q
+	
 	return
 
 def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 	''' Add "decorations": colorbar, legends, overlays and a title'''
 
-	if not kwargs.pop('cb_disable'):
-		orient = kwargs.pop('cb_orientation')
-		spacing = kwargs.pop('cb_tickspacing')
-		shrink = kwargs.pop('cb_shrink')
-		expand = kwargs.pop('cb_expand_fig_fraction')
-		padding = kwargs.pop('cb_expand_pad_fraction', 0.2)
-		axes = kwargs.pop('cb_axes', None)
+	for overlay in kwargs.pop('overlays'):
+		overlay(m, x,y, lon,lat, zorder=3, mask=mask)
+	
+	if hasattr(plt, '__dynlib_latest_cs'):
+		cbkwargs = plt.__dynlib_latest_cs_kwargs
 
+		orient = cbkwargs.pop('cb_orientation')
+		spacing = cbkwargs.pop('cb_tickspacing')
+		shrink = cbkwargs.pop('cb_shrink')
+		expand = cbkwargs.pop('cb_expand_fig_fraction')
+		padding = cbkwargs.pop('cb_expand_pad_fraction', 0.2)
+		
 		pad = expand * padding
 		frac = expand * (1-padding)
 	
 		if axes:
-			cb = plt.colorbar(cax=axes, ticks=kwargs.pop('ticks'), orientation=orient)
+			cb = plt.colorbar(cax=axes, ticks=cbkwargs.pop('ticks'), orientation=orient)
 		else:
-			cb = plt.colorbar(ticks=kwargs.pop('ticks'), orientation=orient, 
+			cb = plt.colorbar(ticks=cbkwargs.pop('ticks'), orientation=orient, 
 				shrink=shrink, pad=pad, fraction=frac, spacing=spacing)
-		if kwargs.get('ticklabels'): 
+		if cbkwargs.get('ticklabels'): 
 			if not orient == 'vertical':
-				cb.ax.set_xticklabels(kwargs.pop('ticklabels'))
+				cb.ax.set_xticklabels(cbkwargs.pop('ticklabels'))
 			else:
-				cb.ax.set_yticklabels(kwargs.pop('ticklabels'))
-		if kwargs.get('cb_label'):
+				cb.ax.set_yticklabels(cbkwargs.pop('ticklabels'))
+		if cbkwargs.get('cb_label'):
 			if not orient == 'vertical':
-				cb.ax.set_xlabel(kwargs.pop('cb_label'))
+				cb.ax.set_xlabel(cbkwargs.pop('cb_label'))
 			else:
-				cb.ax.set_ylabel(kwargs.pop('cb_label'))
-	
-	#legend_labels = kwargs.pop('legend_labels', None)
-	#if legend_labels:
-	#	plt.legend([], legend_labels)
+				cb.ax.set_ylabel(cbkwargs.pop('cb_label'))
 	
 	for overlay in kwargs.pop('overlays'):
 		overlay(m, x,y, lon,lat, zorder=3, mask=mask)
@@ -513,6 +544,8 @@ def __output(plev, q, kwargs):
 
 	dpi = kwargs.pop('fig_dpi')
 	if kwargs.get('save'):
+		if hasattr(plt, '__dynlib_latest_cs_q'): 
+			q = plt.__dynlib_latest_cs_q
 		filename = kwargs.pop('save')
 		if filename == 'auto':
 			filename = '%s_%s_%s.%s' % (q, plev, __safename(kwargs.get('name', 'unnamed')), s.conf.plotformat)
@@ -590,6 +623,12 @@ def section_overlay_contour(dat, static, **kwargs):
 	kwargs = __line_prepare_config(kwargs)
 
 	def overlay(m, xxy, z, xlon, xlat, zorder, mask=None):
+		# Allow both homogenously increasing as well as homogeneously decreasing y axis coordinates
+		if static.y[0,0] > static.y[1,0]:
+			yslc = slice(None,None,-1)
+		else:
+			yslc = slice(None)
+
 		dati = np.empty((dat.shape[0], len(xlon),))
 		for i in range(dat.shape[0]):
 			dati[i] = _interpolate_for_section(static, dat[i,:,:], xlon, xlat)
@@ -634,6 +673,11 @@ def map_overlay_contour(dat, static, **kwargs):
 		Overlay as a callable function
 	'''
 
+	if static.cyclic_ew:
+		x_, y_ = concat1lonlat(static.x, static.y)
+	else:
+		x_, y_ = static.x, static.y
+	
 	kwargs = __line_prepare_config(kwargs)
 	owngrid = kwargs.pop('owngrid', False)
 	
@@ -650,7 +694,8 @@ def map_overlay_contour(dat, static, **kwargs):
 		scale = kwargs.pop('scale')
 		if type(scale) == str and scale == 'auto':
 			scale = autoscale(dat_, **kwargs)
-		cs =  m.contour(x, y, dat_, scale, latlon=True, **kwargs)
+		cs =  m.contour(x_, y_, dat_, scale, latlon=True, **kwargs)
+		plt.gca().set_aspect('equal')
 
 		labels = kwargs.pop('contour_labels')
 		if labels:
@@ -818,7 +863,7 @@ def map_overlay_shading(dat, static, **kwargs):
 		dat_ = __map_prepare_dat(dat, mask, static, kwargs)
 
 		# TODO: What about an additional colorbar for this data?
-		__contourf_dat(m, x, y, dat_, kwargs)
+		__contourf_dat(m, x, y, dat_, q, kwargs)
 
 		return
 
@@ -987,10 +1032,10 @@ def map_overlay_latlonbox(lon0, lon1, lat0, lat1, vertices=30, **kwargs):
 	
 	Parameters
 	----------
-	lon0, lat0 : float
-		Location of the lower left corner
-	lon1, lat1 : float
-		Location of the upper right corner
+	lon0, lon1 : float or None
+		Longitude of the west and east boundary
+	lat0, lat1 : float or None
+		Latitude of the north and south boundary
 	vertices : int
 		How many interpolation points should be used to approximate the potentially
 		curved sections of the latitude or longitude circles?
@@ -1007,15 +1052,34 @@ def map_overlay_latlonbox(lon0, lon1, lat0, lat1, vertices=30, **kwargs):
 	'''
 
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
+		if lat0:
+			lat0_ = lat0
+		else:
+			lat0_ = -90.0
+		if lat1:
+			lat1_ = lat1
+		else:
+			lat1_ = 90.0
+
 		# Western boundary
-		m.plot(np.ones((vertices,))*lon0, np.linspace(lat0,lat1,vertices), latlon=True, **kwargs)
+		if lon0:
+			m.plot(np.ones((vertices,))*lon0, np.linspace(lat0_,lat1_,vertices), latlon=True, **kwargs)
+			lon0_ = lon0
+		else: 
+			lon0_ = -180.0
 		# Eastern boundary
-		m.plot(np.ones((vertices,))*lon1, np.linspace(lat0,lat1,vertices), latlon=True, **kwargs)
+		if lon1:
+			m.plot(np.ones((vertices,))*lon1, np.linspace(lat0_,lat1_,vertices), latlon=True, **kwargs)
+			lon1_ = lon1
+		else:
+			lon1_ = 180.0
 
 		# Southern boundary
-		m.plot(np.linspace(lon0,lon1,vertices), np.ones((vertices,))*lat0, latlon=True, **kwargs)
+		if lat0:
+			m.plot(np.linspace(lon0_,lon1_,vertices), np.ones((vertices,))*lat0, latlon=True, **kwargs)
 		# Northern boundary
-		m.plot(np.linspace(lon0,lon1,vertices), np.ones((vertices,))*lat1, latlon=True, **kwargs)
+		if lat1:
+			m.plot(np.linspace(lon0_,lon1_,vertices), np.ones((vertices,))*lat1, latlon=True, **kwargs)
 
 		return
 

@@ -242,25 +242,23 @@ def frontalzone_largescale(tfp, dx, dy):
 
 	labels = np.empty(tfp.shape, dtype='i4')
 	for tidx in range(tfp.shape[0]):
+		sys.stdout.write('%d/%d\r' % (tidx+1, tfp.shape[0]))
+		sys.stdout.flush()
 		ddx, ddy = dynfor.derivatives.grad(tfp[tidx,:,:,:], dx, dy)
 		tfp_grad = np.sqrt(ddx**2 + ddy**2)
 		mask = tfp_grad > thres
 
-		labels_, sizes = dynfor.utils.label_connected_3d(mask, cellsize, 1000)
+		labels_, sizes = dynfor.utils.label_connected_3d(mask, cellsize, 2500)
 		for n, size in zip(range(1,len(sizes)+1), sizes):
 			if size == 0:
 				break
 
 			if size < (mask.shape[0]*min_size):
 				labels_[labels_ == n] = 0
-				continue
-			
-			sizes_lev = []
-			for pidx in range(mask.shape[0]):
-				labels_lev = labels_[pidx,:,:]
-				sizes_lev.append(labels_lev[labels_lev == n].sum()/n)
 
 		labels[tidx,:,:,:] = labels_
+	
+	print('')
 
 	return labels
 
@@ -324,12 +322,6 @@ def frontalzone_smallscale(tfp, dx, dy):
 
 			if size < (mask.shape[0]*min_size):
 				labels_[labels_ == n] = 0
-				continue
-			
-			sizes_lev = []
-			for pidx in range(mask.shape[0]):
-				labels_lev = labels_[pidx,:,:]
-				sizes_lev.append(labels_lev[labels_lev == n].sum()/n)
 
 		labels[tidx,:,:,:] = labels_
 

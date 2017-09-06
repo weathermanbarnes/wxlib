@@ -56,7 +56,7 @@ contains
        !
        off = 0_ni
        do n = 1_ni,zerocnt
-          if (recj(n,1_ni) == nan) then
+          if ( isnan(recj(n,1_ni)) ) then
              exit
           end if
           !
