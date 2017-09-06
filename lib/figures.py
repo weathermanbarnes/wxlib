@@ -91,27 +91,35 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 		plt.subplot(212)
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
+	# Allow both homogenously increasing as well as homogeneously decreasing y axis coordinates
+	if y[0,0] > y[1,0]:
+		yslc = slice(None,None,-1)
+	else:
+		yslc = slice(None)
+	
 	# 1b. Create and interpolate points of the cross section
 	# TODO: Make the 25 km configurable
 	xlon, xlat, xxy = sect_gen_points(sect, m, 25000.0)
 
 	dati = np.empty((dat.shape[0], len(xlon),))
-	for i in range(dat.shape[0]):
-		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[i,::-1,:].T)
-		dati[i] = interp.ev(xlon, xlat)
+	for k in range(dat.shape[0]):
+		interp = intp.RectBivariateSpline(static.x[0,:], static.y[yslc,0], dat[k,yslc,:].T)
+		dati[k] = interp.ev(xlon, xlat)
 
-	interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], ps[::-1,:].T)
+	interp = intp.RectBivariateSpline(static.x[0,:], static.y[yslc,0], ps[yslc,:].T)
 	psi = interp.ev(xlon, xlat)
 	if not type(p) == type(None):
-		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], p[::-1,:].T)
+		interp = intp.RectBivariateSpline(static.x[0,:], static.y[yslc,0], p[yslc,:].T)
 		pi = interp.ev(xlon, xlat)
 	
 	# 2a. Plot the inset map
-	xx, xy = m(xlon, xlat)
+	if not m or type(m) == type(plt):
+		xx, xy = xlon, xlat
+	else:
+		xx, xy = m(xlon, xlat)
 	if not datmap == None: 
 		datmap = __map_prepare_dat(datmap, mask, static, kwargs_map)
-		__contourf_dat(m, x, y, datmap, kwargs_map)
-	#m.plot(xx, xy, 'w-', linewidth=4)
+		__contourf_dat(m, x, y, datmap, q, kwargs_map)
 	m.plot(xx, xy, 'k-', linewidth=4)
 
 	logp = kwargs.get('logp', False)
@@ -121,6 +129,15 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 		kwargs['ticklabels'] = static.z
 	else:
 		z = static.z
+	
+	# If pressure varies horizontally it needs to be interpolated as well
+	if len(z.shape) > 1:
+		zi = np.empty((z.shape[0], len(xlon),))
+		for k in range(z.shape[0]):
+			interp = intp.RectBivariateSpline(static.x[0,:], static.y[yslc,0], z[k,yslc,:].T)
+			zi[k] = interp.ev(xlon, xlat)
+
+		z = zi
 
 	# 2b. Plot the actual cross section
 	if 'sect_axes' in kwargs:
@@ -131,7 +148,11 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	if kwargs.get('hook'):
 		dati = kwargs.pop('hook')(dati)
 	xxy = np.array(xxy)
-	__contourf_dat(plt, xxy/1e3, z, dati, kwargs)
+	if len(xxy.shape) < len(z.shape):
+		xxy_ = np.tile(xxy, (z.shape[0], 1))
+	else:
+		xxy_ = xxy
+	__contourf_dat(plt, xxy_/1e3, z, dati, q, kwargs)
 	if not type(p) == type(None):
 		if logp:
 			plt.plot(xxy/1e3, np.log(pi), 'g-', linewidth=2)
@@ -142,12 +163,12 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 		plt.fill_between(xxy/1e3, np.log(psi), np.log(1100.0), color='k')
 	else:
 		plt.fill_between(xxy/1e3, psi, 1100.0, color='k')
-	plt.ylim(float(z[-1]), float(z[0]))
+	plt.ylim(z.max(), z.min())
 	plt.ylabel('Pressure [hPa]')
 	plt.xlabel('Distance along section [km]')
 
 	# 3. Finish off
-	__decorate(m, xxy, z, xlon, xlat, slice(None), plev, q, kwargs)
+	__decorate(m, xxy_, z, xlon, xlat, slice(None), plev, q, kwargs)
 	__output(plev, q, kwargs)
 
 	return
@@ -175,6 +196,9 @@ def map(dat, static, **kwargs):
 		For a list of valid arguments refer to :ref:`plot configuration`.
 	'''
 
+	if hasattr(plt, '__dynlib_latest_cs'):
+		delattr(plt, '__dynlib_latest_cs')
+
 	# 1. Prepare
 	plev, q, kwargs = __prepare_config(kwargs)
 	mask = __map_create_mask(static, kwargs)
@@ -184,7 +208,7 @@ def map(dat, static, **kwargs):
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
 	# 2. Plot the actual data
-	__contourf_dat(m, x, y, dat, kwargs)
+	__contourf_dat(m, x, y, dat, q, kwargs)
 
 	# 3. Finish off
 	__decorate(m, x, y, lon, lat, mask, plev, q, kwargs)
@@ -393,7 +417,7 @@ def __map_setup(mask, static, kwargs):
 	
 	return m, x, y, lon, lat
 
-def __contourf_dat(m, x, y, dat, kwargs):
+def __contourf_dat(m, x, y, dat, q, kwargs):
 	''' Plot the actual data '''
 
 	hatch = kwargs.pop('hatches')
@@ -441,40 +465,47 @@ def __contourf_dat(m, x, y, dat, kwargs):
 		else:
 			cs.set_clim((scale[0]+scale[1])/2.0, (scale[-2]+scale[-1])/2.0)
 	
+	if not kwargs.get('cb_disabled'):
+		plt.__dynlib_latest_cs = cs
+		plt.__dynlib_latest_cs_kwargs = kwargs
+		plt.__dynlib_latest_cs_q = q
+	
 	return
 
 def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 	''' Add "decorations": colorbar, legends, overlays and a title'''
 
-	if not kwargs.pop('cb_disable'):
-		orient = kwargs.pop('cb_orientation')
-		spacing = kwargs.pop('cb_tickspacing')
-		shrink = kwargs.pop('cb_shrink')
-		expand = kwargs.pop('cb_expand_fig_fraction')
-		padding = kwargs.pop('cb_expand_pad_fraction', 0.2)
-		
-		pad = expand * padding
-		frac = expand * (1-padding)
-
-		cb = plt.colorbar(ticks=kwargs.pop('ticks'), orientation=orient, 
-				shrink=shrink, pad=pad, fraction=frac, spacing=spacing)
-		if kwargs.get('ticklabels'): 
-			if not orient == 'vertical':
-				cb.ax.set_xticklabels(kwargs.pop('ticklabels'))
-			else:
-				cb.ax.set_yticklabels(kwargs.pop('ticklabels'))
-		if kwargs.get('cb_label'):
-			if not orient == 'vertical':
-				cb.ax.set_xlabel(kwargs.pop('cb_label'))
-			else:
-				cb.ax.set_ylabel(kwargs.pop('cb_label'))
-	
 	#legend_labels = kwargs.pop('legend_labels', None)
 	#if legend_labels:
 	#	plt.legend([], legend_labels)
 	
 	for overlay in kwargs.pop('overlays'):
 		overlay(m, x,y, lon,lat, zorder=3, mask=mask)
+	
+	if hasattr(plt, '__dynlib_latest_cs'):
+		cbkwargs = plt.__dynlib_latest_cs_kwargs
+
+		orient = cbkwargs.pop('cb_orientation')
+		spacing = cbkwargs.pop('cb_tickspacing')
+		shrink = cbkwargs.pop('cb_shrink')
+		expand = cbkwargs.pop('cb_expand_fig_fraction')
+		padding = cbkwargs.pop('cb_expand_pad_fraction', 0.2)
+		
+		pad = expand * padding
+		frac = expand * (1-padding)
+
+		cb = plt.colorbar(plt.__dynlib_latest_cs, ticks=cbkwargs.pop('ticks'), orientation=orient, 
+				shrink=shrink, pad=pad, fraction=frac, spacing=spacing)
+		if cbkwargs.get('ticklabels'): 
+			if not orient == 'vertical':
+				cb.ax.set_xticklabels(cbkwargs.pop('ticklabels'))
+			else:
+				cb.ax.set_yticklabels(cbkwargs.pop('ticklabels'))
+		if cbkwargs.get('cb_label'):
+			if not orient == 'vertical':
+				cb.ax.set_xlabel(cbkwargs.pop('cb_label'))
+			else:
+				cb.ax.set_ylabel(cbkwargs.pop('cb_label'))
 	
 	if kwargs.get('mark'):
 		yidx, xidx = kwargs.pop('mark')
@@ -496,6 +527,8 @@ def __output(plev, q, kwargs):
 	''' Save and/or show the plot '''
 
 	if kwargs.get('save'):
+		if hasattr(plt, '__dynlib_latest_cs_q'): 
+			q = plt.__dynlib_latest_cs_q
 		filename = kwargs.pop('save')
 		if filename == 'auto':
 			filename = '%s_%s_%s.%s' % (q, plev, __safename(kwargs.get('name', 'unnamed')), conf.plotformat)
@@ -569,9 +602,15 @@ def section_overlay_contour(dat, static, **kwargs):
 	kwargs = __line_prepare_config(kwargs)
 
 	def overlay(m, xxy, z, xlon, xlat, zorder, mask=None):
+		# Allow both homogenously increasing as well as homogeneously decreasing y axis coordinates
+		if static.y[0,0] > static.y[1,0]:
+			yslc = slice(None,None,-1)
+		else:
+			yslc = slice(None)
+
 		dati = np.empty((dat.shape[0], len(xlon),))
 		for i in range(dat.shape[0]):
-			interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[i,::-1,:].T)
+			interp = intp.RectBivariateSpline(static.x[0,:], static.y[yslc,0], dat[i,yslc,:].T)
 			dati[i] = interp.ev(xlon, xlat)
 	
 		if type(mask) == np.ndarray:
@@ -798,7 +837,7 @@ def map_overlay_shading(dat, static, **kwargs):
 		dat_ = __map_prepare_dat(dat, mask, static, kwargs)
 
 		# TODO: What about an additional colorbar for this data?
-		__contourf_dat(m, x, y, dat_, kwargs)
+		__contourf_dat(m, x, y, dat_, q, kwargs)
 
 		return
 
