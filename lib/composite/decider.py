@@ -520,6 +520,8 @@ def matrix(list1, list2):
 		list1 = [item for group in list1.values() for item in group]
 	if type(list2) == dict:
 		list2 = [item for group in list2.values() for item in group]
+	if len(list1) == 0 or len(list2) == 0:
+		return {}
 	
 	# Wrap single deciders in a list
 	if not type(list1) == list: list1 = [list1, ]

@@ -25,7 +25,7 @@ def world():
 
 	return Basemap(projection='robin',lon_0=0,resolution='c', area_thresh=50000)
 
-world.aspect = 1.5
+world.aspect = 2.0
 
 # (b) Northern polar centered map
 def n_hemisphere():

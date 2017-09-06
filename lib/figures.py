@@ -248,13 +248,13 @@ def setup(**kwargs):
 	# Use the aspect ratio of the projection (if given, otherwise 1.5 is used) 
 	# to find a good image size
 	if type(figsize) == int or type(figsize) == float:
-		aspect = getattr(kwargs.get('m'),'aspect', 1.5)
+		aspect = kwargs.get('aspect', getattr(kwargs.get('m'), 'aspect', 1.5))
 		height = round(np.sqrt(figsize/aspect),1)
 		figsize = (aspect*height, height)
 
 	elif not type(figsize) == tuple: 
 		raise ValueError("fig_size must be either the string 'auto', a number or a tuple.")
-
+	
 	# Adapt figure size automatically if a color bar is added
 	if not kwargs.get('cb_disabled'): 
 		expand = kwargs.get('cb_expand_fig_fraction')
@@ -357,6 +357,7 @@ def __map_setup(mask, static, kwargs):
 	if not m:
 		m = plt
 		x, y = lon, lat
+	
 	else:
 		m = m()
 		x, y = m(lon,lat)
@@ -399,8 +400,10 @@ def __map_setup(mask, static, kwargs):
 	if orocolor:
 		m.contour(x, y, concat(static.oro), kwargs.pop('oroscale'), latlon=True, colors=orocolor, 
 				alpha=kwargs.pop('oroalpha'), zorder=2)
+		plt.gca().set_aspect('equal')
 	if type(mask) == np.ndarray:
 		m.contourf(x, y, mask, latlon=True, colors=kwargs.pop('maskcolor'))
+		plt.gca().set_aspect('equal')
 	
 	return m, x, y, lon, lat
 
@@ -438,6 +441,8 @@ def __contourf_dat(m, x, y, dat, kwargs):
 		cs = m.contourf(x.flatten(), y.flatten(), dat.flatten(), scale, latlon=True, zorder=1, **kwargs)
 	else:
 		cs = m.contourf(x, y, dat, scale, latlon=True, zorder=1, **kwargs)
+	
+	plt.gca().set_aspect('equal')
 
 	# Maximise contrast, by making sure that the last colors of the colorbar 
 	# actually are identical to the first/last color in the colormap
@@ -629,6 +634,11 @@ def map_overlay_contour(dat, static, **kwargs):
 		Overlay as a callable function
 	'''
 
+	if static.cyclic_ew:
+		x_, y_ = concat1lonlat(static.x, static.y)
+	else:
+		x_, y_ = static.x, static.y
+	
 	kwargs = __line_prepare_config(kwargs)
 	owngrid = kwargs.pop('owngrid', False)
 	
@@ -645,7 +655,8 @@ def map_overlay_contour(dat, static, **kwargs):
 		scale = kwargs.pop('scale')
 		if scale == 'auto':
 			scale = autoscale(dat_, **kwargs)
-		cs =  m.contour(x, y, dat_, scale, latlon=True, **kwargs)
+		cs =  m.contour(x_, y_, dat_, scale, latlon=True, **kwargs)
+		plt.gca().set_aspect('equal')
 
 		labels = kwargs.pop('contour_labels')
 		if labels:

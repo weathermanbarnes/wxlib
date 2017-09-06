@@ -41,7 +41,6 @@ def _add(name, plev, q, dat, mean, hist, x_proj=None, y_proj=None, angle=None):
 				hist[name,plev,q][bi,(dat <  upper).__or__(dat >= lower)] += 1
 	else:
 		if not type(x_proj) == type(None):
-			
 			# Clockwise rotation (following the convention for wind directions)
 			x_proj_ =  x_proj*np.cos(angle) + y_proj*np.sin(angle)
 			y_proj_ = -x_proj*np.sin(angle) + y_proj*np.cos(angle)
@@ -83,15 +82,16 @@ def _get_dat(time, test_qs, readhooks, no_static=False):
 
 			if test_q in LINES:
 				testdat[test_plev, test_q] = utils.mask_lines(testdat[test_plev, test_q], f.variables[LINES[test_q]][::])
-	
+
 	# Request all vertical levels of one variable at once for potential more effective read
 	for test_q in left2request:
 		if not no_static and not static:
 			f, dat_, static = readhooks[test_q](time, left2request[test_q], test_q, static=True)
 		else:
 			f, dat_ = readhooks[test_q](time, left2request[test_q], test_q)
+
 		for pidx, test_plev in zip(range(len(left2request[test_q])), left2request[test_q]):
-			testdat[test_plev,test_q] = dat_[:,pidx,:,:]
+			testdat[test_plev,test_q] = dat_[:,pidx,:,:].squeeze()
 
 	if no_static:
 		return testdat
