@@ -42,9 +42,9 @@ def _interpolate_for_section(static, dat, xlon, xlat):
 		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[::-1,:].T)
 	# If interpolation fails, try again, but this time do not assume a structured mesh
 	except TypeError:
-		points = zip(static.x.flat, static.y.flat)
+		points = list(zip(static.x.flat, static.y.flat))
 		interp = intp.LinearNDInterpolator(points, dat.flatten())
-		points = zip(xlon, xlat)
+		points = list(zip(xlon, xlat))
 		dati = interp(points)
 	# If interpolation successful, get values for given points
 	else:
@@ -107,8 +107,7 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	m, x, y, lon, lat = __map_setup(mask, static, kwargs)
 	
 	# 1b. Create and interpolate points of the cross section
-	# TODO: Make the 25 km configurable
-	xlon, xlat, xxy = sect_gen_points(sect, m, 25000.0)
+	xlon, xlat, xxy = sect_gen_points(sect, m, kwargs.pop('section_hor_resolution'))
 
 	dati = np.empty((dat.shape[0], len(xlon),))
 	for i in range(dat.shape[0]):
@@ -120,7 +119,7 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	
 	# 2a. Plot the inset map
 	xx, xy = m(xlon, xlat)
-	if not datmap == None: 
+	if not type(datmap) == type(None):
 		datmap = __map_prepare_dat(datmap, mask, static, kwargs_map)
 		__contourf_dat(m, x, y, datmap, kwargs_map)
 	#m.plot(xx, xy, 'w-', linewidth=4)
@@ -138,8 +137,8 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 		raise Exception('z dimension must be 1-dimensional!')
 	
 	# 2b. Plot the actual cross section
-	if 'sect_axes' in kwargs:
-		plt.sca(kwargs['sect_axes'])
+	if 'section_axes' in kwargs:
+		plt.sca(kwargs['section_axes'])
 	else:
 		plt.subplot(211)
 	
@@ -256,7 +255,7 @@ def setup(**kwargs):
 		raise ValueError("fig_size must be either the string 'auto', a number or a tuple.")
 
 	# Adapt figure size automatically if a color bar is added
-	if not kwargs.get('cb_disabled'): 
+	if not kwargs.get('cb_disable'): 
 		expand = kwargs.get('cb_expand_fig_fraction')
 		if kwargs.get('cb_orientation') == 'horizontal':
 			figsize = (figsize[0], figsize[1]/(1.0-expand))
@@ -409,7 +408,7 @@ def __contourf_dat(m, x, y, dat, kwargs):
 
 	hatch = kwargs.pop('hatches')
 	scale = kwargs.pop('scale')
-	if scale == 'auto':
+	if type(scale) == str and scale == 'auto':
 		scale = autoscale(dat, **kwargs)
 	
 	if kwargs.get('tile'):
@@ -463,11 +462,15 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 		shrink = kwargs.pop('cb_shrink')
 		expand = kwargs.pop('cb_expand_fig_fraction')
 		padding = kwargs.pop('cb_expand_pad_fraction', 0.2)
-		
+		axes = kwargs.pop('cb_axes', None)
+
 		pad = expand * padding
 		frac = expand * (1-padding)
-
-		cb = plt.colorbar(ticks=kwargs.pop('ticks'), orientation=orient, 
+	
+		if axes:
+			cb = plt.colorbar(cax=axes, ticks=kwargs.pop('ticks'), orientation=orient)
+		else:
+			cb = plt.colorbar(ticks=kwargs.pop('ticks'), orientation=orient, 
 				shrink=shrink, pad=pad, fraction=frac, spacing=spacing)
 		if kwargs.get('ticklabels'): 
 			if not orient == 'vertical':
@@ -488,9 +491,11 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 		overlay(m, x,y, lon,lat, zorder=3, mask=mask)
 	
 	if kwargs.get('mark'):
-		yidx, xidx = kwargs.pop('mark')
-		m.scatter(x[yidx,xidx], y[yidx,xidx], 484, latlon=True, marker='o', facecolors=(1,1,1,0), 
-				edgecolors='k', linewidths=3, zorder=3)
+		lons, lats = kwargs.pop('mark')
+		mark_kwargs = kwargs.pop('mark_conf', dict(marker='o', facecolors=(1,1,1,0), 
+				edgecolors='k', linewidths=3, size=484))
+		size = mark_kwargs.pop('size')
+		m.scatter(lons, lats, size, latlon=True, zorder=3, **mark_kwargs)
 	
 	if kwargs.get('title'):
 		title = kwargs.pop('title')
@@ -643,7 +648,7 @@ def map_overlay_contour(dat, static, **kwargs):
 		if type(mask) == np.ndarray:
 			dat_[mask] = np.nan
 		scale = kwargs.pop('scale')
-		if scale == 'auto':
+		if type(scale) == str and scale == 'auto':
 			scale = autoscale(dat_, **kwargs)
 		cs =  m.contour(x, y, dat_, scale, latlon=True, **kwargs)
 
@@ -911,7 +916,8 @@ def map_overlay_quiver(u, v, static, **kwargs):
 			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
 			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
 		
-		m.quiver(xt, yt, ut, vt, zorder=3, scale=kwargs.pop('quiver_length', None), scale_units='width')
+		m.quiver(xt, yt, ut, vt, zorder=3, scale=kwargs.pop('quiver_length', None), scale_units='width',
+				linewidths=kwargs.pop('linewidths', None))
 	
 	return overlay
 
@@ -969,8 +975,10 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 			ut,vt,xt,yt = m.rotate_vector(defdex[slc],defdey[slc],lon[slc],lat[slc], returnxy=True)
 			qscale = 840
 
-		m.quiver(xt, yt, ut, vt, zorder=4, scale=qscale, alpha=0.85)
-		m.quiver(xt, yt, -ut, -vt, zorder=4, scale=qscale, alpha=0.85)
+		m.quiver(xt, yt, ut, vt, zorder=4, scale=qscale, alpha=0.85, 
+				linewidths=kwargs.get('linewidths', None))
+		m.quiver(xt, yt, -ut, -vt, zorder=4, scale=qscale, alpha=0.85, 
+				linewidths=kwargs.pop('linewidths', None))
 
 	return overlay
 
