@@ -11,7 +11,7 @@ module detect_lines
   use derivatives
   !
   implicit none
-  ! The module is used in the front/line/axis_location subroutines in diag.f95
+  ! The module is used in the front/line/axis_location subroutines in detect.f95
 contains
   !
   !

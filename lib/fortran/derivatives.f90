@@ -204,7 +204,7 @@ contains
     ! -----------------------------------------------------------------
     !
     forall(k = 1_ni:nz, j = 1_ni:ny, i = 3_ni:nx-2_ni)
-       res(k,j,i) = (-dat(k,j,i+2_ni)+8_ni*dat(k,j,i+1_ni)-8_ni*dat(k,j,i-1_ni)+dat(k,j,i+2_ni))/(6_ni*dx(j,i))
+       res(k,j,i) = (-dat(k,j,i+2_ni)+8_ni*dat(k,j,i+1_ni)-8_ni*dat(k,j,i-1_ni)+dat(k,j,i-2_ni))/(6_ni*dx(j,i))
     end forall
     if (grid_cyclic_ew) then
        forall(k = 1_ni:nz, j = 1_ni:ny)
@@ -580,7 +580,7 @@ contains
   !@
   !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Data array
-  !@ dz : np.ndarray with shape (nz-2,ny,nx) and dtype float64
+  !@ dz : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     The double grid spacing in x-direction to be directly for centered differences.
   !@     ``dx(k,j,i)`` is expected to contain the x-distance between ``(k+1,j,i)`` and ``(k-1,j,i)``.
   !@
@@ -592,7 +592,7 @@ contains
   !@ ny : int
   !@     Grid size in y-direction.
   !@ nz : int
-  !@     Grid size in z- or t-direction.
+  !@     Grid size in z-direction.
   !@
   !@ Returns
   !@ -------
