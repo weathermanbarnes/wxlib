@@ -979,10 +979,10 @@ def map_overlay_latlonbox(lon0, lon1, lat0, lat1, vertices=30, **kwargs):
 	
 	Parameters
 	----------
-	lon0, lat0 : float
-		Location of the lower left corner
-	lon1, lat1 : float
-		Location of the upper right corner
+	lon0, lon1 : float or None
+		Longitude of the west and east boundary
+	lat0, lat1 : float or None
+		Latitude of the north and south boundary
 	vertices : int
 		How many interpolation points should be used to approximate the potentially
 		curved sections of the latitude or longitude circles?
@@ -999,15 +999,34 @@ def map_overlay_latlonbox(lon0, lon1, lat0, lat1, vertices=30, **kwargs):
 	'''
 
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
+		if lat0:
+			lat0_ = lat0
+		else:
+			lat0_ = -90.0
+		if lat1:
+			lat1_ = lat1
+		else:
+			lat1_ = 90.0
+
 		# Western boundary
-		m.plot(np.ones((vertices,))*lon0, np.linspace(lat0,lat1,vertices), latlon=True, **kwargs)
+		if lon0:
+			m.plot(np.ones((vertices,))*lon0, np.linspace(lat0_,lat1_,vertices), latlon=True, **kwargs)
+			lon0_ = lon0
+		else: 
+			lon0_ = -180.0
 		# Eastern boundary
-		m.plot(np.ones((vertices,))*lon1, np.linspace(lat0,lat1,vertices), latlon=True, **kwargs)
+		if lon1:
+			m.plot(np.ones((vertices,))*lon1, np.linspace(lat0_,lat1_,vertices), latlon=True, **kwargs)
+			lon1_ = lon1
+		else:
+			lon1_ = 180.0
 
 		# Southern boundary
-		m.plot(np.linspace(lon0,lon1,vertices), np.ones((vertices,))*lat0, latlon=True, **kwargs)
+		if lat0:
+			m.plot(np.linspace(lon0_,lon1_,vertices), np.ones((vertices,))*lat0, latlon=True, **kwargs)
 		# Northern boundary
-		m.plot(np.linspace(lon0,lon1,vertices), np.ones((vertices,))*lat1, latlon=True, **kwargs)
+		if lat1:
+			m.plot(np.linspace(lon0_,lon1_,vertices), np.ones((vertices,))*lat1, latlon=True, **kwargs)
 
 		return
 
