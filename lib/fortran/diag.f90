@@ -1714,6 +1714,88 @@ contains
     !
   end subroutine
   !
+  !@ Estimate the radius of the local streamline through each grid point
+  !@
+  !@ R = ds / tan(dalpha), where ds is a distance increment in flow direction 
+  !@ and dalpha is the change in wind direction along ds.
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     x-wind velocity component.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     y-wind velocity component.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Local stream line radius.
+  subroutine streamline_radius(r, nx,ny,nz, u, v, dx, dy)
+    use consts
+    !
+    real(kind=nr), intent(in) :: u(nz,ny,nx), v(nz,ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: r(nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz
+    !f2py depend(nz,ny,nx) :: v, r
+    !
+    real(kind=nr) :: dd(nz,ny,nx), ddx(nz,ny,nx), ddy(nz,ny,nx), dds, ds, ff, &
+       &             ones(ny,nx)
+    integer(kind=ni) :: i,j,k
+    ! -----------------------------------------------------------------
+    !
+    ! 1. Calculate wind direction
+    do i = 1_ni,nx
+       do j = 1_ni,ny
+          ones(j,i) = 1.0_nr
+          do k = 1_ni,nz
+             dd(k,j,i) = atan2(-u(k,j,i), v(k,j,i))
+          end do
+       end do
+    end do
+    !
+    ! 2a. Calculate gradient of wind direction in x and y directions
+    call grad(ddx,ddy, nx,ny,nz, dd, ones,ones)
+    do i = 1_ni,nx
+       do j = 1_ni,ny
+          do k = 1_ni,nz
+             ! 2b. Take periodicity into account
+             if ( ddx(k,j,i) >= pi ) then
+                ddx(k,j,i) = ddx(k,j,i) - 2_ni*pi
+             end if
+             if ( ddx(k,j,i) < -pi ) then
+                ddx(k,j,i) = ddx(k,j,i) + 2_ni*pi
+             end if
+             if ( ddy(k,j,i) >= pi ) then
+                ddy(k,j,i) = ddy(k,j,i) - 2_ni*pi
+             end if
+             if ( ddy(k,j,i) < -pi ) then
+                ddy(k,j,i) = ddy(k,j,i) + 2_ni*pi
+             end if
+             !
+             ! 3. Project gradient of wind direction along wind direction
+             ff = sqrt(u(k,j,i)**2_ni + v(k,j,i)**2_ni)
+             dds = (u(k,j,i) * ddx(k,j,i) + v(k,j,i) * ddy(k,j,i))/ff
+             !
+             ! 4. Calculate stream line radius
+             ds = (abs(u(k,j,i)) * dx(j,i) + abs(v(k,j,i)) * dy(j,i))/ff
+             r(k,j,i) = ds / tan(dds)
+          end do
+       end do
+    end do
+    !
+  end subroutine
+  !
   !@ Integrate hydrostasy to calculate from given surface value
   !@
   !@ Uses ideal gas law and assumes hydrostasy, such that d(phi)/d(p) = - RT/p.
