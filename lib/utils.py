@@ -454,14 +454,19 @@ def sect_gen_points(coords, m, dxy):
 	    Distances along section from the section origin
 	'''
 
+	noproj = not m or type(m) == type(np)
+
 	retlon = []
 	retlat = []
 	retxy  = []
 	prevxy = 0
 	for i, (lon1, lat1) in zip(range(len(coords)-1), coords[:-1]):
 		lon2, lat2 = coords[i+1]
-
-		(x1,x2), (y1,y2) = m((lon1,lon2), (lat1,lat2))
+		
+		if noproj:
+			x1, x2, y1, y2 = lon1, lon2, lat1, lat2
+		else: 
+			(x1,x2), (y1,y2) = m((lon1,lon2), (lat1,lat2))
 		d12 = np.sqrt((x2-x1)**2 + (y2-y1)**2)
 		N = np.ceil(d12/dxy)
 
@@ -471,7 +476,10 @@ def sect_gen_points(coords, m, dxy):
 
 		prevxy = xy[-1]
 
-		lon, lat = m(x, y, inverse=True)
+		if noproj:
+			lon, lat = x, y
+		else:
+			lon, lat = m(x, y, inverse=True)
 		retlon.extend(lon)
 		retlat.extend(lat)
 		retxy.extend(xy)
