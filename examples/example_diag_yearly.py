@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-# -*- encoding: utf8
+# -*- encoding: utf-8
 
 from dynlib.shorthands import metopen, metsave, np
-from dynlib.settings import conf
 
-import dynlib.context.erainterim
+from dynlib.context.erainterim import conf
 import dynlib.context.derived
 
 import dynlib.diag

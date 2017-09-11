@@ -84,7 +84,7 @@ North Atlantic (line 29/30).
 
 .. literalinclude:: inc/example_diag_yearly.py
    :linenos:
-   :emphasize-lines: 13,17-18
+   :emphasize-lines: 12,16-17
 
 If you want to calculate deformation for all the data in an input file, the structure of the script 
 is very similar. The differences are highlighted in yellow. Most notably, instead of using
