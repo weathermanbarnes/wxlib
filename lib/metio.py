@@ -27,8 +27,7 @@ from .gridlib import grid_by_nc, grid_by_static
 from . import tagg
 from . import dynfor
 
-from . import version
-#dynlib_version = ''.join([x.decode('ascii') for x in dynfor.consts.version]).strip()
+from . import version as dynlib_version
 
 
 
@@ -818,8 +817,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 		dates = [dates, ]
 	years = set(map(lambda date: date.year, dates))
 	years = np.arange(min(years), max(years)+1)
-	tidxs = map(lambda date: date-dt0, dates)
-	tidxs = map(lambda diff: int(diff.total_seconds()/dts), tidxs)
+	tidxs = [int((date-dt0).total_seconds()/dts) for date in dates]
 	tsmin, tsmax = min(tidxs), max(tidxs)
 
 	# Checking max length

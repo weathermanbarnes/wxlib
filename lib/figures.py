@@ -14,6 +14,7 @@ These functions have two main aims:
 '''
 
 from __future__ import absolute_import, unicode_literals, division, print_function
+from six import string_types
 
 import copy
 import re
@@ -432,7 +433,7 @@ def __contourf_dat(m, x, y, dat, q, kwargs):
 
 	hatch = kwargs.pop('hatches')
 	scale = kwargs.pop('scale')
-	if type(scale) == str and scale == 'auto':
+	if isinstance(scale, string_types) and scale == 'auto':
 		scale = autoscale(dat, **kwargs)
 	
 	if kwargs.get('tile'):
@@ -492,7 +493,8 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 	
 	if hasattr(plt, '__dynlib_latest_cs'):
 		cbkwargs = plt.__dynlib_latest_cs_kwargs
-
+		
+		axes = cbkwargs.pop('cb_axes', None)
 		orient = cbkwargs.pop('cb_orientation')
 		spacing = cbkwargs.pop('cb_tickspacing')
 		shrink = cbkwargs.pop('cb_shrink')
@@ -518,7 +520,7 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 			else:
 				cb.ax.set_ylabel(cbkwargs.pop('cb_label'))
 	
-	for overlay in kwargs.pop('overlays'):
+	for overlay in kwargs.pop('overlays', []):
 		overlay(m, x,y, lon,lat, zorder=3, mask=mask)
 	
 	if kwargs.get('mark'):
@@ -692,7 +694,7 @@ def map_overlay_contour(dat, static, **kwargs):
 		if type(mask) == np.ndarray:
 			dat_[mask] = np.nan
 		scale = kwargs.pop('scale')
-		if type(scale) == str and scale == 'auto':
+		if isinstance(scale, string_types) and scale == 'auto':
 			scale = autoscale(dat_, **kwargs)
 		cs =  m.contour(x_, y_, dat_, scale, latlon=True, **kwargs)
 		plt.gca().set_aspect('equal')
