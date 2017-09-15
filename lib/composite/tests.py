@@ -141,7 +141,7 @@ def get_nh_daily_indexes():
 	''' Create deciders daily northern hemispheric variability indexes
 
 	Currently, there is daily data for NAO and PNA, provided by the `Climate Prediction 
-	Center of NOAA <http://www.cpc.ncep.noaa.gov/products/precip/CWlink/daily_ao_index/teleconnections.shtml>`_.
+	Center of NOAA <http://www.cpc.ncep.noaa.gov/products/precip/CWlink/daily_ao_index/teleconnections.shtml>`__.
 
 	The threshold for the indexes is +/- 1 (standard deviation).
 
@@ -165,7 +165,7 @@ def get_sh_monthly_indexes():
 	''' Create deciders daily northern hemispheric variability indexes
 
 	Currently, there is data for the AAO, provided by the `Climate Prediction 
-	Center of NOAA <http://www.cpc.ncep.noaa.gov/products/precip/CWlink/daily_ao_index/teleconnections.shtml>`_.
+	Center of NOAA <http://www.cpc.ncep.noaa.gov/products/precip/CWlink/daily_ao_index/teleconnections.shtml>`__.
 
 	The threshold for the indexes is +/- 1 (standard deviation).
 
@@ -221,12 +221,14 @@ def get_nh_monthly_indexes():
 def get_tropical_indexes():
 	''' Create deciders daily northern hemispheric variability indexes
 
-	Currently, there is daily data for MEI and SOI, provided by the `Earth System 
+	Currently, there is daily data for MEI, SOI (both representing ENSO) and the MJO.
+	The data is provided by the `Earth System 
 	Research Laboratory <http://www.esrl.noaa.gov/psd/enso/mei/>`_, the Australian 
 	`Bureau of Meteorology <http://www.bom.gov.au/climate/current/soi2.shtml>`_ and 
-	the `Centre for Australian Weather and Climate Research <http://cawcr.gov.au/staff/mwheeler/maproom/RMM/>`_.
+	the `Centre for Australian Weather and Climate Research <http://cawcr.gov.au/staff/mwheeler/maproom/RMM/>`_,
+	respectively.
 
-	The threshold for the indexes is +/- 1 (standard deviation).
+	The threshold for the MEI and SOI indexes is +/- 1 (standard deviation).
 
 	Returns
 	-------

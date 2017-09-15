@@ -1,7 +1,7 @@
-dynlib.utils
-============
+dynlib.interpol
+===============
 
-.. automodule:: dynlib.utils
+.. automodule:: dynlib.interpol
    :members:
    :undoc-members:
    

@@ -44,6 +44,17 @@ IO and plotting
    api/windrose
 
 
+Compositing
+-----------
+
+.. toctree::
+   :maxdepth: 2   
+   
+   api/composite
+   api/composite_decider
+   api/composite_tests
+
+
 Plot configuration and constants
 --------------------------------
 
