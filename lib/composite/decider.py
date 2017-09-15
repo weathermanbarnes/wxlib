@@ -77,7 +77,7 @@ class decider(object):
 		elif hasattr(b, 'required_qs'):
 			ret.required_qs = b.required_qs
 			ret.q = b.q
-			ret.plev = self.plev
+			ret.plev = b.plev
 
 		# Combine rotation centres
 		ret.reset = lambda : self.reset() | b.reset()
