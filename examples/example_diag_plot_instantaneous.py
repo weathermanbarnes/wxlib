@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-# -*- encoding: utf8
+# -*- encoding: utf-8
 
 from dynlib.shorthands import dt, get_instantaneous, metsave, fig, np
-from dynlib.settings import conf, proj
+from dynlib.settings import proj
 
-import dynlib.context.erainterim
+from dynlib.context.erainterim import conf
 import dynlib.context.derived
 
 import dynlib.diag
