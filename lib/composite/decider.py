@@ -63,7 +63,23 @@ class decider(object):
 	
 	def __combine(self, b, ret):
 		''' Combines two decider, incorporates anything shared between __or__ and __and__ '''
+		
+		# Combine required test data
+		if hasattr(self, 'required_qs'):
+			if hasattr(b, 'required_qs') and not b.required_qs == self.required_qs:
+				# Problem comes from self.q and self.plev that are then now longer uniquely defined
+				raise ValueError('Cannot combine decider that require different test data')
+			
+			ret.required_qs = self.required_qs
+			ret.q = self.q
+			ret.plev = self.plev
 
+		elif hasattr(b, 'required_qs'):
+			ret.required_qs = b.required_qs
+			ret.q = b.q
+			ret.plev = self.plev
+
+		# Combine rotation centres
 		ret.reset = lambda : self.reset() | b.reset()
 		
 		selfrot = not type(self.rotation_center) == type(None)
@@ -520,13 +536,15 @@ def matrix(list1, list2):
 		list1 = [item for group in list1.values() for item in group]
 	if type(list2) == dict:
 		list2 = [item for group in list2.values() for item in group]
-	if len(list1) == 0 or len(list2) == 0:
-		return {}
 	
 	# Wrap single deciders in a list
 	if not type(list1) == list: list1 = [list1, ]
 	if not type(list2) == list: list2 = [list2, ]
+	
 
+	if len(list1) == 0 or len(list2) == 0:
+		return {}
+	
 	return {item2.name: [item1 & item2 for item1 in list1] for item2 in list2}
 
 # the end

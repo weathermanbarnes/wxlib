@@ -206,7 +206,7 @@ def build(qs, tests, times=None, s=None, readhooks={}):
 		test_prev = test_cur
 		test_cur  = test_next
 		if not time == times[-1]:
-			test_next = _get_dat(times[tidx+1], test_qs, readhooks)
+			test_next = _get_dat(times[tidx+1], test_qs, readhooks, no_static=True)
 		else: 
 			test_next = {}
 	
