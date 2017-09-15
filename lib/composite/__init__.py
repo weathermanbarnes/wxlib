@@ -10,7 +10,8 @@ from ..settings import conf
 from scipy.io import savemat
 from scipy.interpolate import griddata # interp2d
 
-from mpl_toolkits.basemap.pyproj import Proj
+import mpl_toolkits.basemap
+Proj = mpl_toolkits.basemap.pyproj.Proj
 
 
 # TODO: LINES should be centralised somewhere in the variable definitions!
@@ -74,14 +75,18 @@ def _get_dat(time, test_qs, readhooks, no_static=False):
 				left2request[test_q].append(test_plev)
 			else:
 				left2request[test_q] = [test_plev, ]
+		
+		elif test_q in LINES:
+			testdat[test_plev, test_q] = utils.mask_lines(testdat[test_plev, test_q], f.variables[LINES[test_q]][::])
+
 		else:
 			if not no_static and not static:
 				f, testdat[test_plev, test_q], static = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[test_q]}, test_q)
 			else:
 				f, testdat[test_plev, test_q] = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[test_q]}, test_q, no_static=True)
 
-			if test_q in LINES:
-				testdat[test_plev, test_q] = utils.mask_lines(testdat[test_plev, test_q], f.variables[LINES[test_q]][::])
+		testdat[test_plev,test_q] = testdat[test_plev,test_q].squeeze()
+
 
 	# Request all vertical levels of one variable at once for potential more effective read
 	for test_q in left2request:

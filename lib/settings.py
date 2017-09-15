@@ -99,7 +99,7 @@ def def_context(context, parent=None):
 			'q_units': {},
 			'q_long': {},
 			'q_bins': {},
-			'datapath': ['.', '/Data/gfi/users/csp001/share/dynlib'], # TODO: Move to users/local as soon as Idar created the folder.
+			'datapath': ['.', '/Data/gfi/users/local/share'], 
 			'opath': '.',
 			'oformat': 'nc',
 			'plotpath': '.',

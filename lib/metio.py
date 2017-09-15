@@ -93,7 +93,7 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 		if not mode == 'r':
 			print('WARNING: Can only open npy files in read mode!')
 		if q:
-			dat = np.load(filepath, mmap_mode='r')
+			dat = np.load(filepath, mmap_mode='r', encoding='bytes')
 			dat = dat[cut]
 		else:
 			dat = None
@@ -106,7 +106,7 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
 	def handle_npz(filepath):
 		if not mode == 'r' and not quiet:
 			print('WARNING: Can only open npz files in read mode!')
-		f = np.load(filepath)
+		f = np.load(filepath, encoding='bytes')
 		if q:
 			if q not in f.files:
 				tried.append(filepath)
