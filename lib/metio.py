@@ -510,7 +510,6 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 	    Data to be saved. If an numpy array, the variable name q used for meta information.
 	static : gridlib.grid
 	    Some meta information about the data, like the grid information.
-	    The variable name identifier, following the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
 	name : str
 	    Name of the collection, identifying for example the composite or EOF.
 	ids : list of str
@@ -638,7 +637,10 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 
 			ncvarname = q_
 		
-		if q_[-4:] == '_std':
+		if q_[-4:] == '_mean':
+			q = q_[:-4]
+			prefix = 'Mean '
+		elif q_[-4:] == '_std':
 			q = q_[:-4]
 			prefix = 'Standard deviation of '
 		elif q_[-5:] == '_hist':
@@ -649,10 +651,10 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 			prefix = 'Most frequent value of '
 		elif q_[-4:] == '_min':
 			q = q_[:-4]
-			prefix = 'Minimum of '
+			prefix = 'Minimum '
 		elif q_[-4:] == '_max':
 			q = q_[:-4]
-			prefix = 'Maximum of '
+			prefix = 'Maximum '
 		elif q_[-8:] == '_pattern':
 			q = q_[:-8]
 			prefix = 'EOF loading pattern for '
