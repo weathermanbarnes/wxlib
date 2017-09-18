@@ -513,7 +513,7 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 	name : str
 	    Name of the collection, identifying for example the composite or EOF.
 	ids : list of str
-	    Identifying names for each index in the ``id`` dimension.
+	    *Optional*. Identifying names for each index in the ``id`` dimension.
 	q : str
 	    *Optional*. Only used and required if dat is a numpy array. The variable name identifier, 
 	    following the ECMWF conventions, e.g. ``'u'`` or ``'msl'``.
@@ -638,7 +638,7 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 			ncvarname = q_
 		
 		if q_[-5:] == '_mean':
-			q = q_[:-4]
+			q = q_[:-5]
 			prefix = 'Mean '
 		elif q_[-4:] == '_std':
 			q = q_[:-4]
