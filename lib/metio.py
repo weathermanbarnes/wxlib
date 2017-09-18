@@ -637,7 +637,7 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 
 			ncvarname = q_
 		
-		if q_[-4:] == '_mean':
+		if q_[-5:] == '_mean':
 			q = q_[:-4]
 			prefix = 'Mean '
 		elif q_[-4:] == '_std':
