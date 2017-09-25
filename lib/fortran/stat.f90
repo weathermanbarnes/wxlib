@@ -66,12 +66,12 @@ contains
           do n=1_ni,nt
              minv  (j,i) = min(dat(n,j,i),minv(j,i))
              maxv  (j,i) = max(dat(n,j,i),maxv(j,i))
-             mean  (j,i) = mean(j,i)   + dat(n,j,i)
+             mean  (j,i) = mean(j,i) + dat(n,j,i)
              stddev(j,i) = stddev(j,i) + dat(n,j,i)**2._nr
              tprod (j,i) = tprod(j,i) + dat(n,j,i)*(n+tidx_start)
           end do
           mean  (j,i) = mean(j,i)/nt
-          stddev(j,i) = sqrt((stddev(j,i)-(2._nr*nt-1._nr)*mean(j,i)**2._nr)/(nt-1_ni))
+          stddev(j,i) = sqrt((stddev(j,i) - nt*mean(j,i)**2._nr)/(nt-1_ni))
        end do
     end do
   end subroutine

@@ -124,12 +124,12 @@ def build(qs, tests, times=None, s=None, readhooks={}):
 
 	Returns
 	-------
+	dict of np.ndarray with dimensions (y,x)
+	    Composite mean for standard data for each composite.
 	dict of np.ndarray with dimensions (bins,y,x)
 	    Composite histogram for binnded data for each composite.
 	dict of np.ndarray with dimensions (y,x)
 	    Composite most frequent value for binned data for each composite.
-	dict of np.ndarray with dimensions (y,x)
-	    Composite mean for standard data for each composite.
 	dict of int
 	    Number of contributing time steps for each composite.
 	gridlib.grid
