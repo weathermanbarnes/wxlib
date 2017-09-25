@@ -146,6 +146,8 @@ Currently, the following contexts exist:
 
 :mod:`dynlib.context.erainterim`
    ERA-Interim Reanalysis, 0.5° resolution, covering 1979-almost present.
+:mod:`dynlib.context.era5`
+   ERA-5 Reanalysis, 0.25° resolution, download in progress.
 :mod:`dynlib.context.ecmwf_fc`
    ECWMF forecast archive for the last 2 weeks or so. Currently contains only the deterministic forecast at 0.5° resolution.
 :mod:`dynlib.context.metno_fc`

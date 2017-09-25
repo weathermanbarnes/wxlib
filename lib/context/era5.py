@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8
+
+from datetime import datetime as dt, timedelta as td
+
+from ..settings import def_context
+conf = def_context('era5')
+
+
+
+# General settings
+# ================
+
+conf.epoch = dt(1979,1,1)
+conf.years = range(2010,2011)
+conf.file_std = 'ea.ans.%(time)s.%(plev)s.%(qf)s'
+conf.file_agg = 'ea.ans.%(agg)s.%(time)s.%(plev)s.%(qf)s'
+conf.file_timeless = 'ea.ans.%(time)s.%(name)s'
+conf.file_ts = 'ea.ans.%(ts)s.%(time)s.%(plev)s.%(qf)s'
+conf.file_static = 'ea.ans.static'
+conf.timestep = td(0.25)
+conf.gridsize = (721,1440)
+conf.datapath.insert(1, '/Data/gfi/share/Reanalyses/ERA-5/6HOURLY')
+conf.datapath.insert(1, '/Data/gfi/users/local/share')
+
+
+# Variable definitions
+# ====================
+
+#u = ('u', 'u', 'U component of wind', 'm s**-1')
+#v = ('v', 'v', 'V component of wind', 'm s**-1')
+#w = ('w', 'w', 'Pressure vertical velocity', 'Pa s**-1')
+#
+#vo = ('vo', 'vo', 'Vorticity (relative)', 's**-1')
+#pv = ('pv', 'pv', 'Potential vorticity', 'K m**2 kg**-1 s**-1')
+#
+#pres = ('pres', 'pres', 'Pressure', 'Pa')
+#mont = ('mont', 'mont', 'Montgomery potential', 'm**2 s**-2')
+#z = ('z', 'z', 'Geopotential', 'm**2 s**-2')
+#t = ('t', 't', 'Temperature', 'K')
+#pt = ('pt', 'pt', 'Potential temperature', 'K')
+#
+#q = ('q', 'q', 'Specific humidity', 'kg kg**-1')
+
+msl = ('msl', 'msl', 'Mean sea level pressure', 'Pa')
+#sp = ('sp', 'sp', 'Surface pressure', 'Pa')
+#ci = ('ci', 'ci', 'Sea-ice cover', '(0 - 1)')
+#sst = ('sst', 'sst', 'Sea surface temperature', 'K')
+#t2m = ('t2m', 't2m', '2 metre temperature', 'K')
+#tcw = ('tcw', 'tcw', 'Total column water', 'kg m**-2')
+#u10 = ('u10', 'u10', '10 metre U wind component', 'm s**-1')
+#v10 = ('v10', 'v10', '10 metre V wind component', 'm s**-1')
+#tcwv = ('tcwv', 'tcwv', 'Total column water vapour', 'kg m**-2')
+
+#oro = ('oro', None, 'Surface geopotential', 'm**2 s**-2')
+
+# 1. Pressure levels
+#conf.plevs = ['100', '200', '300', '400', '500', '550', '600', '650', '700', '750', '800', '850', '900', '950', '1000', ]
+#conf.register_variable([u, v, w, pv, z, t, q], conf.plevs)
+
+# 2. Potential temperature levels
+#conf.ptlevs = ['pt300', 'pt315', 'pt330', 'pt350', ]
+#conf.register_variable([u, v, vo, pv, pres, mont, z], conf.ptlevs)
+
+# 3. PV-levels
+#conf.pvlevs = ['pv2000', ]
+#conf.register_variable([u, v, pt, z], conf.pvlevs)
+
+# 4. Surface variables
+conf.sfclevs = ['sfc', ]
+conf.register_variable([msl, ], conf.sfclevs) # sp, ci, sst, t2m, tcw, u10, v10, tcwv
+
+# 5. No vertical level
+#conf.register_variable([oro, ], [])
+
+# that's it
