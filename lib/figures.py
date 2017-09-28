@@ -492,7 +492,7 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 		overlay(m, x,y, lon,lat, zorder=3, mask=mask)
 	
 	if hasattr(plt, '__dynlib_latest_cs'):
-		cbcs = plt.__dynlib_latest_cs_kwargs
+		cbcs = plt.__dynlib_latest_cs
 		cbkwargs = plt.__dynlib_latest_cs_kwargs
 		#cbq = plt.__dynlib_latest_cs_q <- unused?
 		
