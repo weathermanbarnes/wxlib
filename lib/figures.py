@@ -492,7 +492,9 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 		overlay(m, x,y, lon,lat, zorder=3, mask=mask)
 	
 	if hasattr(plt, '__dynlib_latest_cs'):
+		cbcs = plt.__dynlib_latest_cs_kwargs
 		cbkwargs = plt.__dynlib_latest_cs_kwargs
+		#cbq = plt.__dynlib_latest_cs_q <- unused?
 		
 		axes = cbkwargs.pop('cb_axes', None)
 		orient = cbkwargs.pop('cb_orientation')
@@ -505,9 +507,9 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 		frac = expand * (1-padding)
 	
 		if axes:
-			cb = plt.colorbar(cax=axes, ticks=cbkwargs.pop('ticks'), orientation=orient)
+			cb = plt.colorbar(cbcs, cax=axes, ticks=cbkwargs.pop('ticks'), orientation=orient)
 		else:
-			cb = plt.colorbar(ticks=cbkwargs.pop('ticks'), orientation=orient, 
+			cb = plt.colorbar(cbcs, ticks=cbkwargs.pop('ticks'), orientation=orient, 
 				shrink=shrink, pad=pad, fraction=frac, spacing=spacing)
 		if cbkwargs.get('ticklabels'): 
 			if not orient == 'vertical':
@@ -519,9 +521,6 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
 				cb.ax.set_xlabel(cbkwargs.pop('cb_label'))
 			else:
 				cb.ax.set_ylabel(cbkwargs.pop('cb_label'))
-	
-	for overlay in kwargs.pop('overlays', []):
-		overlay(m, x,y, lon,lat, zorder=3, mask=mask)
 	
 	if kwargs.get('mark'):
 		lons, lats = kwargs.pop('mark')
@@ -864,7 +863,6 @@ def map_overlay_shading(dat, static, **kwargs):
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		dat_ = __map_prepare_dat(dat, mask, static, kwargs)
 
-		# TODO: What about an additional colorbar for this data?
 		__contourf_dat(m, x, y, dat_, q, kwargs)
 
 		return
