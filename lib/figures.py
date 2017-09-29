@@ -898,23 +898,31 @@ def map_overlay_barbs(u, v, static, **kwargs):
 	kwargs = __line_prepare_config(kwargs)
 
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
+		def rotate_vector(u, v, lon, lat, kwargs):
+			interval = kwargs.pop('vector_space_interval', 15)
+			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
+			return m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
+
+
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
 
 		# Respect rotated coordinate systems (otherweise returned unchanged)
 		u_, v_ = static.unrotate_vector(u_, v_)
-
-		try:
-			if lat[0,0] > lat[-1,0]:
-				ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
-			else:
-				ut,vt, xt,yt = m.transform_vector(u_,v_,lon[0,:],lat[:,0], 30, 20, returnxy=True)
-
-		except (AttributeError, ValueError):
-			interval = kwargs.pop('vector_space_interval', 15)
-			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
-			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
 		
+		# TODO: Why does transform_vector lead to errors for iveret!?
+		if not kwargs.get('vector_disable_interpolation', False):
+			try:
+				if lat[0,0] > lat[-1,0]:
+					ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
+				else:
+					ut,vt, xt,yt = m.transform_vector(u_,v_,lon[0,:],lat[:,0], 30, 20, returnxy=True)
+
+			except (AttributeError, ValueError):
+				ut,vt, xt,yt = rotate_vector(u_, v_, lon, lat, kwargs)
+		else:
+			ut,vt, xt,yt = rotate_vector(u_, v_, lon, lat, kwargs)
+				
 		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5, zorder=3)
 	
 	return overlay
