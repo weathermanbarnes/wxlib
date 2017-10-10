@@ -35,7 +35,7 @@ def theta_from_temp(t, pres):
 
 
 def temp_from_theta(pt, pres):
-	''' Calculate potential temperature from temperature and pressure
+	''' Calculate temperature from potential temperature and pressure
 
 	Uses the Exner function subroutine of dynfor.thermodyn for the calculations.
 
