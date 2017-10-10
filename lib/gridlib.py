@@ -178,9 +178,9 @@ class grid_by_nc(grid):
 	''' Extract the relevant information from a given netCDF file object '''
 
 	X_NAMES = ['lon', 'longitude', 'west_east', 'west_east_stag', 'x', 'x_1', 'x (stag)']
-	X_NAME_BEGINSWITH = ['rlon', 'dimx', ]
+	X_NAME_BEGINSWITH = ['rlon', 'srlon', 'dimx', ]
 	Y_NAMES = ['lat', 'latitude', 'south_north', 'south_north_stag', 'y', 'y_1', 'y (stag)']
-	Y_NAME_BEGINSWITH = ['rlat', 'dimy', ]
+	Y_NAME_BEGINSWITH = ['rlat', 'srlat', 'dimy', ]
 	Z_NAMES = ['level', 'bottom_top', 'bottom_top_stag', 'z', 'z_1', 'alt', 'z (stag)']
 	Z_NAME_BEGINSWITH = ['lev', 'dimz', ]
 	T_NAMES = ['time', 'Time']
@@ -191,7 +191,7 @@ class grid_by_nc(grid):
 	Y_IRREGULAR_NAME_BEGINSWITH = Y_NAME_BEGINSWITH
 
 	ROT_POLES = {
-		'rotated_pole': ('grid_north_pole_longitude', 'grid_north_pole_latitude'),  # name convention in NORA10 and dynlib
+		'rotated_pole': ('grid_north_pole_longitude', 'grid_north_pole_latitude'),  # name convention in NORA10, COSMO and dynlib
 		'projection_3': ('grid_north_pole_longitude', 'grid_north_pole_latitude'),  # name in NORA10 altitude file
 	}
 
