@@ -43,6 +43,7 @@ cloff = ('cloff', 'convl')
 defl = ('defl', 'defl', 'Deformation lines')
 dloff = ('dloff', 'defl')
 
+shear = ('shear', 'shear', 'Wind shear in natural coordinates', 's**-1')
 grad_shear = ('grad_shear', 'grad_shear', 'Shear gradient in natural coordinates', 'm**-1 s**-1')
 jetaxis = ('jetaxis', 'jetaxis', 'Jet axis lines')
 jaoff = ('jaoff', 'jetaxis')
