@@ -29,6 +29,7 @@ dynlib.diag
    .. autofunction:: streamline_radius
    .. autofunction:: uv_geo_from_pot
    .. autofunction:: vor
+   .. autofunction:: vor_curv
 
    Python functions
    ----------------
