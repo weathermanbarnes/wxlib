@@ -45,7 +45,10 @@ NO_ENDING = 'nc' # ETH compatibility: if the file exists without file ending, tr
 def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversion=False, no_static=False, quiet=False, mode='r'):
 	''' Find and open files by name
 	
-	Uses the se.conf.datapath list to locale files in a variety of different locations.
+	Uses the se.conf.datapath list to locate files in a variety of different locations. 
+	In user scripts and user settings files, this variable will typically be available
+	via conf.datapath.
+
 	The located files might either be numpy-files, netCDF-files or matlab mat-files. 
 	For each of the file types, metopen returns the requested variable and some meta-
 	information about the variable, if not suppressed.
@@ -772,6 +775,10 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	Allows general data requests in the configured data base, e.g. ERA-Interim. The request
 	can span several files, e.g. by including several vertical levels or by covering several
 	years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
+	
+	The method internally uses metopen to locate data files. Hence, it will find data in the 
+	locations given se.conf.datapath (in user scripts and user settings files typically 
+	available as conf.datapath).
 
 	Parameters
 	----------
