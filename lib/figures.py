@@ -779,25 +779,35 @@ def map_overlay_clines(lines, cdat, loff, static, **kwargs):
 	'''
 
 	kwargs = __line_prepare_config(kwargs)
-
-	lns = unflatten_lines(lines, loff, minlength=0)
-
-	norm = plt.Normalize()
-	norm.autoscale(cdat)
+	
+	lns = unflatten_lines(lines, loff, static, 
+		convert_grididx=kwargs.get('convert_grididx2lonlat', True))
+	
+	scale = kwargs.get('scale', None)
+	if type(scale) in [list, tuple, np.ndarray,]:
+		norm = plt.Normalize(scale[0], scale[-1])
+	else:
+		norm = plt.Normalize()
+		norm.autoscale(cdat)
 
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
-		for ln in lns:
+		for lidx, ln in zip(range(len(lns)), lns):
 			xfr, yfr = m(ln[:,0], ln[:,1])
 
 			points = np.array([xfr, yfr]).T.reshape(-1, 1, 2)
 			segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-			lc = LineCollection(segments, array=cdat, 
+			lc = LineCollection(segments, array=cdat[loff[lidx]:loff[lidx+1]],
 					cmap=kwargs.get('cmap'), norm=norm,
 					linewidth=kwargs.get('linewidth'), alpha=kwargs.get('alpha'),
 			)
 			plt.gca().add_collection(lc)
 
+			if not kwargs.get('cb_disable'):
+				plt.__dynlib_latest_cs = lc
+				plt.__dynlib_latest_cs_kwargs = kwargs
+				plt.__dynlib_latest_cs_q = kwargs.get('q')
+		
 		return
 
 	return overlay
@@ -1011,6 +1021,8 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 
 		# Respect rotated coordinate systems (otherweise returned unchanged)
 		defdex, defdey = static.unrotate_vector(defdex, defdey)
+
+		# TODO: Better autoscaling, make scaling configurable!
 
 		try:
 			Nvecx = 27
