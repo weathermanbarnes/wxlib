@@ -69,7 +69,7 @@ def scale(var, cut=slice(None)):
 
 	# Apply scaling, numpy is faster than Fortran function!
 	if hasattr(var, 'scale_factor') or hasattr(var, 'add_offset'):
-		dat = dat*var.scale_factor + var.add_offset
+		dat = dat*getattr(var, 'scale_factor', 1.0) + getattr(var, 'add_offset', 0.0)
 	
 	return dat
 
