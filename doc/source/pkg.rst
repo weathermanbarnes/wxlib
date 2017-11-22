@@ -17,7 +17,7 @@ Dynlib uses the following, freely available software.
  * ``sphinx-napoleon`` (python package for automatically generating API documentation from numpy docstrings)
  * ``gfortran`` (Fortran compiler)
  * ``lapack`` (Linear algebra library)
- * ``spherepack`` (Spherical harmonics library)
+ * ``spherepack`` (Spherical harmonics library, compile with ``-fPIC``)
 
 Spherepack is generally not available as a package and must be compiled and installed manually.
 You can download it from the `UCAR website <https://www2.cisl.ucar.edu/resources/legacy/spherepack>`_.

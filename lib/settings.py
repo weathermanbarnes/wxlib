@@ -711,7 +711,7 @@ PLOTF_DEFAULTS.update({
 	'colors': None, 
 	'extend': 'both', 
 
-	'hatches': (),
+	'hatches': None,
 })
 
 MUTEX_GROUPS = [set(['colors', 'cmap']), ]

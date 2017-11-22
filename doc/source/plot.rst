@@ -117,6 +117,7 @@ maskcolor		        ✓ 	✓ 	mpl-color 	        light grey 	        Color of the
 mark			        ✓ 	✓ 	tuple of list 	 	                        Tuple containing list of x-coordinates and y-coordinates to be marked on the map with circles. 
 name				✓	✓	string			''			Name of the plot, used for automatically determining file name and title.
 name_prefix			✓	✓	string			''			Prefix for the plot file name.
+norm                                            mpl.colors.Normalize    LinearNorm              Defines the mapping of values onto colors. By default a linear mapping is used, such that double the distance in value corresponds to double the distance in the color map. Alternatives are ``mpl.colors.BoundaryNorm`` to achieve an equal color spacing between colour bar ticks, and ``mpl.colors.LogNorm`` for a logarithmic mapping.
 oroalpha		        ✓ 	✓ 	float 	                ``0.4``    	        Transparency of the orography isolines, which $0$ being entirely translucent. 
 orocolor		        ✓ 	✓ 	mpl-color 	        black 	                Color of the orography isolines. 
 oroscale		        ✓ 	✓ 	int/list 	        Δ=1000m                 Anything matplotlib accepts as a scale. 

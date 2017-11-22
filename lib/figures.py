@@ -421,17 +421,22 @@ def __map_setup(mask, static, kwargs):
 	if orocolor:
 		m.contour(x, y, concat(static.oro), kwargs.pop('oroscale'), latlon=True, colors=orocolor, 
 				alpha=kwargs.pop('oroalpha'), zorder=2)
-		plt.gca().set_aspect('equal')
+		if isinstance(m, mpl_toolkits.basemap.Basemap):
+			plt.gca().set_aspect('equal')
 	if type(mask) == np.ndarray:
 		m.contourf(x, y, mask, latlon=True, colors=kwargs.pop('maskcolor'))
-		plt.gca().set_aspect('equal')
+		if isinstance(m, mpl_toolkits.basemap.Basemap):
+			plt.gca().set_aspect('equal')
 	
 	return m, x, y, lon, lat
 
 def __contourf_dat(m, x, y, dat, q, kwargs):
 	''' Plot the actual data '''
+	
+	# Circumvent bug in matplotlib: If hatches given but not iterable results in a TypeError
+	if not kwargs.get('hatches'):
+		hatch = kwargs.pop('hatches')
 
-	hatch = kwargs.pop('hatches')
 	scale = kwargs.pop('scale')
 	if isinstance(scale, string_types) and scale == 'auto':
 		scale = autoscale(dat, **kwargs)
@@ -463,7 +468,8 @@ def __contourf_dat(m, x, y, dat, q, kwargs):
 	else:
 		cs = m.contourf(x, y, dat, scale, latlon=True, zorder=1, **kwargs)
 	
-	plt.gca().set_aspect('equal')
+	if isinstance(m, mpl_toolkits.basemap.Basemap):
+		plt.gca().set_aspect('equal')
 
 	# Maximise contrast, by making sure that the last colors of the colorbar 
 	# actually are identical to the first/last color in the colormap
@@ -696,7 +702,8 @@ def map_overlay_contour(dat, static, **kwargs):
 		if isinstance(scale, string_types) and scale == 'auto':
 			scale = autoscale(dat_, **kwargs)
 		cs =  m.contour(x_, y_, dat_, scale, latlon=True, **kwargs)
-		plt.gca().set_aspect('equal')
+		if isinstance(m, mpl_toolkits.basemap.Basemap):
+			plt.gca().set_aspect('equal')
 
 		labels = kwargs.pop('contour_labels')
 		if labels:
@@ -779,25 +786,35 @@ def map_overlay_clines(lines, cdat, loff, static, **kwargs):
 	'''
 
 	kwargs = __line_prepare_config(kwargs)
-
-	lns = unflatten_lines(lines, loff, minlength=0)
-
-	norm = plt.Normalize()
-	norm.autoscale(cdat)
+	
+	lns = unflatten_lines(lines, loff, static, 
+		convert_grididx=kwargs.get('convert_grididx2lonlat', True))
+	
+	scale = kwargs.get('scale', None)
+	if type(scale) in [list, tuple, np.ndarray,]:
+		norm = plt.Normalize(scale[0], scale[-1])
+	else:
+		norm = plt.Normalize()
+		norm.autoscale(cdat)
 
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
-		for ln in lns:
+		for lidx, ln in zip(range(len(lns)), lns):
 			xfr, yfr = m(ln[:,0], ln[:,1])
 
 			points = np.array([xfr, yfr]).T.reshape(-1, 1, 2)
 			segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-			lc = LineCollection(segments, array=cdat, 
+			lc = LineCollection(segments, array=cdat[loff[lidx]:loff[lidx+1]],
 					cmap=kwargs.get('cmap'), norm=norm,
 					linewidth=kwargs.get('linewidth'), alpha=kwargs.get('alpha'),
 			)
 			plt.gca().add_collection(lc)
 
+			if not kwargs.get('cb_disable'):
+				plt.__dynlib_latest_cs = lc
+				plt.__dynlib_latest_cs_kwargs = kwargs
+				plt.__dynlib_latest_cs_q = kwargs.get('q')
+		
 		return
 
 	return overlay
@@ -1011,6 +1028,8 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 
 		# Respect rotated coordinate systems (otherweise returned unchanged)
 		defdex, defdey = static.unrotate_vector(defdex, defdey)
+
+		# TODO: Better autoscaling, make scaling configurable!
 
 		try:
 			Nvecx = 27

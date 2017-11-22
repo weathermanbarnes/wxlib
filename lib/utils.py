@@ -69,7 +69,7 @@ def scale(var, cut=slice(None)):
 
 	# Apply scaling, numpy is faster than Fortran function!
 	if hasattr(var, 'scale_factor') or hasattr(var, 'add_offset'):
-		dat = dat*var.scale_factor + var.add_offset
+		dat = dat*getattr(var, 'scale_factor', 1.0) + getattr(var, 'add_offset', 0.0)
 	
 	return dat
 
@@ -231,7 +231,7 @@ def __unflatten_fronts_t(fronts, froff, minlength):
 
 	return fronts
 
-def unflatten_lines(lines, loff, static):
+def unflatten_lines(lines, loff, static, convert_grididx=True):
 	''' Convert dynlib line format into a list of lines 
 
 	Line coordinates (grid point indexes) are converted actual coordinates like lat/lon.
@@ -250,9 +250,13 @@ def unflatten_lines(lines, loff, static):
 			break
 		line_ = np.empty(line.shape)
 		
-		# Interpolate x and y coordinates at (fractional) grid point indexes
-		line_[:,0] = intpx.ev(line[:,0], line[:,1])
-		line_[:,1] = intpy.ev(line[:,0], line[:,1])
+		if convert_grididx:
+			# Interpolate x and y coordinates at (fractional) grid point indexes
+			line_[:,0] = intpx.ev(line[:,0], line[:,1])
+			line_[:,1] = intpy.ev(line[:,0], line[:,1])
+		else:
+			# No conversion or interpolation
+			line_[:,0:2] = line[:,0:2]
 		# Copy over additional info
 		line_[:,2:] = line[:,2:]
 
