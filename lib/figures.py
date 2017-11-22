@@ -432,8 +432,11 @@ def __map_setup(mask, static, kwargs):
 
 def __contourf_dat(m, x, y, dat, q, kwargs):
 	''' Plot the actual data '''
+	
+	# Circumvent bug in matplotlib: If hatches given but not iterable results in a TypeError
+	if not kwargs.get('hatches'):
+		hatch = kwargs.pop('hatches')
 
-	hatch = kwargs.pop('hatches')
 	scale = kwargs.pop('scale')
 	if isinstance(scale, string_types) and scale == 'auto':
 		scale = autoscale(dat, **kwargs)
