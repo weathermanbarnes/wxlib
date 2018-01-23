@@ -26,11 +26,11 @@ cnt = ('cnt', None, 'Number of time steps contributing to the composite', '1')
 conf.register_variable([cnt, ], [])
 
 
-def _add(name, plev, q, dat, mean, hist, x_proj=None, y_proj=None, angle=None):
+def _add(name, plev, q, dat, mean, meancnt, hist, x_proj=None, y_proj=None, angle=None):
 	''' Add one time step to the composite '''
 
 	if q in conf.q_bins:
-		if not type(rot_center) == type(None):
+		if not type(x_proj) == type(None):
 			raise NotImplementedError('Binned variables cannot be rotated yet.')
 
 		for bi in range(len(conf.q_bins[q])-1):
@@ -42,20 +42,25 @@ def _add(name, plev, q, dat, mean, hist, x_proj=None, y_proj=None, angle=None):
 				hist[name,plev,q][bi,(dat <  upper).__or__(dat >= lower)] += 1
 	else:
 		if not type(x_proj) == type(None):
+			raise NotImplementedError('Rotated composites are only partly implemented and untested.')
+
 			# Clockwise rotation (following the convention for wind directions)
 			x_proj_ =  x_proj*np.cos(angle) + y_proj*np.sin(angle)
 			y_proj_ = -x_proj*np.sin(angle) + y_proj*np.cos(angle)
 			r_proj_ = np.sqrt(x_proj_**2 + x_proj_**2)
 
 			mask = (r_proj_ <= 1.5e6)
-
-			mean[name,plev,q][:,:] += griddata((x_proj_[mask], y_proj_[mask]), dat[mask], 
+			
+			dati = griddata((x_proj_[mask], y_proj_[mask]), dat[mask], 
 					(PROJGRID_Y, PROJGRID_X), method='linear' )
-			#interp = interp2d(x_proj_[mask], y_proj_[mask], dat[mask], kind='cubic')
-			#mean[name,plev,q][:,:] += interp(PROJGRID_Y[0,:], PROJGRID_X[:,0])
+			nanmask = ~np.isnan(dati)
+			mean[name,plev,q][nanmask] += dati[nanmask]
+			meancnt[name,plev,q][nanmask] += nanmask
 
 		else:
-			mean[name,plev,q][:,:] += dat
+			nanmask = ~np.isnan(dat)
+			mean[name,plev,q][nanmask] += dat[nanmask]
+			meancnt[name,plev,q][nanmask] += nanmask
 
 	return
 
@@ -126,10 +131,12 @@ def build(qs, tests, times=None, s=None, readhooks={}):
 	-------
 	dict of np.ndarray with dimensions (y,x)
 	    Composite mean for standard data for each composite.
-	dict of np.ndarray with dimensions (bins,y,x)
-	    Composite histogram for binnded data for each composite.
 	dict of np.ndarray with dimensions (y,x)
-	    Composite most frequent value for binned data for each composite.
+	    Number of contributing time steps at each grid cell (i.e. how much valid data went into each composite).
+	dict of np.ndarray with dimensions (bins,y,x)
+	    Composite histogram for each binned variable.
+	dict of np.ndarray with dimensions (y,x)
+	    Most frequent value in the composite histogram for each binned variable.
 	dict of int
 	    Number of contributing time steps for each composite.
 	gridlib.grid
@@ -153,6 +160,7 @@ def build(qs, tests, times=None, s=None, readhooks={}):
 	grid = get_static()
 	
 	mean = {}
+	meancnt = {}
 	hist = {}
 	mfv  = {}
 	cnt  = {}
@@ -167,6 +175,7 @@ def build(qs, tests, times=None, s=None, readhooks={}):
 			for test in flattened_tests:
 				if not type(test.rotation_center) == type(None):
 					mean[test.name,plev,q] = np.zeros(S_PROJGRID)
+					meancnt[test.name,plev,q] = np.zeros(S_PROJGRID, dtype='i4')
 
 					# Setup projection and interpolation
 
@@ -190,6 +199,7 @@ def build(qs, tests, times=None, s=None, readhooks={}):
 					test.rotargs = (x_proj, y_proj, 0)
 				else:
 					mean[test.name,plev,q] = np.zeros(s)
+					meancnt[test.name,plev,q] = np.zeros(s, dtype='i4')
 					test.rotargs = (None, )*3
 	
 	test_qs = set([])
@@ -226,7 +236,7 @@ def build(qs, tests, times=None, s=None, readhooks={}):
 			for test in flattened_tests:
 				if test.match(t, tidx, test_prev, test_cur, test_next):
 					for plev, q in qs:
-						_add(test.name, plev, q, dat[plev,q][tidx], mean, hist, *test.rotargs)
+						_add(test.name, plev, q, dat[plev,q][tidx], mean, meancnt, hist, *test.rotargs)
 					cnt[test.name] += 1
 
 	del dat
@@ -239,14 +249,14 @@ def build(qs, tests, times=None, s=None, readhooks={}):
 				# Calculate the most frequent value based on the histogram
 				mfv[test.name,plev,q] = utils.cal_mfv(hist[test.name,plev,q], conf.q_bins[q])
 			else:
-				mean[test.name,plev,q] /= cnt[test.name]
+				mean[test.name,plev,q] /= meancnt[test.name,plev,q]
 	
 		test.reset()
 
-	return mean, hist, mfv, cnt, static
+	return mean, meancnt, hist, mfv, cnt, static
 
 
-def save(qs, tests, mean, hist, mfv, cnt, static, s=None):
+def save(qs, tests, mean, meancnt, hist, mfv, cnt, static, s=None):
 	''' Save composites using metsave_timeless
 	
 	Parameters
@@ -257,12 +267,14 @@ def save(qs, tests, mean, hist, mfv, cnt, static, s=None):
 	    List of deciders defining the composites to be compiled. Composites may be organised 
 	    in named groups or may be just a flat list of deciders. Named groups will be saved 
 	    together in one file with the different composites as a new dimension.
-	mean : dict of np.ndarray with dimensions (bins,y,x)
+	mean : dict of np.ndarray with dimensions (y,x)
 	    Composite histogram for binnded data for each composite.
-	hist : dict of np.ndarray with dimensions (y,x)
-	    Composite most frequent value for binned data for each composite.
+	meancnt : dict of np.ndarray with dimensions (y,x)
+	    Number of contributing time steps at each grid cell (i.e. how much valid data went into each composite).
+	hist : dict of np.ndarray with dimensions (bins,y,x)
+	    Composite histogram for each binned variable.
 	mfv : dict of np.ndarray with dimensions (y,x)
-	    Composite mean for standard data for each composite.
+	    Most frequent value in the composite histogram for each binned variable.
 	cnt : dict of int
 	    Number of contributing time steps for each composite.
 	static : gridlib.grid
@@ -281,7 +293,7 @@ def save(qs, tests, mean, hist, mfv, cnt, static, s=None):
 			testrots = [type(test.rotation_center) == type(None) for test in grouped_tests]
 			if not all(testrots):
 				for test in grouped_tests:
-					_save_npz(qs, mean, static, test.name, cnt)
+					_save_npz(qs, mean, meancnt, static, test.name, cnt)
 
 			else:
 				tosave = {}
@@ -297,6 +309,7 @@ def save(qs, tests, mean, hist, mfv, cnt, static, s=None):
 							tosave[plev,q+'_hist'][teidx,::] = hist[test.name,plev,q]
 						else:
 							tosave[plev,q][teidx,::] = mean[test.name,plev,q]
+							tosave[plev,q+'_cnt'][teidx,::] = meancnt[test.name,plev,q]
 
 				metsave_timeless(tosave, static, groupname, testnames)
 	
@@ -313,17 +326,19 @@ def save(qs, tests, mean, hist, mfv, cnt, static, s=None):
 						tosave[plev,q+'_hist'] = hist[test.name,plev,q]
 					else:
 						tosave[plev,q] = mean[test.name,plev,q]
+						tosave[plev,q+'_cnt'] = meancnt[test.name,plev,q]
 
 				metsave_timeless(tosave, static, test.name, global_atts={'cnt': cnt[test.name]})
 	
 	return
 
 
-def _save_npz(qs, mean, static, testname, cnt):
+def _save_npz(qs, mean, meancnt, static, testname, cnt):
 	filename = conf.file_timeless % {'time': metio.dts2str(static.t_parsed), 'name': testname}
 	tosave = {}
 	for plev, q in qs:
 		tosave['%s_%s' % (plev, q)] = mean[testname,plev,q]
+		tosave['%s_%s_cnt' % (plev, q)] = meancnt[testname,plev,q]
 	tosave['cnt'] = cnt[testname]
 	print('Saving as: %s/%s.npz' % (conf.opath, filename))
 	np.savez(conf.opath+'/'+filename+'.npz', **tosave)
