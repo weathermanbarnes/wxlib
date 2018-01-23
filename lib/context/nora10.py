@@ -48,7 +48,8 @@ ci = ('ci', 'ci', 'Sea-ice cover', '(0 - 1)')
 oro = ('oro', None, 'Surface geopotential', 'm**2 s**-2')
 
 # 1. Pressure levels
-conf.plevs = ['100', '300', '500', '700', '850', '925', '1000', ]
+conf.plevs = ['100', '150', '200', '250', '300', '350', '400', '450', '500', '550', '600', '650', '700', 
+		'725', '750', '775', '800', '825', '850', '875', '900', '925', '950', '975', '1000', ]
 conf.register_variable([u, v, w, t, z, q], conf.plevs)
 
 # 2. Surface variables
