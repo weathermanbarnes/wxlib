@@ -807,7 +807,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	    Optional arguments passed on to calls of metopen within this function.
 	'''
 	
-	if not plevs:
+	if type(plevs) == type(None):
 		plevs = se.conf.plevs
 	elif not type(plevs) == np.ndarray and not type(plevs) == list:
 		plevs = [plevs,]
