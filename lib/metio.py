@@ -643,6 +643,9 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 		if q_[-5:] == '_mean':
 			q = q_[:-5]
 			prefix = 'Mean '
+		elif q_[-4:] == '_cnt':
+			q = q_[:-4]
+			prefix = 'Number in composite of '
 		elif q_[-4:] == '_std':
 			q = q_[:-4]
 			prefix = 'Standard deviation of '
