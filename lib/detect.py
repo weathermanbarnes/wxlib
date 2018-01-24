@@ -204,7 +204,7 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 	s.conf.datapath = datapath_
 
 
-def frontalzone_largescale(tfp, dx, dy):
+def frontalvolume_largescale(tfp, dx, dy):
 	''' Detect frontal zones as coherent areas with strong TFP gradients
 	
 	The large-scale version of this function (applicable for example to ERA-Interim data)
@@ -233,7 +233,7 @@ def frontalzone_largescale(tfp, dx, dy):
 
 	See also
 	--------
-	:meth:`frontalzone_smallscale`, :meth:`frontline`
+	:meth:`frontalvolume_smallscale`, :meth:`frontline`
 	'''
 
 	thres = dynfor.config.tfp_mingrad_largescale		# 4.5e-5
@@ -263,7 +263,7 @@ def frontalzone_largescale(tfp, dx, dy):
 	return labels
 
 
-def frontalzone_smallscale(tfp, dx, dy):
+def frontalvolume_smallscale(tfp, dx, dy):
 	''' Detect frontal zones as coherent areas with strong TFP gradients
 	
 	The small-scale version of this function (applicable for example to NORA10 data)
@@ -295,7 +295,7 @@ def frontalzone_smallscale(tfp, dx, dy):
 
 	See also
 	--------
-	:meth:`frontalzone_largescale`, :meth:`frontline`
+	:meth:`frontalvolume_largescale`, :meth:`frontline`
 	'''
 
 	nsmooth = dynfor.config.nsmooth
