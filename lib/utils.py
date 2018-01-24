@@ -630,4 +630,46 @@ def varimax(phi, raw=False, gamma = 1.0, max_iter = 100, tol = 1e-5):
 
 	return rphi, R
 
+
+
+def dist_sphere(lon1, lat1, lon2, lat2, r=6.37e6):
+	''' Shortest distance on a sphere
+
+	Calculate the great circle distance between two points on the surface of a sphere, 
+	using spherical trigonometry. By default, the radius of the sphere is assuemed 	to 
+	be the Earth radius, R = 6370 km, but that can be changed via the optional 
+	parameter r.
+
+	Both the first and second points can be an array of points. If both points are
+	actually arrays of points, these arrays must have compatible shapes in the sense of 
+	the numpy broadcasting rules.
+
+	Parameters
+	----------
+	lon1 : float or np.ndarray
+	    Longitude(s) of the first point(s) in degrees.
+	lat1 : float or np.ndarray
+	    Latitude(s) of the first point(s) in degrees.
+	lon2 : float or np.ndarray
+	    Longitude(s) of the second point(s) in degrees.
+	lat2 : float or np.ndarray
+	    Latitude(s) of the second point(s) in degrees.
+	r : float or np.ndarray
+	    *Optional*. Radius of the sphere(s). Defaults to the Earth radius.
+	
+	Returns
+	-------
+	float or np.ndarray
+	    Distance(s) between the first and second points
+	'''
+		
+	dlon = np.pi/180 * (lon2 - lon1)
+	lat1r = np.pi/180 * lat1
+	lat2r = np.pi/180 * lat2
+	dist = r * np.arccos(np.sin(lat1r)*np.sin(lat2r) + np.cos(lat1r)*np.cos(lat2r)*np.cos(dlon))
+
+	return dist
+
+
+
 #
