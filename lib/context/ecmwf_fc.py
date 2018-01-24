@@ -34,7 +34,7 @@ pt = ('pt', 'pt', 'Potential temperature', 'K')
 q = ('q', 'q', 'Specific humidity', 'kg kg**-1')
 
 msl = ('msl', 'msl', 'Mean sea level pressure', 'Pa')
-ci = ('ci', 'ci', 'Sea-ice cover', '(0 - 1)')
+ic = ('ci', 'ic', 'Sea-ice cover', '(0 - 1)')
 sst = ('sst', 'sst', 'Sea surface temperature', 'K')
 t2m = ('t2m', 't2m', '2 metre temperature', 'K')
 d2m = ('d2m', 'd2m', '2 metre dewpoint temperature', 'K')
@@ -68,7 +68,7 @@ conf.register_variable([u, v, pt], conf.pvlevs)
 
 # 4. Surface variables
 conf.sfclevs = ['sfc', ]
-conf.register_variable([msl, ci, sst, t2m, d2m, u10, v10, tcw, tcwv, cape, cin, 
+conf.register_variable([msl, ic, sst, t2m, d2m, u10, v10, tcw, tcwv, cape, cin, 
 	cp, lsp, hcc, mcc, lcc, tcc, slhf, sshf], conf.sfclevs)
 
 
