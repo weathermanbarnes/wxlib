@@ -22,10 +22,8 @@ contains
   !@ Parameters
   !@ ----------
   !@ 
-  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
-  !@     Wind velocity component in the East direction
-  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
-  !@     Wind velocity component in the North direction
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Input data
   !@
   !@ Returns
   !@ -------
@@ -152,6 +150,147 @@ contains
     end if
     !
     deallocate(work, dwork)
+    !
+  end subroutine
+  !
+  !@ Invert divergence to give irrotational winds
+  !@
+  !@ Parameters
+  !@ ----------
+  !@ 
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Zonal wind component
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Meridional wind component
+  !@
+  !@ Returns
+  !@ -------
+  !@ 2-tuple of np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Irrotational wind velocity components
+  subroutine irot_wind(uir,vir, nx,ny,nz, u,v)
+    real(kind=nr), intent(in) :: u(nz,ny,nx), v(nz,ny,nx)
+    real(kind=nr), intent(out) :: uir(nz,ny,nx), vir(nz,ny,nx)
+    integer(kind=ni), intent(in) :: ny,nz,nx
+    ! TODO: I tried to integrate the return into two complex arrays, but that
+    !       leads to mysterious SEGFAULTS type "double free or corruption"
+    real(kind=nr) :: div(ny,nx), pertrb(ny,nx), a(ny,ny),b(ny,ny), br(ny,ny),bi(ny,ny),cr(ny,ny),ci(ny,ny)
+    integer(kind=ni) :: ierror, k
+    !
+    integer(kind=ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
+    real(kind=nr), allocatable :: work(:)
+    real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
+    !
+    !f2py depend(nz,ny,nx) uir, vir, v
+    ! -----------------------------------------------------------------
+    !
+    if ( nx /= last_nx .or. ny /= last_ny ) then
+       call reset()
+       last_nx = nx
+       last_ny = ny
+    end if
+    !
+    lwork = max( 4_ni*(ny+1_ni)**2_ni , 2_ni*(nz+1_ni)*ny*nx )
+    ldwork = (ny + 1_ni)*2_ni
+    allocate(work(lwork), dwork(ldwork))
+    !
+    ! No precalculated wvhaes available
+    if ( lvhaes == 0_ni ) then
+       lvhaes = ((ny+1_ni)**3_ni) + nx + 15_ni
+       allocate(wvhaes(lvhaes))
+       call vhaesi(ny,nx,wvhaes,lvhaes,work,lwork,dwork,ldwork,ierror)
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in vhaesi, code', ierror
+          stop 1
+       end if
+    end if
+    !
+    ! No precalculated wshses available
+    if ( lshses == 0_ni ) then
+       lshses = ((ny+1_ni)**3_ni) + nx + 15_ni
+       allocate(wshses(lshses))
+       call shsesi(ny,nx,wshses,lshses,work,lwork,dwork,ldwork,ierror)
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in shsesi, code', ierror
+          stop 1
+       end if
+    end if
+    !
+    ! No precalculated wshaes available
+    if ( lshaes == 0_ni ) then
+       lshaes = ((ny+1_ni)**3_ni)/2_ni + nx + 15_ni
+       !
+       allocate(wshaes(lshaes))
+       call shaesi(ny,nx,wshaes,lshaes,work,lwork,dwork,ldwork,ierror)
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in shaesi, code', ierror
+          stop 1
+       end if
+    end if
+    !
+    ! No precalculated wvhses available
+    if ( lvhses == 0_ni ) then
+       lvhses = ((ny+1_ni)**3_ni) + nx + 15_ni
+       allocate(wvhses(lvhses))
+       call vhsesi(ny,nx,wvhses,lvhses,work,lwork,dwork,ldwork,ierror)
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in vhsesi, code', ierror
+          stop 1
+       end if
+    end if
+
+    !
+    do k=1_ni,nz
+       a(:,:) = 0.0_nr
+       b(:,:) = 0.0_nr
+       !
+       br(:,:) = 0.0_nr
+       bi(:,:) = 0.0_nr
+       cr(:,:) = 0.0_nr
+       ci(:,:) = 0.0_nr
+       !
+       div(:,:) = 0.0_nr
+       !
+       call vhaes(ny,nx,0_ni,1_ni, -v(k,:,:),u(k,:,:), ny,nx, &
+               & br,bi,cr,ci, ny,ny, wvhaes,lvhaes,work,lwork, ierror)
+       !
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in vhaes, code', ierror
+          stop 1
+       end if
+       !
+       call dives(ny,nx,0_ni,1_ni, div, ny,nx, &
+               & br,bi, ny,ny, wshses,lshses,work,lwork, ierror)
+       !
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in dives, code', ierror
+          stop 1
+       end if
+       !
+       ! TODO: There must be a way to avoid the second spectral analysis/synthesis, 
+       ! and to extract the spectral representation of divergence a, b directly from br, bi
+       !
+       call shaes(ny,nx,0_ni,1_ni, div, ny,nx, &
+               & a,b, ny,ny, wshaes,lshaes,work,lwork, ierror)
+       !
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in shaes, code', ierror
+          stop 1
+       end if
+       !
+       ! Do the inversion
+       call idives(ny,nx,0_ni,1_ni, vir(k,:,:),uir(k,:,:), ny,nx, &
+          &       a,b, ny,ny, wvhses,lvhses,work,lwork, pertrb, ierror)
+       !
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in idives, code', ierror
+          stop 1
+       end if
+       !
+    end do
+    !
+    deallocate(work, dwork)
+    !
+    vir(:,:,:) = -vir(:,:,:)
     !
   end subroutine
   !
