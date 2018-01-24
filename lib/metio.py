@@ -640,18 +640,21 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 
 			ncvarname = q_
 		
+		compress_to_short_ = compress_to_short
 		if q_[-5:] == '_mean':
 			q = q_[:-5]
 			prefix = 'Mean '
 		elif q_[-4:] == '_cnt':
 			q = q_[:-4]
 			prefix = 'Number in composite of '
+			compress_to_short_ = False
 		elif q_[-4:] == '_std':
 			q = q_[:-4]
 			prefix = 'Standard deviation of '
 		elif q_[-5:] == '_hist':
 			q = q_[:-5]
 			prefix = 'Histogram of '
+			compress_to_short_ = False
 		elif q_[-4:] == '_mfv':
 			q = q_[:-4]
 			prefix = 'Most frequent value of '
@@ -686,9 +689,8 @@ def metsave_timeless(dat, static, name, ids=None, q=None, plev=None, compress_to
 			compress_to_short_ = False
 		else: 
 			dat_ = datdict[plev,q_]
-			compress_to_short_ = compress_to_short
 
-		if compress_to_short_:
+		if compress_to_short_: 
 			dat_, scale, off, fill = utils.unscale(dat_)
 			if fill: 
 				ovar = f.createVariable(ncvarname, 'i2', data_dimensions_, fill_value=fill)
@@ -810,7 +812,7 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	    Optional arguments passed on to calls of metopen within this function.
 	'''
 	
-	if not plevs:
+	if type(plevs) == type(None):
 		plevs = se.conf.plevs
 	elif not type(plevs) == np.ndarray and not type(plevs) == list:
 		plevs = [plevs,]

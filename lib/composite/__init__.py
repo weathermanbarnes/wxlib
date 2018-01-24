@@ -55,12 +55,12 @@ def _add(name, plev, q, dat, mean, meancnt, hist, x_proj=None, y_proj=None, angl
 					(PROJGRID_Y, PROJGRID_X), method='linear' )
 			nanmask = ~np.isnan(dati)
 			mean[name,plev,q][nanmask] += dati[nanmask]
-			meancnt[name,plev,q][nanmask] += nanmask
+			meancnt[name,plev,q] += nanmask
 
 		else:
 			nanmask = ~np.isnan(dat)
 			mean[name,plev,q][nanmask] += dat[nanmask]
-			meancnt[name,plev,q][nanmask] += nanmask
+			meancnt[name,plev,q] += nanmask
 
 	return
 
@@ -303,6 +303,10 @@ def save(qs, tests, mean, meancnt, hist, mfv, cnt, static, s=None):
 
 				for plev, q in qs:
 					tosave[plev,q] = np.empty((len(grouped_tests),)+s)
+					if q in conf.q_bins:
+						tosave[plev,q+'_hist'] = np.empty((len(grouped_tests),)+s)
+					else:
+						tosave[plev,q+'_cnt'] = np.empty((len(grouped_tests),)+s, dtype='i4')
 					for teidx, test in zip(range(len(grouped_tests)), grouped_tests):
 						if q in conf.q_bins:
 							tosave[plev,q][teidx,::] = mfv[test.name,plev,q]
