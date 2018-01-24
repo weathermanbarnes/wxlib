@@ -847,7 +847,7 @@ def map_overlay_dots(lons, lats, static, **kwargs):
 	def overlay(m, x, y, lon, lat, zorder, mask=None):
 		# TODO: Convert to latlon=True system
 		xfr, yfr = m(lons, lats)
-		m.scatter(xfr, yfr, kwargs.get('linewidth',9), marker='.', edgecolors=kwargs['linecolor'])
+		m.scatter(xfr, yfr, s=kwargs.get('markersize',25), marker='.', edgecolors=kwargs['linecolor'])
 
 		return
 
@@ -929,18 +929,38 @@ def map_overlay_barbs(u, v, static, **kwargs):
 		
 		# TODO: Why does transform_vector lead to errors for iveret!?
 		if not kwargs.get('vector_disable_interpolation', False):
+			Nvecx, Nvecy = kwargs.pop('vector_space_numbers_xy', (30,20))
 			try:
 				if lat[0,0] > lat[-1,0]:
-					ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
+					ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 
+							Nvecx, Nvecy, returnxy=True)
 				else:
-					ut,vt, xt,yt = m.transform_vector(u_,v_,lon[0,:],lat[:,0], 30, 20, returnxy=True)
+					ut,vt, xt,yt = m.transform_vector(u_,v_,lon[0,:],lat[:,0], 
+							Nvecx, Nvecy, returnxy=True)
 
 			except (AttributeError, ValueError):
 				ut,vt, xt,yt = rotate_vector(u_, v_, lon, lat, kwargs)
 		else:
 			ut,vt, xt,yt = rotate_vector(u_, v_, lon, lat, kwargs)
-				
-		m.barbs(xt, yt, ut, vt, length=6, linewidth=0.5, zorder=3)
+		
+		# barbs does not set some default values of None specified, and cannot handle extra kwargs
+		ALLOWED_KWARGS = ['barbcolor', 'flagcolor', 'length', 'sizes', 'fill_empty', 'alpha', 
+				'linestyles', 'linewidths']
+		kwargs_ = {}
+		for key, value in kwargs.items():
+			if key in ALLOWED_KWARGS:
+				kwargs_[key] = value
+		kwargs_['linewidth'] = kwargs_.get('linewidths')
+		kwargs_.pop('linewidths')
+
+		if type(kwargs_['linestyles']) == type(None):
+			kwargs_['linestyles'] = 'solid'
+		if type(kwargs_.get('length')) == type(None):
+			kwargs_['length'] = 6
+		if type(kwargs_.get('linewidth')) == type(None):
+			kwargs_['linewidth'] = 0.5
+
+		m.barbs(xt, yt, ut, vt, zorder=3, **kwargs_)
 	
 	return overlay
 
@@ -980,7 +1000,8 @@ def map_overlay_quiver(u, v, static, **kwargs):
 		u_, v_ = static.unrotate_vector(u_, v_)
 
 		try:
-			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 30, 20, returnxy=True)
+			Nvecx, Nvecy = kwargs.pop('vector_space_numbers_xy', (30,20))
+			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], Nvecx, Nvecy, returnxy=True)
 		except (AttributeError, ValueError):
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
@@ -1032,8 +1053,7 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 		# TODO: Better autoscaling, make scaling configurable!
 
 		try:
-			Nvecx = 27
-			Nvecy = 18
+			Nvecx, Nvecy = kwargs.pop('vector_space_numbers_xy', (27,18))
 			ut,vt,xt,yt = m.transform_vector(defdex[::-1,:],defdey[::-1,:],lon[0,:],lat[::-1,0], Nvecx, Nvecy, returnxy=True)
 			qscale = 420
 		except AttributeError:
