@@ -812,6 +812,13 @@ def get_instantaneous(q, dates, plevs=None, tavg=False, force=False, **kwargs):
 	-----------------
 	metopen arguments : all optional
 	    Optional arguments passed on to calls of metopen within this function.
+
+	Returns
+	-------
+	np.ndarray
+	    Data for the requested variable.
+	grid.gridlib
+	    If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
 	'''
 	
 	if type(plevs) == type(None):
