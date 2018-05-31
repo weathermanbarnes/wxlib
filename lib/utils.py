@@ -386,7 +386,7 @@ def smear_lines(lines, loff, shape=None):
 	
 	filtr_len = 5
 	filtr_func = mk_gauss(0, 1)
-	filtr = np.array(map(filtr_func, range(-filtr_len,filtr_len+1)))
+	filtr = np.array([filtr_func(x) for x in range(-filtr_len,filtr_len+1)])
 	filtr /= sum(filtr)
 
 	mask = dynfor.utils.mask_lines(shape[1], shape[0], lines, loff)
@@ -566,7 +566,7 @@ def aggregate(dates, dat, agg):
 	dat_out = np.empty(shape)
 	
 	# 3. Doing the actual calculations
-	for i in xrange(outlen):
+	for i in range(outlen):
 		dat_out[i] = dat[tslc[i]].mean(axis=0)
 
 	return dates_out, dat_out

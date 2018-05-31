@@ -434,8 +434,10 @@ def metsave_lines(dat, datoff, static, plev, q, qoff, additional_axes=[]):
 		raise RuntimeError('dat does not have size 3 in the last dimension')
 
 	now = dt.now(pytz.timezone('Europe/Oslo'))
-	of = nc.Dataset(se.conf.opath+'/'+(se.conf.file_std % {'time': dts2str(static.t_parsed), 
-		'plev': plev, 'qf': se.conf.qf[q]})+'.nc', 'w', format='NETCDF3_CLASSIC')
+	filename = se.conf.opath+'/'+(se.conf.file_std % {'time': dts2str(static.t_parsed), 
+		'plev': plev, 'qf': se.conf.qf[q]})+'.nc'
+	print('Saving to %s' % filename)
+	of = nc.Dataset(filename, 'w', format='NETCDF3_CLASSIC')
 	of.setncatts({'Conventions': 'CF-1.0', 
 			'history': '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
 	})

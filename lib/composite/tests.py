@@ -151,35 +151,19 @@ def get_nh_daily_indexes():
 	    Deciders for NAO+, NAO-, PNA+ and PNA-.
 	'''
 
-	nao   = metopen('indexes/ts_nao', no_static=True)
-	nao_p = ts_lowerbound('NAO+', nao,  1.0)
-	nao_n = ts_upperbound('NAO-', nao, -1.0)
+	nao   = metopen('indexes/ts_NAOd', no_static=True)
+	nao_p = ts_lowerbound('NAOd+', nao,  1.0)
+	nao_n = ts_upperbound('NAOd-', nao, -1.0)
 
-	pna   = metopen('indexes/ts_pna', no_static=True)
-	pna_p = ts_lowerbound('PNA+', pna,  1.0)
-	pna_n = ts_upperbound('PNA-', pna, -1.0)
+	ao   = metopen('indexes/ts_AOd', no_static=True)
+	ao_p = ts_lowerbound('AOd+', nao,  1.0)
+	ao_n = ts_upperbound('AOd-', nao, -1.0)
 
-	return {'NAOd': [nao_p, nao_n], 'PNAd': [pna_p, pna_n, ], }
+	pna   = metopen('indexes/ts_PNAd', no_static=True)
+	pna_p = ts_lowerbound('PNAd+', pna,  1.0)
+	pna_n = ts_upperbound('PNAd-', pna, -1.0)
 
-def get_sh_monthly_indexes():
-	''' Create deciders daily northern hemispheric variability indexes
-
-	Currently, there is data for the AAO, provided by the `Climate Prediction 
-	Center of NOAA <http://www.cpc.ncep.noaa.gov/products/precip/CWlink/daily_ao_index/teleconnections.shtml>`__.
-
-	The threshold for the indexes is +/- 1 (standard deviation).
-
-	Returns
-	-------
-	dict of list of decider
-	    Deciders for AAO+ and AAO-.
-	'''
-
-	aao   = metopen('indexes/ts_aao', no_static=True)
-	aao_p = ts_lowerbound('AAO+', aao,  1.0)
-	aao_n = ts_upperbound('AAO-', aao, -1.0)
-
-	return {'AAO': [aao_p, aao_n, ], }
+	return {'NAOd': [nao_p, nao_n], 'AOd': [ao_p, ao_n], 'PNAd': [pna_p, pna_n, ], }
 
 def get_nh_monthly_indexes():
 	''' Create deciders daily northern hemispheric variability indexes
@@ -195,28 +179,70 @@ def get_nh_monthly_indexes():
 	    Deciders for AO, NAO, EA, PNA and WP, each for positive and negative phases.
 	'''
 
-	ao   = metopen('indexes/ts_ao', no_static=True)
+	ao   = metopen('indexes/ts_AO', no_static=True)
 	ao_p = ts_lowerbound('AO+', ao,  1.0)
 	ao_n = ts_upperbound('AO-', ao, -1.0)
 	
-	nao   = metopen('indexes/ts_nao_monthly', no_static=True)
+	nao   = metopen('indexes/ts_NAO', no_static=True)
 	nao_p = ts_lowerbound('NAO+', nao,  1.0)
 	nao_n = ts_upperbound('NAO-', nao, -1.0)
 
-	ea    = metopen('indexes/ts_ea', no_static=True)
+	ea    = metopen('indexes/ts_EA', no_static=True)
 	ea_p  = ts_lowerbound('EA+', ea,  1.0)
 	ea_n  = ts_upperbound('EA-', ea, -1.0)
 	
-	pna   = metopen('indexes/ts_pna_monthly', no_static=True)
+	pna   = metopen('indexes/ts_PNA', no_static=True)
 	pna_p = ts_lowerbound('PNA+', pna,  1.0)
 	pna_n = ts_upperbound('PNA-', pna, -1.0)
 
-	wp    = metopen('indexes/ts_wp', no_static=True)
+	wp    = metopen('indexes/ts_WP', no_static=True)
 	wp_p  = ts_lowerbound('WP+', wp,  1.0)
 	wp_n  = ts_upperbound('WP-', wp, -1.0)
 	
 	return {'AO': [ao_p, ao_n, ], 'NAO': [nao_p, nao_n, ], 'EA': [ea_p, ea_n, ], 
 			'PNA': [ pna_p, pna_n, ], 'WP': [wp_p, wp_n, ], }
+
+def get_sh_daily_indexes():
+	''' Create deciders daily northern hemispheric variability indexes
+
+	Currently, there is data for the AAO, provided by the `Climate Prediction 
+	Center of NOAA <http://www.cpc.ncep.noaa.gov/products/precip/CWlink/daily_ao_index/teleconnections.shtml>`__.
+
+	The threshold for the indexes is +/- 1 (standard deviation).
+
+	Returns
+	-------
+	dict of list of decider
+	    Deciders for AAO+ and AAO-.
+	'''
+
+	aao   = metopen('indexes/ts_AAOd', no_static=True)
+	aao_p = ts_lowerbound('AAOd+', aao,  1.0)
+	aao_n = ts_upperbound('AAOd-', aao, -1.0)
+
+	return {'AAOd': [aao_p, aao_n, ], }
+
+	
+def get_sh_monthly_indexes():
+	''' Create deciders daily northern hemispheric variability indexes
+
+	Currently, there is data for the AAO, provided by the `Climate Prediction 
+	Center of NOAA <http://www.cpc.ncep.noaa.gov/products/precip/CWlink/daily_ao_index/teleconnections.shtml>`__.
+
+	The threshold for the indexes is +/- 1 (standard deviation).
+
+	Returns
+	-------
+	dict of list of decider
+	    Deciders for AAO+ and AAO-.
+	'''
+
+	aao   = metopen('indexes/ts_AAO', no_static=True)
+	aao_p = ts_lowerbound('AAO+', aao,  1.0)
+	aao_n = ts_upperbound('AAO-', aao, -1.0)
+
+	return {'AAO': [aao_p, aao_n, ], }
+
 
 def get_tropical_indexes():
 	''' Create deciders daily northern hemispheric variability indexes
@@ -236,15 +262,15 @@ def get_tropical_indexes():
 	    Deciders MEI+, MEI-, SOI+, SOI- and the eight phases of the MJO after Wheeler and Hendon (2004).
 	'''
 
-	enso   = metopen('indexes/ts_enso', no_static=True)
+	enso   = metopen('indexes/ts_MEI', no_static=True)
 	enso_p = ts_lowerbound('MEI+', enso,  1.0)
 	enso_n = ts_upperbound('MEI-', enso, -1.0)
 	
-	soi   = metopen('indexes/ts_soi', no_static=True)
+	soi   = metopen('indexes/ts_SOI', no_static=True)
 	soi_p = ts_lowerbound('SOI+', soi,  1.0)
 	soi_n = ts_upperbound('SOI-', soi, -1.0)
 
-	mjo = metopen('indexes/ts_mjo', no_static=True)
+	mjo = metopen('indexes/ts_MJO', no_static=True)
 	mjo_1 = ts_equal('MJO_phase1', mjo, 1)
 	mjo_2 = ts_equal('MJO_phase2', mjo, 2)
 	mjo_3 = ts_equal('MJO_phase3', mjo, 3)

@@ -15,7 +15,8 @@ Proj = mpl_toolkits.basemap.pyproj.Proj
 
 
 # TODO: LINES should be centralised somewhere in the variable definitions!
-LINES = {'fronts': 'froff', 'convl': 'cloff', 'defl': 'dloff', 'vorl': 'vloff', 'jetaxis': 'jaoff'}
+LINES = {'cold_front': 'cold_froff', 'warm_front': 'warm_froff', 'stat_front': 'stat_froff', 'sst_front': 'sst_froff', 
+	'convl': 'cloff', 'defl': 'dloff', 'vorl': 'vloff', 'jetaxis': 'jaoff'}
 
 # TODO: How to avoid hard-coding the rotated grid dimensions here?
 PROJGRID_Y, PROJGRID_X = np.meshgrid(np.arange(-1000,1001,40)*1e3, np.arange(-1000,1001,40)*1e3)
@@ -82,7 +83,14 @@ def _get_dat(time, test_qs, readhooks, no_static=False):
 				left2request[test_q] = [test_plev, ]
 		
 		elif test_q in LINES:
-			testdat[test_plev, test_q] = utils.mask_lines(testdat[test_plev, test_q], f.variables[LINES[test_q]][::])
+			if not no_static and not static:
+				f, line, static = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[test_q]}, test_q)
+			else: 
+				f, line = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[test_q]}, test_q, no_static=True)
+
+			f, loff = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[LINES[test_q]]}, LINES[test_q], no_static=True)
+			
+			testdat[test_plev, test_q] = utils.mask_lines(conf.gridsize[1], conf.gridsize[0], line, loff)
 
 		else:
 			if not no_static and not static:
@@ -302,15 +310,22 @@ def save(qs, tests, mean, meancnt, hist, mfv, cnt, static, s=None):
 					tosave[None,'cnt'][teidx] = cnt[test.name]
 
 				for plev, q in qs:
-					tosave[plev,q] = np.empty((len(grouped_tests),)+s)
 					if q in conf.q_bins:
+						tosave[plev,q+'_mfv'] = np.empty((len(grouped_tests),)+s)
 						tosave[plev,q+'_hist'] = np.empty((len(grouped_tests),)+s)
+					elif q in LINES:
+						tosave[plev,q+'_freq'] = np.empty((len(grouped_tests),)+s)
+						tosave[plev,q+'_freq_cnt'] = np.empty((len(grouped_tests),)+s, dtype='i4')
 					else:
+						tosave[plev,q] = np.empty((len(grouped_tests),)+s)
 						tosave[plev,q+'_cnt'] = np.empty((len(grouped_tests),)+s, dtype='i4')
 					for teidx, test in zip(range(len(grouped_tests)), grouped_tests):
 						if q in conf.q_bins:
-							tosave[plev,q][teidx,::] = mfv[test.name,plev,q]
+							tosave[plev,q+'_mfv'][teidx,::] = mfv[test.name,plev,q]
 							tosave[plev,q+'_hist'][teidx,::] = hist[test.name,plev,q]
+						elif q in LINES:
+							tosave[plev,q+'_freq'][teidx,::] = mean[test.name,plev,q]
+							tosave[plev,q+'_freq_cnt'][teidx,::] = meancnt[test.name,plev,q]
 						else:
 							tosave[plev,q][teidx,::] = mean[test.name,plev,q]
 							tosave[plev,q+'_cnt'][teidx,::] = meancnt[test.name,plev,q]

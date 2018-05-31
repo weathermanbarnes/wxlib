@@ -11,7 +11,8 @@ dynlib.detect
    .. autofunction:: block_indicator_grad_rev
    .. autofunction:: convline
    .. autofunction:: defline
-   .. autofunction:: frontline
+   .. autofunction:: frontline_at_maxcurv
+   .. autofunction:: frontline_at_maxgrad
    .. autofunction:: front_intensity_speed
    .. autofunction:: jetaxis
    .. autofunction:: jetaxis_ff_thres

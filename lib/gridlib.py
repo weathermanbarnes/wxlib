@@ -89,13 +89,11 @@ class grid(object):
 
 		return
 
-	def _parse_time(self):
+	def _parse_time_unit(self):
 		tusplit = self.t_unit.split()
 		if len(tusplit) > 3 and tusplit[1] == 'since':
 			facs = {'seconds': 1, 'minutes': 60, 'hours': 3600, 'days': 86400}
-			if tusplit[0] not in facs:
-				self.t_parsed = None
-			else:
+			if tusplit[0] in facs:
 				formats = ['%Y-%m-%d %H:%M:0.0', '%Y-%m-%d %H:%M:00', '%Y-%m-%d %H:%M', ]
 				self.t_interval_unit = facs[tusplit[0]]
 				for fmt in formats:
@@ -109,11 +107,6 @@ class grid(object):
 
 				if type(self.t_epoch) == type(None):
 					self.t_epoch = dt(1,1,1,0,0)
-					
-				self.t_parsed = np.array([self.t_epoch + td(0, self.t_interval_unit*int(ts)) for ts in self.t])
-
-		else:
-			self.t_parsed = None
 		
 		return
 
@@ -449,6 +442,8 @@ class grid_by_nc(grid):
 				# Try to parse the time axis into datetime objects
 				t = self.f.variables[self.t_name] 
 				if hasattr(t, 'units'):
+					self.t_unit = t.units
+					self._parse_time_unit() # set self.t_epoch and self.t_interval_unit
 					self.t_parsed = nc.num2date(t[:], units=t.units, calendar=getattr(t, 'calendar', 'standard'))
 			else:
 				self.t = np.arange(self.nt)

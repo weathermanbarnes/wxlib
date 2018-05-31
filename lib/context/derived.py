@@ -29,18 +29,21 @@ ow = ('ow', 'ow', 'Okubo-Weiss parameter', 's**-2')
 pt = ('pt', 'pt', 'Potential temperature', 'K')
 eqpt = ('eqpt', 'eqpt', 'Equivalent potential temperature', 'K')
 
-cfront = ('cfront', 'cfront', 'Cold front lines')
-cfroff = ('cfroff', 'cfront')
-wfront = ('wfront', 'wfront', 'Warm front lines')
-wfroff = ('wfroff', 'wfront')
-sfront = ('sfront', 'sfront', 'Stationary front lines')
-sfroff = ('sfroff', 'sfront')
+cfront = ('cold_front', 'cold_front', 'Cold front lines', '1')
+cfroff = ('cold_froff', 'cold_front')
+wfront = ('warm_front', 'warm_front', 'Warm front lines', '1')
+wfroff = ('warm_froff', 'warm_front')
+sfront = ('stat_front', 'stat_front', 'Stationary front lines', '1')
+sfroff = ('stat_froff', 'stat_front')
+sstfront = ('sst_front', 'sst_front', 'SST front lines', '1')
+sstfroff = ('sst_froff', 'sst_front')
+sstfront_freq = ('sst_front_freq', 'sst_front_freq', 'SST front detection frequency', '(time step)**-1')
 
-vorl = ('vorl', 'vorl', 'Vorticity lines')
+vorl = ('vorl', 'vorl', 'Vorticity lines', '1')
 vloff = ('vloff', 'vorl')
-convl = ('convl', 'convl', 'Convergence lines')
+convl = ('convl', 'convl', 'Convergence lines', '1')
 cloff = ('cloff', 'convl')
-defl = ('defl', 'defl', 'Deformation lines')
+defl = ('defl', 'defl', 'Deformation lines', '1')
 dloff = ('dloff', 'defl')
 
 shear = ('shear', 'shear', 'Wind shear in natural coordinates', 's**-1')
@@ -56,29 +59,14 @@ blockint = ('blockint', 'blockint', 'Block intensity indicator', '(input) m**-1'
 block = ('block', 'block', 'Block mask', '1')
 
 
-#conf.new_variable('div', 'defabs_tend_div')
-#conf.new_variable('defabs_tend_beta', 'defabs_tend_beta')
-#conf.new_variable('defabs_tend_prescor', 'defabs_tend_prescor')
-#conf.new_variable('defabs_tend_tilt', 'defabs_tend_tilt')
-#conf.new_variable('defabs_tend_adv', 'defabs_tend_adv')
-#conf.new_variable('defabs_tend_adv3d', 'defabs_tend_adv3d')
+# The vertical level of the following variables is fixed and does not depend on user application
+conf.register_variable([sstfront, sstfroff, sstfront_freq, ], ['sfc',])
 
-#conf.new_variable(None, 'defabs_tend_lagrange')
-#conf.new_variable(None, 'defabs_tend_euler')
-
-#conf.new_variable('defang_tend_beta', 'defang_tend_beta')
-#conf.new_variable('defang_tend_prescor', 'defang_tend_prescor')
-#conf.new_variable('defang_tend_tilt', 'defang_tend_tilt')
-#conf.new_variable('defang_tend_adv', 'defang_tend_adv')
-#conf.new_variable('defang_tend_adv3d', 'defang_tend_adv3d')
-
-
-
-# The vertical levels on which any of these variables are available depends 
+# The vertical levels on which the following variables are available depends 
 # on the application, and must hence be defined in the user settings.
 conf.register_variable([ff, dd, vo, div, defabs, defang, defanr, rsr, ow, 
 	pt, eqpt, 
-	cfront, cfroff, wfront, wfroff, sfront, sfroff, 
+	cfront, cfroff, wfront, wfroff, sfront, sfroff,
 	vorl, vloff, convl, cloff, defl, dloff, 
 	grad_shear, jetaxis, jaoff, jetaxis_freq, 
 	rwb_a, rwb_c, blockint, block], [])

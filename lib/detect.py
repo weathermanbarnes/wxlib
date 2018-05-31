@@ -63,13 +63,18 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 	tlen = 0
 	for year in s.conf.years:
 		# Stage 1: Load base data, calculate and save blocking indicator
-		f, dat, grid = metopen(s.conf.file_std % {'time': year, 'plev': plev, 'qf': s.conf.qf[q]}, q)
-		dat = dat.squeeze()
-		if year == s.conf.years[0]:
-			dynfor.config.grid_cyclic_ew = grid.cyclic_ew
-			print(grid.cyclic_ew)
-		bi = dynfor.detect.block_indicator_grad_rev(dat, grid.dx, grid.dy)
-		metsave(bi[:,np.newaxis,:,:], grid, q=Q_BI, plev=plev)
+		try: 
+			f, bi, grid = metopen(s.conf.file_std % {'time': year, 'plev': plev, 'qf': s.conf.qf[Q_BI]}, Q_BI)
+			bi = bi.squeeze()
+		except: 
+			f, dat, grid = metopen(s.conf.file_std % {'time': year, 'plev': plev, 'qf': s.conf.qf[q]}, q)
+			dat = dat.squeeze()
+			if year == s.conf.years[0]:
+				dynfor.config.grid_cyclic_ew = grid.cyclic_ew
+				print(grid.cyclic_ew)
+			bi = dynfor.detect.block_indicator_grad_rev(dat, grid.dx, grid.dy)
+			metsave(bi[:,np.newaxis,:,:], grid, q=Q_BI, plev=plev)
+
 		tlen += bi.shape[0]
 		
 		# Translate thresholds from degrees to grid point indexes
@@ -156,7 +161,7 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 	filename = s.conf.opath+'/'+(s.conf.file_timeless % 
 			{'time': str(s.conf.years[0])+'-'+str(s.conf.years[-1]), 
 			 'name': plev+'.'+Q_BLOCK})+'.pickle'
-	fsave = file(filename, 'w')
+	fsave = open(filename, 'wb')
 	pickle.dump(blocks, fsave)
 	fsave.close()
 

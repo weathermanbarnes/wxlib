@@ -698,10 +698,9 @@ contains
   !@ Front intensity function after G. Berry et al, based on the frontal detection
   !@ algorithm by Hewson (1998) which uses the Laplacian of the equivalent potential
   !@ temperature as dat
-  !@ 
-  !@ *Note*: Routine not sufficiently tested for general applicability! More thorough 
-  !@ documentation will be added once properly tested.
-  subroutine front_intensity_speed(frint,frspd,frloc,nx,ny,nz,dat,u,v,dx,dy)
+  !@
+  !@ Used only internally in dynlib to detect front lines at the maximum curvature
+  subroutine front_intensity_speed_maxcurv(frint,frspd,frloc,nx,ny,nz,dat,u,v,dx,dy)
     real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
                  &                dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: frint(nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx)
@@ -726,6 +725,31 @@ contains
     call ddx(absxx, nx,ny,nz, absx, dx,dy)
     call ddy(absyy, nx,ny,nz, absy, dx,dy)
     frloc(:,:,:) = absxx(:,:,:) + absyy(:,:,:)
+    !
+    return
+  end subroutine
+  !
+  !@ Front intensity function after Jenkner et al. (2010), loosely based on the frontal 
+  !@ detection algorithm by Hewson (1998) which uses the gradient of the equivalent 
+  !@ potential temperature as dat
+  !@
+  !@ Used only internally in dynlib to detect front lines at the maximum gradient
+  subroutine front_intensity_speed_maxgrad(frint,frspd,frloc,nx,ny,nz,dat,u,v,dx,dy)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
+                 &                dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: frint(nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx)
+    integer(kind=ni) :: nx,ny,nz
+    !f2py depend(nx,ny,nz) frint, frspd, u, v
+    !f2py depend(nx,ny) dx, dy
+    !
+    real(kind=nr) :: datx (nz,ny,nx), daty (nz,ny,nx)
+    ! -----------------------------------------------------------------
+    !
+    call grad(datx,daty, nx,ny,nz, dat, dx,dy)
+    call lap2(frloc, nx,ny,nz, dat, dx,dy)
+    !
+    frint(:,:,:) = sqrt(datx**2.0_nr + daty**2.0_nr)
+    frspd(:,:,:) = (u(:,:,:)*datx(:,:,:) + v(:,:,:)*daty(:,:,:)) / frint(:,:,:)
     !
     return
   end subroutine
@@ -781,8 +805,8 @@ contains
   !@
   !@ See also
   !@ --------
-  !@ :meth:`frontalzone_smallscale`, :meth:`frontalzone_largescale`
-  subroutine frontline(fr,froff,nx,ny,nz,no,nf,dat,u,v,dx,dy)
+  !@ :meth:`frontalzone_smallscale`, :meth:`frontalzone_largescale`, :meth:`frontline_at_maxgrad`
+  subroutine frontline_at_maxcurv(fr,froff,nx,ny,nz,no,nf,dat,u,v,dx,dy)
     use config
     use detect_lines
     use utils, only: smooth_xy
@@ -810,10 +834,134 @@ contains
     call smooth_xy(us, nx,ny,nz, u, nsmooth)
     call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
-    call front_intensity_speed(frint,frspd,frloc,nx,ny,nz,dats,us,vs,dx,dy)
+    call front_intensity_speed_maxcurv(frint,frspd,frloc,nx,ny,nz,dats,us,vs,dx,dy)
     !
     ! frint must be negative and below a configurable threshold for front
     where(frint > frint_thres)
+       frloc = nan
+    end where
+    ! 
+    do typ = 1_ni,3_ni
+       ! cold fronts
+       if (typ == 1_ni) then
+          where(frspd(:,:,:) < -1_ni*frspd_thres)
+             frloc_cws = frloc(:,:,:)
+          elsewhere
+             frloc_cws = nan
+          end where
+       ! warm fronts
+       elseif(typ == 2_ni) then
+          where(frspd(:,:,:) > frspd_thres)
+             frloc_cws = frloc(:,:,:)
+          elsewhere
+             frloc_cws = nan
+          end where
+       ! stationary fronts
+       else
+          where(frspd(:,:,:) > -1_ni*frspd_thres .and. frspd(:,:,:) < frspd_thres)
+             frloc_cws = frloc(:,:,:)
+          elsewhere
+             frloc_cws = nan
+          end where
+       end if
+       !
+       call line_locate(fr(:,typ,:,:),froff(:,typ,:), nx,ny,nz,no,nf, frloc_cws,frint,searchrad,minlen, dx,dy)
+       !
+    end do ! loop over front type
+    !
+    return
+  end subroutine
+  !
+  !@ Front line detection after Jenkner et al. (2010)
+  !@ 
+  !@ The scheme is loosely based on the frontal detection algorithm by Hewson (1998),
+  !@ but uses the maximum in gradient rather than the maximum in curvature to locate
+  !@ the front. Hence fronts will not be placed at the (leading) edge of an area of
+  !@ strong gradients, but rather in it's centre. 
+  !@
+  !@ This algorithm is more robust for higher-resolution datasets that the one by 
+  !@ Berry et al. (2007). Nevertheless, some smoothing might be necessary to obtain 
+  !@ useful results. Smoothing can be done within this function if configured by  
+  !@ the ``dynfor.consts.nsmooth`` parameter.
+  !@ 
+  !@ The front intensity threshold can be overridden via 
+  !@ ``dynfor.consts.frint_thres``.
+  !@ The front movement threshold to separate between warm, stationary and cold
+  !@ fronts can be set via ``dynfor.consts.frspd_thres``.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@ 
+  !@ no : integer
+  !@     Maximum number of points along all front lines combined, 
+  !@     determinining the output array size
+  !@ nf : integer
+  !@     Maximum number of front lines, determining the output array size
+  !@ dat : np.ndarray with shape (nz,ny,nx)
+  !@     Thermal frontal parameter (TFP), often potential or equivalent 
+  !@     potential temperature
+  !@ u : np.ndarray with shape (nz,ny,nx)
+  !@     Wind velocity component u
+  !@ v : np.ndarray with shape (nz,ny,nx)
+  !@     Wind velocity component v
+  !@ 
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,no,3) and dtype float64
+  !@     List of points points belonging to front lines for each time step. For each point, 
+  !@     (0) the j-index, (1) the i-index and (2) the TFP is saved.
+  !@ np.ndarray with shape (nz,nf) and dtype float64
+  !@     List of point indexes marking the beginning of front lines within the point array.
+  !@
+  !@ See also
+  !@ --------
+  !@ :meth:`frontalzone_smallscale`, :meth:`frontalzone_largescale`, :meth:`frontline_at_maxcurv`
+  subroutine frontline_at_maxgrad(fr,froff,nx,ny,nz,no,nf,dat,u,v,dx,dy)
+    use config
+    use detect_lines
+    use utils, only: smooth_xy
+    !
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), & 
+                 &                dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: fr(nz,3_ni,no,3_ni), froff(nz,3_ni,nf)
+    integer(kind=ni) :: nx,ny,nz, no, nf
+    !f2py depend(nx,ny,nz) u, v
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(nz) fr, froff
+    !
+    real   (kind=nr), allocatable :: reci(:,:), recj(:,:)
+    integer(kind=ni), allocatable :: linelen(:)
+    !
+    real(kind=nr) :: us     (nz,ny,nx), vs   (nz,ny,nx), dats (nz,ny,nx), &
+                 &   frint  (nz,ny,nx), frspd(nz,ny,nx), frloc(nz,ny,nx), &
+                 &   frloc_cws(nz,ny,nx)
+    integer(kind=ni) :: typ
+    ! -----------------------------------------------------------------
+    !
+    write(*,*) 'preparing'
+    !
+    call smooth_xy(dats, nx,ny,nz, dat, nsmooth)
+    call smooth_xy(us, nx,ny,nz, u, nsmooth)
+    call smooth_xy(vs, nx,ny,nz, v, nsmooth)
+    !
+    call front_intensity_speed_maxgrad(frint,frspd,frloc,nx,ny,nz,dats,us,vs,dx,dy)
+    write(*,*) minval(frint), maxval(frint)
+    write(*,*) minval(frspd), maxval(frspd)
+    write(*,*) minval(frloc), maxval(frloc)
+    write(*,*)
+    !
+    ! frint must be positive and above a configurable threshold for front
+    where(frint < frint_thres)
        frloc = nan
     end where
     ! 

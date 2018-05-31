@@ -61,7 +61,7 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	given map projection. Using different map projections one can hence construct cross 
 	sections along the following special lines:
 
-	 * Great circle: Use the gnomic projection
+	 * Great circle: Use the gnomonic projection
 	 * Latitude circle: Use a cylindrical projection or plain latlon coordinates
 	 * Longitude circle: Use the gnomic projection or plain latlon coordinates
 	 * Rhumb lines (loxodromes or lines of constant course): Use the Mercator 
@@ -117,8 +117,8 @@ def section_p(dat, ps, sect, static, datmap=None, p=None, **kwargs):
 	xlon, xlat, xxy = sect_gen_points(sect, m, kwargs.pop('section_hor_resolution'))
 
 	dati = np.empty((dat.shape[0], len(xlon),))
-	for i in range(dat.shape[0]):
-		dati[i] = _interpolate_for_section(static, dat[i,:,:], xlon, xlat)
+	for k in range(dat.shape[0]):
+		dati[k] = _interpolate_for_section(static, dat[k,:,:], xlon, xlat)
 
 	psi = _interpolate_for_section(static, ps, xlon, xlat)
 	if not type(p) == type(None):

@@ -12,7 +12,7 @@ conf = def_context('erainterim')
 # ================
 
 conf.epoch = dt(1979,1,1)
-conf.years = range(1979,2015)
+conf.years = range(1979,2017)
 conf.file_std = 'ei.ans.%(time)s.%(plev)s.%(qf)s'
 conf.file_agg = 'ei.ans.%(agg)s.%(time)s.%(plev)s.%(qf)s'
 conf.file_timeless = 'ei.ans.%(time)s.%(name)s'
@@ -39,6 +39,7 @@ mont = ('mont', 'mont', 'Montgomery potential', 'm**2 s**-2')
 z = ('z', 'z', 'Geopotential', 'm**2 s**-2')
 t = ('t', 't', 'Temperature', 'K')
 pt = ('pt', 'pt', 'Potential temperature', 'K')
+tdiab = ('tdiab', 'tdiab', 'Temperature tendency due to physics', 'K (6h)**-1')
 
 q = ('q', 'q', 'Specific humidity', 'kg kg**-1')
 
@@ -56,7 +57,7 @@ oro = ('oro', None, 'Surface geopotential', 'm**2 s**-2')
 
 # 1. Pressure levels
 conf.plevs = ['100', '200', '300', '400', '500', '550', '600', '650', '700', '750', '800', '850', '900', '950', '1000', ]
-conf.register_variable([u, v, w, pv, z, t, q], conf.plevs)
+conf.register_variable([u, v, w, pv, z, t, tdiab, q], conf.plevs)
 
 # 2. Potential temperature levels
 conf.ptlevs = ['pt300', 'pt315', 'pt330', 'pt350', ]

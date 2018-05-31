@@ -218,6 +218,10 @@ contains
   !@ Parameters
   !@ ----------
   !@
+  !@ nx : int
+  !@     Grid size of the output array in y-direction.
+  !@ ny : int
+  !@     Grid size of the output array in y-direction.
   !@ line : np.ndarray with shape (nz,np,3) and dtype float64
   !@     Position and additional information about each point along the lines.
   !@ lineoff : np.ndarray with shape (nz,ny,nx) and dtype float64
