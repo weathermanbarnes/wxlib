@@ -762,12 +762,12 @@ contains
   !@ The algorithm was developed with ERA40 data of 2.5x2.5 degree resolution, 
   !@ so some smoothing might be necessary to obtain useful results for other
   !@ data sets. Smoothing can be done within this function if configured by  
-  !@ the ``dynfor.consts.nsmooth`` parameter.
+  !@ the ``dynfor.config.nsmooth`` parameter.
   !@ 
   !@ The front intensity threshold can be overridden via 
-  !@ ``dynfor.consts.frint_thres``.
+  !@ ``dynfor.config.frint_thres``.
   !@ The front movement threshold to separate between warm, stationary and cold
-  !@ fronts can be set via ``dynfor.consts.frspd_thres``.
+  !@ fronts can be set via ``dynfor.config.frspd_thres``.
   !@
   !@ Parameters
   !@ ----------
@@ -882,12 +882,12 @@ contains
   !@ This algorithm is more robust for higher-resolution datasets that the one by 
   !@ Berry et al. (2007). Nevertheless, some smoothing might be necessary to obtain 
   !@ useful results. Smoothing can be done within this function if configured by  
-  !@ the ``dynfor.consts.nsmooth`` parameter.
+  !@ the ``dynfor.config.nsmooth`` parameter.
   !@ 
   !@ The front intensity threshold can be overridden via 
-  !@ ``dynfor.consts.frint_thres``.
+  !@ ``dynfor.config.frint_thres``.
   !@ The front movement threshold to separate between warm, stationary and cold
-  !@ fronts can be set via ``dynfor.consts.frspd_thres``.
+  !@ fronts can be set via ``dynfor.config.frspd_thres``.
   !@
   !@ Parameters
   !@ ----------
@@ -955,10 +955,6 @@ contains
     call smooth_xy(vs, nx,ny,nz, v, nsmooth)
     !
     call front_intensity_speed_maxgrad(frint,frspd,frloc,nx,ny,nz,dats,us,vs,dx,dy)
-    write(*,*) minval(frint), maxval(frint)
-    write(*,*) minval(frspd), maxval(frspd)
-    write(*,*) minval(frloc), maxval(frloc)
-    write(*,*)
     !
     ! frint must be positive and above a configurable threshold for front
     where(frint < frint_thres)
@@ -968,14 +964,14 @@ contains
     do typ = 1_ni,3_ni
        ! cold fronts
        if (typ == 1_ni) then
-          where(frspd(:,:,:) < -1_ni*frspd_thres)
+          where(frspd(:,:,:) > frspd_thres)
              frloc_cws = frloc(:,:,:)
           elsewhere
              frloc_cws = nan
           end where
        ! warm fronts
        elseif(typ == 2_ni) then
-          where(frspd(:,:,:) > frspd_thres)
+          where(frspd(:,:,:) < -1_ni*frspd_thres)
              frloc_cws = frloc(:,:,:)
           elsewhere
              frloc_cws = nan
