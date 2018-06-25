@@ -305,18 +305,8 @@ class grid_by_nc(grid):
 		else:
 			self.t_unit = None
 		
-		self.nx = self.f.variables[self.x_name].shape
-		if len(self.nx) == 1:
-			self.nx = self.nx[0]
-		elif len(self.nx) == 2:
-			self.nx = self.nx[1]
-		else:
-			raise ValueError('x coordinate variable has incompatible shape: %s' % self.nx)
-		self.ny = self.f.variables[self.y_name].shape
-		if len(self.ny) in [1,2]:
-			self.ny = self.ny[0]
-		else:
-			raise ValueError('y coordinate variable has incompatible shape: %s' % self.ny)
+		self.nx = self.f.dimensions[self.x_name].size
+		self.ny = self.f.dimensions[self.y_name].size
 
 		if self.x_unit == 'degrees_E' and self.y_unit == 'degrees_N':
 			self.gridtype = 'latlon'
