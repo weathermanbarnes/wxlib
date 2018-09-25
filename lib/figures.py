@@ -918,16 +918,16 @@ def map_overlay_barbs(u, v, static, **kwargs):
 		def rotate_vector(u, v, lon, lat, kwargs):
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
-			return m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
-
+			return m.rotate_vector(u[slc].astype('f8'), v[slc].astype('f8'), lon[slc].astype('f8'), lat[slc].astype('f8'), returnxy=True)
 
 		u_ = __map_prepare_dat(u, mask, static, kwargs)
 		v_ = __map_prepare_dat(v, mask, static, kwargs)
-
+			
+		
 		# Respect rotated coordinate systems (otherweise returned unchanged)
 		u_, v_ = static.unrotate_vector(u_, v_)
-		
-		# TODO: Why does transform_vector lead to errors for iveret!?
+
+		# TODO: Check for homogeneous lat and lon before attempting the interpolation!
 		if not kwargs.get('vector_disable_interpolation', False):
 			Nvecx, Nvecy = kwargs.pop('vector_space_numbers_xy', (30,20))
 			try:
@@ -942,6 +942,14 @@ def map_overlay_barbs(u, v, static, **kwargs):
 				ut,vt, xt,yt = rotate_vector(u_, v_, lon, lat, kwargs)
 		else:
 			ut,vt, xt,yt = rotate_vector(u_, v_, lon, lat, kwargs)
+			#ut,vt, xt,yt = m.rotate_vector(u_, v_, lon, lat, returnxy=True)
+		
+		#fio = plt.gcf()
+		#plt.figure()
+		#dd = np.arctan2(vt,ut)
+		#plt.hist(dd[~np.isnan(dd)], np.arange(-16,17)*np.pi/16)
+		#plt.savefig('03.pdf')
+		#plt.figure(fio.number)
 		
 		# barbs does not set some default values of None specified, and cannot handle extra kwargs
 		ALLOWED_KWARGS = ['barbcolor', 'flagcolor', 'length', 'sizes', 'fill_empty', 'alpha', 
@@ -1005,7 +1013,7 @@ def map_overlay_quiver(u, v, static, **kwargs):
 		except (AttributeError, ValueError):
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
-			ut,vt, xt,yt = m.rotate_vector(u_[slc], v_[slc], lon[slc], lat[slc], returnxy=True)
+			ut,vt, xt,yt = m.rotate_vector(u_[slc].astype('f8'), v_[slc].astype('f8'), lon[slc].astype('f8'), lat[slc].astype('f8'), returnxy=True)
 		
 		m.quiver(xt, yt, ut, vt, zorder=3, scale=kwargs.pop('quiver_length', None), scale_units='width',
 				linewidths=kwargs.pop('linewidths', None))
@@ -1064,7 +1072,7 @@ def map_overlay_dilatation(defabs, defang, static, **kwargs):
 		except ValueError:
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
-			ut,vt,xt,yt = m.rotate_vector(defdex[slc],defdey[slc],lon[slc],lat[slc], returnxy=True)
+			ut,vt,xt,yt = m.rotate_vector(defdex[slc].astype('f8'),defdey[slc].astype('f8'),lon[slc].astype('f8'),lat[slc].astype('f8'), returnxy=True)
 			qscale = 840
 
 		m.quiver(xt, yt, ut, vt, zorder=4, scale=qscale, alpha=0.85, 

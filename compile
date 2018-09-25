@@ -10,7 +10,7 @@
 COMPILE_OPTS="productive"
 
 # Choose python version to compile for
-PY_VER="3.4"
+PY_VER=""
 F2PY="f2py$PY_VER"
 PYTHON="python$PY_VER"
 
@@ -36,7 +36,7 @@ pysig="${precc}/$python_library.pyf"
 host=`hostname -f`
 uname=`uname`
 if [ ${host: -6} == 'uib.no' ]; then
-	LIBS='-L/Data/gfi/users/local/lib -lspherepack -lblas -llapack'
+	LIBS='-L/Data/gfi/users/local/lib -lspherepack -llapack'
 elif [ "$uname" == 'Darwin' ]; then
 	LIBS='-L/usr/lib -L/usr/local/lib -lspherepack -lblas -llapack'
 else

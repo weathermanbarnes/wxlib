@@ -311,7 +311,7 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	if not plev == 'sfc':
 		of.createDimension(static.z_name, s[1])
 	
-	if static.rotated:
+	if getattr(static, 'rotated', False):
 		y_name = static.rot_y_name
 		x_name = static.rot_x_name
 	else:
@@ -342,7 +342,7 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	else:
 		dims = ('time', y_name, x_name,)
 	
-	if static.rotated:
+	if getattr(static, 'rotated', False):
 		olat = of.createVariable(static.rot_y_name, 'f', (y_name,))
 		olat.setncatts({'long_name': static.rot_y_longname, 'units': static.y_unit, 'axis': 'Y'})
 		olat[::] = static.rot_y[:,0]
@@ -387,7 +387,7 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
 	
 	ovar.setncatts({'long_name': se.conf.q_long[q], 'units': se.conf.q_units[q]})
 	# Add some attributes to make ncview display the rotated grid correctly
-	if static.rotated:
+	if getattr(static, 'rotated', False):
 		ovar.setncatts({'grid_mapping': 'rotated_pole', 'coordinates': static.x_name+' '+static.y_name})
 	ovar[::] = dat
 

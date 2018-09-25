@@ -16,7 +16,7 @@ module config
     &                def_thres = 0.7e-4_nr, &
     &             jetint_thres = 2.5e-4_nr, & 
     &                searchrad = 1.5_nr, & 
-    &              smooth_coef = 0.25_nr, &
+    &              smooth_coef = 1.0_nr/6.0_nr, &
     &                   minlen = 1.0e6, &
     &   tfp_mingrad_largescale = 4.5e-5, &
     &   tfp_mingrad_smallscale = 7.5e-5, &

@@ -6,6 +6,7 @@
 module utils
   use kind
   use config
+  use consts !, only: nan
   !
   implicit none
 contains
@@ -178,37 +179,116 @@ contains
     !res(:,:,:) = dat(:,:,:)
     !
     do i = 1_ni,nx
+       do j = 1_ni,n
+          do k = 1_ni,nz
+             res(k,j,i) = nan
+          end do
+       end do
        do j = 1_ni+n,ny-n
           do k = 1_ni,nz
              res(k,j,i) = sum(filtr(:) * dat(k,j-n:j+n,i))
+          end do
+       end do
+       do j = ny-n+1_ni,ny
+          do k = 1_ni,nz
+             res(k,j,i) = nan
           end do
        end do
     end do
     !
     tmp(:,:,:) = res(:,:,:)
     do i = 1_ni+n,nx-n
-       do j = 1_ni,ny
+       do j = 1_ni+n,ny-n
           do k = 1_ni,nz
              res(k,j,i) = sum(filtr(:) * tmp(k,j,i-n:i+n))
           end do
        end do
     end do
     if ( grid_cyclic_ew ) then
-       do j = 1_ni,ny
+       do j = 1_ni+n,ny-n
           do k = 1_ni,nz
              do i = 1_ni,n
                 m = n-i+1_ni
                 res(k,j,i) = sum(filtr(1_ni:m)*tmp(k,j,nx-m+1_ni:nx)) &
                       &    + sum(filtr(m+1_ni:)*dat(k,j,:nf-m))
              end do
-             do i = nx-n,nx
+             do i = nx-n+1_ni,nx
                 m = nf - (i-nx+n + 1_ni)
                 res(k,j,i) = sum(filtr(1_ni:m)*tmp(k,j,nx-m+1_ni:nx)) &
                       &    + sum(filtr(m+1_ni:)*tmp(k,j,:nf-m))
              end do
           end do
        end do
+    else
+       do j = 1_ni+n,ny-n
+          do k = 1_ni,nz
+             do i = 1_ni,n
+                res(k,j,i) = nan
+             end do
+             do i = nx-n+1_ni,nx
+                res(k,j,i) = nan
+             end do
+          end do
+       end do
     end if
+    !
+    return
+  end subroutine
+  !
+  !@ Generic filtering in the first dimension (typically: time)
+  !@
+  !@ The filter is in the time dimension of a 3D (t,y,x) field.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nt,ny,nx) and dtype float64
+  !@     Input data to be filtered.
+  !@ filtr : np.ndarray with shape (nf,) and dtype float64
+  !@     Odd length array of filter weights. The filter array should sum up to 1
+  !@     if the filter is to be conservative.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in t-direction.
+  !@ nf : int
+  !@     Length of the filter, must be odd.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Filtered data.
+  subroutine filter_t(res,nx,ny,nz,nf,dat,filtr)
+    real(kind=nr), intent(in)  :: dat(nz,ny,nx), filtr(nf)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz, nf
+    integer(kind=ni) :: i,j,k, n
+    !f2py depend(nx,ny,nz) res
+    ! -----------------------------------------------------------------
+    !
+    n = (nf - 1_ni)/2_ni
+    !
+    !res(:,:,:) = dat(:,:,:)
+    !
+    do i = 1_ni,nx
+       do j = 1_ni,ny
+          do k=1,n
+             res(k,j,i) = nan
+          end do
+          do k = 1_ni+n,nz-n
+             res(k,j,i) = sum(filtr(:) * dat(k-n:k+n,j,i))
+          end do
+          do k=nz-n+1_ni,nz
+             res(k,j,i) = nan
+          end do
+       end do
+    end do
     !
     return
   end subroutine
