@@ -36,11 +36,13 @@ pysig="${precc}/$python_library.pyf"
 host=`hostname -f`
 uname=`uname`
 if [ ${host: -6} == 'uib.no' ]; then
-	LIBS='-L/Data/gfi/users/local/lib -lspherepack -llapack'
+	LIBS="-L/Data/gfi/users/local/lib -lspherepack -lblas -llapack"
+	RPATH="-Wl,-rpath,/Data/gfi/users/local/lib"
 elif [ "$uname" == 'Darwin' ]; then
 	LIBS='-L/usr/lib -L/usr/local/lib -lspherepack -lblas -llapack'
+	RPATH=""
 else
-	echo "Error: Unknown host/ operation system."
+	echo "Error: Unknown host/ operating system."
 	exit 1
 fi
 
@@ -105,13 +107,13 @@ mv ${pysig}_tmp $pysig
 # 3. Compiling the fortran modules 
 echo -e "Stage 3: Compiling Fortran shared object using $flagset options."
 gfortran $OPTS $LIBS -c $filek $filec $files 
-gfortran -shared $fileko $fileco $fileso $OPTS $LIBS -o $fortran_library.so 
+gfortran -shared $RPATH $fileko $fileco $fileso $OPTS $LIBS -o $fortran_library.so 
 mv $fortran_library.so $baselib
 
 
 # 4. Compiling the shared object usable from within python
 echo -e "Stage 4: Compiling the python module using $flagset options."
-$F2PY -c $LIBS --fcompiler=gnu95 $F2PY_OPTS --opt="\"$OPTS\"" $pysig $files $filec $filek > /dev/null
+LDFLAGS="$RPATH -shared" $F2PY -c $LIBS --fcompiler=gnu95 $F2PY_OPTS --opt="\"$OPTS\"" $pysig $files $filec $filek > /dev/null
 mv ${python_library}*.so $baselib
 
 

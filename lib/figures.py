@@ -25,6 +25,10 @@ from PIL import Image
 import numpy as np
 import scipy.interpolate as intp
 
+# No GUI for now
+import matplotlib as mpl
+mpl.use('Agg')
+
 import matplotlib.pyplot as plt
 import matplotlib.colors
 from matplotlib.collections import LineCollection
