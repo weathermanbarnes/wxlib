@@ -36,8 +36,8 @@ pysig="${precc}/$python_library.pyf"
 host=`hostname -f`
 uname=`uname`
 if [ ${host: -6} == 'uib.no' ]; then
-	LIBS="-L/Data/gfi/users/local/lib -lspherepack -lblas -llapack"
-	RPATH="-Wl,-rpath,/Data/gfi/users/local/lib"
+	LIBS="-L/Data/gfi/users/local/lib -lspherepack -lopenblas -lscalapack"
+	RPATH="" #-Wl,-rpath,/Data/gfi/users/local/lib"
 elif [ "$uname" == 'Darwin' ]; then
 	LIBS='-L/usr/lib -L/usr/local/lib -lspherepack -lblas -llapack'
 	RPATH=""
