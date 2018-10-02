@@ -111,6 +111,7 @@ def unscale(var):
 	res = np.round((var[::] - off)/scale)
 	# Avoid integer overflow due to roundoff error
 	res[res > 32737] = 32737
+	res[res <= missing] = missing + 1
 
 	res[np.isnan(res)] = missing
 
