@@ -3,7 +3,7 @@
 ! +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
 !@ Tendencies of meteorological variables. 
-!@ 
+!@ !@ 
 !@ For each variable the adiabatic and diabatic tendencies are separate routines, 
 !@ as far as available.
 module tend
@@ -15,6 +15,7 @@ module tend
   implicit none
   !
   real(kind=nr), allocatable :: dzdth(:,:,:,:), slope(:,:,:,:), dzdx(:,:,:,:), dzdy(:,:,:,:), w(:,:,:,:)
+  real(kind=nr), allocatable :: dthdx_p(:,:,:,:), dthdy_p(:,:,:,:), dthdp(:,:,:,:), dzdp(:,:,:,:), th(:,:,:,:), rho(:,:,:,:)
   integer(kind=ni) :: slope_nt=-1_ni, slope_nx=-1_ni, slope_ny=-1_ni, slope_nz=-1_ni
 contains
   !
@@ -473,19 +474,98 @@ contains
   !@     Tendency of the slope due to full vertical motion.
   !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     Tendency of the slope due to cross-isentropic vertical motion.
-  subroutine slope_tilt(tend,tend_ci, nx,ny,nz,nt, u,v, dx,dy)
+  subroutine slope_tilt(tend,tend_ci, w_ci, nx,ny,nz,nt, u,v, dx,dy)
     use consts !, only: p0, kappa
     !
     real(kind=nr), intent(in) :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), &
             &                    dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: tend(nt,nz,ny,nx), tend_ci(nt,nz,ny,nx)
+    real(kind=nr), intent(out) :: tend(nt,nz,ny,nx), tend_ci(nt,nz,ny,nx),  w_ci(nt,nz,ny,nx)
     integer(kind=ni), intent(in) :: nx,ny,nz,nt
     !
-    real(kind=nr) :: dwdx(nz,ny,nx), dwdy(nz,ny,nx), w_ci(nt,nz,ny,nx)
+    real(kind=nr) :: dwdx(nz,ny,nx), dwdy(nz,ny,nx), dwdth(nz,ny,nx) !, w_ci(nt,nz,ny,nx)
     integer(kind=ni) :: n
-    !f2py depend(nx,ny,nz) u,v,w, z, tend, tend_ci
-    !f2py depend(nx,ny,nz) dth
+    !f2py depend(nt,nz,ny,nx) v, w_ci, tend, tend_ci
     !f2py depend(nx,ny) dx,dy
+    ! -----------------------------------------------------------------
+    !
+    !if ( type_of_level /= "isentrope" .or. type_of_level /= "pressure") then
+    !   write(*,*) 'Type_of_level should be isentrope or pressure'
+    !   stop 1
+    !end if
+    !if ( slope_nt /= nt .or. slope_nz /= nz .or. slope_ny /= ny .or. slope_nx /= nx ) then
+    !   write(*,*) 'Input does not match prepared shape, did you forget to call slope_prepare before?'
+    !   stop 1
+    !end if
+    !
+    ! Determine cross isentropic vertical motion
+    w_ci = w - u * dzdx - v * dzdy
+    !
+    do n = 1_ni,nt
+       call grad(dwdx,dwdy, nx,ny,nz, w(n,:,:,:), dx,dy)
+       ! Dwdth:
+       call ddz_on_q(dwdth,nx,ny,nz,w(n,:,:,:),th(n,:,:,:),dx,dy)
+       ! Correction
+       dwdx = dwdx - dwdth*dthdx_p(n,:,:,:)
+       dwdy = dwdy - dwdth*dthdy_p(n,:,:,:)
+       !Calculation of tendency
+       tend(n,:,:,:) = (dwdx * dzdx(n,:,:,:) + dwdy * dzdy(n,:,:,:))/slope(n,:,:,:)
+       !
+       call grad(dwdx,dwdy, nx,ny,nz, w_ci(n,:,:,:), dx,dy)
+       ! Dwdth:
+       call ddz_on_q(dwdth,nx,ny,nz,w_ci(n,:,:,:),th(n,:,:,:),dx,dy)
+       dwdx = dwdx - dwdth*dthdx_p(n,:,:,:)
+       dwdy = dwdy - dwdth*dthdy_p(n,:,:,:)
+       tend_ci(n,:,:,:) = (dwdx * dzdx(n,:,:,:) + dwdy * dzdy(n,:,:,:))/slope(n,:,:,:)
+    end do
+    !
+  end subroutine
+  !
+  !@ Tendency due to horizontal isentropic advection
+  !@ 
+  !@ TODO: Clarify "residual" calculation in isal.f90
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@ 
+  !@ u : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     U-wind velocity.
+  !@ v : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     V-wind velocity.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Number of isentropic levels.
+  !@ nt : int 
+  !@     Grid size in t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Tendency of the slope due to horizontal advection.
+  subroutine slope_iadv(tend, nx,ny,nz,nt, u,v, dx,dy)
+    use consts !, only: p0, kappa
+    !
+    real(kind=nr), intent(in) :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), &
+            &                    dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: tend(nt,nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz,nt
+    !
+    real(kind=nr) :: dslopedx(nz,ny,nx), dslopedy(nz,ny,nx), dslopedth(nz,ny,nx)
+    integer(kind=ni) :: n
+    !f2py depend(nt,nz,ny,nx) v,slope, tend
+    !f2py depend(ny,nx) dx,dy
     ! -----------------------------------------------------------------
     !
     if ( slope_nt /= nt .or. slope_nz /= nz .or. slope_ny /= ny .or. slope_nx /= nx ) then
@@ -493,15 +573,15 @@ contains
        stop 1
     end if
     !
-    ! Determine cross isentropic vertical motion
-    w_ci = w - u * dzdx - v * dzdy
-    !
     do n = 1_ni,nt
-       call grad(dwdx,dwdy, nx,ny,nz, w(n,:,:,:), dx,dy)
-       tend(n,:,:,:) = (dwdx * dzdx(n,:,:,:) + dwdy * dzdy(n,:,:,:))/slope(n,:,:,:)
-       !
-       call grad(dwdx,dwdy, nx,ny,nz, w_ci(n,:,:,:), dx,dy)
-       tend_ci(n,:,:,:) = (dwdx * dzdx(n,:,:,:) + dwdy * dzdy(n,:,:,:))/slope(n,:,:,:)
+       call grad(dslopedx,dslopedy, nx,ny,nz, slope(n,:,:,:), dx,dy)
+       ! Dslopedth:
+       call ddz_on_q(dslopedth,nx,ny,nz,slope(n,:,:,:),th(n,:,:,:),dx,dy)
+       !Correction 
+       dslopedx = dslopedx - dslopedth*dthdx_p(n,:,:,:)
+       dslopedy = dslopedy - dslopedth*dthdy_p(n,:,:,:)
+       !Calculate tendency
+       tend(n,:,:,:) = u(n,:,:,:) * dslopedx + v(n,:,:,:) * dslopedy
     end do
     !
   end subroutine
@@ -540,19 +620,19 @@ contains
   !@ -------
   !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     Tendency of the slope due to horizontal advection.
-  subroutine slope_adv(tend, nx,ny,nz,nt, u,v, dx,dy)
+  subroutine slope_adv(tend, nx,ny,nz,nt, u,v, omega, dx,dy,dp)
     use consts !, only: p0, kappa
     !
     real(kind=nr), intent(in) :: u(nt,nz,ny,nx), v(nt,nz,ny,nx), &
-            &                    dx(ny,nx), dy(ny,nx)
+            &                    dx(ny,nx), dy(ny,nx),dp(nt,nz,ny,nx), &
+            &                    omega(nt,nz,ny,nx)
     real(kind=nr), intent(out) :: tend(nt,nz,ny,nx)
     integer(kind=ni), intent(in) :: nx,ny,nz,nt
     !
-    real(kind=nr) :: dslopedx(nz,ny,nx), dslopedy(nz,ny,nx), dslopedth(nz,ny,nx)
+    real(kind=nr) :: dslopedx(nz,ny,nx), dslopedy(nz,ny,nx), dslopedth(nz,ny,nx), dslopedp(nz,ny,nx)
     integer(kind=ni) :: n
-    !f2py depend(nx,ny,nz) u,v,w, z, tend, tend_ci
-    !f2py depend(nx,ny,nz) dth
-    !f2py depend(nx,ny) dx,dy
+    !f2py depend(nt,nz,ny,nx) v,slope, tend, omega, dp
+    !f2py depend(ny,nx) dx,dy
     ! -----------------------------------------------------------------
     !
     if ( slope_nt /= nt .or. slope_nz /= nz .or. slope_ny /= ny .or. slope_nx /= nx ) then
@@ -561,11 +641,19 @@ contains
     end if
     !
     do n = 1_ni,nt
-       call grad(dslopedx,dslopedy, nx,ny,nz, slope(n,:,:,:), dx,dy)
-       tend(n,:,:,:) = u(n,:,:,:) * dslopedx + v(n,:,:,:) * dslopedy
+       !call grad(dslopedx_p,dslopedy_p, nx,ny,nz, slope(n,:,:,:), dx,dy)
+       ! Dslopedth:
+       call ddz_on_q(dslopedth,nx,ny,nz,slope(n,:,:,:),th(n,:,:,:),dx,dy)
+       call ddz(dslopedp,nx,ny,nz,slope(n,:,:,:),dp(n,:,:,:))
+       !Correction 
+       dslopedx = - dslopedth*dthdx_p(n,:,:,:)
+       dslopedy = - dslopedth*dthdy_p(n,:,:,:)
+       !Calculate tendency
+       tend(n,:,:,:) = u(n,:,:,:) * dslopedx + v(n,:,:,:) * dslopedy - omega(n,:,:,:)*dslopedp
     end do
     !
   end subroutine
+  !
   !
   !@ Tendency due to a given diabatic heating (physical temperature tendency)
   !@ 
@@ -601,19 +689,18 @@ contains
   !@ -------
   !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
   !@     Tendency of the slope due to the given diabatic heating field.
-  subroutine slope_diab(tend, nx,ny,nz,nt, diab,p, dx,dy)
+  subroutine slope_diab(tend, diab_pt, nx,ny,nz,nt, diab,p, dx,dy)
     use consts !, only: p0, kappa
     !
     real(kind=nr), intent(in) :: diab(nt,nz,ny,nx), p(nt,nz,ny,nx), &
             &                    dx(ny,nx), dy(ny,nx)
-    real(kind=nr), intent(out) :: tend(nt,nz,ny,nx)
+    real(kind=nr), intent(out) :: tend(nt,nz,ny,nx), diab_pt(nt,nz,ny,nx)
     integer(kind=ni), intent(in) :: nx,ny,nz,nt
     !
-    real(kind=nr) :: ddiabdx(nz,ny,nx), ddiabdy(nz,ny,nx)
+    real(kind=nr) :: ddiabdx(nz,ny,nx), ddiabdy(nz,ny,nx), ddiabdth(nz,ny,nx)
     integer(kind=ni) :: n
-    !f2py depend(nx,ny,nz) z,p, tend
-    !f2py depend(nx,ny,nz) dth
-    !f2py depend(nx,ny) dx,dy
+    !f2py depend(nt,nz,ny,nx) p, tend
+    !f2py depend(ny,nx) dx,dy
     ! -----------------------------------------------------------------
     !
     if ( slope_nt /= nt .or. slope_nz /= nz .or. slope_ny /= ny .or. slope_nx /= nx ) then
@@ -621,9 +708,15 @@ contains
        stop 1
     end if
     !
-    tend = diab * (p0/p)**(Rl/cp)
+    diab_pt = diab * (p0/p)**(Rl/cp)
     do n = 1_ni,nt
-       call grad(ddiabdx,ddiabdy, nx,ny,nz, tend(n,:,:,:), dx,dy)
+       call grad(ddiabdx,ddiabdy, nx,ny,nz, diab_pt(n,:,:,:), dx,dy)
+       ! Dslopedth:
+       call ddz_on_q(ddiabdth,nx,ny,nz,diab_pt(n,:,:,:),th(n,:,:,:),dx,dy)
+       !Correction 
+       ddiabdx = ddiabdx - ddiabdth*dthdx_p(n,:,:,:)
+       ddiabdy = ddiabdy - ddiabdth*dthdy_p(n,:,:,:)
+       !Calculate tendency
        tend(n,:,:,:) = - dzdth(n,:,:,:) * (ddiabdx * dzdx(n,:,:,:) + ddiabdy * dzdy(n,:,:,:))/slope(n,:,:,:)
     end do
     !
@@ -697,5 +790,156 @@ contains
        call w_from_omega(w(n,:,:,:), nx,ny,nz, omega(n,:,:,:), rho)
     end do
     !
+  end subroutine
+ !
+  !@ Prepare the calculation of the tendencies by setting some widely used variables
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@ 
+  !@ diab : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Diabatic heating at isentropic levels.
+  !@ z : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Geopotential at isentropic levels.
+  !@ p : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Pressure at isentropic levels.
+  !@ T : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Temperature at isentropic levels.
+  !@ omega : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Pressure vertical velocity at isentropic levels.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@ dth : np.ndarray with shape (nz-2,ny,nx) and dtype float64
+  !@     The double grid spacing in th-direction to be directly for centered differences.
+  !@     ``dth(k,j,i)`` is expected to contain the th-distance between ``(k+1,j,i)`` and ``(k-1,j,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Number of isentropic levels.
+  !@ nt : int 
+  !@     Grid size in t-direction.
+  subroutine slope_prepare_pres(nx,ny,nz,nt, z,p,T,omega, dx,dy,dp)
+    real(kind=nr), intent(in) :: z(nt,nz,ny,nx), p(nz), T(nt,nz,ny,nx), &
+            &                    omega(nt,nz,ny,nx), &
+            &                    dx(ny,nx), dy(ny,nx), dp(nt,nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz,nt
+    !
+    !real(kind=nr) :: rho(nt,nz,ny,nx)
+    integer(kind=ni) :: n
+    !--!f2py depend(nx,ny,nz,nt) dp,T,omega
+    !--!f2py depend(nx,ny) dx,dy
+    !--!f2py depend(nz) p
+    ! -----------------------------------------------------------------
+    !
+    if ( allocated(slope) ) deallocate(slope)
+    if ( allocated(dzdx) )  deallocate(dzdx)
+    if ( allocated(dzdy) )  deallocate(dzdy)
+    if ( allocated(dzdp) )  deallocate(dzdp)
+    if ( allocated(w) )     deallocate(w)
+    if ( allocated(dthdx_p))  deallocate(dthdx_p)
+    if ( allocated(dthdy_p))  deallocate(dthdy_p)
+    if ( allocated(dthdp))  deallocate(dthdp)
+    if ( allocated(dzdth))  deallocate(dzdth)
+    if ( allocated(th))  deallocate(th)
+    if ( allocated(rho))  deallocate(rho)
+    !
+    allocate(slope(nt,nz,ny,nx), dzdx(nt,nz,ny,nx), dzdy(nt,nz,ny,nx), dzdp(nt,nz,ny,nx), w(nt,nz,ny,nx))
+    allocate(dthdx_p(nt,nz,ny,nx), dthdy_p(nt,nz,ny,nx), dthdp(nt,nz,ny,nx), dzdth(nt,nz,ny,nx), th(nt,nz,ny,nx), rho(nt,nz,ny,nx))
+    !
+    slope_nx = nx
+    slope_ny = ny
+    slope_nz = nz
+    slope_nt = nt
+    !
+    !call isen_geop_slope(slope,dzdx,dzdy,dzdth, nx,ny,nz,nt, z, dx,dy,dp)
+    do n= 1_ni,nz
+      print *, n, "theta"
+      th(:,n,:,:) = T(:,n,:,:)*(p0/p(n))**(Rl/cp)
+      print *, n, "rho"
+      rho(:,n,:,:) = p(n) / (Rl * T(:,n,:,:))
+    enddo
+    !
+    do n = 1_ni,nt
+       !call rho_from_T_p(rho, nx,ny,nz, T(n,:,:,:), p(n,:,:,:))
+       call w_from_omega(w(n,:,:,:), nx,ny,nz, omega(n,:,:,:), rho(n,:,:,:))       
+    end do
+    call pres_geop_slope(slope,dzdx,dzdy,dzdp, dthdx_p,dthdy_p, dthdp, dzdth,nx,ny,nz,nt, z, th, dx,dy,dp) 
+    !
+  end subroutine
+  !
+  subroutine calc_w_ci(w_ci, nx,ny,nz,nt, z,p,T,u,v,omega, dx,dy,dp)
+    real(kind=nr), intent(in) :: z(nt,nz,ny,nx), p(nz), T(nt,nz,ny,nx), &
+            &                    omega(nt,nz,ny,nx), u(nt,nz,ny,nx), v(nt,nz,ny,nx), &
+            &                    dx(ny,nx), dy(ny,nx), dp(nt,nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz,nt
+    real(kind=nr), intent(out) :: w_ci(nt,nz,ny,nx)
+    !local variables 
+    real(kind=nr)    :: dzdx_p(nt,nz,ny,nx), dzdy_p(nt,nz,ny,nx)
+    !
+    integer(kind=ni) :: n
+    ! -----------------------------------------------------------------
+    !
+    if ( allocated(dzdx) )  deallocate(dzdx)
+    if ( allocated(dzdy) )  deallocate(dzdy)
+    if ( allocated(dzdp) )  deallocate(dzdp)
+    if ( allocated(w) )     deallocate(w)
+    if ( allocated(dthdx_p))  deallocate(dthdx_p)
+    if ( allocated(dthdy_p))  deallocate(dthdy_p)
+    if ( allocated(dthdp))  deallocate(dthdp)
+    if ( allocated(dzdth))  deallocate(dzdth)
+    if ( allocated(th))  deallocate(th)
+    if ( allocated(rho))  deallocate(rho)
+    !
+    !
+    ! Allocate variables
+    allocate(dzdx(nt,nz,ny,nx), dzdy(nt,nz,ny,nx), dzdp(nt,nz,ny,nx), w(nt,nz,ny,nx))
+    allocate(dthdx_p(nt,nz,ny,nx), dthdy_p(nt,nz,ny,nx), dthdp(nt,nz,ny,nx), dzdth(nt,nz,ny,nx), th(nt,nz,ny,nx), rho(nt,nz,ny,nx))
+    !
+    !call isen_geop_slope(slope,dzdx,dzdy,dzdth, nx,ny,nz,nt, z, dx,dy,dp)
+    do n= 1_ni,nz
+      print *, n, "theta"
+      th(:,n,:,:) = T(:,n,:,:)*(p0/p(n))**(Rl/cp)
+      print *, n, "rho"
+      rho(:,n,:,:) = p(n) / (Rl * T(:,n,:,:))
+    enddo
+    !
+    do n = 1_ni,nt
+       !call rho_from_T_p(rho, nx,ny,nz, T(n,:,:,:), p(n,:,:,:))
+       call w_from_omega(w(n,:,:,:), nx,ny,nz, omega(n,:,:,:), rho(n,:,:,:))       
+    end do
+    ! Gradient of z on pressure levels
+    call grad_3d(dzdx_p,dzdy_p,dzdp, nx,ny,nz,nt, z, dx,dy,dp)
+    !
+    ! Gradient of theta on pressure levels
+    call grad_3d(dthdx_p,dthdy_p,dthdp, nx,ny,nz,nt, th, dx,dy,dp)
+    ! Dzdth:
+    do n=1_ni,nt
+       call ddz_on_q(dzdth(n,:,:,:),nx,ny,nz,z(n,:,:,:),th(n,:,:,:),dx,dy)
+    end do
+    !
+    ! Mask unreasonable results for dzdth    
+    !where (dzdth > thres_max_dzdth .or. dzdth < thres_min_dzdth)
+    !    dzdth = nan
+    !end where
+    where (1.0_nr/dzdth < thres_min_dzdth)
+        dzdth = nan
+    end where  
+    !
+    ! Transform the derivatives to be calculated on isentropic surfaces
+    dzdx  = (dzdx_p-dthdx_p*dzdth)
+    dzdy  = (dzdy_p-dthdy_p*dzdth)
+    !
+    ! Determine cross isentropic vertical motion
+    w_ci = w - u * dzdx - v * dzdy
   end subroutine
 end module

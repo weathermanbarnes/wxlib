@@ -1562,6 +1562,97 @@ contains
     end do
   end subroutine
   !
+  !@ Horizontal slope and 3D-gradient of geopotential on isentropic levels, calculated on pressure levels
+  !@
+  !@ The slope and the vertical gradient are set to NaN where they exceed 
+  !@ a maximum threshold, defined in the config module.
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ z : np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Geopotential at pressure levels.
+  !@ th: np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Potential temperature at pressure levels
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@ dp : np.ndarray with shape (nz-2,ny,nx) and dtype float64
+  !@     The double grid spacing in p-direction to be directly for centered differences.
+  !@     ``dth(k,j,i)`` is expected to contain the th-distance between ``(k+1,j,i)`` and ``(k-1,j,i)``.
+  !@
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Number of pressure levels.
+  !@ nt : int 
+  !@     Grid size in t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     Horizontal slope of the geopotential.
+  !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     x-derivative of the geopotential.
+  !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     y-derivative of the geopotential.
+  !@ np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+  !@     th-derivative of the geopotential.
+  subroutine pres_geop_slope(slope, dzdx,dzdy,dzdp, dthdx_p,dthdy_p, dthdp, dzdth, nx,ny,nz,nt, z, th, dx,dy,dp)
+    use consts !, only: nan
+    use config !, only: thres_max_slope, thres_max_dzdth
+    !
+    real(kind=nr), intent(in) :: z(nt,nz,ny,nx), th(nt,nz,ny,nx), dx(ny,nx), dy(ny,nx), dp(nt,nz,ny,nx) !dp(nz-2_ni,ny,nx)
+    real(kind=nr), intent(out) :: slope(nt,nz,ny,nx), dzdx(nt,nz,ny,nx), dzdy(nt,nz,ny,nx), dzdp(nt,nz,ny,nx)
+    real(kind=nr), intent(out) :: dthdx_p(nt,nz,ny,nx), dthdy_p(nt,nz,ny,nx), dthdp(nt,nz,ny,nx), dzdth(nt,nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz,nt
+    !local variables 
+    real(kind=nr)    :: dth(nt,nz,ny,nx), dzdx_p(nt,nz,ny,nx), dzdy_p(nt,nz,ny,nx)
+    integer(kind=ni) :: i
+    !f2py depend(nt,nz,ny,nx) :: slope,dzdx,dzdy,dzdth, dthdx,dthdy,dthdp,dzdth, N2
+    ! -----------------------------------------------------------------
+    !
+    ! Gradient of z on pressure levels
+    call grad_3d(dzdx_p,dzdy_p,dzdp, nx,ny,nz,nt, z, dx,dy,dp)
+
+    ! Gradient of theta on pressure levels
+    call grad_3d(dthdx_p,dthdy_p,dthdp, nx,ny,nz,nt, th, dx,dy,dp)
+    ! Dzdth:
+    do i=1_ni,nt
+       call ddz_on_q(dzdth(i,:,:,:),nx,ny,nz,z(i,:,:,:),th(i,:,:,:),dx,dy)
+    end do
+    !
+    ! Mask unreasonable results for dzdth    
+    !where (dzdth > thres_max_dzdth .or. dzdth < thres_min_dzdth)
+    !    dzdth = nan
+    !end where
+    where (1.0_nr/dzdth < thres_min_dzdth)
+        dzdth = nan
+    end where  
+    !
+    ! Transform the derivatives to be calculated on isentropic surfaces
+    dzdx  = (dzdx_p-dthdx_p*dzdth)
+    dzdy  = (dzdy_p-dthdy_p*dzdth)
+    !
+    ! Calculate the slope 
+    slope = sqrt(dzdx**2_ni + dzdy**2_ni)
+    !
+    ! Mask unreasonable results
+    where (slope > thres_max_slope .or. slope < thres_min_slope)
+        slope = nan
+    end where
+    !
+  end subroutine
+  !
   !@ Horizontal slope and 3D-gradient of geopotential on isentropic levels
   !@
   !@ The slope and the vertical gradient are set to NaN where they exceed 
@@ -1853,6 +1944,96 @@ contains
                               &            + Rl*t(n,k,:,:)*(log(pstag(:,:)) - log(p(n,k,:,:)))
        end do
     end do
+    !
+  end subroutine
+  !
+  !*****************************************************************************************
+  !> author: Jacob Williams
+  !  date: 7/13/2014
+  !
+  !  Great circle distance on a spherical body, using the Vincenty algorithm.
+  !
+  !# References
+  !  * T. Vincenty, "[Direct and Inverse Solutions of Geodesics on the Ellipsoid
+  !    with Application of Nested Equations](http://www.ngs.noaa.gov/PUBS_LIB/inverse.pdf)",
+  !    Survey Review XXII. 176, April 1975.
+
+  function great_circle_distance(r,long1,lat1,long2,lat2) result(d)
+
+    implicit none
+
+    real(kind=nr)            :: d        !! great circle distance from 1 to 2 [km]
+    real(kind=nr),intent(in) :: r        !! radius of the body [km]
+    real(kind=nr),intent(in) :: long1    !! longitude of first site [rad]
+    real(kind=nr),intent(in) :: lat1     !! latitude of the first site [rad]
+    real(kind=nr),intent(in) :: long2    !! longitude of the second site [rad]
+    real(kind=nr),intent(in) :: lat2     !! latitude of the second site [rad]
+
+    real(kind=nr) :: c1,s1,c2,s2,dlon,clon,slon
+
+    !Compute aux variables:
+    c1    = cos(lat1)
+    s1    = sin(lat1)
+    c2    = cos(lat2)
+    s2    = sin(lat2)
+    dlon  = long1-long2
+    clon  = cos(dlon)
+    slon  = sin(dlon)
+
+    d = r*atan2( sqrt((c2*slon)**2+(c1*s2-s1*c2*clon)**2), (s1*s2+c1*c2*clon) )
+
+  end function great_circle_distance
+
+  function approx_distance(r,long1,lat1,long2,lat2) result(d)
+    implicit none
+    real(kind=nr)            :: d        !! great circle distance from 1 to 2 [km]
+    real(kind=nr),intent(in) :: r        !! radius of the body [km]
+    real(kind=nr),intent(in) :: long1    !! longitude of first site [rad]
+    real(kind=nr),intent(in) :: lat1     !! latitude of the first site [rad]
+    real(kind=nr),intent(in) :: long2    !! longitude of the second site [rad]
+    real(kind=nr),intent(in) :: lat2     !! latitude of the second site [rad]
+
+    real(kind=nr) :: x,y
+    x = (long2 - long1) * cos( 0.5*(lat2+lat1) )
+    y = lat2 - lat1
+    d = r * sqrt( x*x + y*y )
+  end function approx_distance
+  !**************************************
+  subroutine calc_weights(weights, nx,ny,np, x, y)
+    use consts
+    !
+    real(kind=nr), intent(in) :: x(ny,nx), y(ny,nx)
+    real(kind=nr), intent(out) :: weights(ny,nx) !,np,np
+    integer(kind=ni), intent(in) :: np
+    integer(kind=ni)           :: nx,ny
+    !f2py depend(ny,nx) :: x,y
+    !f2py depend(ny,nx) :: weights
+    !
+    integer(kind=ni) :: i,j,k,l
+    real(kind=nr) :: dists(17,17), sigma_dist=50.0
+    ! -----------------------------------------------------------------
+    !
+    do j = 1_ni,ny
+       print *, j
+       do i = 1_ni,nx
+          do l=1_ni,17
+             do k=1_ni,17
+                if(i + k -8 >= 1 .AND. i + k - 8 <= 720 .AND. j + l - 8  >= 1 .AND. j + l - 8  <= 360) then
+                   dists(k,l) = approx_distance(6371.0_nr,x(j,i)*pi/180.0_nr,y(j,i)*pi/180.0_nr, &
+                                    x(j + l -8,i + k - 8)*pi/180.0_nr, y(j + l -8,i + k - 8)*pi/180.0_nr)
+                end if
+             end do
+          end do
+          weights(:,:) = exp(-dists**2.0/(sigma_dist)**2.0*1.0/2.0)     
+	  weights(:,:) = weights(:,:)/sum(weights)
+
+       end do
+    end do
+
+    !	  if((lonidx + lonidx2 -8 >= 0) & (lonidx + lonidx2 - 8 < 720) & (latidx + latidx2 - 8  >= 0) & (latidx + latidx2 - 8  < 360)):
+    !	      dists[latidx2,lonidx2] = great_circle((ugrid.y[latidx,lonidx],ugrid.x[latidx,lonidx]), 
+    !	      (ugrid.y[latidx + latidx2 - 8,lonidx + lonidx2 -8],
+    !      ugrid.x[latidx + latidx2 - 8,lonidx + lonidx2 -8])).kilometers 
     !
   end subroutine
   !
