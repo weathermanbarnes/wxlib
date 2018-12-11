@@ -14,9 +14,11 @@ import mpl_toolkits.basemap
 Proj = mpl_toolkits.basemap.pyproj.Proj
 
 
-# TODO: LINES should be centralised somewhere in the variable definitions!
+# TODO: LINES and OBJMASK should be centralised somewhere in the variable definitions!
 LINES = {'cold_front': 'cold_froff', 'warm_front': 'warm_froff', 'stat_front': 'stat_froff', 'sst_front': 'sst_froff', 
-	'convl': 'cloff', 'defl': 'dloff', 'vorl': 'vloff', 'jetaxis': 'jaoff'}
+	'convl': 'cloff', 'defl': 'dloff', 'vorl': 'vloff', 'jetaxis': 'jaoff', 'jetaxis_l10d': 'jaoff_l10d'}
+
+OBJMASK = {'frovo_id': 'frovo'}
 
 # TODO: How to avoid hard-coding the rotated grid dimensions here?
 PROJGRID_Y, PROJGRID_X = np.meshgrid(np.arange(-1000,1001,40)*1e3, np.arange(-1000,1001,40)*1e3)
@@ -97,6 +99,9 @@ def _get_dat(time, test_qs, readhooks, no_static=False):
 				f, testdat[test_plev, test_q], static = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[test_q]}, test_q)
 			else:
 				f, testdat[test_plev, test_q] = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[test_q]}, test_q, no_static=True)
+
+			if test_q in OBJMASK:
+				testdat[test_plev, test_q] = testdat[test_plev, test_q] > 0.5
 
 		testdat[test_plev,test_q] = testdat[test_plev,test_q].squeeze()
 
@@ -316,6 +321,9 @@ def save(qs, tests, mean, meancnt, hist, mfv, cnt, static, s=None):
 					elif q in LINES:
 						tosave[plev,q+'_freq'] = np.empty((len(grouped_tests),)+s)
 						tosave[plev,q+'_freq_cnt'] = np.empty((len(grouped_tests),)+s, dtype='i4')
+					elif q in OBJMASK:
+						tosave[plev,OBJMASK[q]+'_freq'] = np.empty((len(grouped_tests),)+s)
+						tosave[plev,OBJMASK[q]+'_freq_cnt'] = np.empty((len(grouped_tests),)+s, dtype='i4')
 					else:
 						tosave[plev,q] = np.empty((len(grouped_tests),)+s)
 						tosave[plev,q+'_cnt'] = np.empty((len(grouped_tests),)+s, dtype='i4')
@@ -326,6 +334,9 @@ def save(qs, tests, mean, meancnt, hist, mfv, cnt, static, s=None):
 						elif q in LINES:
 							tosave[plev,q+'_freq'][teidx,::] = mean[test.name,plev,q]
 							tosave[plev,q+'_freq_cnt'][teidx,::] = meancnt[test.name,plev,q]
+						elif q in OBJMASK:
+							tosave[plev,OBJMASK[q]+'_freq'][teidx,::] = mean[test.name,plev,q]
+							tosave[plev,OBJMASK[q]+'_freq_cnt'][teidx,::] = meancnt[test.name,plev,q]
 						else:
 							tosave[plev,q][teidx,::] = mean[test.name,plev,q]
 							tosave[plev,q+'_cnt'][teidx,::] = meancnt[test.name,plev,q]
