@@ -56,7 +56,7 @@ tcwv = ('tcwv', 'tcwv', 'Total column water vapour', 'kg m**-2')
 oro = ('oro', None, 'Surface geopotential', 'm**2 s**-2')
 
 # 1. Pressure levels
-conf.plevs = ['100', '200', '300', '400', '500', '550', '600', '650', '700', '750', '800', '850', '900', '950', '1000', ]
+conf.plevs = ['100', '200', '300', '400', '500', '550', '600', '650', '700', '750', '800', '850', '900', '925', '950', '1000', ]
 conf.register_variable([u, v, w, pv, z, t, tdiab, q], conf.plevs)
 
 # 2. Potential temperature levels

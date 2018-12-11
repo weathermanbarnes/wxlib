@@ -58,6 +58,8 @@ rwb_c = ('rwb_c', 'rwb_c', 'Cyclonic wave breaking frequency', '(time step)**-1'
 blockint = ('blockint', 'blockint', 'Block intensity indicator', '(input) m**-1')
 block = ('block', 'block', 'Block mask', '1')
 
+frovo = ('frovo_id', 'frovo_id', 'Frontal volume ID', '1')
+frovo_freq = ('frovo_freq', 'frovo_freq', 'Frontal volume detection frequency', '(time step)**-1')
 
 # The vertical level of the following variables is fixed and does not depend on user application
 conf.register_variable([sstfront, sstfroff, sstfront_freq, ], ['sfc',])
@@ -65,7 +67,7 @@ conf.register_variable([sstfront, sstfroff, sstfront_freq, ], ['sfc',])
 # The vertical levels on which the following variables are available depends 
 # on the application, and must hence be defined in the user settings.
 conf.register_variable([ff, dd, vo, div, defabs, defang, defanr, rsr, ow, 
-	pt, eqpt, 
+	pt, eqpt, frovo, frovo_freq,
 	cfront, cfroff, wfront, wfroff, sfront, sfroff,
 	vorl, vloff, convl, cloff, defl, dloff, 
 	grad_shear, jetaxis, jaoff, jetaxis_freq, 
