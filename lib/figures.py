@@ -387,10 +387,12 @@ def __map_setup(mask, static, kwargs):
 		m = m()
 		x, y = m(lon,lat)
 	
-		lines = m.drawcoastlines(color=kwargs.pop('coastcolor'))
-		alpha = kwargs.pop('coast_alpha', None)
-		if alpha:
-			lines.set_alpha(alpha)
+		coastcolor = kwargs.pop('coastcolor')
+		if coastcolor:
+			lines = m.drawcoastlines(color=coastcolor, linewidth=kwargs.pop('coastwidth', 1.0))
+			alpha = kwargs.pop('coast_alpha', None)
+			if alpha:
+				lines.set_alpha(alpha)
 
 		gridcolor = kwargs.pop('gridcolor')
 		if gridcolor:
@@ -934,6 +936,14 @@ def map_overlay_barbs(u, v, static, **kwargs):
 		# TODO: Check for homogeneous lat and lon before attempting the interpolation!
 		if not kwargs.get('vector_disable_interpolation', False):
 			Nvecx, Nvecy = kwargs.pop('vector_space_numbers_xy', (30,20))
+			
+			# Shift (global) grids to start from -180.0 if necessary
+			if not lon[0,0] == -180.0 and (lon[0,-1]-lon[0,0]) > 355:
+				u_, lon_ = mpl_toolkits.basemap.shiftgrid(180.0, u_, lon[0,:])
+				v_, lon_ = mpl_toolkits.basemap.shiftgrid(180.0, v_, lon[0,:])
+				lon_[lon_ >= 180.0] -= 360.0
+				lon[:,:] = lon_[np.newaxis,:]
+
 			try:
 				if lat[0,0] > lat[-1,0]:
 					ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], 
@@ -944,6 +954,7 @@ def map_overlay_barbs(u, v, static, **kwargs):
 
 			except (AttributeError, ValueError):
 				ut,vt, xt,yt = rotate_vector(u_, v_, lon, lat, kwargs)
+
 		else:
 			ut,vt, xt,yt = rotate_vector(u_, v_, lon, lat, kwargs)
 			#ut,vt, xt,yt = m.rotate_vector(u_, v_, lon, lat, returnxy=True)
@@ -1011,6 +1022,13 @@ def map_overlay_quiver(u, v, static, **kwargs):
 		# Respect rotated coordinate systems (otherweise returned unchanged)
 		u_, v_ = static.unrotate_vector(u_, v_)
 
+		# Shift (global) grids to start from -180.0 if necessary
+		if not lon[0,0] == -180.0 and (lon[0,-1]-lon[0,0]) > 355:
+			u_, lon_ = mpl_toolkits.basemap.shiftgrid(180.0, u_, lon[0,:])
+			v_, lon_ = mpl_toolkits.basemap.shiftgrid(180.0, v_, lon[0,:])
+			lon_[lon_ >= 180.0] -= 360.0
+			lon[:,:] = lon_[np.newaxis,:]
+
 		try:
 			Nvecx, Nvecy = kwargs.pop('vector_space_numbers_xy', (30,20))
 			ut,vt, xt,yt = m.transform_vector(u_[::-1,:],v_[::-1,:],lon[0,:],lat[::-1,0], Nvecx, Nvecy, returnxy=True)
@@ -1020,7 +1038,7 @@ def map_overlay_quiver(u, v, static, **kwargs):
 			ut,vt, xt,yt = m.rotate_vector(u_[slc].astype('f8'), v_[slc].astype('f8'), lon[slc].astype('f8'), lat[slc].astype('f8'), returnxy=True)
 		
 		m.quiver(xt, yt, ut, vt, zorder=3, scale=kwargs.pop('quiver_length', None), scale_units='width',
-				linewidths=kwargs.pop('linewidths', None))
+				width=kwargs.pop('quiver_width', None))
 	
 	return overlay
 
