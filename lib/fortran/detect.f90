@@ -730,8 +730,8 @@ contains
   end subroutine
   !
   !@ Front intensity function after Jenkner et al. (2010), loosely based on the frontal 
-  !@ detection algorithm by Hewson (1998) which uses the gradient of the equivalent 
-  !@ potential temperature as dat
+  !@ detection algorithm by Hewson (1998) which uses the gradient of the equivalent 
+  !@ potential temperature as dat
   !@
   !@ Used only internally in dynlib to detect front lines at the maximum gradient
   subroutine front_intensity_speed_maxgrad(frint,frspd,frloc,nx,ny,nz,dat,u,v,dx,dy)
