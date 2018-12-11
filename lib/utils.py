@@ -673,4 +673,77 @@ def dist_sphere(lon1, lat1, lon2, lat2, r=6.37e6):
 
 
 
+def dist_green_latlon(lon, lat):
+	''' Calculate distances from points along zero meridian and 0°-90°N
+
+	These distances can be used to readily look up the distance between any two points 
+	on the given latitude/longitude raster.
+
+	This approach is not unlike that of Green's functions to solve PDEs, hence the name.
+
+	Parameters
+	----------
+	lon : list or np.ndarray with dimensions (nx)
+	    Longitudes of grid points
+	lat : list or np.ndarray with dimensions (ny)
+	    Latitudes of grid points
+	
+	Returns
+	-------
+	np.ndarray with dimensions (nx//2,ny,nx)
+	    Distances between all points and points along the zero meridian between 0° and 90°N in meters
+	'''
+
+	if not 0 in lon:
+		raise ValueError('Zero meridian must be part of the given longitudes')
+
+	Ngreen = len(lat)//2 + 1
+	dists = np.empty((Ngreen, len(lat), len(lon)))
+	
+	lon = np.array(lon)
+	lat = np.array(lat)
+
+	for n in range(Ngreen):
+		dists[n,:,:] = dist_sphere(lon[np.newaxis,:], lat[:,np.newaxis], 0, lat[n])
+	
+	return dists
+
+
+
+def dist_from_mask_latlon(featmask, green_dists, jzero):
+	''' Calculate the minimum distance to any feature, as given by a mask field
+
+	Parameters
+	----------
+	featmask : np.ndarray with dimensions (...,ny,nx) and dtype bool
+	    Binary mask field marking the locations (by value True) of detected features.
+	green_dists : np.ndarray with dimensions (nx//2+1,ny,nx)
+	    Precalculated array of distances between any two points on the grid. Use 
+	    ``dist_green_latlon`` to prepare this array.
+	jzero : int
+	    Longitude-index of the zero meridian
+	
+	Returns
+	-------
+	np.ndarray with dimensions (...,ny,nx)
+	    Minimum distance to any detected feature in meters.
+	'''
+
+	ny = featmask.shape[-2]
+	mindists = np.ones(featmask.shape) * 50.0e6 # Larger than the circumpherence of the Earth
+	for pos in np.argwhere(featmask):
+		overwrite = tuple(pos[:-2]) + (slice(None), slice(None))
+		j, i = pos[-2:]
+		shift = j - jzero
+		if j < green_dists.shape[0]:
+			curdists = np.roll(green_dists[j,:,:], shift, axis=1)
+		else:
+			j = ny - j - 1
+			curdists = np.roll(green_dists[j,::-1,:], shift, axis=1)
+
+		mindists[overwrite] = np.minimum(mindists[overwrite], curdists)
+	
+	return mindists
+
+
 #
