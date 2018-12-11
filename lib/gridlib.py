@@ -201,10 +201,10 @@ class grid_by_nc(grid):
 	def _init_grid(self):
 		def matches(match, names, begins):
 			for name in names:
-				if name == match: 
+				if name == match.lower(): 
 					return True
 			for begin in begins:
-				if begin == match[:len(begin)]:
+				if begin == match.lower()[:len(begin)]:
 					return True
 			
 			return False
@@ -349,7 +349,7 @@ class grid_by_nc(grid):
 				self.y = np.arange(self.ny)
 				self.x_name = 'xidx'
 				self.y_name = 'yidx'
-		elif self.x_unit == 'm' and self.y_unit == 'm':
+		elif self.x_unit in ['m', 'km'] and self.y_unit in ['km', 'm']:
 			self.gridtype = 'cartesian'
 			self.x = self.f.variables[self.x_name][::]
 			self.y = self.f.variables[self.y_name][::]
@@ -438,6 +438,46 @@ class grid_by_nc(grid):
 			else:
 				self.t = np.arange(self.nt)
 				self.t_parsed = None
+
+		return
+
+
+
+
+
+# Construct the grid based on given lat/lon arrays
+class grid_by_latlon(grid):
+	''' Build the relevant information from given lats and lons '''
+
+	def __init__(self, lats, lons):
+		self.lon = lons
+		self.lat = lats
+		
+		grid.__init__(self)
+
+		return
+
+	# Skims through the netcdf file looking for the type of the x and y axis
+	def _init_grid(self):
+		self.gridtype = 'latlon'
+		self.cyclic_ew = True
+		self.cyclic_ns = False
+		
+		self.x = self.lon
+		self.y = self.lat
+		self.x_name = 'longitude'
+		self.y_name = 'latitude'
+		self.x_unit = 'degrees_east'
+		self.y_unit = 'degrees_north'
+
+		self.ny, self.nx = self.lon.shape
+		
+		self._calc_dx_dy_latlon()
+		if len(self.x.shape) == 1:
+			self.x = np.tile(self.x, (self.ny,1))
+			self.y = np.tile(self.y, (self.nx,1)).T
+
+		self.rotated = False
 
 		return
 
