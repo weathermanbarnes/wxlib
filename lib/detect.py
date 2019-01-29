@@ -10,7 +10,7 @@ from datetime import datetime as dt, timedelta as td
 from . import dynfor
 from . import docutil
 from . import settings_basic as s
-from .metio import metopen, metsave
+from .metio import metopen, metsave, dts2str
 
 # Take over the contents of dynfor.diag to this module and inject documentation from the Fortran sources
 docutil.takeover(dynfor.detect, 'detect', sys.modules[__name__])
@@ -61,6 +61,9 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 	ny, nx = s.conf.gridsize
 	dtd = s.conf.timestep
 	tlen = 0
+
+	# Save date strings to allow years with incomplete data to be processed
+	periodstrs = {}
 	for year in s.conf.years:
 		# Stage 1: Load base data, calculate and save blocking indicator
 		try: 
@@ -74,6 +77,11 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 				print(grid.cyclic_ew)
 			bi = dynfor.detect.block_indicator_grad_rev(dat, grid.dx, grid.dy)
 			metsave(bi[:,np.newaxis,:,:], grid, q=Q_BI, plev=plev)
+
+			periodstr = dts2str(grid.t_parsed)
+			if not periodstr == str(year):
+				print('WARNING: Incomplete data for %d, got period string %s' % (year, periodstr))
+				periodstrs[year] = periodstr
 
 		tlen += bi.shape[0]
 		
@@ -185,7 +193,7 @@ def block_by_grad_rev(q='pv', plev='pt330', lat_band=(30, 70),
 	s.conf.datapath = [s.conf.opath, ]
 	for year in s.conf.years:
 		# Open nc file
-		fbi, bi, grid  = metopen(s.conf.file_std % {'time': year, 'plev': plev, 'qf': s.conf.qf[Q_BI]}, Q_BI)
+		fbi, bi, grid  = metopen(s.conf.file_std % {'time': periodstrs.get(year, year), 'plev': plev, 'qf': s.conf.qf[Q_BI]}, Q_BI)
 		bi = bi.squeeze()
 		if q == 'pv':		# PV does climatologically increase polewards
 			bi = -bi
