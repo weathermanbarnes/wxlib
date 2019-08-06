@@ -396,7 +396,7 @@ def __map_setup(mask, static, kwargs):
 	
 		coastcolor = kwargs.pop('coastcolor')
 		if coastcolor:
-			lines = m.drawcoastlines(color=coastcolor, linewidth=kwargs.pop('coastwidth', 1.0))
+			lines = m.drawcoastlines(color=coastcolor, linewidth=kwargs.pop('coastwidth', 1.0), zorder=1000)
 			alpha = kwargs.pop('coast_alpha', None)
 			if alpha:
 				lines.set_alpha(alpha)
@@ -453,6 +453,8 @@ def __contourf_dat(m, x, y, dat, q, kwargs):
 	scale = kwargs.pop('scale')
 	if isinstance(scale, string_types) and scale == 'auto':
 		scale = autoscale(dat, **kwargs)
+
+	zorder = kwargs.pop('zorder', 1)
 	
 	if kwargs.get('tile'):
 		if not 'edgecolors' in kwargs:
@@ -475,11 +477,11 @@ def __contourf_dat(m, x, y, dat, q, kwargs):
 		pkwargs = ['cmap', 'norm', 'vmin', 'vmax', 'edgecolors', 'alpha', 'clim', ]
 		pkwargs = { key: kwargs.get(key, None) for key in pkwargs }
 		datm = np.ma.masked_where(np.isnan(dat), dat)
-		cs = m.pcolormesh(x, y, datm, latlon=True, zorder=1, **pkwargs)
+		cs = m.pcolormesh(x, y, datm, latlon=True, zorder=zorder, **pkwargs)
 	elif kwargs.get('tri'):
-		cs = m.contourf(x.flatten(), y.flatten(), dat.flatten(), scale, latlon=True, zorder=1, **kwargs)
+		cs = m.contourf(x.flatten(), y.flatten(), dat.flatten(), scale, latlon=True, zorder=zorder, **kwargs)
 	else:
-		cs = m.contourf(x, y, dat, scale, latlon=True, zorder=1, **kwargs)
+		cs = m.contourf(x, y, dat, scale, latlon=True, zorder=zorder, **kwargs)
 	
 	if isinstance(m, mpl_toolkits.basemap.Basemap):
 		plt.gca().set_aspect('equal')
@@ -1043,9 +1045,12 @@ def map_overlay_quiver(u, v, static, **kwargs):
 			interval = kwargs.pop('vector_space_interval', 15)
 			slc = (slice(interval//2,None,interval), slice(interval//2,None,interval))
 			ut,vt, xt,yt = m.rotate_vector(u_[slc].astype('f8'), v_[slc].astype('f8'), lon[slc].astype('f8'), lat[slc].astype('f8'), returnxy=True)
+
+		qkwargs = ['alpha', 'color', 'cmap', ]
+		qkwargs = { key: kwargs.get(key, None) for key in qkwargs }
 		
 		m.quiver(xt, yt, ut, vt, zorder=3, scale=kwargs.pop('quiver_length', None), scale_units='width',
-				width=kwargs.pop('quiver_width', None))
+				width=kwargs.pop('quiver_width', None), **qkwargs)
 	
 	return overlay
 
