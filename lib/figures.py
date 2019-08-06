@@ -662,8 +662,13 @@ def section_overlay_contour(dat, static, **kwargs):
 
 		labels = kwargs.pop('contour_labels')
 		if labels:
-			plt.clabel(cs, kwargs.pop('contour_labels_scale', scale),
-					fontsize=kwargs.pop('contour_labels_fontsize', 12), 
+			cscale = kwargs.pop('contour_labels_scale', None)
+			if not type(cscale) == type(None):
+				args = [cs, cscale]
+			else:
+				args = [cs,]
+
+			plt.clabel(*args, fontsize=kwargs.pop('contour_labels_fontsize', 12), 
 					fmt=kwargs.pop('contour_labels_format', '%1.1f'),
 					inline=kwargs.pop('contour_labels_inline', True), 
 					inline_spacing=kwargs.pop('contour_labels_inline_spacing', 2)
@@ -722,8 +727,13 @@ def map_overlay_contour(dat, static, **kwargs):
 
 		labels = kwargs.pop('contour_labels')
 		if labels:
-			plt.clabel(cs, kwargs.pop('contour_labels_scale', scale),
-					fontsize=kwargs.pop('contour_labels_fontsize', 12), 
+			cscale = kwargs.pop('contour_labels_scale', None)
+			if not type(cscale) == type(None):
+				args = [cs, cscale]
+			else:
+				args = [cs,]
+
+			plt.clabel(*args, fontsize=kwargs.pop('contour_labels_fontsize', 12), 
 					fmt=kwargs.pop('contour_labels_format', '%1.1f'),
 					inline=kwargs.pop('contour_labels_inline', True), 
 					inline_spacing=kwargs.pop('contour_labels_inline_spacing', 2)
