@@ -34,8 +34,8 @@ fortran_library="libdynfor"
 pysig="${precc}/$python_library.pyf"
 
 host=`hostname -f`
-uname=`uname`
-if [ ${host: -6} == 'uib.no' ]; then
+uname=`uname -s`
+if [ ${host:-6} == 'uib.no' ]; then
 	LIBS="-L/Data/gfi/users/local/lib -lspherepack -lopenblas -lscalapack"
 	RPATH="" #-Wl,-rpath,/Data/gfi/users/local/lib"
 elif [ ${host: -14} == 'fram.sigma2.no' ]; then
@@ -44,6 +44,11 @@ elif [ ${host: -14} == 'fram.sigma2.no' ]; then
 	#LIBS="-lblas -llapack"
 	module load Python/3.6.4-intel-2018a
 elif [ "$uname" == 'Darwin' ]; then
+	# Default Mac OS configuration, based on Homebrew
+	LIBS='-L/usr/lib -L/usr/local/lib -lspherepack -lblas -llapack'
+	RPATH=""
+elif [ "$uname" == 'Linux' ]; then
+	# Default Linux configuration
 	LIBS='-L/usr/lib -L/usr/local/lib -lspherepack -lblas -llapack'
 	RPATH=""
 else
