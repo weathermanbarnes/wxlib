@@ -564,14 +564,11 @@ contains
     !
     !real(kind=nr) :: us(nz,ny,nx), vs(nz,ny,nx)
     real(kind=nr) :: dsheardx(nz,ny,nx), dsheardy(nz,ny,nx), &
-                 &   jetint(nz,ny,nx), shear(nz,ny,nx), ones(ny,nx), ff(nz,ny,nx)
+                 &   jetint(nz,ny,nx), shear(nz,ny,nx), ff(nz,ny,nx)
     integer(kind=ni) :: i,j,k, ip1,im1
     ! -----------------------------------------------------------------
     !
     write(*,*) 'preparing'
-    !
-    ! Would be interesting, if otherwise :-)
-    ones(:,:) = 1.0_nr
     !
     ff = sqrt( u(:,:,:)**2_ni + v(:,:,:)**2_ni )
     !
@@ -655,14 +652,11 @@ contains
     !
     real(kind=nr) :: us(nz,ny,nx), vs(nz,ny,nx), ffs(nz,ny,nx), & 
                  &   ddangdx(nz,ny,nx), ddangdy(nz,ny,nx), &
-                 &   jetint(nz,ny,nx), jaloc(nz,ny,nx), ones(ny,nx)
+                 &   jetint(nz,ny,nx), jaloc(nz,ny,nx)
     integer(kind=ni) :: i,j,k, ip1,im1
     ! -----------------------------------------------------------------
     !
     write(*,*) 'preparing'
-    !
-    ! Would be interesting, if otherwise :-)
-    ones(:,:) = 1.0_nr
     !
     call smooth_xy(us, nx,ny,nz, u, nsmooth)
     call smooth_xy(vs, nx,ny,nz, v, nsmooth)
