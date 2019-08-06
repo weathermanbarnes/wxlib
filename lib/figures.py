@@ -44,7 +44,14 @@ from .autoscale import autoscale
 
 def _interpolate_for_section(static, dat, xlon, xlat):
 	try:
-		interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[::-1,:].T)
+		if getattr(static, 'treat_as_unstructured', False):
+			raise TypeError('to be caught below ...')
+
+		if static.y[1,0] < static.y[0,0]:
+			interp = intp.RectBivariateSpline(static.x[0,:], static.y[::-1,0], dat[::-1,:].T)
+		else:
+			interp = intp.RectBivariateSpline(static.x[0,:], static.y[:,0], dat.T)
+
 	# If interpolation fails, try again, but this time do not assume a structured mesh
 	except TypeError:
 		points = list(zip(static.x.flat, static.y.flat))
