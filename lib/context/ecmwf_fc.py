@@ -34,7 +34,7 @@ pt = ('pt', 'pt', 'Potential temperature', 'K')
 q = ('q', 'q', 'Specific humidity', 'kg kg**-1')
 
 msl = ('msl', 'msl', 'Mean sea level pressure', 'Pa')
-ic = ('ci', 'ic', 'Sea-ice cover', '(0 - 1)')
+ic = ('siconc', 'ic', 'Sea-ice concentration', '(0 - 1)')
 sst = ('sst', 'sst', 'Sea surface temperature', 'K')
 t2m = ('t2m', 't2m', '2 metre temperature', 'K')
 d2m = ('d2m', 'd2m', '2 metre dewpoint temperature', 'K')
