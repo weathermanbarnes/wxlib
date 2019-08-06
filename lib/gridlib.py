@@ -15,10 +15,17 @@ a "static.npz" file that contains the pertinent information for a given data set
 import copy
 import numpy as np
 import netCDF4 as nc
+
+# Required only for rotpole projection, so this should not be a hard dependency
+NO_PROJ_AVAILABLE = False
 try:
-	from mpl_toolkits.basemap.pyproj import Proj 		# for rotpole projection
+	from mpl_toolkits.basemap.pyproj import Proj
 except:
-	from pyproj import Proj
+	try: 
+		from pyproj import Proj
+	except:
+		NO_PROJ_AVAILABLE = True
+
 from datetime import datetime as dt, timedelta as td
 
 from . import derivatives
@@ -386,6 +393,9 @@ class grid_by_nc(grid):
 		if self.gridtype == 'latlon':
 			for var in self.f.variables:
 				if var in self.ROT_POLES:
+					if NO_PROJ_AVAILABLE:
+						raise ValueError('For handling rotated-pole grids, a Proj module must be available')
+					
 					rot_nplon_name, rot_nplat_name = self.ROT_POLES[var]
 					rot_nplon = getattr(self.f.variables[var], rot_nplon_name) 
 					rot_nplat = getattr(self.f.variables[var], rot_nplat_name)

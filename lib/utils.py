@@ -21,7 +21,7 @@ import scipy.interpolate as intp
 from scipy.special import erfinv
 
 from . import tagg
-from . import settings as s
+from . import settings_basic as s
 
 from datetime import datetime as dt, timedelta as td
 import calendar

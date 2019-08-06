@@ -21,7 +21,7 @@ import calendar
 from datetime import datetime as dt, timedelta as td
 from dateutil.relativedelta import relativedelta as rtd
 
-from . import settings as se
+from . import settings_basic as se
 from . import utils
 from .gridlib import grid_by_nc, grid_by_static
 from . import tagg

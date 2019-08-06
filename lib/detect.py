@@ -9,7 +9,7 @@ from datetime import datetime as dt, timedelta as td
 
 from . import dynfor
 from . import docutil
-from . import settings as s
+from . import settings_basic as s
 from .metio import metopen, metsave
 
 # Take over the contents of dynfor.diag to this module and inject documentation from the Fortran sources
