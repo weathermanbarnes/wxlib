@@ -336,7 +336,7 @@ contains
        last_ny = ny
     end if
     !
-    lwork = max( 4_ni*(ny+1_ni)**2_ni , (2_ni*nz+1_ni)*ny*nx )
+    lwork = max( 4_ni*(ny+1_ni)**2_ni , 3000_ni*ny*nx )
     ldwork = (ny + 1_ni)*2_ni
     allocate(work(lwork), dwork(ldwork))
     !
@@ -409,7 +409,7 @@ contains
        last_ny = ny
     end if
     !
-    lwork = max( 4_ni*(ny+1_ni)**2_ni , (2_ni*nz+1_ni)*ny*nx )
+    lwork = max( 4_ni*(ny+1_ni)**2_ni , 3000_ni*ny*nx )
     ldwork = (ny + 1_ni)*2_ni
     allocate(work(lwork), dwork(ldwork))
     !
