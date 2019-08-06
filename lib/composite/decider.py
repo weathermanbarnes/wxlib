@@ -20,7 +20,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 from copy import deepcopy
 
-from ..settings import conf
+from ..settings_basic import conf
 from ..shorthands import np, dt, td, metopen
 
 

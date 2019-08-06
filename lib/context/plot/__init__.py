@@ -3,7 +3,8 @@
 
 import numpy as np
 
-from ...settings import def_context, in_context, conf, cm
+from ...settings_basic import conf
+from ...settings import def_context, in_context, cm
 def_context('plot', parent='active')
 
 

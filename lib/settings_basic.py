@@ -65,6 +65,10 @@ def in_context(*contexts):
 def def_context(context, parent=None):
 	''' Define a new context
 
+	The new context will contain a plot configuration if 
+	 - the default config does contain one when creating a new context
+	 - the parent context contains one when extending another context
+
 	Parameters
 	----------
 	context : str
@@ -87,6 +91,16 @@ def def_context(context, parent=None):
 	elif parent:
 		conf_ = __context__[parent]
 	else:
+		_plot = {}
+		_plotf = {}
+		if not context == 'default':
+			default_ = get_context('default')
+			if not type(default_.plot) == dict:
+				from .settings import plot_settings_dict, PLOT_DEFAULTS, PLOTF_DEFAULTS, MUTEX_GROUPS
+
+				_plot = plot_settings_dict(PLOT_DEFAULTS, MUTEX_GROUPS)
+				_plotf = plot_settings_dict(PLOTF_DEFAULTS, MUTEX_GROUPS)
+
 		conf_ = settings_obj({
 			'q': {}, 		# Given a file name segment, which variable to we expect to find there?
 			'qf': {}, 		# Given a variable name, in which file do we find it?
@@ -115,8 +129,8 @@ def def_context(context, parent=None):
 			'zlevs': [],
 			'mlevs': [],
 			'sfclevs': [],
-			'plot': {}, 
-			'plotf': {}, 
+			'plot': _plot, 
+			'plotf': _plotf, 
 		}, [])
 		
 	__context__[context] = conf_

@@ -36,12 +36,14 @@ import numpy as np
 from copy import copy 
 
 from . import cm, proj
-from .settings_basic import *
+from . import settings_basic as base
+
+from .settings_basic import in_context, def_context, get_context, is_active_context, set_active_context
 
 import collections
 
 
-class nd_default_dict(default_dict):
+class nd_default_dict(base.default_dict):
 	''' n-dimensional dictionary with default values for valid keys in the last dimension
 
 	The default value is independent from any dimension but the last. All dimensions 
@@ -75,7 +77,7 @@ class nd_default_dict(default_dict):
 				raise ValueError('Defaults for plotconf must be immutable, but got variable of type %s, value: %s' % (type(default), str(default)))
 		self._fdims = [first_table, ]
 		self._ndims = len(first_table) + 1
-		default_dict.__init__(self, defaults, mutexes) 	# dictionary of valid keys in the last dimension and their default values
+		base.default_dict.__init__(self, defaults, mutexes) 	# dictionary of valid keys in the last dimension and their default values
 	
 	def __check_key(self, key, allow_blank=False):
 		''' Check if a given query key is valid '''
@@ -353,8 +355,8 @@ MUTEX_GROUPS = [set(['colors', 'cmap']), ]
 
 
 # Inject plot settings into the default context
-conf.plot = plot_settings_dict(PLOT_DEFAULTS, MUTEX_GROUPS) 
-conf.plotf = plot_settings_dict(PLOTF_DEFAULTS, MUTEX_GROUPS)
+base.conf.plot = plot_settings_dict(PLOT_DEFAULTS, MUTEX_GROUPS) 
+base.conf.plotf = plot_settings_dict(PLOTF_DEFAULTS, MUTEX_GROUPS)
 
 
 # C'est la fin.

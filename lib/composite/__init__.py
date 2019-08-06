@@ -5,7 +5,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 from .. import utils, metio
 from ..shorthands import np, dt, td, metopen, metsave_timeless, get_static
-from ..settings import conf
+from ..settings_basic import conf
 
 from scipy.io import savemat
 from scipy.interpolate import griddata # interp2d
