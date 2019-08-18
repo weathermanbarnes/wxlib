@@ -44,6 +44,34 @@ contains
   !@
   !@ Interpolates all given grid indexes. The given levels must be in acending order
   !@ of the original vertical index direction
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ dat : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Input variable to be interpolated.
+  !@ datv : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Vertical coordinate values on the same grid as the input variable, 
+  !@     e.g. a 3D pressure field for interpolation onto pressure levels.
+  !@ levels : np.ndarray with shape (nn) and dtype float64
+  !@     List of coordinate values to be interpolated onto.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Input grid size in z- or t-direction.
+  !@ nn : int
+  !@     Output grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nn,ny,nx) and dtype float64
+  !@     Input variable `dat` interpolated on the `levels` given.
   subroutine vert_by_coord(res,nx,ny,nz,nn,dat,datv,levels)
     real(kind=nr), intent(out) :: res(nn,ny,nx)
     real(kind=nr), intent(in) :: dat(nz,ny,nx), datv(nz,ny,nx), levels(nn)
