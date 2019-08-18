@@ -46,6 +46,14 @@ elif [ "${host: -14}" == 'fram.sigma2.no' ]; then
 elif [ "$uname" == 'Darwin' ]; then
 	# Default Mac OS configuration, based on Homebrew
 	LIBS='-L/usr/lib -L/usr/local/lib -lspherepack -lblas -llapack'
+
+	# For some reason libpython is no longer automatically detected/found for the linking step
+	# -> Have python inject the libraries it was buildt with into $LIBS 
+	# (works only for python3.x)
+	PYFIX=`python-config --prefix`
+	PYFIXVER="${PYFIX: -3}"
+	PYLIBS="-L$PYFIX/lib/python$PYFIXVER/config-${PYFIXVER}m-darwin -lpython${PYFIXVER}m"
+	LIBS="$LIBS $PYLIBS"
 	RPATH=""
 elif [ "$uname" == 'Linux' ]; then
 	# Default Linux configuration
@@ -58,7 +66,7 @@ fi
 
 # TODO: Make code ready for -pedantic
 if [ "$COMPILE_OPTS" == 'productive' ]; then
-	OPTS="-fPIC -O2 -fno-range-check"
+	OPTS="-fno-range-check" #-fPIC -O2 -fno-range-check"
 	F2PY_OPTS=""
 	flagset="\e[0;32mproductive\e[0m";
 elif [ "$COMPILE_OPTS" == 'debug' ]; then
@@ -107,7 +115,7 @@ echo "Stage 2: Creating python signature file"
 
 cd $precc
 
-$F2PY -m $python_library -h $pysig $filec $files > /dev/null
+$F2PY -m $python_library -h $pysig $filec $files > f2py.log
 sed "s/kind=nc/kind=16/g" $pysig | sed "s/_nc//g" |
 sed "s/kind=nr/kind=8/g" | sed "s/_nr//g" |
 sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" |
