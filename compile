@@ -36,46 +36,46 @@ pysig="${precc}/$python_library.pyf"
 host=`hostname -f`
 uname=`uname -s`
 if [ "${host: -6}" == 'uib.no' ]; then
-	LIBS="-L/Data/gfi/users/local/lib -lspherepack -lopenblas -lscalapack"
-	RPATH="" #-Wl,-rpath,/Data/gfi/users/local/lib"
+    LIBS="-L/Data/gfi/users/local/lib -lspherepack -lopenblas -lscalapack"
+    RPATH="" #-Wl,-rpath,/Data/gfi/users/local/lib"
 elif [ "${host: -14}" == 'fram.sigma2.no' ]; then
-	LIBS="-L/cluster/home/csp001/sw/spherepack3.2/lib -lspherepack -lopenblas -lscalapack"
-	module load ScaLAPACK/2.0.2-gompi-2018a-OpenBLAS-0.2.20
-	module load Python/3.6.4-intel-2018a
-	RPATH=""
+    LIBS="-L/cluster/home/csp001/sw/spherepack3.2/lib -lspherepack -lopenblas -lscalapack"
+    module load ScaLAPACK/2.0.2-gompi-2018a-OpenBLAS-0.2.20
+    module load Python/3.6.4-intel-2018a
+    RPATH=""
 elif [ "$uname" == 'Darwin' ]; then
-	# Default Mac OS configuration, based on Homebrew
-	LIBS='-L/usr/lib -L/usr/local/lib -lspherepack -lblas -llapack'
+    # Default Mac OS configuration, based on Homebrew
+    LIBS='-L/usr/lib -L/usr/local/lib -lspherepack -lblas -llapack'
 
-	# For some reason libpython is no longer automatically detected/found for the linking step
-	# -> Have python inject the libraries it was buildt with into $LIBS 
-	# (works only for python3.x)
-	PYFIX=`python-config --prefix`
-	PYFIXVER="${PYFIX: -3}"
-	PYLIBS="-L$PYFIX/lib/python$PYFIXVER/config-${PYFIXVER}m-darwin -lpython${PYFIXVER}m"
-	LIBS="$LIBS $PYLIBS"
-	RPATH=""
+    # For some reason libpython is no longer automatically detected/found for the linking step
+    # -> Have python inject the libraries it was buildt with into $LIBS 
+    # (works only for python3.x)
+    PYFIX=`python-config --prefix`
+    PYFIXVER="${PYFIX: -3}"
+    PYLIBS="-L$PYFIX/lib/python$PYFIXVER/config-${PYFIXVER}m-darwin -lpython${PYFIXVER}m"
+    LIBS="$LIBS $PYLIBS"
+    RPATH=""
 elif [ "$uname" == 'Linux' ]; then
-	# Default Linux configuration
-	LIBS='-L/usr/lib -L/usr/local/lib -lspherepack -lblas -llapack'
-	RPATH=""
+    # Default Linux configuration
+    LIBS='-L/usr/lib -L/usr/local/lib -lspherepack -lblas -llapack'
+    RPATH=""
 else
-	echo "Error: Unknown host/ operating system."
-	exit 1
+    echo "Error: Unknown host/ operating system."
+    exit 1
 fi
 
 # TODO: Make code ready for -pedantic
 if [ "$COMPILE_OPTS" == 'productive' ]; then
-	OPTS="-fno-range-check" #-fPIC -O2 -fno-range-check"
-	F2PY_OPTS=""
-	flagset="\e[0;32mproductive\e[0m";
+    OPTS="-fPIC -O2 -fno-range-check"
+    F2PY_OPTS=""
+    flagset="\e[0;32mproductive\e[0m";
 elif [ "$COMPILE_OPTS" == 'debug' ]; then
-	OPTS="-fPIC -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace -g -fno-range-check"
-	F2PY_OPTS="--debug-capi --debug"
-	flagset="\e[0;31mdebug\e[0m";
+    OPTS="-fPIC -fcheck=all -ffpe-trap=invalid,zero,overflow -fbacktrace -g -fno-range-check"
+    F2PY_OPTS="--debug-capi --debug"
+    flagset="\e[0;31mdebug\e[0m";
 else
-	echo "Configuration error: COMPILE_OPTS must be one of ('productive', 'debug')"
-	exit 1
+    echo "Configuration error: COMPILE_OPTS must be one of ('productive', 'debug')"
+    exit 1
 fi
 
 # Empty precompiler directory
@@ -85,7 +85,7 @@ rm -rf ${precc}/*
 # Anticipate compiled object file names
 fileso=""
 for file in $files
-	do fileso="$fileso ${file%.*}.o"
+    do fileso="$fileso ${file%.*}.o"
 done
 fileco="${filec%.*}.o"
 fileko="${filek%.*}.o"
