@@ -147,6 +147,9 @@ contains
   !@ Detects the occurrence of anticyclonic and cyclonic wave-breaking 
   !@ events from a PV field on isentropic coordinates.
   !@
+  !@ The implementation assumes to be given a grid with longitudes starting at
+  !@ -180, and with equal longitudial as latitudinal resolution (dlon == dlat). 
+  !@
   !@ Reference: Riviere (2009, hereafter R09): Effect of latitudinal 
   !@ variations in low-level baroclinicity on eddy life cycles and upper-
   !@ tropospheric wave-breaking processes. J. Atmos. Sci., 66, 1569-1592.
@@ -159,6 +162,9 @@ contains
   !@     Isentropic PV. Should be on a regular lat-lon grid and 180W must be the 
   !@     first longitude (If 180W is not the first longitude, the outputs will have 
   !@     180W as the first, so must be rearranged).
+  !@ variable : string of length 2
+  !@     Abbreviated variable, 'PT' for potential temperature on PV2, 'PV' for
+  !@     potential vorticity on an isentropic level and 'Z2' for 250 hPa geopotential
   !@ lonvalues : np.ndarray with shape (nx) and dtype float64
   !@     Longitudes describing ``pv_in``.
   !@ latvalues : np.ndarray with shape (ny) and dtype float64
@@ -172,7 +178,7 @@ contains
   !@     Flag array, the value 1 indicates anticyclonic wave breaking 
   !@ np.ndarray with shape (nz,ny,nx) and dtype int32 
   !@     Flag array, the value 1 indicates cyclonic wave breaking 
-  subroutine rwb_by_contour(beta_a_out,beta_c_out,nx,ny,nz,pv_in,lonvalues,latvalues,ncon,dx,dy)
+  subroutine rwb_by_contour(beta_a_out,beta_c_out,nx,ny,nz,pv_in,variable,lonvalues,latvalues,ncon,dx,dy)
     use detect_rwb_contour
     !
     implicit none
@@ -194,11 +200,11 @@ contains
     real(kind=nr), dimension(:,:,:,:), allocatable :: pv,pvint
     real(kind=nr), dimension(:), allocatable :: rdate
     !
-    character :: grandeur*2
+    character :: variable*2
     character :: cx*18,cy*18
     integer(kind=ni), dimension(:,:,:,:), allocatable :: beta_a,beta_c,beta_cint
     real(kind=nr), dimension(:,:,:), allocatable :: xvalf,yvalf
-    real(kind=nr) :: incr,incr2,incrlat
+    real(kind=nr) :: incr,incr2,incrlat,incrlat2
     integer(kind=ni) :: nlon2,nlat2,choicegrid
     real(kind=nr), dimension(:), allocatable :: lonval2,latval2,lonval,latval
     real(kind=nr), dimension(:,:,:,:), allocatable :: pv2
@@ -295,6 +301,7 @@ contains
        nlat2=nlat2+1
     end do
     incr2=incr*choicegrid
+    incrlat2=abs(incrlat)*choicegrid
     !
     allocate(lonval2(nlon2))
     lonval2=0._nr
@@ -305,7 +312,7 @@ contains
     allocate(latval2(nlat2))
     latval2=0._nr
     do j=1,nlat2
-       latval2(j)=latval(1)+incr2*real(j-1)
+       latval2(j)=latval(1)+incrlat2*real(j-1)
     end do
     ! 
     allocate(pv2(nlon2,nlat2,nplev,ntime))
@@ -346,16 +353,13 @@ contains
     beta_a=0
     beta_c=0
     !
-    ! TODO: Make this variable configurable!
-    grandeur='PT'
-    !
     allocate(xvalf(8000,nlat2,ncon))
     allocate(yvalf(8000,nlat2,ncon))
     xvalf=0._nr
     yvalf=0._nr
     !print *,'before detection'
-    !print *,'variable=',grandeur
-    !print *,'nlon2=',nlon2,'nlat2=',nlat2,'ncon=',ncon,' incr2=',incr2
+    !print *,'variable=',variable
+    !print *,'nlon2=',nlon2,'nlat2=',nlat2,'ncon=',ncon,' incr2=',incr2, ' incrlat2=', incrlat2
     !print *,'lonval2(1)=',lonval2(1),'latval2(1)=',latval2(1)
     !
     do it=1,ntime
@@ -363,8 +367,8 @@ contains
        do nn=1,nplev
           xvalf=0._nr
           yvalf=0._nr
-          call wb_detection(grandeur,pv2(:,:,nn,it),nlon2,nlat2,ncon,&
-                       &    lonval2(1),latval2(1),incr2,lonval2,latval2,&
+          call wb_detection(variable,pv2(:,:,nn,it),nlon2,nlat2,ncon,&
+                       &    incr2,incrlat2,lonval2,latval2,&
                        &    xvalf,yvalf,beta_a(:,:,nn,it),beta_c(:,:,nn,it))
        end do
     end do

@@ -15,7 +15,7 @@ contains
 ! This section contains all subroutines needed to detect RWBs
 !======================================================================
 ! This subroutine is that called in contour_rwb subroutine to detect RWBs
-        SUBROUTINE WB_DETECTION(grd,PV2d,NX,NY,ncon,LONMIN,LATMIN,INCR,&
+        SUBROUTINE WB_DETECTION(grd,PV2d,NX,NY,ncon,INCRX,INCRY,&
         lon,lat,XVALF,YVALF,beta_a2d,beta_c2d)
 ! The input variables of the subroutine (given at the subroutine)
 ! grd= PV (for potential vorticity) or VO (for absolute vorticity)
@@ -25,10 +25,8 @@ contains
         integer(kind=ni),INTENT(IN) :: NX,NY,ncon
 ! ndim is the highest number of points that can define a contour
         integer(kind=ni),PARAMETER :: ndim=8000
-! lonmin is the first value of longitude (generally 180 degW)
-! latmin is the first value of latitude (either 90 degS or 0 deg)
-! incr is the grid step
-        real(kind=nr),INTENT(IN) :: LONMIN,LATMIN,INCR
+! incrx,incry is the grid step in degrees in x and y directions
+        real(kind=nr),INTENT(IN) :: INCRX, INCRY
 ! lon is the table containing all longitudes (from 180 degW to 180 degE)
         real(kind=nr),DIMENSION(NX),INTENT(IN) :: lon
 ! lat is the table containing all latitudes
@@ -85,8 +83,10 @@ contains
         
 ! zz is the table containing contours values (with ncon=21 or 41)
 ! For PV: from 0 pvu to 10 pvu with an interval of 0.5 pvu
-! For VO (absolute vorticity): form -20e-5 to 20e-5 with an interval of 2e-5 s-1
-! For PT (potential temperature): from 280K to 380K with ncon=21
+! For VO (absolute vorticity): from -20e-5 to 20e-5 with an interval of 2e-5 s-1
+! For Z2 (250 hPa geopotential): from 90e3 to 105e3 in steps of 750 m^2 s^-2 for ncon=21
+! For Z5 (500 hPa geopotential): from 49e3 to 56e3 in steps of 350 m^2 s^-2 for ncon=21
+! For PT (potential temperature): from 280K to 380K in steps of 5K with ncon=21
         nc1=int(ncon/2)+1
 !        print '(A4,I2)','nc1=',nc1
 !        print '(A3,I2)','ncon=',ncon
@@ -94,6 +94,14 @@ contains
 ! if the initial field studied is PV on the northern hemisphere
           if (grd.eq.'PV') then
             zz(pp)=0.5e-6*(real(pp-nc1))
+          endif
+! if the initial field studied is 250 hPa geopotential on the sphere
+          if (grd.eq.'Z2') then
+            zz(pp)=97500 + 750*(real(pp-nc1))
+          endif
+! if the initial field studied is 500 hPa geopotential on the sphere
+          if (grd.eq.'Z5') then
+            zz(pp)=52500 + 350*(real(pp-nc1))
           endif
 ! if the initial field studied is the absolute vorticity on the sphere
           if (grd.eq.'VO') then
@@ -144,9 +152,8 @@ contains
 ! box studied
               call conrec(PV2d(i:i+1,j:j+1),lon(i:i+1),&
               lat(j:j+1),zz(p),xseg,yseg,npt,nbc)
-              if ((nbc.ne.0).and.(xseg(nbc).ne.(-180.0)).and.&
-              (xseg(nbc-1).ne.(-180.0))) CYCLE
               if (nbc.ne.0) then
+                if ((xseg(nbc).ne.(-180.0)).and.(xseg(nbc-1).ne.(-180.0))) CYCLE 
                 flag(j)=2
 ! orgseg is the subroutine that orders the points found by conrec in the
 ! west-east direction
@@ -249,7 +256,7 @@ contains
             if (XVAL(1).ne.0.0) then
 ! Once the whole contour is detected, the eventfunctions subroutine
 ! finds the WB areas and fills in the two beta tables
-              call eventfunctions(icompt,NX,NY,LONMIN,LATMIN,INCR,&
+              call eventfunctions(icompt,NX,NY,lon(1),lat(1),INCRX,INCRY,&
               XVAL(1:icompt),YVAL(1:icompt),beta_a_temp(1:NX,1:NY),&
               beta_c_temp(1:NX,1:NY),nbpta_temp,nbptc_temp)
               nbpta=nbpta_temp
@@ -306,7 +313,7 @@ contains
         integer(kind=ni) caseid
         integer(kind=ni) castab(-1:1,-1:1,-1:1)
         integer(kind=ni) p1,p2,ii
-        real(kind=nr) l1,l3,pi,incr
+        real(kind=nr) l1,l3,pi
         real(kind=nr) l11,l31,l41,l12,l32,l42
         real(kind=nr) dmin,dmax
         data im/0,1,1,0/
@@ -718,11 +725,11 @@ contains
 ! AWB or to a CWB
 ! beta_a_temp is 1 when an AWB is detected at a grid point and 0 otherwise
 ! beta_c_temp is 1 when a CWB is detected at a grid point and 0 otherwise
-        SUBROUTINE eventfunctions(icompt,NX,NY,longmin,latimin,grille, &
+        SUBROUTINE eventfunctions(icompt,NX,NY,longmin,latimin,incrx,incry, &
         XVAL,YVAL,beta_a_temp,beta_c_temp,nbpta_temp,nbptc_temp)
 
         integer(kind=ni),INTENT(IN) :: icompt,NX,NY
-        real(kind=nr),INTENT(IN) :: longmin,latimin,grille
+        real(kind=nr),INTENT(IN) :: longmin,latimin,incrx,incry
         real(kind=nr),DIMENSION(icompt),INTENT(IN) :: XVAL
         real(kind=nr),DIMENSION(icompt),INTENT(IN) :: YVAL
         integer(kind=ni),DIMENSION(NX,NY),INTENT(OUT) ::beta_a_temp,beta_c_temp
@@ -756,8 +763,8 @@ contains
                 ptdpremier=kk
                 flag1(kk)=2
                 if (YVAL(ptdpremier-1).le.YVAL(ptdpremier)) then
-                  indi=int((XVAL(ptdpremier)-longmin)/grille)+1
-                  indj=int((YVAL(ptdpremier)-latimin)/grille)+1
+                  indi=int((XVAL(ptdpremier)-longmin)/incrx)+1
+                  indj=int((YVAL(ptdpremier)-latimin)/incry)+1
                   if ((indi.gt.NX).or.(indj.gt.NY)) then
                     print *,'indi ou indj depassent NX ou NY'
                     STOP
@@ -775,8 +782,8 @@ contains
                   endif
                   DO WHILE((diffm1.lt.0.0).and.(diffp1.lt.0.0))
                     aa=aa+1
-                    indi=int((XVAL(ww)-longmin)/grille)+1
-                    indj=int((YVAL(ww)-latimin)/grille)+1
+                    indi=int((XVAL(ww)-longmin)/incrx)+1
+                    indj=int((YVAL(ww)-latimin)/incry)+1
                     if ((indi.gt.NX).or.(indj.gt.NY)) then
                       STOP
                     endif
@@ -794,8 +801,8 @@ contains
                   ENDDO
                 else
                   if (YVAL(ptdpremier-1).gt.YVAL(ptdpremier)) then
-                    indi=int((XVAL(ptdpremier)-longmin)/grille)+1
-                    indj=int((YVAL(ptdpremier)-latimin)/grille)+1
+                    indi=int((XVAL(ptdpremier)-longmin)/incrx)+1
+                    indj=int((YVAL(ptdpremier)-latimin)/incry)+1
                     if ((indi.gt.NX).or.(indj.gt.NY)) then
                       STOP
                     endif
@@ -812,8 +819,8 @@ contains
                     endif
                     DO WHILE((diffm1.lt.0.0).and.(diffp1.lt.0.0))
                       bb=bb+1
-                      indi=int((XVAL(ww)-longmin)/grille)+1
-                      indj=int((YVAL(ww)-latimin)/grille)+1
+                      indi=int((XVAL(ww)-longmin)/incrx)+1
+                      indj=int((YVAL(ww)-latimin)/incry)+1
                       beta_a_temp(indi,indj)=1
                       flag1(ww)=2
                       ww=ww+1
