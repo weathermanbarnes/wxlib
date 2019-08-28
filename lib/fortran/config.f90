@@ -25,6 +25,8 @@ module config
     &          thres_max_slope = 1.0e3, &
     &          thres_min_dzdth = 1.0e-4, &
     &          thres_max_dzdth = 1.0e4
-  integer(kind=ni) :: nsmooth = 2_ni 
+  integer(kind=ni) ::  nsmooth = 2_ni, &
+    &                 block_dj = 30, &  ! 15 deg latitude at ERAI resolution
+    &                 block_di = 15     ! 7.5 deg longitude at ERAI resolution
   !
 end module

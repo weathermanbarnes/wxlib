@@ -436,7 +436,7 @@ contains
   !@ Blocking indicator using large-scale gradient reversals
   !@
   !@ Base data can for example be potential temperature on the PV2-surface (following 
-  !@ e.g. Masato et al. 2013).
+  !@ e.g. Masato et al. 2012).
   !@
   !@ Parameters
   !@ ----------
@@ -476,28 +476,22 @@ contains
     !f2py depend(nx,ny) dx, dy
     !
     real(kind=nr) :: tmp(nz,ny,nx)
-    integer(kind=ni) :: i,j,k, di,dj, j0,j1
+    integer(kind=ni) :: i,j,k
     ! -----------------------------------------------------------------
-    !
-    ! TODO: Move to constants / arguments
-    dj = 30  ! 15 deg  latitude
-    di = 15  ! 7.5 def longitude
-    j0 = 120 ! From 30 degN
-    j1 = 40  ! To 70 degN
     !
     res(:,:,:) = 0.0_nr
     !
     do k = 1_ni,nz
        ! Local blocking index
-       do j = j0,j1,-1_ni
+       do j = ny-block_dj,block_dj+1_ni,-1_ni
           do i = 1_ni,nx
-             tmp(k,j,i) = (sum(dat(k,j-dj:j-1_ni,i)) - sum(dat(k,j+1_ni:j+dj,i))) / dj
+             tmp(k,j,i) = (sum(dat(k,j-block_dj:j-1_ni,i)) - sum(dat(k,j+1_ni:j+block_dj,i))) / block_dj
           end do
        end do
        ! Longitudinal smoothing by running mean
-       do j = j0,j1,-1_ni
-          do i = 1_ni+di,nx-di
-             res(k,j,i) = sum(tmp(k,j,i-di:i+di))/(2_ni*di+1_ni)
+       do j = ny-block_dj,block_dj+1_ni,-1_ni
+          do i = 1_ni+block_di,nx-block_di
+             res(k,j,i) = sum(tmp(k,j,i-block_di:i+block_di))/(2_ni*block_di+1_ni)
           end do
        end do
     end do
@@ -505,12 +499,12 @@ contains
     ! Taking periodic grid into account for longitudinal smoothing by running mean
     if (grid_cyclic_ew) then
        do k = 1_ni,nz
-          do j = j0,j1,-1_ni
-             do i = 1_ni,di
-                res(k,j,i) = (sum(tmp(k,j,nx-(di-i):nx)) + sum(tmp(k,j,1_ni:i+di)) )/(2_ni*di+1_ni)
+          do j = ny-block_dj,block_dj+1_ni,-1_ni
+             do i = 1_ni,block_di
+                res(k,j,i) = (sum(tmp(k,j,nx-(block_di-i):nx)) + sum(tmp(k,j,1_ni:i+block_di)) )/(2_ni*block_di+1_ni)
              end do
-             do i = nx-di+1_ni,nx
-                res(k,j,i) = (sum(tmp(k,j,i-di:nx)) + sum(tmp(k,j,1_ni:i-(nx-di))) )/(2_ni*di+1_ni)
+             do i = nx-block_di+1_ni,nx
+                res(k,j,i) = (sum(tmp(k,j,i-block_di:nx)) + sum(tmp(k,j,1_ni:i-(nx-block_di))) )/(2_ni*block_di+1_ni)
              end do
           end do
        end do
