@@ -512,6 +512,260 @@ contains
     !
   end subroutine
   !
+  !@ Cyclone masks by finding the outermost closed contour
+  !@
+  !@ Reimplementation of the Wernli and Schwierz (2006) algorithm, including the
+  !@ modifications described in Sprenger et al. (2017). To avoid the technically 
+  !@ difficult contour tracing, we base the detection on sorted sea-level 
+  !@ pressure values. 
+  !@ 
+  !@ The criteria used in the original implementation of the algorithm are
+  !@  - Location: Deepest sea-level pressure minimum within 750 km radius
+  !@  - Topography below 1500 m at location
+  !@  - Cyclone mask: Enclosed in contour of min 100 km and max 7500 km length
+  !@  - No sea-level pressure maximum in the enclosed contour
+  !@ 
+  !@ We adapt the minimum and maximum contour length to cyclone area thresholds
+  !@ assuming circular contours. The thresholds then correspond to a minimum 
+  !@ size of 800 km^2 and a maximum size of 4.5e6 km^2.
+  !@ 
+  !@ Looping from minimum to maximum values, cyclone masks are then grown by deciding 
+  !@ whether each new grid point (1) belongs to an existing cyclone, (2) separates to 
+  !@ existing cyclones, (3) constitutes a new sea-level pressure minimum, or (4) none
+  !@ of the above.
+  !@ 
+  !@ These cases can be separated using the following rules:
+  !@  (1) The point is adjacent to exactly one existing cyclone mask, which does not
+  !@      exceed its maximum size
+  !@  (2) The point is adjacent to two or more existing cyclone masks
+  !@  (3) The point is adjacent to no existing cyclone masks, but constitutes at a local
+  !@      minimum
+  !@  (4) All points not fulfilling any of the above
+  !@ 
+  !@ In addition to the contour tracking, we further avoid a predefined contour
+  !@ interval at which the analysis is carried out. The chosen contour interval however
+  !@ implies a minimum prominence of the sea-level pressure minima, which is here
+  !@ explicity defined and enforced. Following Wernli and Schwierz (2006) contour
+  !@ interval, we set this minimum prominence to 2 hPa.
+  !@
+  !@ The algorithm uses the following configration parameters
+  !@  - `dynfor.config.cyc_minsize`: Minimum size in km^2
+  !@  - `dynfor.config.cyc_maxsize`: Maximum size in km^2
+  !@  - `dynfor.config.cyc_maxoro`: Maximum orographic height in the units of
+  !@    the `oro` parameter to this function.
+  !@  - `dynfor.config.cyc_mindist`: Minimum distance between two cyclone centres in km
+  !@  - `dynfor.config.cyc_minprominence`: Minimum prominence of the sea-level
+  !@    pressure minimum in the unit of the `msl`/`msls` parameters to this function.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ nn : int
+  !@     Maximum number of cyclones to be detected
+  !@ msl : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Sea-level pressure (or any other suitable field).
+  !@ msls : np.ndarray with shape (nz,ny*nx) and dtype float64
+  !@     Sorted sea-level pressure values for each time step.
+  !@ iis : np.ndarray with shape (nz,ny*nx) and dtype float64
+  !@     Longitudinal grid index of the respective sea-level pressure value.
+  !@ jjs : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Latitudinal grid index of the respective sea-level pressure value.
+  !@ oro : np.ndarray with shape (ny,nx) and dtype float64
+  !@     Orographic height to mask sea-level pressure minima over high terrain.
+  !@ lon : np.ndarray with shape(nx)
+  !@     Longitudes in degrees
+  !@ lat : np.ndarray with shape(ny)
+  !@     Latitudes in degrees
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype int32
+  !@     Cyclone mask with different integers designating different cyclones
+  !@ np.ndarray with shape (nz,nn,5)
+  !@     Meta data about each cyclone: (1) latitutde and (2) longitude of its centre,
+  !@     (3) minimum SLP, (4) SLP at the outermost contour, and (5) cyclone size.
+  subroutine cyclone_by_contour(mask,meta, nx,ny,nz,nn, msl, msls,iis,jjs, oro, lon,lat, dx,dy)
+    use consts
+    !
+    real(kind=nr), intent(in)  :: msl(nz,ny,nx), msls(nz,ny*nx), oro(ny,nx),  &
+       &                          lon(nx), lat(ny), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: meta(nz,nn,5_ni)
+    integer(kind=ni), intent(in) :: iis(nz,ny*nx), jjs(nz,ny*nx), nn,nx,ny,nz
+    integer(kind=ni), intent(out) :: mask(nz,ny,nx)
+    !f2py depend(nx,ny,nz) mask, msls, iis, jjs
+    !f2py depend(nn,nz) meta
+    !f2py depend(nx,ny) oro, dx, dy
+    !f2py depend(nx) lon
+    !f2py depend(ny) lat
+    !
+    real(kind=nr) :: cellsize(ny,nx), min_around, dist, mindist, dlon, lat1r, lat2r, val, prominence
+    integer(kind=ni) :: loc_mask(8_ni), cycidx, ocycidx, minidx, ndiffloc, nmaxloc
+    logical :: done(nn)
+    integer(kind=ni) :: i,j,k,n,m, ip1,im1,jp1,jm1
+    ! -----------------------------------------------------------------
+    !
+    ! Initialize stuff
+    meta(:,:,:) = 0_ni
+    !
+    do i = 1_ni,nx
+       do j = 1_ni,ny
+          cellsize(j,i) = abs(dx(j,i) * dy(j,i)) / 4.0e6 ! double grid spacing in dx/dy and conversion from m^2 to km^2
+          if ( isnan(cellsize(j,i)) ) then
+             cellsize(j,i) = 0.0_nr
+          end if
+       end do
+    end do
+    !
+    ! Loops over time and sorted arrays
+    do k = 1,nz
+       cycidx = 0_ni
+       done(:) = .false.
+       !
+       do n = 1,ny*nx
+          i = iis(k,n) + 1_ni ! conversion to Fortran indexes
+          j = jjs(k,n) + 1_ni
+          val = msls(k,n)
+          !
+          ip1 = modulo(i,nx) + 1_ni
+          im1 = modulo(i-2_ni,nx) + 1_ni
+          jp1 = min(j+1_ni,ny)
+          jm1 = max(j-1_ni,1_ni)
+          !
+          min_around = min(msl(k,j,ip1), msl(k,jp1,ip1), msl(k,jp1,i), msl(k,jp1,im1), &
+             &             msl(k,j,im1), msl(k,jm1,im1), msl(k,jm1,i), msl(k,jm1,ip1) )
+          loc_mask(:) = (/ mask(k,j,ip1), mask(k,jp1,ip1), mask(k,jp1,i), mask(k,jp1,im1), &
+             &             mask(k,j,im1), mask(k,jm1,im1), mask(k,jm1,i), mask(k,jm1,ip1) /)
+          !
+          ! How many different mask values in the vicinity?  0, 1, 2-or-more?
+          ndiffloc = 0_ni
+          nmaxloc = maxval(loc_mask)
+          do m = 1_ni,8_ni
+             if ( loc_mask(m) == 0_ni ) then
+                cycle
+             end if
+
+             if ( loc_mask(m) == nmaxloc ) then
+                ndiffloc = max(ndiffloc,1_ni)
+             else
+                ndiffloc = max(ndiffloc,2_ni)
+             end if
+          end do
+          !
+          ! Nothing around -> potential new cyclone center
+          if ( minval(loc_mask) == 0_ni .and. maxval(loc_mask) == 0_ni ) then
+             ! If SLP minimum and not above too high orography
+             if ( val < min_around .and. oro(j,i) < cyc_maxoro ) then
+                ! Check proximity to previously detected cyclone centres
+                mindist = cyc_mindist
+                minidx = -1_ni
+                do m = 1_ni,cycidx
+                   dlon = pi/180.0_nr * ( lon(i) - meta(k,m,2_ni) )
+                   lat1r = pi/180.0_nr * lat(j)
+                   lat2r = pi/180.0_nr * meta(k,m,1_ni)
+                   dist = 6370.0_nr * acos(sin(lat1r)*sin(lat2r) + cos(lat1r)*cos(lat2r)*cos(dlon))
+                   if ( dist < mindist ) then
+                      mindist = dist
+                      minidx = m
+                   end if
+                end do
+                ! Minimum belongs to existing cyclone
+                if ( minidx > 0 ) then
+                   mask(k,j,i) = minidx
+
+                ! Actually new cyclone
+                else
+                   cycidx = cycidx + 1_ni
+                   mask(k,j,i) = cycidx
+                   meta(k,cycidx,1_ni) = lat(j)
+                   meta(k,cycidx,2_ni) = lon(i)
+                   meta(k,cycidx,3_ni) = val
+                   meta(k,cycidx,4_ni) = val
+                   meta(k,cycidx,5_ni) = cellsize(j,i)
+                end if
+
+             else
+                mask(k,j,i) = -1_ni
+             end if
+          !
+          ! One cyclone around -> potential extension of existing cyclone
+          else if ( ndiffloc == 1_ni ) then
+             ocycidx = nmaxloc
+             
+             ! Only close to previously discarded grid cell
+             if ( ocycidx < 0_ni ) then
+                mask(k,j,i) = -1_ni
+             ! Other cyclone already complete
+             else if ( done(ocycidx) ) then
+                mask(k,j,i) = -1_ni
+             ! Other cyclone would become too large
+             else if ( meta(k,ocycidx,5_ni) + cellsize(j,i) > cyc_maxsize ) then
+                mask(k,j,i) = -1_ni
+                done(ocycidx) = .true.
+             ! Point extends other cyclone
+             else
+                mask(k,j,i) = ocycidx
+                meta(k,ocycidx,5_ni) = meta(k,ocycidx,5_ni) + cellsize(j,i)
+                meta(k,ocycidx,4_ni) = val
+             end if
+
+          ! More than one cyclone around -> mark all of them as complete
+          else
+             mask(k,j,i) = -1_ni
+             do m = 1_ni,8_ni
+                if ( loc_mask(m) > 0_ni ) then
+                   done(loc_mask(m)) = .true.
+                end if
+             end do
+          end if
+       end do ! Loop over sorted grid cells
+       !
+       !
+       ! Clean up negative masks
+       do j = 1_ni,ny
+          do i = 1_ni,nx
+             if ( mask(k,j,i) < 0_ni ) then
+                mask(k,j,i) = 0_ni
+             end if
+          end do
+       end do
+       !
+       ! Enforce minimum size and minimum prominence 
+       do n = 1_ni,cycidx
+          prominence = meta(k,n,4_ni) - meta(k,n,3_ni)
+          ! Too weak or too small -> not a cyclone after all
+          if ( prominence < cyc_minprominence .or. meta(k,n,5_ni) < cyc_minsize ) then
+             meta(k,n,:) = 0.0_nr
+             !
+             do j = 1_ni,ny
+                do i = 1_ni,nx
+                   if ( mask(k,j,i) == n ) then
+                      mask(k,j,i) = 0_ni
+                   end if
+                end do
+             end do
+          end if
+       end do  
+       ! 
+    end do ! Loop over time
+    !
+  end subroutine
+  !
   !@ Find jetaxes by zero-shear condition and a mask for well-defined wind maxima
   !@
   !@ The mask for well-defined maxima is defined by d/dn(U * dU/dn) < K. The

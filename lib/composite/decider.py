@@ -454,9 +454,33 @@ class ts_notnan(ts_lowerbound):
         return not np.isnan(self.values[self.tidx])
 
 
+# Criterion: Match given years
+class years(decider):
+    ''' Decider checking whether in given years
+    
+    Parameters
+    ----------
+    name : str
+        Name of the composite, to be used for saving.
+    years : list of int
+        List of calendar years.
+    '''
+
+    def __init__(self, name, years):
+        decider.__init__(self, name)
+        self.years = years
+
+        return
+    
+    def match(self, date, tidx, prv, cur, nxt):
+        __doc__ = decider.match.__doc__
+
+        return date.year in self.years
+
+
 # Criterion: Match a given month
 class month(decider):
-    ''' Decider checking if in a given month 
+    ''' Decider checking whether in a given month 
     
     Parameters
     ----------
@@ -504,6 +528,33 @@ class timeofday(decider):
         __doc__ = decider.match.__doc__
 
         return date.hour >= self.begin and date.hour < self.end
+
+
+# Criterion: Match a given time of the day
+class from_list_of_dates(decider):
+    ''' Check whether given date within list of dates (hours are disregarded)
+    
+    Parameters
+    ----------
+    name : str
+        Name of the composite, to be used for saving.
+    dates: list of datetime.datetime
+        List of dates to check against.
+    '''
+    
+    def __init__(self, name, dates):
+        decider.__init__(self, name)
+        self.dates = {dt(date.year, date.month, date.day, 0) for date in dates}
+
+        return
+    
+    # Decider
+    def match(self, date, tidx, prv, cur, nxt):
+        __doc__ = decider.match.__doc__
+
+        date_day = dt(date.year, date.month, date.day, 0)
+
+        return date_day in self.dates
 
 
 def __timelag_one(decider, lidx, dtidx, dt):

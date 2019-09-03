@@ -24,7 +24,12 @@ module config
     &          thres_min_slope = 1.0e-5, &
     &          thres_max_slope = 1.0e3, &
     &          thres_min_dzdth = 1.0e-4, &
-    &          thres_max_dzdth = 1.0e4
+    &          thres_max_dzdth = 1.0e4, &
+    &              cyc_minsize = 800.0, &
+    &              cyc_maxsize = 4.5e6, &
+    &               cyc_maxoro = 1500, &
+    &              cyc_mindist = 750, &
+    &        cyc_minprominence = 200
   integer(kind=ni) ::  nsmooth = 2_ni, &
     &                 block_dj = 30, &  ! 15 deg latitude at ERAI resolution
     &                 block_di = 15     ! 7.5 deg longitude at ERAI resolution
