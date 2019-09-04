@@ -81,13 +81,6 @@ def cyclone_by_contour(msl, grid):
         (3) minimum SLP, (4) SLP at the outermost contour, and (5) cyclone size.
     '''
     
-    # Configuration
-    dynfor.config.cyc_minsize = 800       # in km^2; Minimum size of cyclone mask
-    dynfor.config.cyc_maxsize = 4.5e6     # in km^2; Maximum size of cyclone mask
-    dynfor.config.cyc_maxoro = 1500       # in m; Maximum orographic height over which cyclone centers are detected
-    dynfor.config.cyc_mindist = 750       # in km; Minimum distance between two cyclone centres
-    dynfor.config.cyc_minprominence = 200 # in Pa; Minimum difference between outermost contour and SLP minimum
-    
     # Preprocessing
     msl = msl.squeeze()
     nt, ny, nx = msl.shape
