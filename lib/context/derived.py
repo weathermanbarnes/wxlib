@@ -61,8 +61,14 @@ block = ('block', 'block', 'Block mask', '1')
 frovo = ('frovo_id', 'frovo_id', 'Frontal volume ID', '1')
 frovo_freq = ('frovo_freq', 'frovo_freq', 'Frontal volume detection frequency', '(time step)**-1')
 
+cyc = ('cycmask', 'cycmask', 'Cyclone object ID', '1')
+cyc_freq = ('cyc_freq', 'cyc_freq', 'Cyclone detection frequency', '(time step)**-1')
+cyc_dens = ('cyc_dens', 'cyc_dens', 'Cyclone detection density', '(time step)**-1 (1000 km)**-1')
+cycgen_dens = ('cycgen_dens', 'cycgen_dens', 'Cyclogeneis detection density', '(time step)**-1 (1000 km)**-1')
+cyclys_dens = ('cyclys_dens', 'cyclys_dens', 'Cyclolysis detection density', '(time step)**-1 (1000 km)**-1')
+
 # The vertical level of the following variables is fixed and does not depend on user application
-conf.register_variable([sstfront, sstfroff, sstfront_freq, ], ['sfc',])
+conf.register_variable([sstfront, sstfroff, sstfront_freq, cyc, cyc_freq, cyc_dens, cycgen_dens, cyclys_dens], ['sfc',])
 
 # The vertical levels on which the following variables are available depends 
 # on the application, and must hence be defined in the user settings.
