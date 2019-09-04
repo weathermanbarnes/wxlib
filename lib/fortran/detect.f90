@@ -514,39 +514,13 @@ contains
   !
   !@ Cyclone masks by finding the outermost closed contour
   !@
-  !@ Reimplementation of the Wernli and Schwierz (2006) algorithm, including the
-  !@ modifications described in Sprenger et al. (2017). To avoid the technically 
-  !@ difficult contour tracing, we base the detection on sorted sea-level 
-  !@ pressure values. 
-  !@ 
-  !@ The criteria used in the original implementation of the algorithm are
-  !@  - Location: Deepest sea-level pressure minimum within 750 km radius
-  !@  - Topography below 1500 m at location
-  !@  - Cyclone mask: Enclosed in contour of min 100 km and max 7500 km length
-  !@  - No sea-level pressure maximum in the enclosed contour
-  !@ 
-  !@ We adapt the minimum and maximum contour length to cyclone area thresholds
-  !@ assuming circular contours. The thresholds then correspond to a minimum 
-  !@ size of 800 km^2 and a maximum size of 4.5e6 km^2.
-  !@ 
-  !@ Looping from minimum to maximum values, cyclone masks are then grown by deciding 
-  !@ whether each new grid point (1) belongs to an existing cyclone, (2) separates to 
-  !@ existing cyclones, (3) constitutes a new sea-level pressure minimum, or (4) none
-  !@ of the above.
-  !@ 
-  !@ These cases can be separated using the following rules:
-  !@  (1) The point is adjacent to exactly one existing cyclone mask, which does not
-  !@      exceed its maximum size
-  !@  (2) The point is adjacent to two or more existing cyclone masks
-  !@  (3) The point is adjacent to no existing cyclone masks, but constitutes at a local
-  !@      minimum
-  !@  (4) All points not fulfilling any of the above
-  !@ 
-  !@ In addition to the contour tracking, we further avoid a predefined contour
-  !@ interval at which the analysis is carried out. The chosen contour interval however
-  !@ implies a minimum prominence of the sea-level pressure minima, which is here
-  !@ explicity defined and enforced. Following Wernli and Schwierz (2006) contour
-  !@ interval, we set this minimum prominence to 2 hPa.
+  !@ Fortran part of a reimplementation of the Wernli and Schwierz (2006) 
+  !@ algorithm, including the modifications described in Sprenger et al. (2017). 
+  !@ To avoid the technically difficult contour tracing, we base the detection on 
+  !@ sorted sea-level pressure values. 
+  !@
+  !@ For more info refer to the python function. This routine is not intended to
+  !@ be called directly.
   !@
   !@ The algorithm uses the following configration parameters
   !@  - `dynfor.config.cyc_minsize`: Minimum size in km^2
@@ -600,7 +574,7 @@ contains
   !@ np.ndarray with shape (nz,nn,5)
   !@     Meta data about each cyclone: (1) latitutde and (2) longitude of its centre,
   !@     (3) minimum SLP, (4) SLP at the outermost contour, and (5) cyclone size.
-  subroutine cyclone_by_contour(mask,meta, nx,ny,nz,nn, msl, msls,iis,jjs, oro, lon,lat, dx,dy)
+  subroutine cyclone_by_contour_fortran(mask,meta, nx,ny,nz,nn, msl, msls,iis,jjs, oro, lon,lat, dx,dy)
     use consts
     !
     real(kind=nr), intent(in)  :: msl(nz,ny,nx), msls(nz,ny*nx), oro(ny,nx),  &

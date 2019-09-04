@@ -16,6 +16,108 @@ from .metio import metopen, metsave, dts2str
 docutil.takeover(dynfor.detect, 'detect', sys.modules[__name__])
 
 
+
+def cyclone_by_contour(msl, grid):
+    ''' Cyclone masks by finding the outermost closed contour
+   
+    Reimplementation of the Wernli and Schwierz (2006) algorithm, including the
+    modifications described in Sprenger et al. (2017). To avoid the technically 
+    difficult contour tracing, we base the detection on sorted sea-level 
+    pressure values. 
+    
+    The criteria used in the original implementation of the algorithm are
+     - Location: Deepest sea-level pressure minimum within 750 km radius
+     - Topography below 1500 m at location
+     - Cyclone mask: Enclosed in contour of min 100 km and max 7500 km length
+     - No sea-level pressure maximum in the enclosed contour
+    
+    We adapt the minimum and maximum contour length to cyclone area thresholds
+    assuming circular contours. The thresholds then correspond to a minimum 
+    size of 800 km^2 and a maximum size of 4.5e6 km^2.
+    
+    Looping from minimum to maximum values, cyclone masks are then grown by deciding 
+    whether each new grid point (1) belongs to an existing cyclone, (2) separates to 
+    existing cyclones, (3) constitutes a new sea-level pressure minimum, or (4) none
+    of the above.
+    
+    These cases can be separated using the following rules:
+     (1) The point is adjacent to exactly one existing cyclone mask, which does not
+         exceed its maximum size
+     (2) The point is adjacent to two or more existing cyclone masks
+     (3) The point is adjacent to no existing cyclone masks, but constitutes at a local
+         minimum
+     (4) All points not fulfilling any of the above
+    
+    In addition to the contour tracking, we further avoid a predefined contour
+    interval at which the analysis is carried out. The chosen contour interval however
+    implies a minimum prominence of the sea-level pressure minima, which is here
+    explicity defined and enforced. Following Wernli and Schwierz (2006) contour
+    interval, we set this minimum prominence to 2 hPa.
+   
+    The algorithm uses the following configration parameters
+     - `dynfor.config.cyc_minsize`: Minimum size in km^2
+     - `dynfor.config.cyc_maxsize`: Maximum size in km^2
+     - `dynfor.config.cyc_maxoro`: Maximum orographic height in the units of
+       the `oro` parameter to this function.
+     - `dynfor.config.cyc_mindist`: Minimum distance between two cyclone centres in km
+     - `dynfor.config.cyc_minprominence`: Minimum prominence of the sea-level
+       pressure minimum in the unit of the `msl`/`msls` parameters to this function.
+   
+    Parameters
+    ----------
+   
+    msl : np.ndarray with shape (nz,ny,nx) and dtype float64
+        Sea-level pressure (or any other suitable field).
+    grid : gridlib.grid
+        Grid and static information about the array. Make sure grid.oro contains the 
+        model orography in masl.
+   
+    Returns
+    -------
+    np.ndarray with shape (nz,ny,nx) and dtype int32
+        Cyclone mask with different integers designating different cyclones
+    np.ndarray with shape (nz,nn,5)
+        Meta data about each cyclone: (1) latitutde and (2) longitude of its centre,
+        (3) minimum SLP, (4) SLP at the outermost contour, and (5) cyclone size.
+    '''
+    
+    # Configuration
+    dynfor.config.cyc_minsize = 800       # in km^2; Minimum size of cyclone mask
+    dynfor.config.cyc_maxsize = 4.5e6     # in km^2; Maximum size of cyclone mask
+    dynfor.config.cyc_maxoro = 1500       # in m; Maximum orographic height over which cyclone centers are detected
+    dynfor.config.cyc_mindist = 750       # in km; Minimum distance between two cyclone centres
+    dynfor.config.cyc_minprominence = 200 # in Pa; Minimum difference between outermost contour and SLP minimum
+    
+    # Preprocessing
+    msl = msl.squeeze()
+    nt, ny, nx = msl.shape
+    
+    # Creating array holding only the grid index for the respective locations for the following sort
+    xidx = np.empty(msl.shape[1:], dtype='i4')
+    yidx = np.empty(msl.shape[1:], dtype='i4')
+    xidx[:,:] = np.arange(nx)[np.newaxis,:]
+    yidx[:,:] = np.arange(ny)[:,np.newaxis]
+    
+    # Allocating the sorted arrays
+    sortshape = (msl.shape[0], msl.shape[1]*msl.shape[2])
+    xidx_sort = np.empty(sortshape, dtype='i4')
+    yidx_sort = np.empty(sortshape, dtype='i4')
+    msl_sort = np.empty(sortshape)
+
+    # Sorting the input
+    for k in range(nt):
+        sortidx = np.argsort(msl[k,:,:], axis=None)
+        msl_sort[k,:] = np.take_along_axis(msl[k,:,:], sortidx, axis=None)
+        xidx_sort[k,:] = np.take_along_axis(xidx, sortidx, axis=None)
+        yidx_sort[k,:] = np.take_along_axis(yidx, sortidx, axis=None)
+        
+    # The actual cyclone detections
+    mask, meta = cyclone_by_contour_fortran(1000, msl, msl_sort, xidx_sort, yidx_sort, grid.oro,
+            grid.x[0,:], grid.y[:,0], grid.dx, grid.dy)
+
+    return mask, meta
+
+
 def block_by_grad_rev(dat, grid, lat_band=(30,70),
         local_move=(27,36), total_move=(40,54), min_duration=21):
     ''' Detect blocking following the Masato et al. (2012) procedure based on persistent gradient reversals
