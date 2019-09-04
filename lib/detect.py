@@ -106,10 +106,10 @@ def cyclone_by_contour(msl, grid):
 
     # Sorting the input
     for k in range(nt):
-        sortidx = np.argsort(msl[k,:,:], axis=None)
-        msl_sort[k,:] = np.take_along_axis(msl[k,:,:], sortidx, axis=None)
-        xidx_sort[k,:] = np.take_along_axis(xidx, sortidx, axis=None)
-        yidx_sort[k,:] = np.take_along_axis(yidx, sortidx, axis=None)
+        sortidx = np.unravel_index(np.argsort(msl[k,:,:], axis=None), msl[k,:,:].shape)
+        msl_sort[k,:] = msl[k,:,:][sortidx]
+        xidx_sort[k,:] = xidx[sortidx]
+        yidx_sort[k,:] = yidx[sortidx]
         
     # The actual cyclone detections
     mask, meta = cyclone_by_contour_fortran(1000, msl, msl_sort, xidx_sort, yidx_sort, grid.oro,
