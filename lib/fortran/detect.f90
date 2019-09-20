@@ -819,7 +819,7 @@ contains
     !  (the original jetint is not needed anymore after the masking `where` block)
     jetint(:,:,:) = ff(:,:,:)
     !
-    call line_locate(ja,jaoff, nx,ny,nz,no,nf, shear,jetint,searchrad,minlen, dx,dy)
+    call line_locate(ja,jaoff, nx,ny,nz,no,nf, shear,jetint, dx,dy)
     !
     return
   end subroutine
@@ -916,7 +916,7 @@ contains
     !  (the original jetint is not needed anymore after the masking `where` block)
     jetint(:,:,:) = sqrt(us(:,:,:)**2.0_nr + vs(:,:,:)**2.0_nr)
     !
-    call line_locate(ja,jaoff, nx,ny,nz,no,nf, jaloc,jetint,searchrad,minlen, dx,dy)
+    call line_locate(ja,jaoff, nx,ny,nz,no,nf, jaloc,jetint, dx,dy)
     !
     return
   end subroutine
@@ -1097,7 +1097,7 @@ contains
           end where
        end if
        !
-       call line_locate(fr(:,typ,:,:),froff(:,typ,:), nx,ny,nz,no,nf, frloc_cws,frint,searchrad,minlen, dx,dy)
+       call line_locate(fr(:,typ,:,:),froff(:,typ,:), nx,ny,nz,no,nf, frloc_cws,frint, dx,dy)
        !
     end do ! loop over front type
     !
@@ -1223,7 +1223,7 @@ contains
           end where
        end if
        !
-       call line_locate(fr(:,typ,:,:),froff(:,typ,:), nx,ny,nz,no,nf, frloc_cws,frint,searchrad,minlen, dx,dy)
+       call line_locate(fr(:,typ,:,:),froff(:,typ,:), nx,ny,nz,no,nf, frloc_cws,frint, dx,dy)
        !
     end do ! loop over front type
     !
@@ -1282,7 +1282,7 @@ contains
     !
     absgrad = -absgrad
     !
-    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,-div_thres, searchrad,minlen, dx,dy)
+    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,-div_thres, dx,dy)
     !
     return
   end subroutine
@@ -1337,7 +1337,7 @@ contains
     !   absy = nan
     !end where
     ! 
-    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,vor_thres, searchrad,minlen, dx,dy)
+    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,vor_thres, dx,dy)
     !
     return
   end subroutine
@@ -1390,7 +1390,89 @@ contains
     !   absy = nan
     !end where
     ! 
-    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,def_thres, searchrad,minlen, dx,dy)
+    call maxline_locate(fr,froff, nx,ny,nz,no,nf, absgrad,def_thres, dx,dy)
+    !
+    return
+  end subroutine
+  !
+  ! TODO: Reduce duplication with line_locate
+  subroutine maxline_locate(lines,lnoff,nx,ny,nz,no,nf,dat,thres,dx,dy)
+    use consts
+    use detect_lines, only: find_maxloc, linejoin
+    !
+    real(kind=nr), intent(in) :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx), thres
+    real(kind=nr), intent(out) :: lines(nz,no,3_ni), lnoff(nz,nf)
+    integer(kind=ni) :: nx,ny,nz, no, nf
+    !f2py depend(nx,ny) dx, dy
+    !f2py depend(nz) lines, lnoff
+    !
+    integer(kind=ni), parameter :: nn = 30000_ni
+    !
+    real   (kind=nr), allocatable :: reci(:,:), recj(:,:), linelen(:)
+    integer(kind=ni), allocatable :: lineptcnt(:)
+    !
+    real(kind=nr) :: maxloc_(nz,nn,2_ni)
+    integer(kind=ni) :: i,j,k, di, m, n, maxcnt(nz), ptcnt, linecnt, off
+    ! -----------------------------------------------------------------
+    !
+    ! find lines by zero-criterion
+    call find_maxloc(dat(:,:,:),thres, nx,ny,nz, nn,  maxloc_(:,:,:),maxcnt(:), dx,dy)
+    !
+    do k = 1_ni,nz
+       write(*,'(I5,A4,I5,A)', advance='no') k, 'of', nz, cr
+       !
+       ! searchrad is in grid point indexes, as zero locations are found at grid
+       ! resolution, hence the number of neighbours for a given searchrad does not
+       ! depend on location within the grid
+       !
+       allocate(recj(maxcnt(k),maxcnt(k)), reci(maxcnt(k),maxcnt(k)), lineptcnt(maxcnt(k)), linelen(maxcnt(k)) )
+       reci(:,:) = nan
+       recj(:,:) = nan
+       linecnt    = 0_ni ! number of lines
+       ptcnt      = 0_ni ! total numer of points
+       lineptcnt(:) = 0_ni ! number of points per line
+       call linejoin(maxcnt(k), maxcnt(k), nx,ny, maxloc_(k,1_ni:maxcnt(k),2_ni), maxloc_(k,1_ni:maxcnt(k),1_ni), &
+          &          searchrad, recj, reci, linelen, lineptcnt, dx,dy) 
+       !
+       off = 0_ni
+       do n = 1_ni,maxcnt(k)
+          if ( isnan(recj(n,1_ni)) ) then
+             exit
+          end if
+          !
+          ! filter fronts by length
+          if (linelen(n) >= minlen) then
+          !if (.true.) then
+             linecnt = linecnt + 1_ni
+             ptcnt = ptcnt + lineptcnt(n)
+             !
+             ! check if results larger than output array
+             if (ptcnt > no) then
+                write(*,*) 'Found more points than output array allows: ', no
+                stop 1
+             end if
+             if (linecnt > nf) then
+                write(*,*) 'Found more fronts than output array allows: ', nf
+                stop 1
+             end if
+             !
+             ! write into output arrays fr and froff
+             do m = 1_ni,lineptcnt(n)
+                lines(k,off+m,1_ni) = reci(n,m)
+                lines(k,off+m,2_ni) = recj(n,m)
+                lines(k,off+m,3_ni) = dat(k,int(recj(n,m),ni),int(reci(n,m),ni))
+             end do
+             lnoff(k,linecnt) = off
+             off = off + lineptcnt(n)
+          end if
+       end do
+       ! Save the ending of the last front by saving the beginning of the
+       ! first non-existant
+       lnoff(k,linecnt+1_ni) = off
+       !
+       deallocate(reci, recj, lineptcnt, linelen)
+       !
+    end do ! loop over k
     !
     return
   end subroutine

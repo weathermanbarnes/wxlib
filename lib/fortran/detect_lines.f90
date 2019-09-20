@@ -15,11 +15,11 @@ module detect_lines
 contains
   !
   !
-  subroutine line_locate(lines,lnoff,nx,ny,nz,no,nf,lnloc,lnint,searchrad,minlen,dx,dy)
+  subroutine line_locate(lines,lnoff,nx,ny,nz,no,nf,lnloc,lnint,dx,dy)
     use consts
     !
     real(kind=nr), intent(in) :: lnloc(nz,ny,nx), lnint(nz,ny,nx), &
-                 &               dx(ny,nx), dy(ny,nx), searchrad, minlen
+                 &               dx(ny,nx), dy(ny,nx)
     real(kind=nr), intent(out) :: lines(nz,no,3_ni), lnoff(nz,nf)
     integer(kind=ni) :: nx,ny,nz, no, nf
     !f2py depend(nx,ny,nz) lnint
@@ -81,87 +81,6 @@ contains
                 lines(k,off+m,1_ni) = reci(n,m)
                 lines(k,off+m,2_ni) = recj(n,m)
                 lines(k,off+m,3_ni) = lnint(k,int(recj(n,m),ni),int(reci(n,m),ni))
-             end do
-             lnoff(k,linecnt) = off
-             off = off + lineptcnt(n)
-          end if
-       end do
-       ! Save the ending of the last front by saving the beginning of the
-       ! first non-existant
-       lnoff(k,linecnt+1_ni) = off
-       !
-       deallocate(reci, recj, lineptcnt, linelen)
-       !
-    end do ! loop over k
-    !
-    return
-  end subroutine
-  !
-  ! TODO: Reduce duplication with line_locate
-  subroutine maxline_locate(lines,lnoff,nx,ny,nz,no,nf,dat,thres,searchrad,minlen,dx,dy)
-    use consts
-    !
-    real(kind=nr), intent(in) :: dat(nz,ny,nx), dx(ny,nx), dy(ny,nx), thres, searchrad, minlen
-    real(kind=nr), intent(out) :: lines(nz,no,3_ni), lnoff(nz,nf)
-    integer(kind=ni) :: nx,ny,nz, no, nf
-    !f2py depend(nx,ny) dx, dy
-    !f2py depend(nz) lines, lnoff
-    !
-    integer(kind=ni), parameter :: nn = 30000_ni
-    !
-    real   (kind=nr), allocatable :: reci(:,:), recj(:,:), linelen(:)
-    integer(kind=ni), allocatable :: lineptcnt(:)
-    !
-    real(kind=nr) :: maxloc_(nz,nn,2_ni)
-    integer(kind=ni) :: i,j,k, di, m, n, maxcnt(nz), ptcnt, linecnt, off
-    ! -----------------------------------------------------------------
-    !
-    ! find lines by zero-criterion
-    call find_maxloc(dat(:,:,:),thres, nx,ny,nz, nn,  maxloc_(:,:,:),maxcnt(:), dx,dy)
-    !
-    do k = 1_ni,nz
-       write(*,'(I5,A4,I5,A)', advance='no') k, 'of', nz, cr
-       !
-       ! searchrad is in grid point indexes, as zero locations are found at grid
-       ! resolution, hence the number of neighbours for a given searchrad does not
-       ! depend on location within the grid
-       !
-       allocate(recj(maxcnt(k),maxcnt(k)), reci(maxcnt(k),maxcnt(k)), lineptcnt(maxcnt(k)), linelen(maxcnt(k)) )
-       reci(:,:) = nan
-       recj(:,:) = nan
-       linecnt    = 0_ni ! number of lines
-       ptcnt      = 0_ni ! total numer of points
-       lineptcnt(:) = 0_ni ! number of points per line
-       call linejoin(maxcnt(k), nf*3_ni, nx,ny, maxloc_(k,:,2_ni), maxloc_(k,:,1_ni), searchrad, &
-               & recj, reci, linelen, lineptcnt, dx,dy) 
-       !
-       off = 0_ni
-       do n = 1_ni,maxcnt(k)
-          if (recj(n,1_ni) == nan) then
-             exit
-          end if
-          !
-          ! filter fronts by length
-          if (linelen(n) >= minlen) then
-          !if (.true.) then
-             linecnt = linecnt + 1_ni
-             ptcnt = ptcnt + lineptcnt(n)
-             !
-             ! check if results larger than output array
-             if (ptcnt > no) then
-                write(*,*) 'Found more points than output array allows: ', no
-                stop 1
-             end if
-             if (linecnt > nf) then
-                write(*,*) 'Found more fronts than output array allows: ', nf
-                stop 1
-             end if
-             !
-             ! write into output arrays fr and froff
-             do m = 1_ni,lineptcnt(n)
-                lines(k,off+m,1_ni) = reci(n,m)
-                lines(k,off+m,2_ni) = recj(n,m)
-                lines(k,off+m,3_ni) = dat(k,int(recj(n,m),ni),int(reci(n,m),ni))
              end do
              lnoff(k,linecnt) = off
              off = off + lineptcnt(n)
@@ -278,7 +197,7 @@ contains
     end do
     !
     return
-  end  subroutine find_zeroloc
+  end subroutine find_zeroloc
   !
   ! Find maximum axis locations by interpolating the 2-dim gridded data
   subroutine find_maxloc(dat,thres, nx,ny,nz, nn, maxloc_, maxcnt, dx,dy)
@@ -290,9 +209,8 @@ contains
     !f2py depend(nz) maxloc_, maxcnt
     !
     real(kind=nr) :: datxx(nz,ny,nx), datyy(nz,ny,nx), datxy(nz,ny,nx), &
-                &    datx (nz,ny,nx), daty (nz,ny,nx), dats, ds, di, dj
-    real(kind=nr) :: hess(2_ni,2_ni), evalr(2_ni), evali(2_ni), evec(2_ni,2_ni), &
-                &    dummy(2_ni,2_ni), work(68_ni)
+                &    datx (nz,ny,nx), daty (nz,ny,nx), dats, ds, di, dj, &
+                &    trace, det, lp, ll, evecx, evecy, evecl
     integer(kind=ni) :: i,j,k, minidx, info, cnt
     ! -----------------------------------------------------------------
     !
@@ -306,45 +224,41 @@ contains
        cnt = 0_ni
        do i = 1_ni,nx
           do j = 1_ni,ny
+             if ( isnan(datxx(k,j,i)) .or. isnan(datyy(k,j,i)) ) cycle
              if ( dat(k,j,i) < thres ) cycle
+             ! 
+             ! Trace and determinant of the local Hessian matrix
+             trace = datxx(k,j,i) + datyy(k,j,i)
+             det = datxx(k,j,i)*datyy(k,j,i) - datxy(k,j,i)*datxy(k,j,i)
              !
-             hess(:,:) = reshape((/ datxx(k,j,i), datxy(k,j,i), datxy(k,j,i), datyy(k,j,i) /), (/ 2_ni, 2_ni /) )
-             call dgeev('N','V',2_ni,hess,2_ni,evalr,evali,dummy,2_ni,evec,2_ni,work,68_ni,info)
+             ! Eigenvalues
+             lp = trace/2.0_nr + sqrt(trace*trace/4.0_nr - det)
+             ll = trace/2.0_nr - sqrt(trace*trace/4.0_nr - det)
              !
-             ! Minimum eigenvalue: Largest negative curvature
-             minidx = minloc(evalr, 1_ni)
-             if ( evalr(minidx) > 0.0_nr ) cycle
              ! Enforce an elongated aspect ratio
-             if ( evalr(minidx)/abs(evalr(3_ni-minidx)) > -1.0_nr ) cycle
-
-             ! Slope in direction of the largest negative curvature
-             dats = datx(k,j,i)*evec(1_ni,minidx) + daty(k,j,i)*evec(2_ni,minidx)
+             !if ( ll/abs(lp) > -1.0_nr ) cycle
              !
-             ! Extrapolate to find zero-slope
-             ds = -dats/evalr(minidx)
-             di = ds*evec(1_ni,minidx)/dx(j,i)
-             dj = ds*evec(2_ni,minidx)/dy(j,i)
-             if ( abs(di) > 0.5_nr .or. abs(dj) > 0.5_nr ) cycle
+             ! Normalised eigenvector to ll
+             evecx = (ll - datyy(k,j,i))
+             evecy = (datxy(k,j,i))
+             evecl = sqrt(evecx*evecx + evecy*evecy)
+             evecx = evecx/evecl
+             evecy = evecy/evecl
+             !
+             ! Slope in direction of the largest negative curvature
+             dats = datx(k,j,i)*evecx + daty(k,j,i)*evecy
+             !
+             ! Extrapolate to find distance to slope == 0
+             ds = -dats/ll
+             di = ds*evecx/dx(j,i)
+             dj = ds*evecy/dy(j,i)
+             !
+             ! If close enough to current point, save as maximum location
+             if ( sqrt(di*di + dj*dj) > searchrad ) cycle
              !
              cnt = cnt + 1_ni
              maxloc_(k,cnt,2_ni) = j + 0.5_nr + dj
              maxloc_(k,cnt,1_ni) = i + 0.5_nr + di
-             !
-             !if ( i == 371_ni .and. j == 60_ni .and. k == 1_ni ) then
-             !   hess(:,:) = reshape((/ datxx(k,j,i), datxy(k,j,i), datxy(k,j,i), datyy(k,j,i) /), (/ 2_ni, 2_ni /) )
-             !   write(*,*) 'matrix', hess
-             !   write(*,*) 'eval 1', evalr(1_ni), evali(1_ni)
-             !   write(*,*) 'evec 1', evec(:,1_ni)
-             !   write(*,*) 'eval 2', evalr(2_ni), evali(2_ni)
-             !   write(*,*) 'evec 2', evec(:,2_ni)
-             !   write(*,*) 'work len', work(1_ni)
-             !   write(*,*) 'info', info
-             !   write(*,*) 'min val', evalr(minidx)
-             !   write(*,*) 'slope xys', datx(k,j,i), daty(k,j,i), dats
-             !   write(*,*) 'zero dist', ds
-             !   write(*,*) 'dpos', di, dj
-             !   stop 1
-             !end if
           end do
        end do
        maxcnt(k) = cnt
@@ -371,7 +285,6 @@ contains
     inter(:,:) = 0_ni    ! intermediate point defining the shortest path between each pair points
     used(:) = .false.    ! Used in the DFS? Is eqivalent to: Already assigned to a choherent structure?
     oidx(:) = 0_ni       ! Mapping of the new index (used in the dists matrix) to the old index used in jidx/iidx
-    !
     !
     ! 1. Step: Find coherent structures via a Depth-First-Search
     nstruct = 0_ni
@@ -433,7 +346,6 @@ contains
           call construct_path(cnt, startpos,endpos, inter, oidx, jidx,iidx, &
                   & lineptcnt(linecnt), recj(linecnt,:), reci(linecnt,:))
           !
-          !write(*,*) linecnt, linelen(linecnt), lineptcnt(linecnt)
        end if
        !
        startidx = endidx + 1_ni
@@ -484,7 +396,6 @@ contains
        ! if we found a pair of close points
        if ( distji <= searchrad ) then
           nm = donecnt + 1_ni
-          !write(*,*) n, m, nn, nm
           dists(nn,nm) = dist
           dists(nm,nn) = dist
           call depth_first_search(cnt,donecnt, nx,ny, m,used,dists, oidx, jidx,iidx,searchrad, dx,dy)
