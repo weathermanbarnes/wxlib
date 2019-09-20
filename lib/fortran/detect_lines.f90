@@ -257,8 +257,8 @@ contains
              if ( sqrt(di*di + dj*dj) > searchrad ) cycle
              !
              cnt = cnt + 1_ni
-             maxloc_(k,cnt,2_ni) = j + 0.5_nr + dj
-             maxloc_(k,cnt,1_ni) = i + 0.5_nr + di
+             maxloc_(k,cnt,2_ni) = j + dj
+             maxloc_(k,cnt,1_ni) = i + di
           end do
        end do
        maxcnt(k) = cnt
