@@ -163,7 +163,7 @@ contains
   !@     first longitude (If 180W is not the first longitude, the outputs will have 
   !@     180W as the first, so must be rearranged).
   !@ variable : string of length 2
-  !@     Abbreviated variable, 'PT' for potential temperature on PV2, 'PV' for
+  !@     Abbreviated variable, 'PT' for potential temperature on PV2, 'PV' for
   !@     potential vorticity on an isentropic level and 'Z2' for 250 hPa geopotential
   !@ lonvalues : np.ndarray with shape (nx) and dtype float64
   !@     Longitudes describing ``pv_in``.
