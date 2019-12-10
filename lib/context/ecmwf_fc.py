@@ -17,6 +17,7 @@ if os.path.exists(_PATH):
 	conf.times = [t for t in os.listdir(_PATH) if os.path.isdir(os.path.join(_PATH,t))]
 	conf.datapath.insert(1, _PATH)
 conf.file_std = '%(time)d/ec.for.%(time)d.%(plev)s.%(q)s'
+conf.file_ens = '%(time)d/ec.ens.%(time)d.%(plev)s.%(q)s'
 
 # Variable definitions
 # ====================
