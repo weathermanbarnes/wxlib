@@ -517,7 +517,7 @@ contains
   !@ Fortran part of a reimplementation of the Wernli and Schwierz (2006) 
   !@ algorithm, including the modifications described in Sprenger et al. (2017). 
   !@ To avoid the technically difficult contour tracing, we base the detection on 
-  !@ sorted sea-level pressure values. 
+  !@ sorted sea-level pressure values. 
   !@
   !@ For more info refer to the python function. This routine is not intended to
   !@ be called directly.
@@ -534,7 +534,7 @@ contains
   !@ Parameters
   !@ ----------
   !@
-  !@ nn : int
+  !@ nn : int
   !@     Maximum number of cyclones to be detected
   !@ msl : np.ndarray with shape (nz,ny,nx) and dtype float64
   !@     Sea-level pressure (or any other suitable field).
