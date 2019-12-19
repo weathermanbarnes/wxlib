@@ -78,7 +78,7 @@ conf.register_variable([sstfront, sstfroff, sstfront_freq, cyc, cyc_freq, cyc_de
 # on the application, and must hence be defined in the user settings.
 conf.register_variable([ff, dd, vo, div, defabs, defang, defanr, rsr, ow, 
 	pt, eqpt, frovo, frovo_freq,
-	cfront, cfroff, wfront, wfroff, sfront, sfroff,
+	cfront, cfroff, cfront_freq, wfront, wfroff, wfront_freq, sfront, sfroff, sfront_freq,
 	vorl, vloff, convl, cloff, defl, dloff, 
 	grad_shear, jetaxis, jaoff, jetaxis_freq, 
 	rwb_a, rwb_c, blockint, block, block_freq], [])
