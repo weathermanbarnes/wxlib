@@ -341,6 +341,13 @@ class grid_by_nc(grid):
             self.y = self.f.variables[self.y_name][::]
             self.x_name = 'longitude'
             self.y_name = 'latitude'
+        elif self.x_unit == 'degrees east' and self.y_unit == 'degrees north':
+            self.gridtype = 'latlon'
+            self.cyclic_ew = True
+            self.x = self.f.variables[self.x_name][::]
+            self.y = self.f.variables[self.y_name][::]
+            self.x_name = 'longitude'
+            self.y_name = 'latitude'
         elif self.x_unit == 'degree_east' and self.y_unit == 'degree_north':
             self.gridtype = 'latlon'
             self.cyclic_ew = True
