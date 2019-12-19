@@ -1262,8 +1262,8 @@ def dts2str(dates, agg=None):
         # First time step of the next year 
         # -> First time step of the agg interval starting in the next year 
         # -> first time step of the last agg interval starting in the old year
-        yearly = tagg.cal_year(dta)
-        monthly = tagg.cal_month(dta)
+        yearly = tagg.cal_year(dta, timestep)
+        monthly = tagg.cal_month(dta, timestep)
         last4year = agg.start(yearly.start_next(aggdates[-1])) - timestep
         last4month = agg.start(monthly.start_next(aggdates[-1])) - timestep
         #
