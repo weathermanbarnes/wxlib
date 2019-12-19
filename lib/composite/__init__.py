@@ -18,7 +18,7 @@ Proj = mpl_toolkits.basemap.pyproj.Proj
 LINES = {'cold_front': 'cold_froff', 'warm_front': 'warm_froff', 'stat_front': 'stat_froff', 'sst_front': 'sst_froff', 
     'convl': 'cloff', 'defl': 'dloff', 'vorl': 'vloff', 'jetaxis': 'jaoff', 'jetaxis_l10d': 'jaoff_l10d'}
 
-OBJMASK = {'frovo_id': 'frovo', 'cycmask': 'cyc'}
+OBJMASK = {'frovo_id': 'frovo', 'cycmask': 'cyc', 'block': 'block'}
 
 # TODO: How to avoid hard-coding the rotated grid dimensions here?
 PROJGRID_Y, PROJGRID_X = np.meshgrid(np.arange(-1000,1001,40)*1e3, np.arange(-1000,1001,40)*1e3)

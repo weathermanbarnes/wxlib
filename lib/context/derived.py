@@ -37,6 +37,9 @@ sfront = ('stat_front', 'stat_front', 'Stationary front lines', '1')
 sfroff = ('stat_froff', 'stat_front')
 sstfront = ('sst_front', 'sst_front', 'SST front lines', '1')
 sstfroff = ('sst_froff', 'sst_front')
+cfront_freq = ('cold_front_freq', 'cold_front_freq', 'Cold front detection frequency', '(time step)**-1')
+wfront_freq = ('warm_front_freq', 'warm_front_freq', 'Warm front detection frequency', '(time step)**-1')
+sfront_freq = ('stat_front_freq', 'stat_front_freq', 'Stationary front detection frequency', '(time step)**-1')
 sstfront_freq = ('sst_front_freq', 'sst_front_freq', 'SST front detection frequency', '(time step)**-1')
 
 vorl = ('vorl', 'vorl', 'Vorticity lines', '1')
@@ -57,6 +60,7 @@ rwb_c = ('rwb_c', 'rwb_c', 'Cyclonic wave breaking frequency', '(time step)**-1'
 
 blockint = ('blockint', 'blockint', 'Block intensity indicator', '(input) m**-1')
 block = ('block', 'block', 'Block mask', '1')
+block_freq = ('block_freq', 'block_freq', 'Block detection frequency', '(time step)**-1')
 
 frovo = ('frovo_id', 'frovo_id', 'Frontal volume ID', '1')
 frovo_freq = ('frovo_freq', 'frovo_freq', 'Frontal volume detection frequency', '(time step)**-1')
@@ -77,7 +81,7 @@ conf.register_variable([ff, dd, vo, div, defabs, defang, defanr, rsr, ow,
 	cfront, cfroff, wfront, wfroff, sfront, sfroff,
 	vorl, vloff, convl, cloff, defl, dloff, 
 	grad_shear, jetaxis, jaoff, jetaxis_freq, 
-	rwb_a, rwb_c, blockint, block], [])
+	rwb_a, rwb_c, blockint, block, block_freq], [])
 
 
 # that's it

@@ -244,7 +244,7 @@ def block_by_grad_rev(dat, grid, lat_band=(30,70),
         seeds.append([])
     for block in blocks:
         if len(block['blockidx']) >= min_duration:
-            tidx0 = grid.t_parsed.index(block['onset'])
+            tidx0 = list(grid.t_parsed).index(block['onset'])
             for dtidx in range(len(block['blockidx'])):
                 pos = block['pos'][dtidx]
                 # convert to Fortran indexes
