@@ -35,7 +35,7 @@ pysig="${precc}/$python_library.pyf"
 
 host=`hostname -f`
 uname=`uname -s`
-if [ "${host: -6}" == 'uib.no' ]; then
+if [ "${host: -10}" == 'hpc.uib.no' ]; then
     LIBS="-L/Data/gfi/users/local/lib -lopenblas -lscalapack"
     RPATH="" #-Wl,-rpath,/Data/gfi/users/local/lib"
 elif [ "${host: -14}" == 'fram.sigma2.no' ]; then
