@@ -746,4 +746,39 @@ def dist_from_mask_latlon(featmask, green_dists, jzero):
     return mindists
 
 
+
+def smooth_xy_nan(dat, nsmooth):
+    ''' As smooth_xy, but first using the fill_nan function to remove potential NaNs.
+
+    The NaN mask is conserved and applied to the smoothed field before it is returned.
+
+    Parameters
+    ----------
+    dat : np.ndarray with dimensions (nz,ny,nx)
+        Input data to be smoothed.
+    nsmooth : int
+        Number of passes of the three-point filter
+    
+    Returns
+    -------
+    np.ndarray with dimensions (nz,ny,nx)
+        Smoothed version of the input data.
+    '''
+    
+    # Save the NaN mask
+    mask = np.isnan(dat)
+    
+    # Remove zonal-time mean before filling the NaNs to make the initial guess of zeros a bit more applicable
+    zonaltimemean = np.nanmean(dat, axis=2).mean(axis=0)
+    dat_ = dat - zonaltimemean[np.newaxis,:,np.newaxis]
+    dat_, conv = fill_nan(dat_)
+    dat_ += zonaltimemean[np.newaxis,:,np.newaxis]
+    
+    # Smooth the filled field and then apply the NaN mask again
+    dats = smooth_xy(dat_, nsmooth)
+    dats[mask] = np.nan
+
+    return dats
+
+
 #
