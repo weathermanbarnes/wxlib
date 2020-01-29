@@ -347,6 +347,105 @@ contains
     end do
   end subroutine
   !
+  !@ Normalized line frequencies: Line length per area
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ nx : int
+  !@     Grid size of the output array in y-direction.
+  !@ ny : int
+  !@     Grid size of the output array in y-direction.
+  !@ line : np.ndarray with shape (nz,np,3) and dtype float64
+  !@     Position and additional information about each point along the lines.
+  !@ lineoff : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Point index for the first point of each line.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@ np : int
+  !@     Maximum number of points in all lines.
+  !@ nl : int
+  !@     Maximum number of lines.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Length map, indicating the length of the line segments through each
+  !@     grid point
+  subroutine normalize_lines(res,nx,ny,nz,np,nl,line,lineoff,dx,dy)
+    real(kind=nr), intent(in) :: line(nz,np,3_ni), dx(ny,nx), dy(ny,nx)
+    integer(kind=ni), intent(in) :: lineoff(nz,nl)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz,np,nl
+    !f2py depend(nx,ny,nz) res
+    !f2py depend(nx,ny) dy
+    !f2py depend(nz) lineoff
+    !
+    real(kind=nr) :: toi, toj, fromi, fromj, distx, disty, dist
+    real(kind=nr) :: gridsize(ny,nx)
+    integer(kind=ni) :: i,j,k, m,n
+    ! -----------------------------------------------------------------
+    !
+    res(:,:,:) = 0.0_nr
+    gridsize(:,:) = abs(dx(:,:)*dy(:,:))/4.0_nr
+    !
+    do k = 1_ni,nz
+       ! Loop over lines
+       do m = 2_ni,nl
+          if ( lineoff(k,m) == 0_ni ) then
+             exit
+          end if
+          !
+          ! Loop over points in line: +1 for Fortran indices, +1 for starting with second point
+          do n = lineoff(k,m-1_ni)+2_ni,lineoff(k,m)
+             ! Line from where to where?
+             fromi = line(k,n-1_ni,1_ni)
+             toi = line(k,n,1_ni)
+             fromj = line(k,n-1_ni,2_ni)
+             toj = line(k,n,2_ni)
+             !
+             ! Indices of the originating point
+             i = nint(fromi, ni)
+             if (i > nx) i = i - nx
+             j = nint(fromj, ni)
+             !
+             ! Total length of the line segment
+             distx = (toi-fromi)*dx(j,i)
+             disty = (toj-fromj)*dy(j,i)
+             dist = sqrt(distx**2 + disty**2)
+             !
+             ! Half of the length to be counted for the originating point
+             res(k,j,i) = res(k,j,i) + dist/2.0_nr
+             !
+             ! Indices of the terminating point
+             i = nint(toi, ni)
+             if (i > nx) i = i - nx
+             j = nint(toj, ni)
+             !
+             ! Half of the length to be counted for the terminating point
+             res(k,j,i) = res(k,j,i) + dist/2.0_nr
+          end do
+       end do
+       !
+       ! Normalize by size of the grid cells
+       res(k,:,:) = res(k,:,:) / gridsize
+    end do
+  end subroutine
+  !
   !@ Linear regression, for example of EOF patterns on instantaneous data
   !@
   !@ Constructs ``nn`` time series by calculating the projection of a varying
