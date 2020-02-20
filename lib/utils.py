@@ -356,11 +356,11 @@ def mk_gauss(x0,stddev):
     return lambda x: np.exp(-0.5*(x-x0)**2/stddev**2)/(np.sqrt(2*np.pi)*stddev)
 
 
-def smear_lines(lines, loff, shape=None):
-    ''' Mask lines in a gridded map and then smooth slightly
+def smear_lines(lines, loff, static):
+    ''' Smoothed and normalized line detection frequencies on a gridded map
 
-    Grid points containing a line will be marked with the value ``1``,
-    otherwise the retuned map contains zeros.
+    Grid points containing a line will be marked with the length of the line 
+    through that grid point per grid point area; otherwise zero.
 
     Notes
     -----
@@ -373,8 +373,8 @@ def smear_lines(lines, loff, shape=None):
         Lines to be marked on the map
     loff : np.array with dimensions (lineindex)
         List of point indexes for the first points of each line
-    shape : 2-tuple of int
-        Optional: Grid dimensions, defaults to conf.gridsize
+    static : grid object
+        Grid information as returned, for example, by metopen
     
     Returns
     -------
@@ -382,15 +382,12 @@ def smear_lines(lines, loff, shape=None):
         Gridded map of lines
     '''
 
-    if type(shape) == type(None):
-        shape = s.conf.gridsize
-    
     filtr_len = 5
     filtr_func = mk_gauss(0, 1)
     filtr = np.array([filtr_func(x) for x in range(-filtr_len,filtr_len+1)])
     filtr /= sum(filtr)
 
-    mask = dynfor.utils.mask_lines(shape[1], shape[0], lines, loff)
+    mask = dynfor.utils.normalize_lines(lines, loff, static.dx, static.dy)
         
     return dynfor.utils.filter_xy(mask, filtr)
 

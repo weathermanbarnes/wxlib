@@ -92,7 +92,7 @@ def _get_dat(time, test_qs, readhooks, no_static=False):
 
             f, loff = metopen(conf.file_std % {'time': time, 'plev': test_plev, 'qf': conf.qf[LINES[test_q]]}, LINES[test_q], no_static=True)
             
-            testdat[test_plev, test_q] = utils.mask_lines(conf.gridsize[1], conf.gridsize[0], line, loff)
+            testdat[test_plev, test_q] = utils.normalize_lines(line, loff, static.dx, static.dy)
 
         else:
             if not no_static and not static:

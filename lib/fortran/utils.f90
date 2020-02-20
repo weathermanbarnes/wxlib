@@ -424,8 +424,12 @@ contains
              j = nint(fromj, ni)
              !
              ! Total length of the line segment
-             distx = (toi-fromi)*dx(j,i)
-             disty = (toj-fromj)*dy(j,i)
+             distx = abs(toi-fromi)
+             if ( distx > nx/2 ) then
+                distx = nx - distx
+             end if
+             distx = distx*dx(j,i)/2.0
+             disty = (toj-fromj)*dy(j,i)/2.0
              dist = sqrt(distx**2 + disty**2)
              !
              ! Half of the length to be counted for the originating point
