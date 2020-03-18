@@ -2,8 +2,17 @@
 # -*- encoding: utf-8
 
 
+import os
+import netCDF4 as nc
+import scipy.io.matlab as mat
+
+import numpy as np
 import cftime
 from datetime import timedelta as td
+
+from ..settings_basic import conf
+from ..gridlib import grid_by_static, grid_by_nc
+from .. import utils
 
 
 # 16 billion values -> 128G of memory, a bit more than 40 years of 6 hourly data at 0.5deg resolution
@@ -13,6 +22,7 @@ WARN_REQUEST_SIZE = 2.0e9
 
 timestep = None
 gridsize = None
+staticfile = None
 calendar = 'standard'
 dt = cftime.DatetimeGregorian
 
@@ -116,11 +126,13 @@ class files_by_plevq(object):
         raise StopIteration
 
 
+# TODO: Return xarray by default, reflect other docu changes (if any?)
+# TODO: Should become a factory, dependent on get_static
 def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversion=False,
         no_static=False, quiet=False, mode='r', no_xarray=False):
     ''' Find and open files by name
     
-    Uses the se.conf.datapath list to locate files in a variety of different locations. 
+    Uses the conf.datapath list to locate files in a variety of different locations. 
     In user scripts and user settings files, this variable will typically be available
     via conf.datapath.
 
@@ -170,7 +182,133 @@ def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversio
         If ``no_static=False`` meta-information about the requested data.
     '''
 
-    raise NotImplementedError('Needs to be implemented per specific data source.')
+    def handle_npy(filepath):
+        if not mode == 'r':
+            print('WARNING: Can only open npy files in read mode!')
+        if q:
+            dat = np.load(filepath, mmap_mode='r', encoding='bytes')
+            dat = dat[cut]
+        else:
+            dat = None
+        if not quiet:
+            print('Found '+filepath)
+        f = None
+
+        return f, dat
+
+    def handle_npz(filepath):
+        if not mode == 'r' and not quiet:
+            print('WARNING: Can only open npz files in read mode!')
+        f = np.load(filepath, encoding='bytes')
+        if q:
+            if q not in f.files:
+                tried.append(filepath)
+            dat = f[q][cut]
+        else:
+            dat = None
+        if not quiet:
+            print('Found '+filepath)
+
+        return f, dat
+    
+    def handle_mat(filepath):
+        if not mode == 'r' and not quiet:
+            print('WARNING: Can only open mat files in read mode!')
+        f = mat.loadmat(filepath)
+        if q:
+            if q not in f:
+                tried.append(filepath)
+            dat = f[q][cut]
+        else:
+            dat = None
+        if not quiet:
+            print('Found '+filepath)
+
+        return f, dat
+
+    def handle_nc(filepath):
+        f = nc.Dataset(filepath, mode)
+        f.set_auto_scale(False)
+        f.set_auto_mask(False)
+        if q:
+            var = f.variables[q]
+            if q not in f.variables:
+                tried.append(filepath)
+            if not no_dtype_conversion:
+                dat = utils.scale(var, cut=cut)
+            else:
+                dat = var[cut]
+        else:
+            dat = None
+
+        if not no_static:
+            if q:
+                static = grid_by_nc(f, var)
+            else:
+                static = grid_by_nc(f)
+            # TODO: Where to search for topography in nc files?
+            static.oro = np.zeros((static.ny, static.nx))
+        else:
+            static = None
+
+        if not quiet:
+            print('Found '+filepath)
+
+        return f, dat, static
+
+    if not type(cut) == slice:
+        raise ValueError('cut must be a 1-dimensional slice object')
+    
+    tried = []
+    for path in conf.datapath:
+        static = None
+
+        if verbose:
+            print('Trying: '+path+'/'+filename+'.*')
+
+        if os.path.exists(path+'/'+filename+'.npy'):
+            f, dat = handle_npy(path+'/'+filename+'.npy')
+        elif os.path.exists(path+'/'+filename) and NO_ENDING == 'npy':
+            f, dat = handle_npy(path+'/'+filename)
+
+        elif os.path.exists(path+'/'+filename+'.npz'):
+            f, dat = handle_npz(path+'/'+filename+'.npz')
+        elif os.path.exists(path+'/'+filename) and NO_ENDING == 'npz':
+            f, dat = handle_npz(path+'/'+filename)
+
+        elif os.path.exists(path+'/'+filename+'.mat'):
+            f, dat = handle_mat(path+'/'+filename+'.mat')
+        elif os.path.exists(path+'/'+filename) and NO_ENDING == 'mat':
+            f, dat = handle_mat(path+'/'+filename)
+
+        elif os.path.exists(path+'/'+filename+'.nc'):
+            f, dat, static = handle_nc(path+'/'+filename+'.nc')
+        elif os.path.exists(path+'/'+filename) and NO_ENDING == 'nc':
+            f, dat, static = handle_nc(path+'/'+filename)
+
+        else:
+            tried.append(path)
+            continue
+        
+        if q and not no_dtype_conversion and not dat.dtype == 'f8':
+            dat = dat.astype('f8')
+
+        if not no_static:
+            if not static:
+                static = get_static(verbose, no_dtype_conversion, quiet)
+        else:
+            if q:
+                return f, dat
+            else:
+                return f
+        if q:
+            return f, dat, static
+        else:
+            return f, static
+    
+    raise ValueError('%s.* not found in any data location. \n'
+            'Tried the following (in order):\n\t%s' % (filename, '\n\t'.join(tried)) )
+
 
 
 def metsave(**kwargs):
@@ -183,156 +321,122 @@ def metsave(**kwargs):
     raise NotImplementedError('TBD. May be data source-specific, may be not.')
 
 
-# TODO: Make into a factory returning get_instantaneus tailored to the different data sets
-#       (Likely this can be done through decorators?)
-#       This method depends on: files_by_plevq
-def get_instantaneous(plevqs, dates, force=False, **kwargs):
-    ''' Get instantaneous fields
 
-    Allows general data requests in the configured data base, e.g. ERA-Interim. The request
-    can span several files, e.g. by including several vertical levels or by covering several
-    years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
-    
-    The method internally uses metopen to locate data files. Hence, it will find data in the 
-    locations given se.conf.datapath (in user scripts and user settings files typically 
-    available as conf.datapath).
+def get_instantaneous_factory(files_by_plevq, get_static):
+    ''' Create the get_instantaneous function based on data source specific helpers '''
 
-    Parameters
-    ----------
-    plevqs : 2-tuple or list of 2-tuples
-        Each 2-tuple consists of (1) a string representations of the requested vertical level(s), 
-        e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface, and (2) a variable name 
-        identifier, following the ECMWF conventions as far as appicable, e.g. ``'u'`` or ``'msl'``.
-        Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
-        and/or the variable name, to request all vertical levels/variables available.
-    dates : list of datetime
-        The minimum and maxmimum dates in this list define the requested time interval. The i
-        final date will not be included in the result, i.e. for all time steps in 2016 request
-        dates from 2016-01-01 00:00 to 2017-01-01 00:00.
-    force : bool
-        *Optional*, default ``False``. Turn off the error, if large amounts of data are
-        requested at once. **Be sure you know what you are doing, when setting this to 
-        ``True``! Your request might make your script occupy a large fraction of the 
-        system memory**.
-    
-    Keyword arguments
-    -----------------
-    metopen arguments : all optional
-        Optional arguments passed on to calls of metopen within this function.
+    def get_instantaneous(plevqs, dates, force=False, **kwargs):
+        ''' Get instantaneous fields
 
-    Returns
-    -------
-    dict of np.ndarray
-        Data for the requested variable.
-    grid.gridlib
-        If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
-    '''
+        Allows general data requests in the configured data base, e.g. ERA-Interim. The request
+        can span several files, e.g. by including several vertical levels or by covering several
+        years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
+        
+        The method internally uses metopen to locate data files. Hence, it will find data in the 
+        locations given conf.datapath (in user scripts and user settings files typically 
+        available as conf.datapath).
 
-    start, end = min(dates), max(dates)
+        Parameters
+        ----------
+        plevqs : 2-tuple or list of 2-tuples
+            Each 2-tuple consists of (1) a string representations of the requested vertical level(s), 
+            e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface, and (2) a variable name 
+            identifier, following the ECMWF conventions as far as appicable, e.g. ``'u'`` or ``'msl'``.
+            Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
+            and/or the variable name, to request all vertical levels/variables available.
+        dates : list of datetime
+            The minimum and maxmimum dates in this list define the requested time interval. The i
+            final date will not be included in the result, i.e. for all time steps in 2016 request
+            dates from 2016-01-01 00:00 to 2017-01-01 00:00.
+        force : bool
+            *Optional*, default ``False``. Turn off the error, if large amounts of data are
+            requested at once. **Be sure you know what you are doing, when setting this to 
+            ``True``! Your request might make your script occupy a large fraction of the 
+            system memory**.
+        
+        Keyword arguments
+        -----------------
+        metopen arguments : all optional
+            Optional arguments passed on to calls of metopen within this function.
 
-    if type(plevqs) == tuple:
-        plevqs = [plevqs, ]
+        Returns
+        -------
+        dict of np.ndarray
+            Data for the requested variable.
+        grid.gridlib
+            If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
+        '''
+        
+        start, end = min(dates), max(dates)
 
-    # Dry run to test whether input parameters are valid and to determine the total amount of requested data
-    req = {}
-    request_size = 0
-    for plevq in plevqs:
-        # req[plevq] contains a list of 4-tuples: 
-        # (filename, list of tidx, list of dates, request_size in number of values)
-        req[plevq] = list(files_by_plevq(plevq, start=start, end=end))
-        request_size += sum([reqinfo[3] for reqinfo in req[plevq]])
+        if type(plevqs) == tuple:
+            plevqs = [plevqs, ]
 
-    # Checking max length
-    if request_size > MAX_REQUEST_SIZE:
-        if force:
+        # Dry run to test whether input parameters are valid and to determine the total amount of requested data
+        req = {}            # Request info
+        datshape = {}       # Shape of the resulting data arrays
+        request_size = 0    # Total size of all requested data 
+        for plevq in plevqs:
+            # req[plevq] contains a list of 4-tuples: 
+            # (filename, list of tidx, list of dates, request_size in number of values)
+            req[plevq] = list(files_by_plevq(plevq, start=start, end=end))
+            datshape[plevq] = req[plevq][0][3]
+            for entry in req[plevq][1:]:
+                shape = entry[3]
+                if not shape[1:] == datshape[plevq][1:]:
+                    raise ValueError(f'''Discovered inconsistent data shape across time:
+                            plevq: {plevq}
+                            file {entry[0]} with shape {shape[1:]}, 
+                            preceeding files with shape {datshape[plevq][1:]}.''')
+                datshape[plevq] = (datshape[plevq][0] + shape[0],) + shape[1:]
+            request_size += sum([np.prod(reqinfo[3]) for reqinfo in req[plevq]])
+
+        # Checking max length
+        if request_size > MAX_REQUEST_SIZE:
+            if force:
+                print(f'Warning: you requested {request_size / 1024**3:.2f}G of data.')
+            else:
+                raise ValueError('''Cowardly refusing to fetch {request_size} values at once.
+                    If you are absolutely certain what you're doing, you can use force=True to override.''')
+
+        if not force and request_size > WARN_REQUEST_SIZE:
             print(f'Warning: you requested {request_size / 1024**3:.2f}G of data.')
+        
+        # Remove no_static if present, this should only effect the output of this function rather than the metopen calls herein
+        no_static = kwargs.pop('no_static', False)
+
+        dat = {}
+        dates = {}
+        for plev, q in plevqs:
+            # Allocate memory for the result
+            dat[plev,q] = np.empty(datshape[plev,q])
+            dates[plev,q] = []
+            
+            toff = 0
+            for filename, tidxs, dates_, shape in req[plev,q]:
+                cut = slice(tidxs[0], tidxs[-1]+1)
+                tlen = len(tidxs)
+                
+                # TODO: ERA5 will in general need an interpolation at this stage. 
+                #       How to incorporate in the general mechanism?
+                f, dat_ = metopen(filename, q, cut=cut, no_static=True, **kwargs)
+                dat[plev,q][toff:toff+tlen,...] = dat_[...]
+                dates[plev,q].extend(dates_)
+                
+                toff += tlen
+
+        # TODO: Check whether dates lists are consistent (?)
+        
+        # Prepare grid information, if so requested
+        if no_static:
+            grid = None
         else:
-            raise ValueError('''Cowardly refusing to fetch {request_size} values at once.
-                If you are absolutely certain what you're doing, you can use force=True to override.''')
-
-    if not force and request_size > WARN_REQUEST_SIZE:
-        print(f'Warning: you requested {request_size / 1024**3:.2f}G of data.')
+            grid = get_static()
+            grid = grid.new_time(dates[plev,q])
+            
+        return dat, grid
     
-    # Remove no_static if present
-    kwargs.pop('no_static', None)
-    static = None
-
-    dat = None
-    for year in years:
-        # Construct the slice
-        fst = dt(year,1,1,0) - dt0
-        lst = (dt(year+1,1,1,0) - se.conf.timestep) - dt0
-        fst = int(fst.total_seconds()/dts)
-        lst = int(lst.total_seconds()/dts) + 1
-
-        # Leave out unnecessary indexes for better compatibility
-        cut = slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst))
-        datcut = slice(fst+cut.start-tsmin, fst+cut.stop-tsmin)
-        
-        # One or more vertical levels?
-        i = 0
-        if type(dat) == type(None):
-            f, d, static = metopen(se.conf.file_std % {'time': year, 'plev': plevs[0], 'qf': se.conf.qf[q]}, q, cut=cut, **kwargs)
-            # Inject meta data for npy files
-            if not f:
-                static.t = np.arange(d.shape[0])*dts/3600
-                static.t_parsed = [dt(year,1,1)+i*se.conf.timestep for i in range(d.shape[0])]
-            if len(d.shape) == 4 and d.shape[1] > 1:
-                separate_plevs = False
-                s = (1+tsmax-tsmin, ) + d.shape[1:]
-            elif len(d.shape) == 4: 
-                separate_plevs = True
-                s = (1+tsmax-tsmin, len(plevs), ) + d.shape[2:]
-            else:
-                separate_plevs = True
-                s = (1+tsmax-tsmin, len(plevs), ) + d.shape[1:]
-
-            dat = np.empty(s, dtype=d.dtype)
-            if separate_plevs:
-                if len(d.shape) < 4:
-                    d = d[:,np.newaxis,::]
-                dat[datcut,0:1,::] = d
-            else:
-                dat[datcut,::] = d
-
-            static.t = static.t[cut]
-            if type(static.t_parsed) == np.ndarray:
-                static.t_parsed = static.t_parsed[cut]
-
-            i = 1
-        
-        if separate_plevs:
-            for plev in plevs[i:]:
-                f, d, static_ = metopen(se.conf.file_std % {'time': year, 'plev': plev, 'qf': se.conf.qf[q]}, q, cut=cut, **kwargs)
-                if len(d.shape) < 4:
-                    d = d[:,np.newaxis,::]
-                dat[datcut,i:i+1,::] = d
-                if i == 0:
-                    static.t = np.concatenate((static.t, static_.t[cut]))
-                    if type(static.t_parsed) == np.ndarray:
-                        static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
-                elif year == years[0]:
-                    if not static.z_name == static_.z_name or \
-                            not static.z_unit == static_.z_unit:
-                        print('WARNING: concatenating vertical levels of different types!')
-                        static.z_unit = u'MIXED!'
-                    static.z = np.concatenate((static.z, static_.z))
-                i += 1
-
-        elif i == 0:
-            f, dat[datcut,::], static_ = metopen(se.conf.file_std % {'time': year, 'plev': plevs[0], 'qf': se.conf.qf[q]}, q, cut=cut, **kwargs)
-            static.t = np.concatenate((static.t, static_.t[cut]))
-            if type(static.t_parsed) == np.ndarray:
-                static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
-
-    # Time-averaging if specified
-    if tavg and len(dates) > 1:
-        dat = dat.mean(axis=0)
-    
-    #dat = dat.squeeze()
-    
-    return dat, static
-    raise NotImplementedError('to be written')
+    return get_instantaneous
 
 
 def get_time_average(plevqs, dates, **kwargs):
@@ -343,7 +447,7 @@ def get_time_average(plevqs, dates, **kwargs):
     years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
     
     The method internally uses metopen to locate data files. Hence, it will find data in the 
-    locations given se.conf.datapath (in user scripts and user settings files typically 
+    locations given conf.datapath (in user scripts and user settings files typically 
     available as conf.datapath).
 
     Parameters
@@ -383,7 +487,7 @@ def get_aggregate(plevqs, dates, agg, **kwargs):
     years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
     
     The method internally uses metopen to locate data files. Hence, it will find data in the 
-    locations given se.conf.datapath (in user scripts and user settings files typically 
+    locations given conf.datapath (in user scripts and user settings files typically 
     available as conf.datapath).
 
     Parameters
@@ -426,7 +530,7 @@ def get_composite(plevqs, dates, composites, **kwargs):
     years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
     
     The method internally uses metopen to locate data files. Hence, it will find data in the 
-    locations given se.conf.datapath (in user scripts and user settings files typically 
+    locations given conf.datapath (in user scripts and user settings files typically 
     available as conf.datapath).
 
     Parameters

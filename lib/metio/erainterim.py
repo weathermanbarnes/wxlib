@@ -2,11 +2,15 @@
 # -*- encoding: utf-8
 
 
-from datasource import *
+from .datasource import *
 
 
 timestep = td(0.25)
 gridsize = (361,720)
+staticfile = 'ei.ans.static'
+
+conf.datapath.insert(1, '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY')
+conf.datapath.insert(1, '/Data/gfi/users/csp001/share') # for static; TODO: Move to a more general directory!
 
 
 _files_by_plevq = files_by_plevq
@@ -35,7 +39,7 @@ class files_by_plevq(_files_by_plevq):
 
             tidxs = [tidx for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
             dates = [dates_all[tidx] for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
-            size= len(tidxs) * gridsize[0] * gridsize[1]
+            size = (len(tidxs), 1) + gridsize
 
             self.cur = dt(self.cur.year+1, 1, 1, 0)
             return filename, tidxs, dates, size
@@ -43,5 +47,41 @@ class files_by_plevq(_files_by_plevq):
         else:
             raise StopIteration
 
+
+def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
+    ''' Get standard meta-information for ERA-Interim
+
+    Parameters
+    ----------
+    quiet : bool
+        *Optional*, default ``False``. Suppress default output from metopen.
+    verbose : bool
+        *Optional*, default ``False``. Print debug information on where the static
+        file is being looked for.
+    no_dtype_conversion : bool
+        *Optional*, default ``False``. By default, ``metopen`` uncompresses data in the 
+        file and converts all data to float64. This behaviour can be suppressed by 
+        setting this option to ``True``.
+
+    Returns
+    -------
+    gridlib.grid
+        Some meta information about the data, like the grid information.
+    '''
+    
+    fo, oro = metopen(staticfile, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, 
+            quiet=quiet, no_static=True)
+    static = grid_by_static(fo)
+    static.oro = oro[::]
+    static.t_epoch = dt(1900,1,1,0)
+    static.t_unit = 'hours since 1900-01-01 00:00:00'
+    static.t_interval_unit = 3600
+    fo.close()
+
+    return static
+
+
+# Derive data source-specific versions of some functions
+get_instantaneous = get_instantaneous_factory(files_by_plevq, get_static)
 
 # C'est le fin
