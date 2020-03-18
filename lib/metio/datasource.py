@@ -6,6 +6,10 @@ import cftime
 from datetime import timedelta as td
 
 
+# 16 billion values -> 128G of memory, a bit more than 40 years of 6 hourly data at 0.5deg resolution
+MAX_REQUEST_SIZE = 16.0e9 
+WARN_REQUEST_SIZE = 2.0e9
+
 
 timestep = None
 gridsize = None
@@ -94,10 +98,12 @@ def tuple_to_plev(plevtype, plevhgt):
     return plev
 
 
-class files_by_plev_q(object):
-    def __init__(self, plev, q, start=None, end=None):
+class files_by_plevq(object):
+    def __init__(self, plevq, start, end):
+        plev, q = plevq
         self.plev = plev
         self.q = q
+        self.start = start
         self.cur = start
         self.end = end
 
@@ -110,7 +116,7 @@ class files_by_plev_q(object):
         raise StopIteration
 
 
-def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversion=False, i
+def metopen(filename, q=None, cut=slice(None), verbose=False, no_dtype_conversion=False,
         no_static=False, quiet=False, mode='r', no_xarray=False):
     ''' Find and open files by name
     
@@ -177,6 +183,9 @@ def metsave(**kwargs):
     raise NotImplementedError('TBD. May be data source-specific, may be not.')
 
 
+# TODO: Make into a factory returning get_instantaneus tailored to the different data sets
+#       (Likely this can be done through decorators?)
+#       This method depends on: files_by_plevq
 def get_instantaneous(plevqs, dates, force=False, **kwargs):
     ''' Get instantaneous fields
 
@@ -219,6 +228,110 @@ def get_instantaneous(plevqs, dates, force=False, **kwargs):
         If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
     '''
 
+    start, end = min(dates), max(dates)
+
+    if type(plevqs) == tuple:
+        plevqs = [plevqs, ]
+
+    # Dry run to test whether input parameters are valid and to determine the total amount of requested data
+    req = {}
+    request_size = 0
+    for plevq in plevqs:
+        # req[plevq] contains a list of 4-tuples: 
+        # (filename, list of tidx, list of dates, request_size in number of values)
+        req[plevq] = list(files_by_plevq(plevq, start=start, end=end))
+        request_size += sum([reqinfo[3] for reqinfo in req[plevq]])
+
+    # Checking max length
+    if request_size > MAX_REQUEST_SIZE:
+        if force:
+            print(f'Warning: you requested {request_size / 1024**3:.2f}G of data.')
+        else:
+            raise ValueError('''Cowardly refusing to fetch {request_size} values at once.
+                If you are absolutely certain what you're doing, you can use force=True to override.''')
+
+    if not force and request_size > WARN_REQUEST_SIZE:
+        print(f'Warning: you requested {request_size / 1024**3:.2f}G of data.')
+    
+    # Remove no_static if present
+    kwargs.pop('no_static', None)
+    static = None
+
+    dat = None
+    for year in years:
+        # Construct the slice
+        fst = dt(year,1,1,0) - dt0
+        lst = (dt(year+1,1,1,0) - se.conf.timestep) - dt0
+        fst = int(fst.total_seconds()/dts)
+        lst = int(lst.total_seconds()/dts) + 1
+
+        # Leave out unnecessary indexes for better compatibility
+        cut = slice(max(tsmin - fst, 0),min(1+tsmax - fst, lst - fst))
+        datcut = slice(fst+cut.start-tsmin, fst+cut.stop-tsmin)
+        
+        # One or more vertical levels?
+        i = 0
+        if type(dat) == type(None):
+            f, d, static = metopen(se.conf.file_std % {'time': year, 'plev': plevs[0], 'qf': se.conf.qf[q]}, q, cut=cut, **kwargs)
+            # Inject meta data for npy files
+            if not f:
+                static.t = np.arange(d.shape[0])*dts/3600
+                static.t_parsed = [dt(year,1,1)+i*se.conf.timestep for i in range(d.shape[0])]
+            if len(d.shape) == 4 and d.shape[1] > 1:
+                separate_plevs = False
+                s = (1+tsmax-tsmin, ) + d.shape[1:]
+            elif len(d.shape) == 4: 
+                separate_plevs = True
+                s = (1+tsmax-tsmin, len(plevs), ) + d.shape[2:]
+            else:
+                separate_plevs = True
+                s = (1+tsmax-tsmin, len(plevs), ) + d.shape[1:]
+
+            dat = np.empty(s, dtype=d.dtype)
+            if separate_plevs:
+                if len(d.shape) < 4:
+                    d = d[:,np.newaxis,::]
+                dat[datcut,0:1,::] = d
+            else:
+                dat[datcut,::] = d
+
+            static.t = static.t[cut]
+            if type(static.t_parsed) == np.ndarray:
+                static.t_parsed = static.t_parsed[cut]
+
+            i = 1
+        
+        if separate_plevs:
+            for plev in plevs[i:]:
+                f, d, static_ = metopen(se.conf.file_std % {'time': year, 'plev': plev, 'qf': se.conf.qf[q]}, q, cut=cut, **kwargs)
+                if len(d.shape) < 4:
+                    d = d[:,np.newaxis,::]
+                dat[datcut,i:i+1,::] = d
+                if i == 0:
+                    static.t = np.concatenate((static.t, static_.t[cut]))
+                    if type(static.t_parsed) == np.ndarray:
+                        static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
+                elif year == years[0]:
+                    if not static.z_name == static_.z_name or \
+                            not static.z_unit == static_.z_unit:
+                        print('WARNING: concatenating vertical levels of different types!')
+                        static.z_unit = u'MIXED!'
+                    static.z = np.concatenate((static.z, static_.z))
+                i += 1
+
+        elif i == 0:
+            f, dat[datcut,::], static_ = metopen(se.conf.file_std % {'time': year, 'plev': plevs[0], 'qf': se.conf.qf[q]}, q, cut=cut, **kwargs)
+            static.t = np.concatenate((static.t, static_.t[cut]))
+            if type(static.t_parsed) == np.ndarray:
+                static.t_parsed = np.concatenate((static.t_parsed, static_.t_parsed[cut]))
+
+    # Time-averaging if specified
+    if tavg and len(dates) > 1:
+        dat = dat.mean(axis=0)
+    
+    #dat = dat.squeeze()
+    
+    return dat, static
     raise NotImplementedError('to be written')
 
 
