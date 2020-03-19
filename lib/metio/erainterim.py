@@ -82,6 +82,7 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
 
 
 # Derive data source-specific versions of some functions
-get_instantaneous = get_instantaneous_factory(files_by_plevq, get_static)
+metopen = metopen_factory(get_static)
+get_instantaneous = get_instantaneous_factory(metopen, files_by_plevq, get_static)
 
 # C'est le fin
