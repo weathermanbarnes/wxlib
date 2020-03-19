@@ -15,8 +15,10 @@ from ..gridlib import grid_by_static, grid_by_nc
 from .. import utils
 
 
-# 16 billion values -> 128G of memory, a bit more than 40 years of 6 hourly data at 0.5deg resolution
+# 16 billion values -> 128G of memory
+# (Corresponds to a bit more than 40 years of 6 hourly data for a single variable/level at 0.5deg resolution)
 MAX_REQUEST_SIZE = 16.0e9 
+# 2 billion values -> 16G of memory
 WARN_REQUEST_SIZE = 2.0e9
 
 
@@ -345,7 +347,7 @@ def metsave(**kwargs):
 
 
 def get_instantaneous_factory(metopen, files_by_plevq, get_static):
-    ''' Create the get_instantaneous function based on data source specific helpers '''
+    ''' Create the get_instantaneous function based on data source-specific helpers '''
 
     def get_instantaneous(plevqs, dates, force=False, **kwargs):
         ''' Get instantaneous fields
@@ -446,8 +448,13 @@ def get_instantaneous_factory(metopen, files_by_plevq, get_static):
                 dates[plev,q].extend(dates_)
                 
                 toff += tlen
-
-        # TODO: Check whether dates lists are consistent (?)
+        
+        if len(dates) > 1:
+            # Iterate through all time axes at in parallel, see if all indexes refer to the respective same date
+            for dates_tstep in zip(*dates.values()):
+                for date in dates_tstep[1:]:
+                    if not date == dates_tstep[0]:
+                        raise ValueError('Time axes not consistent across the requested variables')
         
         # Prepare grid information, if so requested
         if no_static:
