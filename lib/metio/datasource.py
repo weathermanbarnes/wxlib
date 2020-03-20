@@ -502,129 +502,270 @@ def get_instantaneous_factory(files_by_plevq, get_from_file, get_static):
     return get_instantaneous
 
 
-def get_time_average(plevqs, dates, **kwargs):
-    ''' Get time-average fields
+def get_time_average_factory(files_by_plevq, get_from_file, get_static):
+    ''' Create the get_time_average function based on data source-specific helpers '''
 
-    Allows general data requests in the configured data base, e.g. ERA-Interim. The request
-    can span several files, e.g. by including several vertical levels or by covering several
-    years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
+    def get_time_average(plevqs, dates, **kwargs):
+        ''' Get time-average fields
+
+        Allows general data requests in the configured data base, e.g. ERA-Interim. The request
+        can span several files, e.g. by including several vertical levels or by covering several
+        years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
+        
+        The method internally uses metopen to locate data files. Hence, it will find data in the 
+        locations given conf.datapath (in user scripts and user settings files typically 
+        available as conf.datapath).
+
+        Parameters
+        ----------
+        plevqs : 2-tuple or list of 2-tuples
+            Each 2-tuple consists of (1) a string representations of the requested vertical level(s), 
+            e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface, and (2) a variable name 
+            identifier, following the ECMWF conventions as far as appicable, e.g. ``'u'`` or ``'msl'``.
+            Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
+            and/or the variable name, to request all vertical levels/variables available.
+        dates : list of datetime
+            The minimum and maxmimum dates in this list define the requested time interval. The i
+            final date will not be included in the result, i.e. for an average of 2016 request
+            dates from 2016-01-01 00:00 to 2017-01-01 00:00.
+        
+        Keyword arguments
+        -----------------
+        metopen arguments : all optional
+            Optional arguments passed on to calls of metopen within this function.
+
+        Returns
+        -------
+        dict of np.ndarray
+            Time average for the requested variable and vertical level(s).
+        grid.gridlib
+            If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
+        '''
+
+        start, end = min(dates), max(dates)
+
+        if type(plevqs) == tuple:
+            plevqs = [plevqs, ]
+
+        # Dry run to test whether input parameters are valid and to determine the total amount of requested data
+        req = {}            # Request info
+        datshape = {}       # Shape of the resulting data arrays
+        for plevq in plevqs:
+            # req[plevq] contains a list of 4-tuples: 
+            # (filename, list of tidx, list of dates, shape)
+            req[plevq] = list(files_by_plevq(plevq, start=start, end=end))
+            datshape[plevq] = req[plevq][0][3][1:]
+            for entry in req[plevq][1:]:
+                shape = entry[3]
+                if not shape[1:] == datshape[plevq]:
+                    raise ValueError(f'''Discovered inconsistent data shape across time:
+                            plevq: {plevq}
+                            file {entry[0]} with shape {shape[1:]}, 
+                            preceeding files with shape {datshape[plevq]}.''')
+
+        # Remove no_static if present, this should only effect the output of this function rather than the metopen calls herein
+        no_static = kwargs.pop('no_static', False)
+
+        dat = {}
+        dates = {}
+        for plev, q in plevqs:
+            # Allocate memory for the result
+            dat[plev,q] = np.zeros(datshape[plev,q])
+            dates[plev,q] = []
+            
+            toff = 0
+            for filename, tidxs, dates_, shape in req[plev,q]:
+                cut = slice(tidxs[0], tidxs[-1]+1)
+                tlen = len(tidxs)
+                
+                f, dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
+                dat[plev,q] += dat_.sum(axis=0)
+                
+                toff += tlen
+
+            dat[plev,q] /= toff
+        
+        # Prepare grid information, if so requested
+        if no_static:
+            grid = None
+        else:
+            grid = get_static()
+            grid = grid.new_time([start, ])
+            grid.t_periods = [(start, end), ]
+            
+        return dat, grid
     
-    The method internally uses metopen to locate data files. Hence, it will find data in the 
-    locations given conf.datapath (in user scripts and user settings files typically 
-    available as conf.datapath).
+    return get_time_average
 
-    Parameters
-    ----------
-    plevqs : 2-tuple or list of 2-tuples
-        Each 2-tuple consists of (1) a string representations of the requested vertical level(s), 
-        e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface, and (2) a variable name 
-        identifier, following the ECMWF conventions as far as appicable, e.g. ``'u'`` or ``'msl'``.
-        Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
-        and/or the variable name, to request all vertical levels/variables available.
-    dates : list of datetime
-        The minimum and maxmimum dates in this list define the requested time interval. The i
-        final date will not be included in the result, i.e. for an average of 2016 request
-        dates from 2016-01-01 00:00 to 2017-01-01 00:00.
+
+def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
+    ''' Create the get_time_average function based on data source-specific helpers '''
+
+    def get_aggregate(plevqs, dates, agg, **kwargs):
+        ''' Get time-aggregates, such as monthly means
+
+        Allows general data requests in the configured data base, e.g. ERA-Interim. The request
+        can span several files, e.g. by including several vertical levels or by covering several
+        years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
+        
+        The method internally uses metopen to locate data files. Hence, it will find data in the 
+        locations given conf.datapath (in user scripts and user settings files typically 
+        available as conf.datapath).
+
+        Parameters
+        ----------
+        plevqs : 2-tuple or list of 2-tuples
+            Each 2-tuple consists of (1) a string representations of the requested vertical level(s), 
+            e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface, and (2) a variable name 
+            identifier, following the ECMWF conventions as far as appicable, e.g. ``'u'`` or ``'msl'``.
+            Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
+            and/or the variable name, to request all vertical levels/variables available.
+        dates : list of datetime
+            The minimum and maxmimum dates in this list define the requested time interval. The i
+            final date will not be included in the result, i.e. for all time steps in 2016 request
+            dates from 2016-01-01 00:00 to 2017-01-01 00:00.
+        agg : str or dynlib.tagg.agg object
+            String representation (e.g. ``'cal_month'``, ``'pentad'``, or ``'met_season'``), or 
+            time aggregator object representation the aggregation interval.
+        
+        Keyword arguments
+        -----------------
+        metopen arguments : all optional
+            Optional arguments passed on to calls of metopen within this function.
+
+        Returns
+        -------
+        dict of np.ndarray
+            Time-aggregated data for the requested variable(s) and vertical level(s).
+        grid.gridlib
+            If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
+        '''
+
+        start, end = min(dates), max(dates)
+
+        if type(plevqs) == tuple:
+            plevqs = [plevqs, ]
+
+        # Dry run to test whether input parameters are valid and to determine the total amount of requested data
+        req = {}            # Request info
+        datshape = {}       # Shape of the resulting data arrays
+        for plevq in plevqs:
+            # req[plevq] contains a list of 4-tuples: 
+            # (filename, list of tidx, list of dates, shape)
+            req[plevq] = list(files_by_plevq(plevq, start=start, end=end))
+            datshape[plevq] = req[plevq][0][3][1:]
+            for entry in req[plevq][1:]:
+                shape = entry[3]
+                if not shape[1:] == datshape[plevq]:
+                    raise ValueError(f'''Discovered inconsistent data shape across time:
+                            plevq: {plevq}
+                            file {entry[0]} with shape {shape[1:]}, 
+                            preceeding files with shape {datshape[plevq]}.''')
+
+        # Remove no_static if present, this should only effect the output of this function rather than the metopen calls herein
+        no_static = kwargs.pop('no_static', False)
+
+        dat = {}
+        start_dates = {}
+        end_dates = {}
+        for plev, q in plevqs:
+            # Allocate memory for the result
+            dat[plev,q] = []
+            start_dates[plev,q] = []
+            end_dates[plev,q] = []
+
+            leftover = None
+            for filename, tidxs, dates_, shape in req[plev,q]:
+                cut = slice(tidxs[0], tidxs[-1]+1)
+                tlen = len(tidxs)
+                
+                f, dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
+
+                # Prepend leftover data from the previous file period, if available
+                if leftover:
+                    dates_ = leftover[0] + dates_
+                    dat_ = np.concatenate((leftover[1], dat_), axis=0)
+                    leftover = None
+
+                start_dates_agg, end_dates_agg, dat_agg = utils.aggregate(dates_, dat_, agg)
+                
+                dat[plev,q].append(dat_agg)
+                start_dates[plev,q].extend(start_dates_agg)
+                end_dates[plev,q].extend(end_dates_agg)
+                
+                # Some time steps were not (yet) incorporated in an aggregation period. Save them for the next one.
+                if end_dates_agg[-1] in dates_:
+                    next_tidx = dates_.index(end_dates_agg[-1])
+                    leftover = dates_[next_tidx:], dat_[next_tidx:]
+            
+            # Concatenate the list of arrays to one array
+            dat[plev,q] = np.concatenate(dat[plev,q], axis=0)
+        
+        if len(start_dates) > 1:
+            # Iterate through all time axes at in parallel, see if all indexes refer to the respective same date
+            for dates_tstep in zip(*start_dates.values()):
+                for date in dates_tstep[1:]:
+                    if not date == dates_tstep[0]:
+                        raise ValueError('Time axes not consistent across the requested variables')
+        
+        # Prepare grid information, if so requested
+        if no_static:
+            grid = None
+        else:
+            grid = get_static()
+            grid = grid.new_time(start_dates[plev,q])
+            grid.t_periods = list(zip(start_dates[plev,q], end_dates[plev,q]))
+            
+        return dat, grid
+ 
+    return get_aggregate
+
+
+def get_composite_factory(files_by_plevq, get_from_file, get_static):
+    ''' Create the get_time_average function based on data source-specific helpers '''
+
+    def get_composite(plevqs, dates, composites, **kwargs):
+        ''' Get composites, such as multi-year seasonal averages or for NAO+/-
+
+        Allows general data requests in the configured data base, e.g. ERA-Interim. The request
+        can span several files, e.g. by including several vertical levels or by covering several
+        years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
+        
+        The method internally uses metopen to locate data files. Hence, it will find data in the 
+        locations given conf.datapath (in user scripts and user settings files typically 
+        available as conf.datapath).
+
+        Parameters
+        ----------
+        plevqs : 2-tuple or list of 2-tuples
+            Each 2-tuple consists of (1) a string representations of the requested vertical level(s), 
+            e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface, and (2) a variable name 
+            identifier, following the ECMWF conventions as far as appicable, e.g. ``'u'`` or ``'msl'``.
+            Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
+            and/or the variable name, to request all vertical levels/variables available.
+        dates : list of datetime
+            The minimum and maxmimum dates in this list define the requested time interval. The i
+            final date will not be included in the result, i.e. for all time steps in 2016 request
+            dates from 2016-01-01 00:00 to 2017-01-01 00:00.
+        composites : composite_test or list of composite_test
+            The compositing criteria to be used.
+        
+        Keyword arguments
+        -----------------
+        metopen arguments : all optional
+            Optional arguments passed on to calls of metopen within this function.
+
+        Returns
+        -------
+        dict of np.ndarray
+            Composite data for the requested variable(s), vertical level(s), and composites.
+        grid.gridlib
+            If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
+        '''
+
+        raise NotImplementedError('to be written')
     
-    Keyword arguments
-    -----------------
-    metopen arguments : all optional
-        Optional arguments passed on to calls of metopen within this function.
-
-    Returns
-    -------
-    dict of np.ndarray
-        Time average for the requested variable and vertical level(s).
-    grid.gridlib
-        If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
-    '''
-
-    raise NotImplementedError('to be written')
-
-
-def get_aggregate(plevqs, dates, agg, **kwargs):
-    ''' Get time-aggregates, such as monthly means
-
-    Allows general data requests in the configured data base, e.g. ERA-Interim. The request
-    can span several files, e.g. by including several vertical levels or by covering several
-    years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
-    
-    The method internally uses metopen to locate data files. Hence, it will find data in the 
-    locations given conf.datapath (in user scripts and user settings files typically 
-    available as conf.datapath).
-
-    Parameters
-    ----------
-    plevqs : 2-tuple or list of 2-tuples
-        Each 2-tuple consists of (1) a string representations of the requested vertical level(s), 
-        e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface, and (2) a variable name 
-        identifier, following the ECMWF conventions as far as appicable, e.g. ``'u'`` or ``'msl'``.
-        Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
-        and/or the variable name, to request all vertical levels/variables available.
-    dates : list of datetime
-        The minimum and maxmimum dates in this list define the requested time interval. The i
-        final date will not be included in the result, i.e. for all time steps in 2016 request
-        dates from 2016-01-01 00:00 to 2017-01-01 00:00.
-    agg : str or dynlib.tagg.agg object
-        String representation (e.g. ``'cal_month'``, ``'pentad'``, or ``'met_season'``), or 
-        time aggregator object representation the aggregation interval.
-    
-    Keyword arguments
-    -----------------
-    metopen arguments : all optional
-        Optional arguments passed on to calls of metopen within this function.
-
-    Returns
-    -------
-    dict of np.ndarray
-        Time-aggregated data for the requested variable(s) and vertical level(s).
-    grid.gridlib
-        If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
-    '''
-
-    raise NotImplementedError('to be written')
-
-
-def get_composite(plevqs, dates, composites, **kwargs):
-    ''' Get composites, such as multi-year seasonal averages or for NAO+/-
-
-    Allows general data requests in the configured data base, e.g. ERA-Interim. The request
-    can span several files, e.g. by including several vertical levels or by covering several
-    years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
-    
-    The method internally uses metopen to locate data files. Hence, it will find data in the 
-    locations given conf.datapath (in user scripts and user settings files typically 
-    available as conf.datapath).
-
-    Parameters
-    ----------
-    plevqs : 2-tuple or list of 2-tuples
-        Each 2-tuple consists of (1) a string representations of the requested vertical level(s), 
-        e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface, and (2) a variable name 
-        identifier, following the ECMWF conventions as far as appicable, e.g. ``'u'`` or ``'msl'``.
-        Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
-        and/or the variable name, to request all vertical levels/variables available.
-    dates : list of datetime
-        The minimum and maxmimum dates in this list define the requested time interval. The i
-        final date will not be included in the result, i.e. for all time steps in 2016 request
-        dates from 2016-01-01 00:00 to 2017-01-01 00:00.
-    composites : composite_test or list of composite_test
-        The compositing criteria to be used.
-    
-    Keyword arguments
-    -----------------
-    metopen arguments : all optional
-        Optional arguments passed on to calls of metopen within this function.
-
-    Returns
-    -------
-    dict of np.ndarray
-        Composite data for the requested variable(s), vertical level(s), and composites.
-    grid.gridlib
-        If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
-    '''
-
-    raise NotImplementedError('to be written')
+    return get_composite
 
 
 # C'est le fin

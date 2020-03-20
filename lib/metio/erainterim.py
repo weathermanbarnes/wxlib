@@ -98,5 +98,9 @@ def get_from_file(filename, plev, q, **kwargs):
 
 # Derive data source-specific versions of the remaining data getter functions
 get_instantaneous = get_instantaneous_factory(files_by_plevq, get_from_file, get_static)
+get_time_average = get_time_average_factory(files_by_plevq, get_from_file, get_static)
+get_aggregate = get_aggregate_factory(files_by_plevq, get_from_file, get_static)
+get_composite = get_composite_factory(files_by_plevq, get_from_file, get_static)
+
 
 # C'est le fin

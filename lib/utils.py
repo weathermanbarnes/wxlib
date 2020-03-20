@@ -524,6 +524,8 @@ def aggregate(dates, dat, agg):
     -------
     list of datetime
         Dates at with the aggregation periods start
+    list of datetime
+        Dates at with the aggregation periods end
     np.ndarray
         Aggregated data
     '''
@@ -536,7 +538,8 @@ def aggregate(dates, dat, agg):
     #    Aggegate by output of functions t_iter.start and t_iter.end; 
     #    These functions give the first and the last time step for the interval `date` belongs to
     previ = -1
-    dates_out = []
+    start_dates = []
+    end_dates = []
     tslc = []
     for i, date in zip(range(len(dates)), dates):
         # Previous interval unfinished, yet we are in a new one.
@@ -547,7 +550,11 @@ def aggregate(dates, dat, agg):
         # End of an interval -> save
         if previ >= 0 and date == t_iter.end(date):
             tslc.append(slice(previ,i+1))
-            dates_out.append(dates[previ])
+            start_dates.append(dates[previ])
+            if i+1 >= len(dates):
+                end_dates.append(dates[-1] + dtd)
+            else:
+                end_dates.append(dates[i+1])
             previ = -1
         
         # Start of an interval -> remember 
@@ -567,7 +574,7 @@ def aggregate(dates, dat, agg):
     for i in range(outlen):
         dat_out[i] = dat[tslc[i]].mean(axis=0)
 
-    return dates_out, dat_out
+    return start_dates, end_dates, dat_out
 
 
 
