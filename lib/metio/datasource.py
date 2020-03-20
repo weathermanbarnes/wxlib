@@ -128,6 +128,42 @@ class files_by_plevq(object):
         raise StopIteration
 
 
+def get_from_file(filename, plev, q, **kwargs):
+    ''' Get data for level plev and variable q from filename
+    
+    The file is located by metopen. Optional arguments are passed on to metopen.
+
+    The located files might either be numpy-files, netCDF-files or matlab mat-files. 
+    For each of the file types, metopen returns the requested variable and some meta-
+    information about the variable, if not suppressed.
+
+    Parameters
+    ----------
+    filename : str
+        The name of the file, excluding the file ending.
+    plev : str
+        The requested vertical level for the variable. Might be ``'__all__'`` for all
+        vertical levels in the file if the data source supports that.
+    q : str
+        The requested variable within the file.. Might be ``'__all__'`` for all
+        variables in the file if the data source supports that.
+
+    Keyword arguments
+    -----------------
+    metopen arguments : all optional
+        Optional arguments passed on to calls of metopen within this function.
+
+    Returns
+    -------
+    np.ndarray
+        Data of the requested variable for the requested vertical level.
+    grid.gridlib
+        If ``no_static=False`` meta-information about the requested data.
+    '''
+
+    raise NotImplementedError('Needs to be implemented per data source')
+
+
 # TODO: Return xarray by default, reflect other docu changes (if any?)
 def metopen_factory(get_static):
     ''' Create the metopen function based on data source specific helpers '''
@@ -346,7 +382,7 @@ def metsave(**kwargs):
 
 
 
-def get_instantaneous_factory(metopen, files_by_plevq, get_static):
+def get_instantaneous_factory(files_by_plevq, get_from_file, get_static):
     ''' Create the get_instantaneous function based on data source-specific helpers '''
 
     def get_instantaneous(plevqs, dates, force=False, **kwargs):
@@ -441,9 +477,7 @@ def get_instantaneous_factory(metopen, files_by_plevq, get_static):
                 cut = slice(tidxs[0], tidxs[-1]+1)
                 tlen = len(tidxs)
                 
-                # TODO: ERA5 will in general need an interpolation at this stage. 
-                #       How to incorporate in the general mechanism?
-                f, dat_ = metopen(filename, q, cut=cut, no_static=True, **kwargs)
+                f, dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
                 dat[plev,q][toff:toff+tlen,...] = dat_[...]
                 dates[plev,q].extend(dates_)
                 

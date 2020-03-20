@@ -13,6 +13,7 @@ conf.datapath.insert(1, '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY')
 conf.datapath.insert(1, '/Data/gfi/users/csp001/share') # for static; TODO: Move to a more general directory!
 
 
+
 _files_by_plevq = files_by_plevq
 class files_by_plevq(_files_by_plevq):
     def __init__(self, plevq, start=None, end=None):
@@ -81,8 +82,21 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
     return static
 
 
-# Derive data source-specific versions of some functions
+# Derive data source-specific version of metopen
 metopen = metopen_factory(get_static)
-get_instantaneous = get_instantaneous_factory(metopen, files_by_plevq, get_static)
+
+
+_get_from_file = get_from_file
+def get_from_file(filename, plev, q, **kwargs):
+    __doc__ = _get_from_file.__doc__
+
+    if plev not in filename:
+        raise ValueError(f'Filename `{filename}` does not match the requested vertical level `{plev}.`')
+
+    return metopen(filename, q, **kwargs)
+
+
+# Derive data source-specific versions of the remaining data getter functions
+get_instantaneous = get_instantaneous_factory(files_by_plevq, get_from_file, get_static)
 
 # C'est le fin
