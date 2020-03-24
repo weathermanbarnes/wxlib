@@ -98,14 +98,14 @@ LINES = {
 
 # Areal detections
 OBJMASK = {
-    'cyc_id': 'cyc',
+    'cycmask': 'cyc',
     'frovo_id': 'frovo',
 }
 
 # Variables where the average is meaningless -> make histograms instead of averages
 _dd_bins = [348.75, ] + list(np.arange(11.25, 360, 22.5))
 _defang_bins = [17, ] + list(range(-18,18))
-_defang_bins = np.array(_bins_defang)*np.pi/36.0 + np.pi/72.0
+_defang_bins = np.array(_defang_bins)*np.pi/36.0 + np.pi/72.0
 BINS = {
     'dd': _dd_bins,
     'defang': _defang_bins, 'defanr': _defang_bins,

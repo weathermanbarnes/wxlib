@@ -10,6 +10,7 @@ import numpy as np
 import cftime
 from datetime import timedelta as td
 
+from .vardefs import LINES, OBJMASK, BINS
 from ..settings_basic import conf
 from ..gridlib import grid_by_static, grid_by_nc
 from .. import utils
@@ -259,8 +260,6 @@ def metopen_factory(get_static):
         ''' Find and open files by name
         
         Uses the conf.datapath list to locate files in a variety of different locations. 
-        In user scripts and user settings files, this variable will typically be available
-        via conf.datapath.
 
         The located files might either be numpy-files, netCDF-files or matlab mat-files. 
         For each of the file types, metopen returns the requested variable and some meta-
@@ -393,8 +392,7 @@ def get_instantaneous_factory(files_by_plevq, get_from_file, get_static):
         years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
         
         The method internally uses metopen to locate data files. Hence, it will find data in the 
-        locations given conf.datapath (in user scripts and user settings files typically 
-        available as conf.datapath).
+        locations given conf.datapath.
 
         Parameters
         ----------
@@ -502,6 +500,8 @@ def get_instantaneous_factory(files_by_plevq, get_from_file, get_static):
     return get_instantaneous
 
 
+# TODO: Special treatment for lines and Object ID masks
+# TODO: Treat NaNs, return number of valid data points in average
 def get_time_average_factory(files_by_plevq, get_from_file, get_static):
     ''' Create the get_time_average function based on data source-specific helpers '''
 
@@ -513,8 +513,7 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static):
         years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
         
         The method internally uses metopen to locate data files. Hence, it will find data in the 
-        locations given conf.datapath (in user scripts and user settings files typically 
-        available as conf.datapath).
+        locations given conf.datapath.
 
         Parameters
         ----------
@@ -568,10 +567,22 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static):
 
         dat = {}
         dates = {}
+        grid = get_static()
         for plev, q in plevqs:
+
+            if q in LINES:
+                qout = f'{q}_freq'
+            elif q in OBJMASK:
+                qout = f'{OBJMASK[q]}_freq'
+            else:
+                qout = q
+
             # Allocate memory for the result
-            dat[plev,q] = np.zeros(datshape[plev,q])
-            dates[plev,q] = []
+            dat[plev,qout] = np.zeros(datshape[plev,q])
+            if q in BINS:
+                dat[plev,qout,'hist'] = np.zeros((len(BINS[q]),) + datshape[plev,q])
+            else:
+                dat[plev,qout,'valid'] = np.zeros(datshape[plev,q], dtype='i4')
             
             toff = 0
             for filename, tidxs, dates_, shape in req[plev,q]:
@@ -579,17 +590,45 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static):
                 tlen = len(tidxs)
                 
                 f, dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
-                dat[plev,q] += dat_.sum(axis=0)
+
+                # Treat special data
+                #
+                #  1. Lines
+                if q in LINES:
+                    ql = LINES[q]
+                    foff, datoff_ = get_from_file(filename, plev, ql, cut=cut, no_static=True, **kwargs)
+                    dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)
+                #  2. Object ID masks
+                if q in OBJMASK:
+                    dat_ = dat_ > 0.5
+                #  3. Binned data
+                if q in BINS:
+                    for bi in range(len(BINS[q])-1):
+                        upper, lower = BINS[q][bi+1], BINS[q][bi]
+                        if upper > lower:
+                            dat[plev,qout,'hist'][bi,:,:] += np.logical_and(dat_ >= lower, dat_ <  upper).sum(axis=0)
+                        else:
+                            dat[plev,qout,'hist'][bi,:,:] += np.logical_or(dat_ <  upper, dat_ >= lower).sum(axis=0)
+                
+                # Summing up non-binned data, taking care of NaNs
+                else:
+                    mask = np.isnan(dat_)
+                    dat[plev,qout] += dat_.sum(axis=0, where=~mask)
+                    dat[plev,qout,'valid'] += tlen - mask.sum(axis=0)
                 
                 toff += tlen
 
-            dat[plev,q] /= toff
+            dat[plev,qout,'cnt'] = toff
+
+            if q in BINS:
+                dat[plev,qout] = utils.cal_mfv(dat[plev,qout,'hist'], BINS[q])
+            else:
+                dat[plev,qout] /= dat[plev,qout,'valid']
         
         # Prepare grid information, if so requested
         if no_static:
             grid = None
         else:
-            grid = get_static()
             grid = grid.new_time([start, ])
             grid.t_periods = [(start, end), ]
             
@@ -598,6 +637,8 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static):
     return get_time_average
 
 
+# TODO: Special treatment for lines and Object ID masks
+# TODO: Treat NaNs, return number of valid data points in average
 def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
     ''' Create the get_time_average function based on data source-specific helpers '''
 
@@ -609,8 +650,7 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
         years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
         
         The method internally uses metopen to locate data files. Hence, it will find data in the 
-        locations given conf.datapath (in user scripts and user settings files typically 
-        available as conf.datapath).
+        locations given conf.datapath.
 
         Parameters
         ----------
@@ -732,8 +772,7 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
         
         The method internally uses metopen to locate data files. Hence, it will find data in the 
-        locations given conf.datapath (in user scripts and user settings files typically 
-        available as conf.datapath).
+        locations given conf.datapath.
 
         Parameters
         ----------
@@ -762,6 +801,18 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         grid.gridlib
             If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
         '''
+        
+        # Overall strategy
+        #
+        #  1. Create (binary) composite time series for all given composites
+        #    - Requires dry run for test_plevqs, looping through all time steps in the test data
+        #    - Lagged composites: mark dates by looping through test data rather than probing dates
+        #    - Composites without test data: API to directly construct composite time series?
+        #    - Composite time series might be cached/ provided by other means
+        #    - Likely requires changes to the composite_decider API
+        #
+        #  2. Loop over all variables and input files
+        #    - If any time step from input file in any composite -> load and add data to respective variable and composite
 
         raise NotImplementedError('to be written')
     
