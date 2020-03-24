@@ -487,7 +487,8 @@ def sect_gen_points(coords, m, dxy):
 
     return retlon, retlat, retxy
 
-def aggregate(dates, dat, agg):
+
+def aggregate(dates, dat, agg, bins=None):
     ''' General temporal aggregation of data
 
     The function assumes that the data is be equally spaced in time. This
@@ -519,6 +520,9 @@ def aggregate(dates, dat, agg):
         * ``three_daily``: 3-day intervals starting from the first given date
         * ``two_daily``: 2-day intervals starting from the first given date
         * ``daily``: 1-day intervals starting from the first given date
+    bins : list of float
+        *Optional*. If provided, the data will not be averaged in time. Instead histograms and 
+        relatively most frequent value will be determined for each time interval.
     
     Returns
     -------
@@ -527,7 +531,11 @@ def aggregate(dates, dat, agg):
     list of datetime
         Dates at with the aggregation periods end
     np.ndarray
-        Aggregated data
+        Aggregated data averages, or most frequent values for binned data
+    np.ndarray
+        Number of valid data, or data histograms for binned data
+    np.nparray
+        List of number of timesteps included in each aggregation period
     '''
 
     dtd = dates[1] - dates[0]
@@ -540,6 +548,7 @@ def aggregate(dates, dat, agg):
     previ = -1
     start_dates = []
     end_dates = []
+    cnt_out = []
     tslc = []
     for i, date in zip(range(len(dates)), dates):
         # Previous interval unfinished, yet we are in a new one.
@@ -550,6 +559,7 @@ def aggregate(dates, dat, agg):
         # End of an interval -> save
         if previ >= 0 and date == t_iter.end(date):
             tslc.append(slice(previ,i+1))
+            cnt_out.append(i+1 - previ)
             start_dates.append(dates[previ])
             if i+1 >= len(dates):
                 end_dates.append(dates[-1] + dtd)
@@ -569,12 +579,28 @@ def aggregate(dates, dat, agg):
     shape = tuple(shape)
 
     dat_out = np.empty(shape)
+    if not type(bins) == type(None):
+        valid_out = np.empty(shape[0:1] + (len(bins),) + shape[1:], dtype='i4')
+    else:
+        valid_out = np.empty(shape, dtype='i4')
     
     # 3. Doing the actual calculations
     for i in range(outlen):
-        dat_out[i] = dat[tslc[i]].mean(axis=0)
+        dat_ = dat[tslc[i]]
+        if not type(bins) == type(None):
+            for bi in range(len(bins)-1):
+                upper, lower = bins[bi+1], bins[bi]
+                if upper > lower:
+                    valid_out[i,bi,:,:] += np.logical_and(dat_ >= lower, dat_ <  upper).sum(axis=0)
+                else:
+                    valid_out[i,bi,:,:] += np.logical_or(dat_ <  upper, dat_ >= lower).sum(axis=0)
+            dat_out[i] = cal_mfv(valid_out[i,:,:,:], bins)
 
-    return start_dates, end_dates, dat_out
+        else:
+            dat_out[i] = np.nanmean(dat_, axis=0)
+            valid_out[i] = cnt_out[i] - np.isnan(dat_).sum(axis=0)
+
+    return start_dates, end_dates, dat_out, valid_out, np.array(cnt_out)
 
 
 

@@ -111,4 +111,20 @@ BINS = {
     'defang': _defang_bins, 'defanr': _defang_bins,
 }
 
+
+
+def _average_q_name(q):
+    ''' Given variable q, what is the name of its composite/time average? '''
+
+    if q in LINES:
+        qout = f'{q}_freq'
+    elif q in OBJMASK:
+        qout = f'{OBJMASK[q]}_freq'
+    else:
+        qout = q
+
+    return qout
+
+
+
 # C'est le fin

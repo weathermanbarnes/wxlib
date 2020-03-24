@@ -10,7 +10,7 @@ import numpy as np
 import cftime
 from datetime import timedelta as td
 
-from .vardefs import LINES, OBJMASK, BINS
+from .vardefs import LINES, OBJMASK, BINS, _average_q_name
 from ..settings_basic import conf
 from ..gridlib import grid_by_static, grid_by_nc
 from .. import utils
@@ -500,8 +500,6 @@ def get_instantaneous_factory(files_by_plevq, get_from_file, get_static):
     return get_instantaneous
 
 
-# TODO: Special treatment for lines and Object ID masks
-# TODO: Treat NaNs, return number of valid data points in average
 def get_time_average_factory(files_by_plevq, get_from_file, get_static):
     ''' Create the get_time_average function based on data source-specific helpers '''
 
@@ -569,18 +567,12 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static):
         dates = {}
         grid = get_static()
         for plev, q in plevqs:
-
-            if q in LINES:
-                qout = f'{q}_freq'
-            elif q in OBJMASK:
-                qout = f'{OBJMASK[q]}_freq'
-            else:
-                qout = q
+            qout = _average_q_name(q)
 
             # Allocate memory for the result
             dat[plev,qout] = np.zeros(datshape[plev,q])
             if q in BINS:
-                dat[plev,qout,'hist'] = np.zeros((len(BINS[q]),) + datshape[plev,q])
+                dat[plev,qout,'hist'] = np.zeros((len(BINS[q]),) + datshape[plev,q], dtype='i4')
             else:
                 dat[plev,qout,'valid'] = np.zeros(datshape[plev,q], dtype='i4')
             
@@ -637,8 +629,6 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static):
     return get_time_average
 
 
-# TODO: Special treatment for lines and Object ID masks
-# TODO: Treat NaNs, return number of valid data points in average
 def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
     ''' Create the get_time_average function based on data source-specific helpers '''
 
@@ -704,13 +694,22 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
 
         # Remove no_static if present, this should only effect the output of this function rather than the metopen calls herein
         no_static = kwargs.pop('no_static', False)
+        grid = get_static() # For LINES and potentially for output
 
         dat = {}
         start_dates = {}
         end_dates = {}
         for plev, q in plevqs:
+            qout = _average_q_name(q)
+
             # Allocate memory for the result
-            dat[plev,q] = []
+            dat[plev,qout] = []
+            if q in BINS:
+                dat[plev,qout,'hist'] = []
+            else:
+                dat[plev,qout,'valid'] = []
+            dat[plev,qout,'cnt'] = []
+
             start_dates[plev,q] = []
             end_dates[plev,q] = []
 
@@ -720,16 +719,33 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
                 tlen = len(tidxs)
                 
                 f, dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
+                
+                # Treat lines
+                if q in LINES:
+                    fl, datoff_ = get_from_file(filename, plev, LINES[q], cut=cut, no_static=True, **kwargs)
+                    dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)
+                # Treat object masks
+                elif q in OBJMASK:
+                    dat_ = dat_ > 0.5
 
                 # Prepend leftover data from the previous file period, if available
                 if leftover:
                     dates_ = leftover[0] + dates_
                     dat_ = np.concatenate((leftover[1], dat_), axis=0)
                     leftover = None
-
-                start_dates_agg, end_dates_agg, dat_agg = utils.aggregate(dates_, dat_, agg)
                 
-                dat[plev,q].append(dat_agg)
+                # Aggregate data
+                start_dates_agg, end_dates_agg, mean_or_mfv_agg, valid_or_hist_agg, cnt_agg = \
+                        utils.aggregate(dates_, dat_, agg, bins=BINS.get(q, None))
+                
+                # Save results to output arrays (lists for now, concatenated below)
+                dat[plev,qout].append(mean_or_mfv_agg)
+                if q in BINS:
+                    dat[plev,qout,'hist'].append(valid_or_hist_agg)
+                else:
+                    dat[plev,qout,'valid'].append(valid_or_hist_agg)
+                dat[plev,qout,'cnt'].append(cnt_agg)
+
                 start_dates[plev,q].extend(start_dates_agg)
                 end_dates[plev,q].extend(end_dates_agg)
                 
@@ -739,7 +755,12 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
                     leftover = dates_[next_tidx:], dat_[next_tidx:]
             
             # Concatenate the list of arrays to one array
-            dat[plev,q] = np.concatenate(dat[plev,q], axis=0)
+            dat[plev,qout] = np.concatenate(dat[plev,qout], axis=0)
+            if q in BINS:
+                dat[plev,qout,'hist'] = np.concatenate(dat[plev,qout,'hist'], axis=0)
+            else:
+                dat[plev,qout,'valid'] = np.concatenate(dat[plev,qout,'valid'], axis=0)
+            dat[plev,qout,'cnt'] = np.concatenate(dat[plev,qout,'cnt'], axis=0)
         
         if len(start_dates) > 1:
             # Iterate through all time axes at in parallel, see if all indexes refer to the respective same date
@@ -749,10 +770,7 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
                         raise ValueError('Time axes not consistent across the requested variables')
         
         # Prepare grid information, if so requested
-        if no_static:
-            grid = None
-        else:
-            grid = get_static()
+        if not no_static:
             grid = grid.new_time(start_dates[plev,q])
             grid.t_periods = list(zip(start_dates[plev,q], end_dates[plev,q]))
             
