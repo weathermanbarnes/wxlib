@@ -824,6 +824,8 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         #
         #  1. Create (binary) composite time series for all given composites
         #    - Requires dry run for test_plevqs, looping through all time steps in the test data
+        #    - For composites requiring test data, they should iterate through the data themselves
+        #      -> DRY: Interation might be implemented in general in here and used in the composite class?
         #    - Lagged composites: mark dates by looping through test data rather than probing dates
         #    - Composites without test data: API to directly construct composite time series?
         #    - Composite time series might be cached/ provided by other means
