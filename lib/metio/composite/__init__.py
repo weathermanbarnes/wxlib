@@ -23,7 +23,9 @@ import numpy as np
 from copy import deepcopy
 from datetime import timedelta as td
 
-from ..settings_basic import conf
+from ..vardefs import LINES
+from ...settings_basic import conf
+from ... import utils
 
 
 
@@ -47,7 +49,7 @@ class decider(object):
         for the PV2-surface.
     '''
 
-    def __init__(self, name, q=None, plev=None):
+    def __init__(self, name, plev=None, q=None):
         self.name = name
         
         if q and plev:
@@ -111,6 +113,75 @@ class decider(object):
         '''
 
         raise NotImplementedError('`decider.get_time_series` must be overriden in derived classes!')
+
+
+
+def decide_by_data_factory(files_by_plevq, get_static, get_from_file):
+    ''' Create the decide_by_data function based on data source specific helpers '''
+
+    class decide_by_data(decider):
+        ''' Compositing criteria based on a given time series
+
+        Parameters
+        ----------
+        name : str
+            Name of the composite, to be used for saving.
+        ts : dict
+            Time series dictionary, containing a list of datetime objects and a list of values.
+        criterion : function
+            A function mapping a time series value to True/False.
+        '''
+
+        def __init__(self, name, plev, q, criterion):
+            super().__init__(name, plev, q)
+            self.evaluate = criterion
+
+            return
+
+        def get_time_series(self, dates):
+            __doc__ = super().get_time_series.__doc__
+            
+            start, end = min(dates), max(dates) + td(0,1) # Add one second to include the final date
+            req = list(files_by_plevq((self.plev, self.q), start=start, end=end))
+            datshape = req[0][3][1:]      # Shape of the resulting data arrays
+            for entry in req[1:]:
+                shape = entry[3]
+                if not shape[1:] == datshape[plevq]:
+                    raise ValueError(f'''Discovered inconsistent data shape across time:
+                            plevq: {plevq}
+                            file {entry[0]} with shape {shape[1:]}, 
+                            preceeding files with shape {datshape[plevq]}.''')
+
+            if self.q in LINES:
+                grid = get_static()
+
+            comp_ts = []
+            for filename, tidxs, dates_, shape in req:
+                cut = slice(tidxs[0], tidxs[-1]+1)
+                tlen = len(tidxs)
+                
+                f, dat_ = get_from_file(filename, self.plev, self.q, cut=cut, no_static=True)
+                
+                # Treat lines 
+                if self.q in LINES:
+                    fl, datoff_ = get_from_file(filename, self.plev, LINES[self.q], cut=cut, no_static=True)
+                    dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)[:,np.newaxis,:,:]
+
+                # Object ID masks are kept as is
+                # Binned variables are kept as they are
+
+                for tidx, date in enumerate(dates_):
+                    if date not in dates:
+                        continue
+
+                    comp_ts.append(self.evaluate(dat_[tidx,:,:,:]))
+
+            if not len(comp_ts) == len(dates):
+                raise ValueError(f'{len(dates)-len(comp_ts)} time steps of the requested dates is not available for the test data.')
+
+            return np.array(comp_ts)
+        
+    return decide_by_data
 
 
 
