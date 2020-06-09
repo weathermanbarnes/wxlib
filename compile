@@ -55,6 +55,9 @@ elif [ "$uname" == 'Darwin' ]; then
     PYLIBS="-L$PYFIX/lib/python$PYFIXVER/config-${PYFIXVER}m-darwin -lpython${PYFIXVER}m"
     LIBS="$LIBS $PYLIBS"
     RPATH=""
+elif [ "${host::12}" == 'nird-cyclone' ]; then
+    LIBS='-L/usr/lib64 -l:libblas.so.3 -l:liblapack.so.3'
+    RPATH=""
 elif [ "$uname" == 'Linux' ]; then
     # Default Linux configuration
     LIBS='-L/usr/lib -L/usr/local/lib -lblas -llapack'
@@ -86,6 +89,11 @@ else
     echo "Configuration error: COMPILE_OPTS must be one of ('productive', 'debug')"
     exit 1
 fi
+
+# Add general OPTS to F2PY_OPTS
+for opt in $OPTS; do
+    F2PY_OPTS="$F2PY_OPTS --opt=\"$opt\""
+done
 
 # Empty precompiler directory
 mkdir -p $precc
@@ -140,7 +148,7 @@ mv $fortran_library.so $baselib
 
 # 4. Compiling the shared object usable from within python
 echo -e "Stage 4: Compiling the python module using $flagset options."
-LDFLAGS="$RPATH -shared" $F2PY -c $LIBS --fcompiler=gnu95 $F2PY_OPTS --opt="\"$OPTS\"" $pysig $files $filec $filek > /dev/null
+LDFLAGS="$RPATH -shared" $F2PY -c $LIBS --fcompiler=gnu95 $F2PY_OPTS $pysig $files $filec $filek > /dev/null
 mv ${python_library}*.so $baselib
 
 
