@@ -466,11 +466,9 @@ def __contourf_dat(m, x, y, dat, q, kwargs):
                 kwargs['cmap'] = matplotlib.colors.ListedColormap(colors*repeat)
             else:
                 kwargs['cmap'] = matplotlib.colors.ListedColormap(kwargs.get('colors'))
+            kwargs['norm'] = matplotlib.colors.BoundaryNorm(scale, kwargs['cmap'].N)
         if not type(scale) == int:
             cmap = plt.get_cmap(kwargs['cmap'])
-            #cmap.set_bad(alpha=0)
-            #cmap.set_over(alpha=0)
-            #cmap.set_under(alpha=0)
             kwargs['norm'] = matplotlib.colors.BoundaryNorm(scale, cmap.N)
             kwargs['cmap'] = cmap
 
