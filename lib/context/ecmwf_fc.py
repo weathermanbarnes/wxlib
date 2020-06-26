@@ -18,6 +18,7 @@ if os.path.exists(_PATH):
 	conf.datapath.insert(1, _PATH)
 conf.file_std = '%(time)d/ec.for.%(time)d.%(plev)s.%(q)s'
 conf.file_ens = '%(time)d/ec.ens.%(time)d.%(plev)s.%(q)s'
+conf.file_ensctrl = '%(time)d/ec.ensctrl.%(time)d.%(plev)s.%(q)s'
 
 # Variable definitions
 # ====================

@@ -113,6 +113,8 @@ def def_context(context, parent=None):
 			'plotpath': '.',
 			'plotformat': 'png',
 			'file_std': None,
+			'file_ens': None,
+			'file_ensctrl': None,
 			'file_agg': None,
 			'file_ts': None,
 			'file_timeless': None,
