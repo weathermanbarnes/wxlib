@@ -707,7 +707,7 @@ def dist_green_latlon(lon, lat):
 
 
 
-def dist_from_mask_latlon(featmask, green_dists, jzero):
+def dist_from_mask_latlon(featmask, green_dists, izero):
     ''' Calculate the minimum distance to any feature, as given by a mask field
 
     Parameters
@@ -717,7 +717,7 @@ def dist_from_mask_latlon(featmask, green_dists, jzero):
     green_dists : np.ndarray with dimensions (nx//2+1,ny,nx)
         Precalculated array of distances between any two points on the grid. Use 
         ``dist_green_latlon`` to prepare this array.
-    jzero : int
+    izero : int
         Longitude-index of the zero meridian
     
     Returns
@@ -731,7 +731,7 @@ def dist_from_mask_latlon(featmask, green_dists, jzero):
     for pos in np.argwhere(featmask):
         overwrite = tuple(pos[:-2]) + (slice(None), slice(None))
         j, i = pos[-2:]
-        shift = j - jzero
+        shift = i - izero
         if j < green_dists.shape[0]:
             curdists = np.roll(green_dists[j,:,:], shift, axis=1)
         else:
