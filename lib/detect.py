@@ -375,7 +375,7 @@ def frontalvolume_smallscale(tfp, dx, dy):
 
         mask = (tfp_grad > thres_ss) & (tfps_grad > thres_ls)
 
-        labels_, sizes = dynfor.utils.label_connected_3d(mask, cellsize, 1000)
+        labels_, sizes = dynfor.utils.label_connected_3d(mask, cellsize, 3000)
         for n, size in zip(range(1,len(sizes)+1), sizes):
             if size == 0:
                 break
