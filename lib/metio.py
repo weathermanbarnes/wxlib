@@ -332,7 +332,10 @@ def metsave(dat, static, q, plev, agg=None, compress_to_short=True):
         z_name, z_positive = known_vertical_level_units[static.z_unit]
 
     ot = of.createVariable('time', 'i', ('time',))
-    ot.setncatts({'long_name': 'time', 'units': static.t_unit})
+    tattrs = {'long_name': 'time', 'units': static.t_unit}
+    if hasattr(static.t_parsed[0], 'calendar'):
+        tattrs['calendar'] = static.t_parsed[0].calendar
+    ot.setncatts(tattrs)
     ot[::] = static.t
     if not plev == 'sfc':
         olev = of.createVariable(static.z_name, 'f', (static.z_name,))
