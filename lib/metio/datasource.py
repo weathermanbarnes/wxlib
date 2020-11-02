@@ -23,6 +23,7 @@ MAX_REQUEST_SIZE = 16.0e9
 WARN_REQUEST_SIZE = 2.0e9
 
 
+# Parameters to generally describe the data source
 timestep = None
 gridsize = None
 staticfile = None
@@ -370,14 +371,35 @@ def metopen_factory(get_static):
 
 
 
-def metsave(**kwargs):
-    # TODO: Should may be become a generic saving function similar to xarray.to_netcdf(), 
-    # but with proper group support?
-    #
-    # In every case: Warn about missing meta data rather than stopping with errors.
-    ''' TBD '''
+def metsave(dat, static, filename, compress_to_short=True, additional_dims=[], global_attrs={}):
+    ''' Save data in a netCDF file
 
-    raise NotImplementedError('TBD. May be data source-specific, may be not.')
+    Parameters
+    ----------
+    dat : dict, mapping q => np.ndarray or q => (dims, np.ndarray, attributes) or groupname => dict 
+        Keys either map the variable name to data or netCDF group name to the contents of a group. 
+        If no meta information is passed along with the variable data, the data is expected to cover 
+        all given dimensions and attributes are filled as far as possible from dynlib's variable 
+        definitions.
+        And error will be raised if, and only if, no metadata is provided for a variable and it's 
+        dimensions do not match the predefined dimensions.
+    static : gridlib.grid
+        Some meta information about the data, like the grid information.
+    filename : str
+        File name to be saved to.
+    compress_to_short : bool
+        *Optional*, default ``True``. By default, ``metsave`` compresses the data by converting
+        the data field into int16, using the float64 ``add_offset`` and ``scale_factor`` attributes 
+        to represent the data.
+    additional_dims : list of dict
+        *Optional*, default empty. List of additional dimensions, in order, to be placed between time 
+        and space. The dict must have the keys ``'name'`` and ``'data'``, defining the axis name and 
+        its data values. All additional keys will be taken over as attributes for the axis variable.
+    global_attrs: 
+        *Optional*, default empty. List of additional global attributes to be included in the netCDF file.
+    '''
+    
+    raise NotImplementedError('To be implemented; from API definition, this seems to be possible generally.')
 
 
 
@@ -801,7 +823,7 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
             Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
             and/or the variable name, to request all vertical levels/variables available.
         dates : list of datetime
-            The minimum and maxmimum dates in this list define the requested time interval. The i
+            The minimum and maxmimum dates in this list define the requested time interval. The
             final date will not be included in the result, i.e. for all time steps in 2016 request
             dates from 2016-01-01 00:00 to 2017-01-01 00:00.
         composites : composite_test or list of composite_test
@@ -822,17 +844,33 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         
         # Overall strategy
         #
-        #  1. Create (binary) composite time series for all given composites
-        #    - Requires dry run for test_plevqs, looping through all time steps in the test data
-        #    - For composites requiring test data, they should iterate through the data themselves
-        #      -> DRY: Interation might be implemented in general in here and used in the composite class?
-        #    - Lagged composites: mark dates by looping through test data rather than probing dates
-        #    - Composites without test data: API to directly construct composite time series?
-        #    - Composite time series might be cached/ provided by other means
-        #    - Likely requires changes to the composite_decider API
+        #  - composite_tests are expected to provide an evaluate_dates() method, taking a sorted list of dates 
+        #    to be evaluated as its main argument. This function can/should internally use caching to avoid 
+        #    expensive recalculations.
+        #  - evaluate_dates() also requires a pointer to the correct get_specific_dates() for the respective
+        #    data source.
+        #  - evaluate_dates() is expected to return a dict of dates => list of grid, determining
+        #    (1) which dates are to be included in the composite;
+        #    (2) for which date which grid(s) are to be evaluated. Grids can be just AS_GIVEN, 
+        #        referring to the native grid of the data set on which the composite is based,
+        #        or a 2-tuple of (x,y)-coordinates to be interpolated to.
+        #  - Here, we "just" loop over all variables and input files, and if any time step from a given
+        #    input file is used in any composite, we 
+        #    (1) load the data,
+        #    (2) interpolate if necessary, and 
+        #    (3) add data to respective variable and composite.
         #
-        #  2. Loop over all variables and input files
-        #    - If any time step from input file in any composite -> load and add data to respective variable and composite
+        # 
+        # Consequences of new API for the composites module
+        #  - Generic implementation of evaluate_dates() method in the composite class
+        #    -> Probably to be overriden in a test data-driven composite class
+        #    -> Data-driven compositing must use the get_specific_dates() method defined for the respective 
+        #       data source; given as argument from get_composite()
+        #  - Lagged composites need to modify the given list of dates before they are passed on to 
+        #    evaluate_dates()
+        #    -> Might be most easily implemented as a feature of evalutate_dates()
+        #      * Drawback: Requires a reimplementation in the data-driven evaluate_dates()
+        #    -> Might alternatively be implemented as/along the lines of a decorator
 
         raise NotImplementedError('to be written')
     
