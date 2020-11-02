@@ -84,6 +84,7 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
 
 # Derive data source-specific version of metopen
 metopen = metopen_factory(get_static)
+metsave = metsave_factory(metopen)
 
 
 _get_from_file = get_from_file

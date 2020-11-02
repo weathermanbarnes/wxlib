@@ -371,36 +371,217 @@ def metopen_factory(get_static):
 
 
 
-def metsave(dat, static, filename, compress_to_short=True, additional_dims=[], global_attrs={}):
-    ''' Save data in a netCDF file
+def metsave_factory(metopen):
+    ''' Create the metsave function based on data source specific helpers '''
 
-    Parameters
-    ----------
-    dat : dict, mapping q => np.ndarray or q => (dims, np.ndarray, attributes) or groupname => dict 
-        Keys either map the variable name to data or netCDF group name to the contents of a group. 
-        If no meta information is passed along with the variable data, the data is expected to cover 
-        all given dimensions and attributes are filled as far as possible from dynlib's variable 
-        definitions.
-        And error will be raised if, and only if, no metadata is provided for a variable and it's 
-        dimensions do not match the predefined dimensions.
-    static : gridlib.grid
-        Some meta information about the data, like the grid information.
-    filename : str
-        File name to be saved to.
-    compress_to_short : bool
-        *Optional*, default ``True``. By default, ``metsave`` compresses the data by converting
-        the data field into int16, using the float64 ``add_offset`` and ``scale_factor`` attributes 
-        to represent the data.
-    additional_dims : list of dict
-        *Optional*, default empty. List of additional dimensions, in order, to be placed between time 
-        and space. The dict must have the keys ``'name'`` and ``'data'``, defining the axis name and 
-        its data values. All additional keys will be taken over as attributes for the axis variable.
-    global_attrs: 
-        *Optional*, default empty. List of additional global attributes to be included in the netCDF file.
-    '''
+    known_vertical_level_units = {
+            'Pa': ('pressure', 'down'),
+            'K': ('isentropic', 'up'),
+            'PVU': ('potential_vorticity', 'up'),
+    }
+
+    def _metsave_vargroup(f, all_dims, dat, prefix=''):
+        ''' Helper function for metsave: Saving a group of variables given a file with defined dimensions '''
+
+        for key, values in dat:
+            # Recursively save subgroups of data
+            if type(values) == dict:
+                _metsave_vargroup(f, all_dims, values, prefix=f'{prefix}/{key}')
+            
+            # Expand values if it contains more than the actual numerical data
+            elif type(values) == tuple:
+                dims, values, varattrs = values
+            
+            # Otherwise assume that variable covers all defined dimensions and 
+            # fill in meta data only from dynlib defaults
+            else:
+                dims = all_dims
+                varattrs = {}
+            
+            # Variable name with group path
+            q = f'{prefix}/{key}'
+            if compress_to_short:
+                values, scale, off, fill = utils.unscale(values)
+                if fill: 
+                    ovar = f.createVariable(q, 'i2', dims, fill_value=fill)
+                    ovar.set_auto_scale(False)
+
+                    ovar.missing_value = fill
+                else:
+                    ovar = f.createVariable(q, 'i2', dims)
+
+                varattrs['add_offset'] = off
+                varattrs['scale_factor'] = scale
+
+            else:
+                ovar = f.createVariable(q, values.dtype, dims)
+            
+            # Fill in some dynlib default meta information if required
+            if 'long_name' not in varattrs and key in conf.q_long:
+                varattrs['long_name'] = conf.q_long[key]
+            if 'units' not in varattrs and key in conf.q_units:
+                varattrs['units'] = conf.q_units[key]
+
+            # Add some attributes to make ncview display the rotated grid correctly
+            if getattr(static, 'rotated', False) and static.x_name in dims and static.y_name in dims:
+                varattrs['grid_mapping'] = 'rotated_pole'
+                varattrs['coordinates'] = f'{static.x_name} {static.y_name}'
+
+            ovar.setncatts(varattrs)
+            ovar[::] = dat
+
+        return 
+
+    def metsave(dat, static, filename, compress_to_short=True, additional_dims=[], global_attrs={}):
+        ''' Save data in a netCDF file
+
+        The data is saved either to an existing file with a matching name in conf.datapath, or, if such 
+        a file does not exist, to a new file in conf.opath. If a given variable already exists in a 
+        file, it will be overwritten with the new data.
+
+        Parameters
+        ----------
+        dat : dict, mapping q => np.ndarray or q => (dims, np.ndarray, attributes) or groupname => dict 
+            Keys either map the variable name to data or netCDF group name to the contents of a group. 
+            If no meta information is passed along with the variable data, the data is expected to cover 
+            all given dimensions and attributes are filled as far as possible from dynlib's variable 
+            definitions.
+            And error will be raised if, and only if, no metadata is provided for a variable and its 
+            dimensions do not match the predefined dimensions.
+        static : gridlib.grid
+            Some meta information about the data, like the grid information.
+        filename : str
+            File name to be saved to.
+        compress_to_short : bool
+            *Optional*, default ``True``. By default, ``metsave`` compresses the data by converting
+            the data field into int16, using the float64 ``add_offset`` and ``scale_factor`` attributes 
+            to represent the data.
+        additional_dims : list of dict
+            *Optional*, default empty. List of additional dimensions, in order, to be placed between time 
+            and space. The dict must have the keys ``'name'`` and ``'data'``, defining the axis name and 
+            its data values. All additional keys will be taken over as attributes for the axis variable.
+        global_attrs: 
+            *Optional*, default empty. List of additional global attributes to be included in the netCDF file.
+        '''
+        
+        for dim in additional_axes:
+            if 'name' not in dim or 'data' not in dim:
+                raise ValueError('Additional dimensions must have a name and data')
+
+        now = dt.now(pytz.timezone(se.conf.local_timezone))
+        new_history = '%s by %s' % (now.strftime('%Y-%m-%d %H:%M:%S %Z'), dynlib_version)
+
+        try:
+            # Try to locate a matching file
+            f = metopen(filename, no_static=True, mode='a')
+            
+            # If dimensions do not exist, they can and will be created; but if they exist, they should match!
+            dims = [(static.t_name, static.t), (static.z_name, static.z),
+                    (static.y_name, static.y), (static.x_name, static.x), ]
+            for dim in additional_dims:
+                dims[dim['name']] = dim['data']
+
+            for dim, dimvals in dims:
+                if dim and dim in f.dimensions:
+                    if not np.all(dimvals == f[dim][::]):
+                        print(f'Skipping existing because of mismatching {dim} dimension.')
+                        raise ValueError
+            
+            print('Saving to existing %s' % filename)
+
+        except ValueError: 
+            f = nc.Dataset(conf.opath+'/'+filename+'.nc', 'w', format='NETCDF4')
+            print('Saving to %s/%s.nc' % (conf.opath, filename))
+
+
+        # Checks whether file dimensions are consistent
+        f.setncatts(global_attrs)
+        f.setncatts({'Conventions': 'CF-1.0'})
+
+        if hasattr(f, 'history'):
+            f.setncattr({'history': f'{f.history}\n{new_history}'})
+        else:
+            f.setncattr({'history': new_history})
+
+        all_dims = ()
+        
+        # Time dimension
+        if static.t_name:
+            if static.t_name not in f.dimensions:
+                f.createDimension('time', len(static.t))
+                ot = f.createVariable('time', 'i', ('time',))
+                ot.setncatts({'long_name': 'time', 'units': static.t_unit})
+                ot[::] = static.t
+            all_dims += ('time', )
+        
+        # Additional dimensions
+        for dim in additional_axes:
+            if dim['name'] not in f.dimensions:
+                of.createDimension(dim['name'], len(dim['data']))
+                odim = of.createVariable(dim['name'], 'f', (dim['name'], ))
+                odim[:] = dim['data']
+                add_dims += (dim['name'], ) 
+
+                del dim['name']
+                del dim['data']
+                odim.setncatts(dim)
+            all_dims += (dim['name'], )
+        
+        # Vertical dimension
+        if static.z_name:
+            if static.z_name not in f.dimensions:
+                z_longname, z_positive = known_vertical_level_units[static.z_unit]
+                olev = of.createVariable(static.z_name, 'f', (static.z_name,))
+                olev.setncatts({'long_name': z_longname, 'units': static.z_unit, 'axis': 'Z', 'positive': z_positive})
+                olev[::] = static.z[:]
+            all_dims += (static.z_name, )
+        
+        # Horizontal dimensions
+        if getattr(static, 'rotated', False):
+            raise NotImplementedError('This seems broken, double-check!')
+
+            olat = of.createVariable(static.rot_y_name, 'f', (y_name,))
+            olat.setncatts({'long_name': static.rot_y_longname, 'units': static.y_unit, 'axis': 'Y'})
+            olat[::] = static.rot_y[:,0]
+            olon = of.createVariable(static.rot_x_name, 'f', (x_name,))
+            olon.setncatts({'long_name': static.rot_x_longname, 'units': static.x_unit, 'axis': 'X'})
+            olon[::] = static.rot_x[0,:]
+
+            olat = of.createVariable(static.y_name, 'f', (y_name, x_name,))
+            olat.setncatts({'long_name': static.y_name, 'units': static.y_unit})
+            olat[::] = static.y
+            olon = of.createVariable(static.x_name, 'f', (y_name, x_name,))
+            olon.setncatts({'long_name': static.x_name, 'units': static.x_unit})
+            olon[::] = static.x
+
+            orot = of.createVariable('rotated_pole', 'i', ())
+            orot.setncatts({
+                'grid_north_pole_longitude': static.rot_np[1], 
+                'grid_north_pole_latitude': static.rot_np[0],
+            })
+            all_dims += (static.y_name, static.x_name)
+
+        else:
+            if static.y_name:
+                if static.y_name not in f.dimensions:
+                    olat = of.createVariable(static.y_name, 'f', (y_name,))
+                    olat.setncatts({'long_name': static.y_name, 'units': static.y_unit, 'axis': 'Y'})
+                    olat[::] = static.y[:,0]
+                all_dims += (static.y_name, )
+            if static.x_name:
+                if static.x_name not in f.dimensions:
+                    olon = of.createVariable(static.x_name, 'f', (x_name,))
+                    olon.setncatts({'long_name': static.x_name, 'units': static.x_unit, 'axis': 'X'})
+                    olon[::] = static.x[0,:]
+                all_dims += (static.x_name, )
     
-    raise NotImplementedError('To be implemented; from API definition, this seems to be possible generally.')
+        _metsave_vargroup(f, all_dims, dat)
 
+        f.close()
+
+        return
+
+    return metsave
 
 
 def get_instantaneous_factory(files_by_plevq, get_from_file, get_static):
