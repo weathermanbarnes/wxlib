@@ -510,7 +510,10 @@ def metsave_factory(metopen):
             if static.t_name not in f.dimensions:
                 f.createDimension('time', len(static.t))
                 ot = f.createVariable('time', 'i', ('time',))
-                ot.setncatts({'long_name': 'time', 'units': static.t_unit})
+                tattrs = {'long_name': 'time', 'units': static.t_unit}
+                if hasattr(static.t_parsed[0], 'calendar'):
+                    tattrs['calendar'] = static.t_parsed[0].calendar
+                ot.setncatts(tattrs)
                 ot[::] = static.t
             all_dims += ('time', )
         
