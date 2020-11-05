@@ -150,7 +150,7 @@ def get_from_file(filename, plev, q, **kwargs):
         The requested vertical level for the variable. Might be ``'__all__'`` for all
         vertical levels in the file if the data source supports that.
     q : str
-        The requested variable within the file.. Might be ``'__all__'`` for all
+        The requested variable within the file. Might be ``'__all__'`` for all
         variables in the file if the data source supports that.
 
     Keyword arguments
@@ -160,8 +160,10 @@ def get_from_file(filename, plev, q, **kwargs):
 
     Returns
     -------
-    np.ndarray
-        Data of the requested variable for the requested vertical level.
+    (dict of) np.ndarray
+        Data of the requested variable for the requested vertical level. If several 
+        variables are requested, a dictionary is returned with the variable shorthand q 
+        as keys.
     grid.gridlib
         If ``no_static=False`` meta-information about the requested data.
     '''
@@ -721,7 +723,7 @@ def get_instantaneous_factory(files_by_plevq, get_from_file, get_static):
                 cut = slice(tidxs[0], tidxs[-1]+1)
                 tlen = len(tidxs)
                 
-                f, dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
+                dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
                 dat[plev,q][toff:toff+tlen,...] = dat_[...]
                 dates[plev,q].extend(dates_)
                 
@@ -827,14 +829,14 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static):
                 cut = slice(tidxs[0], tidxs[-1]+1)
                 tlen = len(tidxs)
                 
-                f, dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
+                dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
 
                 # Treat special data
                 #
                 #  1. Lines
                 if q in LINES:
                     ql = LINES[q]
-                    foff, datoff_ = get_from_file(filename, plev, ql, cut=cut, no_static=True, **kwargs)
+                    datoff_ = get_from_file(filename, plev, ql, cut=cut, no_static=True, **kwargs)
                     dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)
                 #  2. Object ID masks
                 if q in OBJMASK:
@@ -964,11 +966,11 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
                 cut = slice(tidxs[0], tidxs[-1]+1)
                 tlen = len(tidxs)
                 
-                f, dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
+                dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
                 
                 # Treat lines
                 if q in LINES:
-                    fl, datoff_ = get_from_file(filename, plev, LINES[q], cut=cut, no_static=True, **kwargs)
+                    datoff_ = get_from_file(filename, plev, LINES[q], cut=cut, no_static=True, **kwargs)
                     dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)
                 # Treat object masks
                 elif q in OBJMASK:

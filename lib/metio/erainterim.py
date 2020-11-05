@@ -93,8 +93,10 @@ def get_from_file(filename, plev, q, **kwargs):
 
     if plev not in filename:
         raise ValueError(f'Filename `{filename}` does not match the requested vertical level `{plev}.`')
-
-    return metopen(filename, q, **kwargs)
+    
+    # Pass everything on, but the file object itself.
+    stuff = metopen(filename, q, **kwargs)
+    return stuff[1:]
 
 
 # Derive data source-specific versions of the remaining data getter functions
