@@ -106,7 +106,7 @@ class files_by_plevq(_files_by_plevq):
             filename = f'{self.cur.year}/{self.cur.month:02d}/{self.filetype}{self.cur.year}{self.cur.month:02d}{self.cur.day:02d}_{self.cur.hour:02d}'
             dates = [self.cur, ]
             tidxs = [0, ]
-            size = (self.nlevs, ) + gridsize
+            size = (1, self.nlevs, ) + gridsize
 
             self.cur += timestep
             return filename, tidxs, dates, size
@@ -231,7 +231,7 @@ def get_from_file(filename, plev, q, **kwargs):
 
 
 # Derive data source-specific versions of the remaining data getter functions
-get_instantaneous = get_instantaneous_factory(files_by_plevq, get_from_file, get_static)
+get_instantaneous = get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static)
 get_time_average = get_time_average_factory(files_by_plevq, get_from_file, get_static)
 get_aggregate = get_aggregate_factory(files_by_plevq, get_from_file, get_static)
 get_composite = get_composite_factory(files_by_plevq, get_from_file, get_static)

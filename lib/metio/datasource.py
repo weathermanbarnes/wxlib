@@ -629,7 +629,7 @@ def metsave_factory(metopen):
     return metsave
 
 
-def get_instantaneous_factory(files_by_plevq, get_from_file, get_static):
+def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static):
     ''' Create the get_instantaneous function based on data source-specific helpers '''
 
     def get_instantaneous(plevqs, dates, force=False, **kwargs):
@@ -740,7 +740,7 @@ def get_instantaneous_factory(files_by_plevq, get_from_file, get_static):
         if no_static:
             grid = None
         else:
-            grid = get_static()
+            f, _, grid = metopen(req[plevqs[0]][0][0], 'time')
             grid = grid.new_time(dates[plev,q])
             
         return dat, grid

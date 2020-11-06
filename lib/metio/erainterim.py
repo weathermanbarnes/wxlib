@@ -96,11 +96,14 @@ def get_from_file(filename, plev, q, **kwargs):
     
     # Pass everything on, but the file object itself.
     stuff = metopen(filename, q, **kwargs)
-    return stuff[1:]
+    if len(stuff) == 2:
+        return stuff[1]
+    else:
+        return stuff[1:]
 
 
 # Derive data source-specific versions of the remaining data getter functions
-get_instantaneous = get_instantaneous_factory(files_by_plevq, get_from_file, get_static)
+get_instantaneous = get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static)
 get_time_average = get_time_average_factory(files_by_plevq, get_from_file, get_static)
 get_aggregate = get_aggregate_factory(files_by_plevq, get_from_file, get_static)
 get_composite = get_composite_factory(files_by_plevq, get_from_file, get_static)
