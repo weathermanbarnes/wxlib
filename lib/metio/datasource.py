@@ -629,7 +629,7 @@ def metsave_factory(metopen):
     return metsave
 
 
-def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static):
+def get_instantaneous_factory(files_by_plevq, metopen, get_from_file):
     ''' Create the get_instantaneous function based on data source-specific helpers '''
 
     def get_instantaneous(plevqs, dates, force=False, **kwargs):

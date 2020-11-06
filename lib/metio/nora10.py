@@ -5,12 +5,11 @@
 from .datasource import *
 
 
-timestep = td(0.25)
-gridsize = (361,720)
-staticfile = 'ei.ans.static'
+timestep = td(0.125)
+gridsize = (400,248)
+#staticfile = ''
 
-conf.datapath.insert(1, '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY')
-conf.datapath.insert(1, '/Data/gfi/users/csp001/share') # for static; TODO: Move to a more general directory!
+conf.datapath.insert(1, '/Data/gfi/share/Reanalyses/NORA10')
 
 
 
@@ -19,9 +18,9 @@ class files_by_plevq(_files_by_plevq):
     def __init__(self, plevq, start=None, end=None):
         plev, q = plevq
         if plev == '__all__':
-            raise ValueError('ERA-Interim does not support requests for all vertical levels.')
+            raise ValueError('NORA10 does not support requests for all vertical levels.')
         if q == '__all__':
-            raise ValueError('ERA-Interim does not support requests for all variables.')
+            raise ValueError('NORA10 does not support requests for all variables.')
 
         if not start:
             start = dt(1979,1,1,0)
@@ -32,11 +31,14 @@ class files_by_plevq(_files_by_plevq):
 
     def __next__(self):
         if self.cur < self.end:
-            filename = f'ei.ans.{self.cur.year}.{self.plev}.{self.q}'
+            filename = f'NORA10.{self.cur.year}{self.cur.month:02d}.{self.plev}.{self.q}'
 
-            yearlen = int((dt(self.cur.year+1, 1, 1, 0) - dt(self.cur.year, 1, 1, 0)).total_seconds() / timestep.total_seconds())
-            tidxs_all = range(yearlen)
-            dates_all = [dt(self.cur.year, 1, 1, 0) + td(0.25)*i for i in tidxs_all]
+            monlen = int((
+                    dt(self.cur.year + (self.cur.month // 12), self.cur.month % 12 + 1, 1, 0) - 
+                    dt(self.cur.year, self.cur.month, 1, 0)
+            ).total_seconds() / timestep.total_seconds())
+            tidxs_all = range(monlen)
+            dates_all = [dt(self.cur.year, self.cur.month, 1, 0) + timestep*i for i in tidxs_all]
 
             tidxs = [tidx for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
             dates = [dates_all[tidx] for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
@@ -50,7 +52,7 @@ class files_by_plevq(_files_by_plevq):
 
 
 def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
-    ''' Get standard meta-information for ERA-Interim
+    ''' Get standard meta-information for NORA10
 
     Parameters
     ----------

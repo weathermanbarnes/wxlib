@@ -116,7 +116,7 @@ class files_by_plevq(_files_by_plevq):
 
 
 def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
-    ''' Get standard meta-information for ERA-Interim
+    ''' Get standard meta-information for ERA-5
 
     Parameters
     ----------
@@ -231,7 +231,7 @@ def get_from_file(filename, plev, q, **kwargs):
 
 
 # Derive data source-specific versions of the remaining data getter functions
-get_instantaneous = get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static)
+get_instantaneous = get_instantaneous_factory(files_by_plevq, metopen, get_from_file)
 get_time_average = get_time_average_factory(files_by_plevq, get_from_file, get_static)
 get_aggregate = get_aggregate_factory(files_by_plevq, get_from_file, get_static)
 get_composite = get_composite_factory(files_by_plevq, get_from_file, get_static)
