@@ -1030,12 +1030,73 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
 def get_composite_factory(files_by_plevq, get_from_file, get_static):
     ''' Create the get_time_average function based on data source-specific helpers '''
 
+    grid = get_static()
+
+    def _get_chunk(filename, plevq):
+        ''' Internal helper function, loading data for a specific chunk of time, and prepare for compositing '''
+
+        plev, q = plevq
+        dat = get_from_file(filename, plev, q, no_static=True)
+        
+        # Treat lines
+        if q in LINES:
+            datoff = get_from_file(filename, plev, LINES[q], no_static=True)
+            dat = utils.normalize_lines(dat, datoff, grid.dx, grid.dy)
+
+        # Treat objmasks
+        if q in OBJMASK:
+            dat = dat > 0.5
+
+        # Binned variables kept as they are
+
+        return dat
+    
+    def _add_chunk(plevq, dat, comp_ts, dat_to_add):
+        ''' Internal helper function, adding data for a chunk of time to the relevant composites 
+        
+        The dat structure of nested dict is modified in-place.
+        '''
+        
+        plev, q = plevq
+        s = dat_to_add.shape[1:]
+
+        if not q in BINS:
+            for name, ts in comp_ts.items():
+                if 'mean' not in dat[name,plev,q]:
+                    dat[name,plev,q]['mean'] = np.zeros(s)
+                    dat[name,plev,q]['valid_cnt'] = np.zeros(s)
+                    dat[name,plev,q]['_sqsum'] = np.zeros(s)
+                for tidx in np.argwhere(ts)[:,0]:
+                    dat_ = dat_to_add[tidx,::]
+                    nanmask = ~np.isnan(dat_)
+                    dat[name,plev,q]['mean'][nanmask] += dat_[nanmask]
+                    dat[name,plev,q]['_sqsum'][nanmask] += dat_[nanmask]**2
+                    dat[name,plev,q]['valid_cnt'] += nanmask
+        
+        else:
+            for name, ts in comp_ts.items():
+                if 'hist' not in dat[name,plev,q]:
+                    dat[name,plev,q]['hist'] = np.zeros((len(BINS[q]),)+s)
+                    dat[name,plev,q]['mfv'] = np.zeros(s)
+                for tidx in np.argwhere(ts)[:,0]:
+                    for bi in range(len(BINS[q])-1):
+                        upper = conf.q_bins[q][bi+1]
+                        lower = conf.q_bins[q][bi]
+                        if upper > lower:
+                            dat[name,plev,q]['hist'][bi,(dat >= lower).__and__(dat <  upper)] += 1
+                        else:
+                            dat[name,plev,q]['hist'][bi,(dat <  upper).__or__(dat >= lower)] += 1
+
+        return
+    
+
     def get_composite(plevqs, dates, composites, **kwargs):
         ''' Get composites, such as multi-year seasonal averages or for NAO+/-
 
         Allows general data requests in the configured data base, e.g. ERA-Interim. The request
         can span several files, e.g. by including several vertical levels or by covering several
-        years. The returned data can be up to 4-dimensional, with the dimensions (t,z,y,x). 
+        years. For each composite, the returned data can be up to 3-dimensional, with the 
+        dimensions (z,y,x). 
         
         The method internally uses metopen to locate data files. Hence, it will find data in the 
         locations given conf.datapath.
@@ -1067,38 +1128,75 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         grid.gridlib
             If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
         '''
-        
-        # Overall strategy
-        #
-        #  - composite_tests are expected to provide an evaluate_dates() method, taking a sorted list of dates 
-        #    to be evaluated as its main argument. This function can/should internally use caching to avoid 
-        #    expensive recalculations.
-        #  - evaluate_dates() also requires a pointer to the correct get_specific_dates() for the respective
-        #    data source.
-        #  - evaluate_dates() is expected to return a dict of dates => list of grid, determining
-        #    (1) which dates are to be included in the composite;
-        #    (2) for which date which grid(s) are to be evaluated. Grids can be just AS_GIVEN, 
-        #        referring to the native grid of the data set on which the composite is based,
-        #        or a 2-tuple of (x,y)-coordinates to be interpolated to.
-        #  - Here, we "just" loop over all variables and input files, and if any time step from a given
-        #    input file is used in any composite, we 
-        #    (1) load the data,
-        #    (2) interpolate if necessary, and 
-        #    (3) add data to respective variable and composite.
-        #
-        # 
-        # Consequences of new API for the composites module
-        #  - Generic implementation of evaluate_dates() method in the composite class
-        #    -> Probably to be overriden in a test data-driven composite class
-        #    -> Data-driven compositing must use the get_specific_dates() method defined for the respective 
-        #       data source; given as argument from get_composite()
-        #  - Lagged composites need to modify the given list of dates before they are passed on to 
-        #    evaluate_dates()
-        #    -> Might be most easily implemented as a feature of evalutate_dates()
-        #      * Drawback: Requires a reimplementation in the data-driven evaluate_dates()
-        #    -> Might alternatively be implemented as/along the lines of a decorator
 
-        raise NotImplementedError('to be written')
+        # TODO: Generalise both this function and the composite decider infrastructure to allow returning
+        #       Grid information per time step to be taken into the composite
+
+        # Find out if we need any test data and compile an overall set
+        #test_plevqs = set([])
+        #for composite in composites:
+        #    if type(composite.requires) == tuple:
+        #        test_plevqs.add(composite.requires)
+        
+        # Assuming the chunking of data into files is consistent across plevqs, this is a natural rhythm to
+        # iterate through both test and composite data
+        #
+        # (the below code does not require data to be chunked consistently, 
+        #  but the code will much more efficient if it is)
+        start, end = min(dates), max(dates)
+        req = list(files_by_plevq(plevqs[0], start=start, end=end))
+        
+        # Nested structure to hold the results
+        dat = {}
+        for composite in composites:
+            for plev, q in plevqs:
+                dat[composite.name,plev,q] = {}
+                    
+
+        for filename, tidxs, dates_, shape in req:
+            # 1a. For each composite construct time series
+            to_include = {}
+            load_chunk = False
+            for composite in composites:
+                if type(composite.requires) == tuple:
+                    # Inject relevant functions to get test data from this data source
+                    ts = composite.get_time_series(dates_, files_by_plevq, get_static, get_from_file)
+                else:
+                    ts = composite.get_time_series(dates_)
+
+                to_include[composite.name] = ts
+
+                # 1b. Evaluate whether any composite requires data from the current chunk
+                load_chunk = load_chunk or np.any(ts) 
+
+            if not load_chunk:
+                continue
+
+            # Reminder: We need to construct mean, validcnt, std?, hist, mfv, tscnt
+
+            # 2. If yes, request data from the current chunk for all variables, and
+            # 3. Add relevant time steps to each composite
+            dat_ = _get_chunk(filename, plevqs[0])
+            _add_chunk(plevqs[0], dat, to_include, dat_)
+            
+            # ... and the same for all the other variables/levels
+            for plevq in plevqs[1:]:
+                req_ = list(files_by_plevq(plevqs[0], start=min(dates_), end=max(dates_)))
+                for filename_, tidxs, dates_, shape in req_:
+                    dat_ = _get_chunk(filename_, plevq)
+                    _add_chunk(plevq, dat, to_include, dat_)
+
+        for composite in composites:
+            for plev, q in plevqs:
+                if not q in BINS:
+                    dat[composite.name,plev,q]['mean'] /= dat[composite.name,plev,q]['valid_cnt']
+                    del dat[composite.name,plev,q]['_sqsum']
+                    # TODO: calculate stddev from mean, cnt and sqsum
+                else:
+                    pass
+                    # TODO: calculate mfv from hist
+
+        return dat
     
     return get_composite
 

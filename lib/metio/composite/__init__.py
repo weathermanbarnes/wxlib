@@ -51,6 +51,7 @@ class decider(object):
 
     def __init__(self, name, plev=None, q=None):
         self.name = name
+        self.requires = None
         
         if q and plev:
             self.required_qs = (plev, q)
@@ -109,7 +110,7 @@ class decider(object):
         Returns 
         -------
         np.ndarray of dtype bool
-            True of the respective date should be part of the composite, and False otherwise.
+            True if the respective date should be part of the composite, and False otherwise.
         '''
 
         raise NotImplementedError('`decider.get_time_series` must be overriden in derived classes!')
@@ -126,14 +127,19 @@ def decide_by_data_factory(files_by_plevq, get_static, get_from_file):
         ----------
         name : str
             Name of the composite, to be used for saving.
-        ts : dict
-            Time series dictionary, containing a list of datetime objects and a list of values.
+        q : str
+            The variable name identifier for required test data, following the data source
+            conventions, e.g. ``'u'`` or ``'msl'`` in ERA-Interim.
+        plev : str
+            The vertical level of the required test data, following the ECMWF conventions, i
+            e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface.
         criterion : function
-            A function mapping a time series value to True/False.
+            A function mapping a 3d-snapshot of q at plev(s) to True/False.
         '''
 
         def __init__(self, name, plev, q, criterion):
             super().__init__(name, plev, q)
+            self.requires = (plev, q)
             self.evaluate = criterion
 
             return
@@ -141,7 +147,7 @@ def decide_by_data_factory(files_by_plevq, get_static, get_from_file):
         def get_time_series(self, dates):
             __doc__ = super().get_time_series.__doc__
             
-            start, end = min(dates), max(dates) + td(0,1) # Add one second to include the final date
+            start, end = min(dates), max(dates)
             req = list(files_by_plevq((self.plev, self.q), start=start, end=end))
             datshape = req[0][3][1:]      # Shape of the resulting data arrays
             for entry in req[1:]:
@@ -160,11 +166,11 @@ def decide_by_data_factory(files_by_plevq, get_static, get_from_file):
                 cut = slice(tidxs[0], tidxs[-1]+1)
                 tlen = len(tidxs)
                 
-                f, dat_ = get_from_file(filename, self.plev, self.q, cut=cut, no_static=True)
+                dat_ = get_from_file(filename, self.plev, self.q, cut=cut, no_static=True)
                 
                 # Treat lines 
                 if self.q in LINES:
-                    fl, datoff_ = get_from_file(filename, self.plev, LINES[self.q], cut=cut, no_static=True)
+                    datoff_ = get_from_file(filename, self.plev, LINES[self.q], cut=cut, no_static=True)
                     dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)[:,np.newaxis,:,:]
 
                 # Object ID masks are kept as is
