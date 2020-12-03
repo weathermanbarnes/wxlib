@@ -1030,8 +1030,6 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
 def get_composite_factory(files_by_plevq, get_from_file, get_static):
     ''' Create the get_time_average function based on data source-specific helpers '''
 
-    grid = get_static()
-
     def _get_chunk(filename, plevq):
         ''' Internal helper function, loading data for a specific chunk of time, and prepare for compositing '''
 
@@ -1040,7 +1038,7 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         
         # Treat lines
         if q in LINES:
-            datoff = get_from_file(filename, plev, LINES[q], no_static=True)
+            datoff, grid = get_from_file(filename, plev, LINES[q])
             dat = utils.normalize_lines(dat, datoff, grid.dx, grid.dy)
 
         # Treat objmasks
@@ -1058,34 +1056,35 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         '''
         
         plev, q = plevq
+        qs = _average_q_name(q)
         s = dat_to_add.shape[1:]
 
         if not q in BINS:
             for name, ts in comp_ts.items():
-                if 'mean' not in dat[name,plev,q]:
-                    dat[name,plev,q]['mean'] = np.zeros(s)
-                    dat[name,plev,q]['valid_cnt'] = np.zeros(s)
-                    dat[name,plev,q]['_sqsum'] = np.zeros(s)
+                if 'mean' not in dat[name,plev,qs]:
+                    dat[name,plev,qs]['mean'] = np.zeros(s)
+                    dat[name,plev,qs]['valid_cnt'] = np.zeros(s)
+                    dat[name,plev,qs]['std'] = np.zeros(s)
                 for tidx in np.argwhere(ts)[:,0]:
                     dat_ = dat_to_add[tidx,::]
                     nanmask = ~np.isnan(dat_)
-                    dat[name,plev,q]['mean'][nanmask] += dat_[nanmask]
-                    dat[name,plev,q]['_sqsum'][nanmask] += dat_[nanmask]**2
-                    dat[name,plev,q]['valid_cnt'] += nanmask
+                    dat[name,plev,qs]['mean'][nanmask] += dat_[nanmask]
+                    dat[name,plev,qs]['std'][nanmask] += dat_[nanmask]**2
+                    dat[name,plev,qs]['valid_cnt'] += nanmask
         
         else:
             for name, ts in comp_ts.items():
-                if 'hist' not in dat[name,plev,q]:
-                    dat[name,plev,q]['hist'] = np.zeros((len(BINS[q]),)+s)
-                    dat[name,plev,q]['mfv'] = np.zeros(s)
+                if 'hist' not in dat[name,plev,qs]:
+                    dat[name,plev,qs]['hist'] = np.zeros((len(BINS[q]),)+s)
+                    dat[name,plev,qs]['mfv'] = np.zeros(s)
                 for tidx in np.argwhere(ts)[:,0]:
                     for bi in range(len(BINS[q])-1):
-                        upper = conf.q_bins[q][bi+1]
-                        lower = conf.q_bins[q][bi]
+                        upper = BINS[q][bi+1]
+                        lower = BINS[q][bi]
                         if upper > lower:
-                            dat[name,plev,q]['hist'][bi,(dat >= lower).__and__(dat <  upper)] += 1
+                            dat[name,plev,qs]['hist'][bi,(dat >= lower).__and__(dat <  upper)] += 1
                         else:
-                            dat[name,plev,q]['hist'][bi,(dat <  upper).__or__(dat >= lower)] += 1
+                            dat[name,plev,qs]['hist'][bi,(dat <  upper).__or__(dat >= lower)] += 1
 
         return
     
@@ -1150,7 +1149,10 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         dat = {}
         for composite in composites:
             for plev, q in plevqs:
-                dat[composite.name,plev,q] = {}
+                qs = _average_q_name(q)
+                if (composite.name,plev,qs) in dat:
+                    raise ValueError(f'Duplicate composite name `{composite.name}`.')
+                dat[composite.name,plev,qs] = {}
                     
 
         for filename, tidxs, dates_, shape in req:
@@ -1160,7 +1162,7 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
             for composite in composites:
                 if type(composite.requires) == tuple:
                     # Inject relevant functions to get test data from this data source
-                    ts = composite.get_time_series(dates_, files_by_plevq, get_static, get_from_file)
+                    ts = composite.get_time_series(dates_, files_by_plevq, get_from_file)
                 else:
                     ts = composite.get_time_series(dates_)
 
@@ -1181,20 +1183,22 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
             
             # ... and the same for all the other variables/levels
             for plevq in plevqs[1:]:
-                req_ = list(files_by_plevq(plevqs[0], start=min(dates_), end=max(dates_)))
+                req_ = list(files_by_plevq(plevq, start=min(dates_), end=max(dates_)+td(0,1) )) # the end date should here be included in the requests for this chunk
                 for filename_, tidxs, dates_, shape in req_:
                     dat_ = _get_chunk(filename_, plevq)
                     _add_chunk(plevq, dat, to_include, dat_)
-
+        
+        # A bit of post-processing, caculating mean+standard deviation / most-frequent-value
         for composite in composites:
             for plev, q in plevqs:
+                qs = _average_q_name(q)
+                dat_ = dat[composite.name,plev,qs]
                 if not q in BINS:
-                    dat[composite.name,plev,q]['mean'] /= dat[composite.name,plev,q]['valid_cnt']
-                    del dat[composite.name,plev,q]['_sqsum']
-                    # TODO: calculate stddev from mean, cnt and sqsum
+                    dat_['mean'] /= dat_['valid_cnt']
+                    dat_['std'] = np.sqrt((dat_['std'] - dat_['valid_cnt']*dat_['mean']**2)/(dat_['valid_cnt']-1))
                 else:
-                    pass
-                    # TODO: calculate mfv from hist
+                    # the hist itself does not require any post-processing
+                    dat_['mfv'] = dynlib.utils.cal_mfv(dat_['hist'], BINS[q])
 
         return dat
     

@@ -117,77 +117,69 @@ class decider(object):
 
 
 
-def decide_by_data_factory(files_by_plevq, get_static, get_from_file):
-    ''' Create the decide_by_data function based on data source specific helpers '''
+class decide_by_data(decider):
+    ''' Compositing criteria based on a given time series
 
-    class decide_by_data(decider):
-        ''' Compositing criteria based on a given time series
+    Parameters
+    ----------
+    name : str
+        Name of the composite, to be used for saving.
+    q : str
+        The variable name identifier for required test data, following the data source
+        conventions, e.g. ``'u'`` or ``'msl'`` in ERA-Interim.
+    plev : str
+        The vertical level of the required test data, following the ECMWF conventions, i
+        e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface.
+    criterion : function
+        A function mapping a 3d-snapshot of q at plev(s) to True/False.
+    '''
 
-        Parameters
-        ----------
-        name : str
-            Name of the composite, to be used for saving.
-        q : str
-            The variable name identifier for required test data, following the data source
-            conventions, e.g. ``'u'`` or ``'msl'`` in ERA-Interim.
-        plev : str
-            The vertical level of the required test data, following the ECMWF conventions, i
-            e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface.
-        criterion : function
-            A function mapping a 3d-snapshot of q at plev(s) to True/False.
-        '''
+    def __init__(self, name, plev, q, criterion):
+        super().__init__(name, plev, q)
+        self.requires = (plev, q)
+        self.evaluate = criterion
 
-        def __init__(self, name, plev, q, criterion):
-            super().__init__(name, plev, q)
-            self.requires = (plev, q)
-            self.evaluate = criterion
+        return
 
-            return
-
-        def get_time_series(self, dates):
-            __doc__ = super().get_time_series.__doc__
-            
-            start, end = min(dates), max(dates)
-            req = list(files_by_plevq((self.plev, self.q), start=start, end=end))
-            datshape = req[0][3][1:]      # Shape of the resulting data arrays
-            for entry in req[1:]:
-                shape = entry[3]
-                if not shape[1:] == datshape[plevq]:
-                    raise ValueError(f'''Discovered inconsistent data shape across time:
-                            plevq: {plevq}
-                            file {entry[0]} with shape {shape[1:]}, 
-                            preceeding files with shape {datshape[plevq]}.''')
-
-            if self.q in LINES:
-                grid = get_static()
-
-            comp_ts = []
-            for filename, tidxs, dates_, shape in req:
-                cut = slice(tidxs[0], tidxs[-1]+1)
-                tlen = len(tidxs)
-                
-                dat_ = get_from_file(filename, self.plev, self.q, cut=cut, no_static=True)
-                
-                # Treat lines 
-                if self.q in LINES:
-                    datoff_ = get_from_file(filename, self.plev, LINES[self.q], cut=cut, no_static=True)
-                    dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)[:,np.newaxis,:,:]
-
-                # Object ID masks are kept as is
-                # Binned variables are kept as they are
-
-                for tidx, date in enumerate(dates_):
-                    if date not in dates:
-                        continue
-
-                    comp_ts.append(self.evaluate(dat_[tidx,:,:,:]))
-
-            if not len(comp_ts) == len(dates):
-                raise ValueError(f'{len(dates)-len(comp_ts)} time steps of the requested dates is not available for the test data.')
-
-            return np.array(comp_ts)
+    def get_time_series(self, dates, files_by_plevq, get_from_file):
+        __doc__ = super().get_time_series.__doc__
         
-    return decide_by_data
+        start, end = min(dates), max(dates)+td(0,1) # Final date should be included in the request below
+        req = list(files_by_plevq((self.plev, self.q), start=start, end=end))
+        datshape = req[0][3][1:]      # Shape of the resulting data arrays
+        for entry in req[1:]:
+            shape = entry[3]
+            if not shape[1:] == datshape[plevq]:
+                raise ValueError(f'''Discovered inconsistent data shape across time:
+                        plevq: {plevq}
+                        file {entry[0]} with shape {shape[1:]}, 
+                        preceeding files with shape {datshape[plevq]}.''')
+
+        comp_ts = []
+        for filename, tidxs, dates_, shape in req:
+            cut = slice(tidxs[0], tidxs[-1]+1)
+            tlen = len(tidxs)
+            
+            dat_ = get_from_file(filename, self.plev, self.q, cut=cut, no_static=True)
+            
+            # Treat lines 
+            if self.q in LINES:
+                datoff_, grid = get_from_file(filename, self.plev, LINES[self.q], cut=cut)
+                dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)[:,np.newaxis,:,:]
+
+            # Object ID masks are kept as is
+            # Binned variables are kept as they are
+
+            for tidx, date in enumerate(dates_):
+                if date not in dates:
+                    continue
+
+                comp_ts.append(self.evaluate(dat_[tidx,::]))
+
+        if not len(comp_ts) == len(dates):
+            raise ValueError(f'{len(dates)-len(comp_ts)} time steps of the requested dates is not available for the test data.')
+
+        return np.array(comp_ts)
 
 
 
@@ -292,7 +284,7 @@ def timelag(decider, tdiffs):
         such that they will by default be saved together.
     '''
 
-    tl_deciders = {decider.name: [__timelag_one(decider, tdiff) for tdiff in tdiffs]}
+    tl_deciders = [__timelag_one(decider, tdiff) for tdiff in tdiffs]
 
     return tl_deciders
 
@@ -331,7 +323,7 @@ def matrix(list1, list2):
     if len(list1) == 0 or len(list2) == 0:
         return {}
     
-    return {item2.name: [item1 & item2 for item1 in list1] for item2 in list2}
+    return [item1 & item2 for item1 in list1 for item2 in list2]
 
 
 

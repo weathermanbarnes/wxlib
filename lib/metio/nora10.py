@@ -32,10 +32,10 @@ class files_by_plevq(_files_by_plevq):
     def __next__(self):
         if self.cur < self.end:
             filename = f'NORA10.{self.cur.year}{self.cur.month:02d}.{self.plev}.{self.q}'
-
+            
+            nxt = dt(self.cur.year + (self.cur.month // 12), self.cur.month % 12 + 1, 1, 0)
             monlen = int((
-                    dt(self.cur.year + (self.cur.month // 12), self.cur.month % 12 + 1, 1, 0) - 
-                    dt(self.cur.year, self.cur.month, 1, 0)
+                nxt - dt(self.cur.year, self.cur.month, 1, 0)
             ).total_seconds() / timestep.total_seconds())
             tidxs_all = range(monlen)
             dates_all = [dt(self.cur.year, self.cur.month, 1, 0) + timestep*i for i in tidxs_all]
@@ -44,7 +44,7 @@ class files_by_plevq(_files_by_plevq):
             dates = [dates_all[tidx] for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
             size = (len(tidxs), 1) + gridsize
 
-            self.cur = dt(self.cur.year+1, 1, 1, 0)
+            self.cur = nxt
             return filename, tidxs, dates, size
 
         else:
