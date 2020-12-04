@@ -9,6 +9,7 @@ import scipy.io.matlab as mat
 import numpy as np
 import cftime
 import pytz
+import copy
 from datetime import datetime as dtv, timedelta as td
 
 from .vardefs import LINES, OBJMASK, BINS, _average_q_name
@@ -395,11 +396,13 @@ def metsave_factory(metopen):
             # Recursively save subgroups of data
             if type(values) == dict:
                 _metsave_vargroup(f, all_dims, values, static, compress_to_short, prefix=f'{prefix}/{key}')
+
+                continue
             
             # Expand values if it contains more than the actual numerical data
             elif type(values) == tuple:
                 dims, values, varattrs = values
-            
+                
             # Otherwise assume that variable covers all defined dimensions and 
             # fill in meta data only from dynlib defaults
             else:
@@ -512,10 +515,14 @@ def metsave_factory(metopen):
             f = metopen(filename, no_static=True, mode='a')
             
             # If dimensions do not exist, they can and will be created; but if they exist, they should match!
-            dims = [(static.t_name, static.t), (static.z_name, static.z),
-                    (static.y_name, static.y[:,0]), (static.x_name, static.x[0,:]), ]
+            dims = [(static.t_name, static.t), ]
             for dim in add_dims:
-                dims[dim['name']] = dim['data']
+                dims.append((dim['name'], dim['data']) )
+            dims.extend([
+                (static.z_name, static.z),
+                (static.y_name, static.y[:,0]), 
+                (static.x_name, static.x[0,:]), 
+            ])
 
             for dim, dimvals in dims:
                 if dim and dim in f.dimensions:
@@ -526,7 +533,10 @@ def metsave_factory(metopen):
             print('Saving to existing %s' % filename)
 
         except ValueError: 
-            f.close()
+            try:
+                f.close()
+            except:
+                pass
 
             f = nc.Dataset(conf.opath+'/'+filename+'.nc', 'w', format='NETCDF4')
             print('Saving to %s/%s.nc' % (conf.opath, filename))
@@ -557,16 +567,16 @@ def metsave_factory(metopen):
         
         # Additional dimensions
         for dim in add_dims:
+            all_dims += (dim['name'], )
+
             if dim['name'] not in f.dimensions:
                 f.createDimension(dim['name'], len(dim['data']))
-                odim = f.createVariable(dim['name'], 'f', (dim['name'], ))
+                odim = f.createVariable(dim['name'], dim['data'].dtype, (dim['name'], ))
                 odim[:] = dim['data']
-                add_dims += (dim['name'], ) 
 
                 del dim['name']
                 del dim['data']
                 odim.setncatts(dim)
-            all_dims += (dim['name'], )
         
         # Vertical dimension
         if static.z_name:
@@ -626,7 +636,92 @@ def metsave_factory(metopen):
 
         return
 
-    return metsave
+    def metsave_composite(dat, composites, static, filename, compress_to_short=True, add_dims=[], global_attrs={}):
+        ''' Save composite data in a netCDF file
+
+        Convenience interface to metsave
+         (1) transforming the data array as returned from get_composite into a data structure as 
+             required by metsave, and then
+         (2) saving the data using the standard metsave function.
+
+        In the transformation, ``plevs`` are mapped to netCDF groups, and all specified composites
+        are concatenated into a first (prepended) data dimension. This allows skipping through the 
+        composites in ncview in the order in which they are specified here.
+
+        NOTE: Composites that are not specified are not saved!
+
+        Parameters
+        ----------
+        dat : dict, mapping (composite_name, plev, q) => np.ndarray
+            Composite data as returned from get_composite. 
+        composites : list of decider
+            Composites, in order, that should be saved.
+        static : gridlib.grid
+            Some meta information about the data, like the grid information.
+        filename : str
+            File name to be saved to.
+        compress_to_short : bool
+            *Optional*, default ``True``. By default, ``metsave`` compresses the data by converting
+            the data field into int16, using the float64 ``add_offset`` and ``scale_factor`` attributes 
+            to represent the data.
+        add_dims : list of dict
+            *Optional*, default empty. List of additional dimensions, in order, to be placed between time 
+            and space. The dict must have the keys ``'name'`` and ``'data'``, defining the axis name and 
+            its data values. All additional keys will be taken over as attributes for the axis variable.
+        global_attrs: 
+            *Optional*, default empty. List of additional global attributes to be included in the netCDF file.
+        '''
+        
+        # Transform dat array into tosave
+        tosave = {}
+        names = [composite.name for composite in composites]
+        unsaved = 0
+        for (name, plev, q), dat_ in dat.items():
+            if name not in names:
+                unsaved += 1
+                continue
+            
+            cidx = names.index(name)
+
+            if not plev in tosave:
+                tosave[plev] = {}
+
+            if not q in tosave[plev]:
+                if not q in BINS:
+                    s = dat_['mean'].shape
+                    tosave[plev][q] = np.empty((len(names),)+s) * np.nan
+                    tosave[plev][f'{q}_stddev'] = np.empty((len(names),)+s) * np.nan
+                    tosave[plev][f'{q}_valid'] = np.empty((len(names),)+s, dtype='i4') * np.nan
+                else:
+                    raise NotImplementedError('Cannot save binned composites yet.')
+            
+            if not q in BINS:
+                tosave[plev][q][cidx,::] = dat_['mean']
+                tosave[plev][f'{q}_stddev'][cidx,::] = dat_['std']
+                tosave[plev][f'{q}_valid'][cidx,::] = dat_['valid_cnt']
+            else:
+                raise NotImplementedError('Cannot save binned composites yet.')
+
+        
+        if unsaved > 0:
+            print(f'Warning: {unsaved} composite fields left unsaved!')
+
+        # Remove t timension from static if present
+        if static.t_name:
+            static_ = static
+            static = copy.copy(static_)
+            static.t_name = ''
+
+        # Prepend composite name dimension to add_dims
+        add_dims = (
+            [{'name': 'composite', 'data': np.array(names), 'long_name': 'Composite name sequence'},]
+            + add_dims
+        )
+
+        # Do the actual saving and return whatever metsave might return (None currently)
+        return metsave(tosave, static, filename, compress_to_short, add_dims, global_attrs)
+
+    return metsave, metsave_composite
 
 
 def get_instantaneous_factory(files_by_plevq, metopen, get_from_file):
