@@ -9,7 +9,6 @@ from datetime import datetime as dt, timedelta as td
 
 from . import dynfor
 from . import docutil
-from . import settings_basic as s
 from .metio import metopen, metsave, dts2str
 
 # Take over the contents of dynfor.detect to this module and inject documentation from the Fortran sources
@@ -153,8 +152,9 @@ def block_by_grad_rev(dat, grid, lat_band=(30,70),
 
 
     print('Stage 1+2: Finding gradient reversals and conenct them in time')
-    ny, nx = s.conf.gridsize
-    dtd = s.conf.timestep
+    # TODO: Needs to get conf injected
+    ny, nx = conf.gridsize
+    dtd = conf.timestep
     tlen = dat.shape[0]
 
     # Stage 1: Calculate blocking indicator

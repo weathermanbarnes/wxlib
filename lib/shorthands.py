@@ -10,14 +10,13 @@ from . import dynfor
 from . import figures as fig
 from . import gridlib
 from . import utils
-from . import settings as s
-from .metio import metopen, metsave, metsave_lines, metsave_timeless, get_aggregate, get_instantaneous, get_static
 
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 
-from datetime import datetime as dt, timedelta as td
+from datetime import timedelta as td
+from cftime import DatetimeGregorian as dt
 
 
 

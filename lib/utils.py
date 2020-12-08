@@ -21,7 +21,6 @@ import scipy.interpolate as intp
 from scipy.special import erfinv
 
 from . import tagg
-from . import settings_basic as s
 
 from datetime import datetime as dt, timedelta as td
 import calendar
@@ -267,7 +266,7 @@ def unflatten_lines(lines, loff, static, convert_grididx=True):
 
 #
 # return a 3d boolean array where frontal points are True, elsewere False
-def mask_fronts(fronts, froff, shape=s.conf.gridsize):
+def mask_fronts(fronts, froff, shape):
     ''' To be made obsolete by saving cold/warm/stat fronts separately as lines in the standard-dynlib way 
     
     See also
@@ -289,7 +288,7 @@ def mask_fronts(fronts, froff, shape=s.conf.gridsize):
     return masks
 
 
-def mask_lines_with_data(lines, loff, dat=None, shape=None):
+def mask_lines_with_data(lines, loff, shape, dat=None):
     ''' Mask lines in a gridded map
 
     Instead of returning the value ``1`` for grid points containing a line, 
@@ -308,20 +307,17 @@ def mask_lines_with_data(lines, loff, dat=None, shape=None):
         Lines to be marked on the map
     loff : np.array with dimensions (lineindex)
         List of point indexes for the first points of each line
+    shape : 2-tuple of int
+        Grid dimensions (ny,nx)
     dat : np.ndarray with dimensions (y,x)
         Optional: Data to be used for marking on the map
-    shape : 2-tuple of int
-        Optional: Grid dimensions
     
     Returns
     -------
     np.ndarray
         Gridded map of lines
     '''
-
-    if type(shape) == type(None):
-        shape = s.conf.gridsize
-
+    
     mask = np.zeros((lines.shape[0], shape[0], shape[1]))
 
     for t in range(lines.shape[0]):

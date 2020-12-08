@@ -147,6 +147,10 @@ class settings_obj(default_dict):
     _Q_LONG = 'q_long'
     _Q_UNITS = 'q_units'
     _Q_BINS = 'q_bins'
+    _Q_LINES = 'q_lines'
+    _Q_OBJ = 'q_obj'
+    _Q_STD = 'q_std'
+    _Q_AVG = 'q_avg'
     
     def _get(self, *keys):
         ''' A third way to get a configuration item, using the syntax ``conf._get('datapath')`` '''
@@ -189,67 +193,51 @@ class settings_obj(default_dict):
         
         del self[key]
     
-    def _add_single_variable(self, q, q_file, q_long, q_units, q_bins):
+    def __register_single_variable(self, var):
         ''' Add a single variable to the configurarion '''
+        
+        q = var.q
 
-        if not type(q_file) == type(None):
-            self[self._Q_FILE][q] = q_file
-            self[self._Q][q_file] = q
-        if q_long:
-            self[self._Q_LONG][q] = q_long
-        if q_units:
-            self[self._Q_UNITS][q] = q_units
-        if type(q_bins) in [list, np.ndarray]:
-            self[self._Q_BINS][q] = q_bins
-    
-    def _unpack_q(self, q_item):
-        ''' Unpack a tuple holding pertinent information about a variable '''
+        # Long name and units must be set
+        self[self._Q_LONG][q] = var.long_name
+        self[self._Q_UNITS][q] = var.units
 
-        if len(q_item) == 2:
-            q, q_file = q_item
-            q_long = None; q_units = None; q_bins = None
-        elif len(q_item) == 3:
-            q, q_file, q_long = q_item
-            q_units = None; q_bins = None
-        elif len(q_item) == 4:
-            q, q_file, q_long, q_units = q_item
-            q_bins = None
-        elif len(q_item) == 5:
-            q, q_file, q_long, q_units, q_bins = q_item
-        else:
-            raise ValueError('q_item must be length 2--5, got %d instead.' % len(q_item))
+        # Optional: file segment
+        if not type(var.qf) == type(None) and not var.qf == q:
+            self[self._Q_FILE][q] = var.qf
+            self[self._Q][var.qf] = q
 
-        return q, q_file, q_long, q_units, q_bins
+        # Optional: mapping to a standard shorthand 
+        if not type(var.q_std) == type(None) and not var.q_std == q:
+            self[self._Q_STD][q] = var.q_std
+
+        # Optional: mapping to a time-averge name
+        if not type(var.q_avg) == type(None) and not var.q_avg == q:
+            self[self._Q_AVG][q] = var.q_avg
+
+        # Optional: Register as special variable
+        if not type(var.bins) == type(None):
+            self[self._Q_BINS][q] = var.bins
+        if not type(var.lines) == type(None):
+            self[self._Q_LINES][q] = var.lines
+        if not type(var.objmask) == type(None):
+            self[self._Q_OBJ][q] = var.objmask
 
 
-    def register_variable(self, qs):
+    def register_variable(self, variables):
         ''' Register (a) new variable(s) 
         
         Parameters
         ----------
-        qs : (list of) 2-,3-,4- or 5-tuple(s)
-            Tuple(s) describing the variable, including the entries 
-
-            1. Variable name as it appears in the netCDF file
-            2. File name segment for files containing the variable
-            3. (Optional) Long name for the variable
-            4. (Optional) Units of the variale
-            5. (Optional) Binning information for the variable
-
-        plevs : list
-            Vertical levels on which the given variables are available. Might be an empty 
-            list if the variable is only to be registered for a general level "None".
+        variables : (list of) variable object(s)
+            A single or list of variable definitions, using the variable object defined in the generic data source.
         '''
 
-        if type(qs) == list:
-            for q in qs:
-                q, q_file, q_long, q_units, q_bins = self._unpack_q(q)
-                self._add_single_variable(q, q_file, q_long, q_units, q_bins)
-            qs = set([q[0] for q in qs])
+        if type(variables) == list:
+            for var in variables:
+                self.__register_single_variable(var)
         else:
-            q, q_file, q_long, q_units, q_bins = self._unpack_q(qs)
-            self._add_single_variable(q, q_file, q_long, q_units, q_bins)
-            qs = set([qs[0],])
+            self.__register_single_variable(variables)
         
 
 # Not every key is applicable and used for all data sources -- but no additional keys than 
@@ -257,10 +245,13 @@ class settings_obj(default_dict):
 default_conf = settings_obj({
     'q': {},        # Given a file name segment, which variable to we expect to find there?
     'qf': {},       # Given a variable name, in which file do we find it?
-    'qstd': {},     # Given a data source-specific variable name, which standard variable name does it correspond to? (used primarily for plotting currently)
+    'q_std': {},     # Given a data source-specific variable name, which standard variable name does it correspond to? (used primarily for plotting currently)
+    'q_avg': {},    # Given a variable name, what is the name of a time-averge (if different)
     'q_units': {},
     'q_long': {},
     'q_bins': {},
+    'q_lines': {},
+    'q_obj': {},
     'datapath': ['.', '/Data/gfi/users/local/share'], 
     'staticfile': '',
     'opath': '.',

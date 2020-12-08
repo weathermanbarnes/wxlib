@@ -12,7 +12,6 @@ import pytz
 import copy
 from datetime import datetime as dtv, timedelta as td
 
-from ..settings_basic import conf
 from ..gridlib import grid_by_static, grid_by_nc
 from .. import utils
 
@@ -26,34 +25,29 @@ MAX_REQUEST_SIZE = 16.0e9
 WARN_REQUEST_SIZE = 2.0e9
 
 
-def average_q_name_factory():
-    # This is in a factory, because LINES, OBJMASK and BINS are only defined per data source, and
-    # it is those source-specific definitions that need to be used here.
+class variable(object):
+    def __init__(self, q, long_name, units, qf=None, q_std=None, bins=None, lines=None, objmask=None):
+        self.q = q
+        self.long_name = long_name
+        self.units = units
+        
+        if not qf:
+            self.qf = q
+        if not q_std:
+            self.q_std = q
+        
+        self.bins = bins
+        self.lines = lines
+        self.objmask = objmask
 
-    def average_q_name(q):
-        ''' Given variable q, what is the name of its composite/time average?
-
-        Parameters
-        ----------
-        q : str
-            The variable shorthand string.
-
-        Returns
-        -------
-        str
-            The variable shorthand for the time-averaged version of the variable.
-        '''
-
-        if q in LINES:
-            qout = f'{q}_freq'
-        elif q in OBJMASK:
-            qout = f'{OBJMASK[q]}_freq'
+        if lines:
+            self.q_avg = f'{q}_freq'
+        elif objmask:
+            self.q_avg = f'{objmask}_freq'
         else:
-            qout = q
+            self.q_avg = q
 
-        return qout
-    
-    return average_q_name
+        return
 
 
 def plev_to_tuple(plev, with_unit=False):
@@ -193,7 +187,7 @@ def get_from_file(filename, plev, q, **kwargs):
 
 
 # TODO: Return xarray by default, reflect other docu changes (if any?)
-def metopen_factory(get_static):
+def metopen_factory(get_static, conf):
     ''' Create the metopen function based on data source specific helpers '''
     
     # Interpret files without file type designator as netCDF
@@ -400,7 +394,7 @@ def metopen_factory(get_static):
 
 
 
-def metsave_factory(metopen):
+def metsave_factory(metopen, conf):
     ''' Create the metsave function based on data source specific helpers '''
 
     known_vertical_level_units = {
@@ -707,7 +701,7 @@ def metsave_factory(metopen):
                 tosave[plev] = {}
 
             if not q in tosave[plev]:
-                if not q in BINS:
+                if not q in conf.q_bins:
                     s = dat_['mean'].shape
                     tosave[plev][q] = np.empty((len(names),)+s) * np.nan
                     tosave[plev][f'{q}_stddev'] = np.empty((len(names),)+s) * np.nan
@@ -715,7 +709,7 @@ def metsave_factory(metopen):
                 else:
                     raise NotImplementedError('Cannot save binned composites yet.')
             
-            if not q in BINS:
+            if not q in conf.q_bins:
                 tosave[plev][q][cidx,::] = dat_['mean']
                 tosave[plev][f'{q}_stddev'][cidx,::] = dat_['std']
                 tosave[plev][f'{q}_valid'][cidx,::] = dat_['valid_cnt']
@@ -744,7 +738,7 @@ def metsave_factory(metopen):
     return metsave, metsave_composite
 
 
-def get_instantaneous_factory(files_by_plevq, metopen, get_from_file):
+def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, conf):
     ''' Create the get_instantaneous function based on data source-specific helpers '''
 
     def get_instantaneous(plevqs, dates, force=False, **kwargs):
@@ -863,7 +857,7 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file):
     return get_instantaneous
 
 
-def get_time_average_factory(files_by_plevq, get_from_file, get_static):
+def get_time_average_factory(files_by_plevq, get_from_file, get_static, conf):
     ''' Create the get_time_average function based on data source-specific helpers '''
 
     def get_time_average(plevqs, dates, **kwargs):
@@ -930,12 +924,12 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static):
         dates = {}
         grid = get_static()
         for plev, q in plevqs:
-            qout = _average_q_name(q)
+            qout = conf.q_avg.get(q, q)
 
             # Allocate memory for the result
             dat[plev,qout] = np.zeros(datshape[plev,q])
-            if q in BINS:
-                dat[plev,qout,'hist'] = np.zeros((len(BINS[q]),) + datshape[plev,q], dtype='i4')
+            if q in conf.q_bins:
+                dat[plev,qout,'hist'] = np.zeros((len(conf.q_bins[q]),) + datshape[plev,q], dtype='i4')
             else:
                 dat[plev,qout,'valid'] = np.zeros(datshape[plev,q], dtype='i4')
             
@@ -949,17 +943,17 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static):
                 # Treat special data
                 #
                 #  1. Lines
-                if q in LINES:
-                    ql = LINES[q]
+                if q in conf.q_lines:
+                    ql = conf.q_lines[q]
                     datoff_ = get_from_file(filename, plev, ql, cut=cut, no_static=True, **kwargs)
                     dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)
                 #  2. Object ID masks
-                if q in OBJMASK:
+                if q in conf.q_obj:
                     dat_ = dat_ > 0.5
                 #  3. Binned data
-                if q in BINS:
-                    for bi in range(len(BINS[q])-1):
-                        upper, lower = BINS[q][bi+1], BINS[q][bi]
+                if q in conf.q_bins:
+                    for bi in range(len(conf.q_bins[q])-1):
+                        upper, lower = conf.q_bins[q][bi+1], conf.q_bins[q][bi]
                         if upper > lower:
                             dat[plev,qout,'hist'][bi,:,:] += np.logical_and(dat_ >= lower, dat_ <  upper).sum(axis=0)
                         else:
@@ -975,8 +969,8 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static):
 
             dat[plev,qout,'cnt'] = toff
 
-            if q in BINS:
-                dat[plev,qout] = utils.cal_mfv(dat[plev,qout,'hist'], BINS[q])
+            if q in conf.q_bins:
+                dat[plev,qout] = utils.cal_mfv(dat[plev,qout,'hist'], conf.q_bins[q])
             else:
                 dat[plev,qout] /= dat[plev,qout,'valid']
         
@@ -992,7 +986,7 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static):
     return get_time_average
 
 
-def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
+def get_aggregate_factory(files_by_plevq, get_from_file, get_static, conf):
     ''' Create the get_time_average function based on data source-specific helpers '''
 
     def get_aggregate(plevqs, dates, agg, **kwargs):
@@ -1057,17 +1051,17 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
 
         # Remove no_static if present, this should only effect the output of this function rather than the metopen calls herein
         no_static = kwargs.pop('no_static', False)
-        grid = get_static() # For LINES and potentially for output
+        grid = get_static() # For conf.q_lines and potentially for output
 
         dat = {}
         start_dates = {}
         end_dates = {}
         for plev, q in plevqs:
-            qout = _average_q_name(q)
+            qout = conf.q_avg.get(q, q)
 
             # Allocate memory for the result
             dat[plev,qout] = []
-            if q in BINS:
+            if q in conf.q_bins:
                 dat[plev,qout,'hist'] = []
             else:
                 dat[plev,qout,'valid'] = []
@@ -1084,11 +1078,11 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
                 dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
                 
                 # Treat lines
-                if q in LINES:
-                    datoff_ = get_from_file(filename, plev, LINES[q], cut=cut, no_static=True, **kwargs)
+                if q in conf.q_lines:
+                    datoff_ = get_from_file(filename, plev, conf.q_lines[q], cut=cut, no_static=True, **kwargs)
                     dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)
                 # Treat object masks
-                elif q in OBJMASK:
+                elif q in conf.q_obj:
                     dat_ = dat_ > 0.5
 
                 # Prepend leftover data from the previous file period, if available
@@ -1099,11 +1093,11 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
                 
                 # Aggregate data
                 start_dates_agg, end_dates_agg, mean_or_mfv_agg, valid_or_hist_agg, cnt_agg = \
-                        utils.aggregate(dates_, dat_, agg, bins=BINS.get(q, None))
+                        utils.aggregate(dates_, dat_, agg, bins=conf.q_bins.get(q, None))
                 
                 # Save results to output arrays (lists for now, concatenated below)
                 dat[plev,qout].append(mean_or_mfv_agg)
-                if q in BINS:
+                if q in conf.q_bins:
                     dat[plev,qout,'hist'].append(valid_or_hist_agg)
                 else:
                     dat[plev,qout,'valid'].append(valid_or_hist_agg)
@@ -1119,7 +1113,7 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
             
             # Concatenate the list of arrays to one array
             dat[plev,qout] = np.concatenate(dat[plev,qout], axis=0)
-            if q in BINS:
+            if q in conf.q_bins:
                 dat[plev,qout,'hist'] = np.concatenate(dat[plev,qout,'hist'], axis=0)
             else:
                 dat[plev,qout,'valid'] = np.concatenate(dat[plev,qout,'valid'], axis=0)
@@ -1142,7 +1136,7 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static):
     return get_aggregate
 
 
-def get_composite_factory(files_by_plevq, get_from_file, get_static):
+def get_composite_factory(files_by_plevq, get_from_file, get_static, conf):
     ''' Create the get_time_average function based on data source-specific helpers '''
 
     def _get_chunk(filename, plevq):
@@ -1152,12 +1146,12 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         dat = get_from_file(filename, plev, q, no_static=True)
         
         # Treat lines
-        if q in LINES:
-            datoff, grid = get_from_file(filename, plev, LINES[q])
+        if q in conf.q_lines:
+            datoff, grid = get_from_file(filename, plev, conf.q_lines[q])
             dat = utils.normalize_lines(dat, datoff, grid.dx, grid.dy)
 
         # Treat objmasks
-        if q in OBJMASK:
+        if q in conf.q_obj:
             dat = dat > 0.5
 
         # Binned variables kept as they are
@@ -1171,10 +1165,10 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         '''
         
         plev, q = plevq
-        qs = _average_q_name(q)
+        qs = conf.q_avg.get(q, q)
         s = dat_to_add.shape[1:]
 
-        if not q in BINS:
+        if not q in conf.q_bins:
             for name, ts in comp_ts.items():
                 if 'mean' not in dat[name,plev,qs]:
                     dat[name,plev,qs]['mean'] = np.zeros(s)
@@ -1190,12 +1184,12 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         else:
             for name, ts in comp_ts.items():
                 if 'hist' not in dat[name,plev,qs]:
-                    dat[name,plev,qs]['hist'] = np.zeros((len(BINS[q]),)+s)
+                    dat[name,plev,qs]['hist'] = np.zeros((len(conf.q_bins[q]),)+s)
                     dat[name,plev,qs]['mfv'] = np.zeros(s)
                 for tidx in np.argwhere(ts)[:,0]:
-                    for bi in range(len(BINS[q])-1):
-                        upper = BINS[q][bi+1]
-                        lower = BINS[q][bi]
+                    for bi in range(len(conf.q_bins[q])-1):
+                        upper = conf.q_bins[q][bi+1]
+                        lower = conf.q_bins[q][bi]
                         if upper > lower:
                             dat[name,plev,qs]['hist'][bi,(dat >= lower).__and__(dat <  upper)] += 1
                         else:
@@ -1264,7 +1258,7 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         dat = {}
         for composite in composites:
             for plev, q in plevqs:
-                qs = _average_q_name(q)
+                qs = conf.q_avg.get(q, q)
                 if (composite.name,plev,qs) in dat:
                     raise ValueError(f'Duplicate composite name `{composite.name}`.')
                 dat[composite.name,plev,qs] = {}
@@ -1306,14 +1300,14 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static):
         # A bit of post-processing, caculating mean+standard deviation / most-frequent-value
         for composite in composites:
             for plev, q in plevqs:
-                qs = _average_q_name(q)
+                qs = conf.q_avg.get(q, q)
                 dat_ = dat[composite.name,plev,qs]
-                if not q in BINS:
+                if not q in conf.q_bins:
                     dat_['mean'] /= dat_['valid_cnt']
                     dat_['std'] = np.sqrt((dat_['std'] - dat_['valid_cnt']*dat_['mean']**2)/(dat_['valid_cnt']-1))
                 else:
                     # the hist itself does not require any post-processing
-                    dat_['mfv'] = dynlib.utils.cal_mfv(dat_['hist'], BINS[q])
+                    dat_['mfv'] = dynlib.utils.cal_mfv(dat_['hist'], conf.q_bins[q])
 
         return dat
     

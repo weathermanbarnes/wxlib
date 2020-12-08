@@ -3,17 +3,21 @@
 
 
 from .datasource import *
-from .standard_variables import LINES, OBJMASK, BINS
+from .standard_variables import standard_variables
 from ..settings import settings_obj, default_conf
 
 
+dt = cftime.DatetimeGregorian
 conf = settings_obj({
     'q': {},
     'qf': {}, 
-    'qstd': {},
+    'q_std': {},
+    'q_avg': {},
     'q_units': {},
     'q_long': {},
     'q_bins': {},
+    'q_lines': {},
+    'q_obj': {},
     'datapath': ['.',
         '/Data/gfi/share/Reanalyses/NORA10', 
         '/Data/gfi/users/local/share',
@@ -29,11 +33,9 @@ conf = settings_obj({
     'gridsize': (400,248),
     'local_timezone': default_conf.local_timezone,
 }, [])
-dt = cftime.DatetimeGregorian
-# TODO: Register variables and move the LINES, OBJMASK, BINS definitions back to the conf object
+# NORA10 is following our standard naming convention
+conf.register_variable(standard_variables)
 
-
-average_q_name = average_q_name_factory()
 
 _files_by_plevq = files_by_plevq
 class files_by_plevq(_files_by_plevq):
@@ -107,8 +109,8 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
 
 
 # Derive data source-specific version of metopen
-metopen = metopen_factory(get_static)
-metsave, metsave_composite = metsave_factory(metopen)
+metopen = metopen_factory(get_static, conf)
+metsave, metsave_composite = metsave_factory(metopen, conf)
 
 
 _get_from_file = get_from_file
@@ -127,10 +129,10 @@ def get_from_file(filename, plev, q, **kwargs):
 
 
 # Derive data source-specific versions of the remaining data getter functions
-get_instantaneous = get_instantaneous_factory(files_by_plevq, metopen, get_from_file)
-get_time_average = get_time_average_factory(files_by_plevq, get_from_file, get_static)
-get_aggregate = get_aggregate_factory(files_by_plevq, get_from_file, get_static)
-get_composite = get_composite_factory(files_by_plevq, get_from_file, get_static)
+get_instantaneous = get_instantaneous_factory(files_by_plevq, metopen, get_from_file, conf)
+get_time_average = get_time_average_factory(files_by_plevq, get_from_file, get_static, conf)
+get_aggregate = get_aggregate_factory(files_by_plevq, get_from_file, get_static, conf)
+get_composite = get_composite_factory(files_by_plevq, get_from_file, get_static, conf)
 
 
 # C'est le fin
