@@ -35,7 +35,7 @@ from matplotlib.collections import LineCollection
 import mpl_toolkits.basemap
 basemap_version = mpl_toolkits.basemap.__version__
 
-from . import settings as s
+from .plotsettings import pconf, pconfl
 
 from .metio import metopen
 from .utils import concat1, concat1lonlat, unflatten_lines, sect_gen_points
@@ -315,7 +315,7 @@ def __prepare_config(kwargs):
 
     plev = kwargs.pop('plev', None)
     q = kwargs.pop('q', None)
-    kwargs = s.base.conf.plotf.merge(plev, q, **kwargs)
+    kwargs = pconf.merge(plev, q, **kwargs)
 
     # cmap might be a function returing the cmap; if so generate it now!
     if 'cmap' in kwargs and type(kwargs['cmap']) == types.FunctionType:
@@ -329,7 +329,7 @@ def __line_prepare_config(kwargs):
 
     plev = kwargs.pop('plev', None)
     q = kwargs.pop('q', None)
-    kwargs = s.base.conf.plot.merge(plev, q, **kwargs)
+    kwargs = pconfl.merge(plev, q, **kwargs)
     
     return kwargs
 
@@ -352,8 +352,9 @@ def __map_create_mask(static, kwargs):
     datZ = kwargs.pop('Zdata', None)
     
     if plev and not type(datZ) == np.ndarray:
-        f,datZ = metopen(s.base.conf.file_agg % {'agg': 'all', 'time': '%d-%d' % (s.base.conf.years[0],s.base.conf.years[-1]), 'plev': plev, 'q': 'Z'}, 'z', no_static=True)
-        if f: f.close()
+        raise NotImplementedError('plotting should not magically load extra data')
+        #f,datZ = metopen(s.base.conf.file_agg % {'agg': 'all', 'time': '%d-%d' % (s.base.conf.years[0],s.base.conf.years[-1]), 'plev': plev, 'q': 'Z'}, 'z', no_static=True)
+        #if f: f.close()
     if type(datZ) == np.ndarray:
         mask = datZ[:,:] < static.oro[:,:]
         if static.cyclic_ew:
@@ -551,6 +552,7 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
     if kwargs.get('title'):
         title = kwargs.pop('title')
         if title == 'auto':
+            # TODO: This requires some thinking!
             title = u'%s @ %s' % (s.base.conf.q_long.get(q, q), plev)
             if kwargs.get('name'):
                 title += u' for %s' % kwargs.get('name')
@@ -568,6 +570,7 @@ def __output(plev, q, kwargs):
             q = plt.__dynlib_latest_cs_q
         filename = kwargs.pop('save')
         if filename == 'auto':
+            # TODO: This requires some thinking!
             filename = '%s_%s_%s.%s' % (q, plev, __safename(kwargs.get('name', 'unnamed')), s.base.conf.plotformat)
         if kwargs.get('name_prefix'):
             filename = '%s_%s' % (kwargs.pop('name_prefix'), filename)
@@ -579,9 +582,11 @@ def __output(plev, q, kwargs):
             imgstr.seek(0)
             img = Image.open(imgstr)
             img_adaptive = img.convert('RGB').convert('P', palette=Image.ADAPTIVE)
+            # TODO: This requires some thinking!
             img_adaptive.save('%s/%s' % (s.base.conf.plotpath, filename), format='PNG')
 
         else:
+            # TODO: This requires some thinking!
             plt.savefig('%s/%s' % (s.base.conf.plotpath, filename), dpi=dpi)
     
     if kwargs.pop('show'):

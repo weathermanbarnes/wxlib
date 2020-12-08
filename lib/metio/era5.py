@@ -4,17 +4,37 @@
 
 from .datasource import *
 from ..interpol import vert_by_coord
+from ..settings import settings_obj, default_conf
 
 
-timestep = td(0.125)
-gridsize = (361,720)
-staticfile = 'e5.ans.static'
+conf = settings_obj({
+    'q': {},
+    'qf': {}, 
+    'qstd': {},
+    'q_units': {},
+    'q_long': {},
+    'q_bins': {},
+    'datapath': ['.',
+        '/Data/gfi/share/era5/ml',
+        '/Data/gfi/users/local/share',
+        '/Data/gfi/users/csp001/share', 
+    ], 
+    'opath': '.',
+    'oformat': 'nc',
+    'plotpath': '.',
+    'plotformat': 'png',
+    'staticfile': 'ei.ans.static',
+    'epoch': dt(1900,1,1,0),
+    'calendar': 'standard',
+    'timestep': td(0.125),
+    'gridsize': (361,720),
+    'local_timezone': default_conf.local_timezone,
+}, [])
+dt = cftime.DatetimeGregorian
+# TODO: Register variables and move the LINES, OBJMASK, BINS definitions back to the conf object
+
+
 filetypes = ['B', 'H', 'N', 'P', 'Z']
-
-conf.datapath.insert(1, '/Data/gfi/share/era5/ml')
-conf.datapath.insert(1, '/Data/gfi/users/csp001/share') # for static; TODO: Move to a more general directory!
-
-
 # Variables present in B-files (surface variables --- disregarded in favour of the N files)
 Bq = [ 'PS', 'MSL', 'TCC', 'U10M', 'V10M', 'SSTK', 'CI', 'D2M', 'T2M', 'TCW', 'TCWV', 'VIWVD', 'E', 
         'MN2T', 'MX2T', 'SI', 'TTR', 'TTRC', 'WG10', 'LSP', 'CP', 'SF', 'SSHF', 'SLHF', 'BLH', ]
@@ -36,6 +56,12 @@ n_mlevs = 98
 Zq = ['U', 'V', 'Q', 'T', 'Z', ]
 Zplev = ['100', '200', '250', '300', '400', '500', '600', '700', '800', '850', '900']
 
+
+OBJMASK = {}
+LINES = {}
+BINS = {}
+
+average_q_name  = average_q_name_factory()
 
 _files_by_plevq = files_by_plevq
 class files_by_plevq(_files_by_plevq):

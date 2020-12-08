@@ -3,16 +3,38 @@
 
 
 from .datasource import *
+from .standard_variables import LINES, OBJMASK, BINS
+from ..settings import settings_obj, default_conf
 
 
-timestep = td(0.25)
-gridsize = (361,720)
-staticfile = 'ei.ans.static'
+conf = settings_obj({
+    'q': {},
+    'qf': {}, 
+    'qstd': {},
+    'q_units': {},
+    'q_long': {},
+    'q_bins': {},
+    'datapath': ['.',
+        '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY', 
+        '/Data/gfi/users/local/share',
+        '/Data/gfi/users/csp001/share', 
+    ], 
+    'opath': '.',
+    'oformat': 'nc',
+    'plotpath': '.',
+    'plotformat': 'png',
+    'staticfile': 'ei.ans.static',
+    'epoch': dt(1900,1,1,0),
+    'calendar': 'standard',
+    'timestep': td(0.25),
+    'gridsize': (361,720),
+    'local_timezone': default_conf.local_timezone,
+}, [])
+dt = cftime.DatetimeGregorian
+# TODO: Register variables and move the LINES, OBJMASK, BINS definitions back to the conf object
 
-conf.datapath.insert(1, '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY')
-conf.datapath.insert(1, '/Data/gfi/users/csp001/share') # for static; TODO: Move to a more general directory!
 
-
+average_q_name = average_q_name_factory()
 
 _files_by_plevq = files_by_plevq
 class files_by_plevq(_files_by_plevq):

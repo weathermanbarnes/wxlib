@@ -3,15 +3,37 @@
 
 
 from .datasource import *
+from .standard_variables import LINES, OBJMASK, BINS
+from ..settings import settings_obj, default_conf
 
 
-timestep = td(0.125)
-gridsize = (400,248)
-#staticfile = ''
+conf = settings_obj({
+    'q': {},
+    'qf': {}, 
+    'qstd': {},
+    'q_units': {},
+    'q_long': {},
+    'q_bins': {},
+    'datapath': ['.',
+        '/Data/gfi/share/Reanalyses/NORA10', 
+        '/Data/gfi/users/local/share',
+    ], 
+    'opath': '.',
+    'oformat': 'nc',
+    'plotpath': '.',
+    'plotformat': 'png',
+    'staticfile': 'ei.ans.static',
+    'epoch': dt(1900,1,1,0),
+    'calendar': 'standard',
+    'timestep': td(0.125),
+    'gridsize': (400,248),
+    'local_timezone': default_conf.local_timezone,
+}, [])
+dt = cftime.DatetimeGregorian
+# TODO: Register variables and move the LINES, OBJMASK, BINS definitions back to the conf object
 
-conf.datapath.insert(1, '/Data/gfi/share/Reanalyses/NORA10')
 
-
+average_q_name = average_q_name_factory()
 
 _files_by_plevq = files_by_plevq
 class files_by_plevq(_files_by_plevq):

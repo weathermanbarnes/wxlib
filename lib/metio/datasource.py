@@ -12,7 +12,6 @@ import pytz
 import copy
 from datetime import datetime as dtv, timedelta as td
 
-from .vardefs import LINES, OBJMASK, BINS, _average_q_name
 from ..settings_basic import conf
 from ..gridlib import grid_by_static, grid_by_nc
 from .. import utils
@@ -27,13 +26,34 @@ MAX_REQUEST_SIZE = 16.0e9
 WARN_REQUEST_SIZE = 2.0e9
 
 
-# Parameters to generally describe the data source
-timestep = None
-gridsize = None
-staticfile = None
-calendar = 'standard'
-dt = cftime.DatetimeGregorian
+def average_q_name_factory():
+    # This is in a factory, because LINES, OBJMASK and BINS are only defined per data source, and
+    # it is those source-specific definitions that need to be used here.
 
+    def average_q_name(q):
+        ''' Given variable q, what is the name of its composite/time average?
+
+        Parameters
+        ----------
+        q : str
+            The variable shorthand string.
+
+        Returns
+        -------
+        str
+            The variable shorthand for the time-averaged version of the variable.
+        '''
+
+        if q in LINES:
+            qout = f'{q}_freq'
+        elif q in OBJMASK:
+            qout = f'{OBJMASK[q]}_freq'
+        else:
+            qout = q
+
+        return qout
+    
+    return average_q_name
 
 
 def plev_to_tuple(plev, with_unit=False):
