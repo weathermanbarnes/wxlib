@@ -33,8 +33,13 @@ class variable(object):
         
         if not qf:
             self.qf = q
+        else:
+            self.qf = qf
+
         if not q_std:
             self.q_std = q
+        else:
+            self.q_std = q_std
         
         self.bins = bins
         self.lines = lines

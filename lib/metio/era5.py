@@ -34,7 +34,66 @@ conf = settings_obj({
     'gridsize': (361,720),
     'local_timezone': default_conf.local_timezone,
 }, [])
-# TODO: Register variables and move the LINES, OBJMASK, BINS definitions back to the conf object
+
+# Renaming for convenience
+v = variable
+variables = [
+    v('U', 'U component of wind', 'm s**-1', q_std='u'),
+    v('V', 'V component of wind', 'm s**-1', q_std='v'),
+    v('OMEGA', 'Pressure vertical velocity', 'Pa s**-1', q_std='w'),
+
+    v('PV', 'Potential vorticity', 'K m**2 kg**-1 s**-1', q_std='pv'),
+    v('Z', 'Geopotential', 'm**2 s**-2', q_std='z'),
+
+    v('T', 'Temperature', 'K', q_std='t'),
+    v('PT', 'Potential temperature', 'K', q_std='pt'),
+    v('EQPT', 'Equivalent potential temperature', 'K', q_std='eqpt'),
+
+    v('Q', 'Specific humidity', 'kg kg**-1', q_std='q'),
+    v('LWC', 'Specific cloud liquid water content', 'kg kg**-1', q_std='lwc'),
+    v('IWC', 'Specific cloud ice water content', 'kg kg**-1', q_std='iwc'),
+    v('RWC', 'Specific rain water content', 'kg kg**-1', q_std='rwc'),
+    v('SWC', 'Specific snow water content', 'kg kg**-1', q_std='swc'),
+
+    v('MSL', 'Mean sea level pressure', 'Pa', q_std='msl'),
+    v('PS', 'Surface pressure', 'Pa', q_std='sp'),
+    v('CI', 'Sea-ice cover', '(0 - 1)', q_std='ci'),
+    v('SSTK', 'Sea surface skin temperature', 'K', q_std='sst'),
+    v('T2M', '2 metre temperature', 'K', q_std='t2m'),
+    v('D2M', '2 metre dewpoint temperature', 'K', q_std='d2m'),
+    v('U10M', '10 metre U wind component', 'm s**-1', q_std='u10'),
+    v('V10M', '10 metre V wind component', 'm s**-1', q_std='v10'),
+    v('WG10', 'Wind gust at 10 metres', 'm s**-1'),
+
+    v('BLH', 'Boundary layer height', 'm', q_std='blh'),
+    v('TCC', 'Total cloud cover', '1', q_std='tcc'),
+    v('VIWVD', 'Vertical integral of divergence of moisture flux', 'kg m**-2 s**-1', q_std='viwvd'),
+    v('TCW', 'Total column water', 'kg m**-2', q_std='tcw'),
+    v('TCWV', 'Total column water vapour', 'kg m**-2', q_std='tcwv'),
+    v('TCLW', 'Total column liquid water', 'kg m**-2', q_std='tclw'),
+    v('TCIW', 'Total column ice water', 'kg m**-2', q_std='tciw'),
+
+    v('CP', 'Convective precipitation', 'm (6h)**-1', q_std='cp'),
+    v('E', 'Evaporation', 'm of water equivalent (6h)**-1', q_std='e'),
+    v('LSP', 'Large-scale precipitation', 'm (6h)**-1', q_std='lsp'),
+    v('SF', 'Total snow fall', 'm of water equivalent (6h)**-1', q_std='sf'),
+
+    v('SLHF', 'Surface latent heat flux', 'W m**-2', q_std='slhf'),
+    v('SSHF', 'Surface sensible heat flux', 'W m**-2', q_std='sshf'),
+
+    v('SI', 'Solar insolation', 'W m**-2'),
+    v('SSR', 'Surface net solar radiation', 'W m**-2', q_std='ssr'),
+    v('SSRC', 'Surface net solar radiation, clear sky', 'W m**-2', q_std='ssrc'),
+    v('SSRD', 'Surface downwelling solar radiation', 'W m**-2', q_std='ssrd'),
+    v('STR', 'Surface net thermal radiation', 'W m**-2', q_std='str'),
+    v('STRC', 'Surface net thermal radiation, clear sky', 'W m**-2', q_std='strc'),
+    v('STRD', 'Surface downwelling thermal radiation', 'W m**-2', q_std='strd'),
+    v('TSR', 'Top net solar radiation', 'W m**-2', q_std='tsr'),
+    v('TSRC', 'Top net solar radiation, clear sky', 'W m**-2', q_std='tsrc'),
+    v('TTR', 'Top net thermal radiation', 'W m**-2', q_std='ttr'),
+    v('TTRC', 'Top net thermal radiation, clear sky', 'W m**-2', q_std='ttrc'),
+]
+conf.register_variable(variables)
 
 
 filetypes = ['B', 'H', 'N', 'P', 'Z']
