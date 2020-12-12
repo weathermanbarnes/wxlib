@@ -304,6 +304,8 @@ PLOT_DEFAULTS.update({
     'extend': 'both', 
     
     'hatches': None,
+    'plotformat': 'pdf',
+    'plotpath': '.',
 })
 
 MUTEX_GROUPS = [set(['colors', 'cmap']), ]

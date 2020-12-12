@@ -152,9 +152,7 @@ def block_by_grad_rev(dat, grid, lat_band=(30,70),
 
 
     print('Stage 1+2: Finding gradient reversals and conenct them in time')
-    # TODO: Needs to get conf injected
-    ny, nx = conf.gridsize
-    dtd = conf.timestep
+    ny, nx = grid.x.shape
     tlen = dat.shape[0]
 
     # Stage 1: Calculate blocking indicator

@@ -36,8 +36,8 @@ import mpl_toolkits.basemap
 basemap_version = mpl_toolkits.basemap.__version__
 
 from .plotsettings import pconf, pconfl
+from .settings import default_conf
 
-from .metio import metopen
 from .utils import concat1, concat1lonlat, unflatten_lines, sect_gen_points
 from .autoscale import autoscale
 
@@ -351,10 +351,6 @@ def __map_create_mask(static, kwargs):
     plev = kwargs.pop('plev', None)
     datZ = kwargs.pop('Zdata', None)
     
-    if plev and not type(datZ) == np.ndarray:
-        raise NotImplementedError('plotting should not magically load extra data')
-        #f,datZ = metopen(s.base.conf.file_agg % {'agg': 'all', 'time': '%d-%d' % (s.base.conf.years[0],s.base.conf.years[-1]), 'plev': plev, 'q': 'Z'}, 'z', no_static=True)
-        #if f: f.close()
     if type(datZ) == np.ndarray:
         mask = datZ[:,:] < static.oro[:,:]
         if static.cyclic_ew:
@@ -552,8 +548,7 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
     if kwargs.get('title'):
         title = kwargs.pop('title')
         if title == 'auto':
-            # TODO: This requires some thinking!
-            title = u'%s @ %s' % (s.base.conf.q_long.get(q, q), plev)
+            title = u'%s @ %s' % (default_conf.q_long.get(q, q), plev)
             if kwargs.get('name'):
                 title += u' for %s' % kwargs.get('name')
 
@@ -570,11 +565,12 @@ def __output(plev, q, kwargs):
             q = plt.__dynlib_latest_cs_q
         filename = kwargs.pop('save')
         if filename == 'auto':
-            # TODO: This requires some thinking!
-            filename = '%s_%s_%s.%s' % (q, plev, __safename(kwargs.get('name', 'unnamed')), s.base.conf.plotformat)
+            filename = '%s_%s_%s.%s' % (q, plev, __safename(kwargs.get('name', 'unnamed')), kwargs.get('plotformat','png'))
         if kwargs.get('name_prefix'):
             filename = '%s_%s' % (kwargs.pop('name_prefix'), filename)
-        
+            
+        opath = kwargs.get('plotpath','.')
+
         # If png: Use adaptive palette to save space
         if filename[-3:] == 'png':
             imgstr = BytesIO()
@@ -582,12 +578,10 @@ def __output(plev, q, kwargs):
             imgstr.seek(0)
             img = Image.open(imgstr)
             img_adaptive = img.convert('RGB').convert('P', palette=Image.ADAPTIVE)
-            # TODO: This requires some thinking!
-            img_adaptive.save('%s/%s' % (s.base.conf.plotpath, filename), format='PNG')
+            img_adaptive.save('%s/%s' % (opath, filename), format='PNG')
 
         else:
-            # TODO: This requires some thinking!
-            plt.savefig('%s/%s' % (s.base.conf.plotpath, filename), dpi=dpi)
+            plt.savefig('%s/%s' % (opath, filename), dpi=dpi)
     
     if kwargs.pop('show'):
         plt.show()

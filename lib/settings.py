@@ -34,6 +34,7 @@ For these reasons, this module introduces:
 
 import numpy as np
 from copy import copy 
+from .metio.standard_variables import standard_variables
 
 import collections
 
@@ -256,13 +257,12 @@ default_conf = settings_obj({
     'staticfile': '',
     'opath': '.',
     'oformat': 'nc',
-    'plotpath': '.',
-    'plotformat': 'png',
     'epoch': None,
     'timestep': None,
     'gridsize': None,
     'local_timezone': 'Europe/Oslo',
 }, [])
+default_conf.register_variable(standard_variables)
 
 
 # C'est la fin.

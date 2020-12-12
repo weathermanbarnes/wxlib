@@ -25,8 +25,6 @@ conf = settings_obj({
     ], 
     'opath': '.',
     'oformat': 'nc',
-    'plotpath': '.',
-    'plotformat': 'png',
     'staticfile': 'ei.ans.static',
     'epoch': dt(1900,1,1,0),
     'calendar': 'standard',
