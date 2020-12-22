@@ -59,14 +59,6 @@ contains
         integer(kind=ni) :: sd1
         integer(kind=ni) :: nc1,sd
 
- !f2py depend(NX) lon
- !f2py depend(NY) lat,flag
- !f2py depend(NX,NY) PV2d,beta_a2d,beta_c2d,beta_a_temp,beta_c_temp
- !f2py depend(ndim,NY,ncon) XVALF, YVALF
- !f2py depend(ncon) zz
- !f2py depend(ndim) XVAL,YVAL
- !f2py depend(npt) xseg,yseg
-
 ! Initialisations
         zz=0.0
         xseg=0.0
@@ -506,6 +498,7 @@ contains
           yyf(2)=yseg(ptsauvb)
           ptf=nbc/2+1
           if (ptf.gt.2) then
+            icnew=icompt
             boucleorgpt : &
             DO kk=3,ptf
               faux=0
@@ -525,11 +518,11 @@ contains
                 EXIT boucleorgpt
               endif
             ENDDO boucleorgpt
-          endif
-          if (faux.ge.nbc) then
-            icompt=icnew
-          else
-            icompt=icompt+ptf
+            if (faux.ge.nbc) then
+              icompt=icnew
+            else
+              icompt=icompt+ptf
+            endif
           endif
         else
           ptsauv=0
@@ -547,6 +540,7 @@ contains
           endif
           ptf=nbc/2+1
           if (ptf.gt.2) then
+            icnew = icompt
             boucleorgpts : &
             DO kk=icompt+2,icompt+ptf-1
               faux=0
@@ -566,11 +560,11 @@ contains
                 EXIT boucleorgpts
               endif
             ENDDO boucleorgpts
-          endif
-          if (faux.ge.nbc) then      
-            icompt=icnew
-          else
-            icompt=icompt+ptf-1
+            if (faux.ge.nbc) then      
+              icompt=icnew
+            else
+              icompt=icompt+ptf-1
+            endif
           endif
         endif
    

@@ -56,7 +56,7 @@ elif [ "$uname" == 'Darwin' ]; then
     LIBS="$LIBS $PYLIBS"
     RPATH=""
 elif [ "${host::12}" == 'nird-cyclone' ]; then
-    LIBS='-L/usr/lib64 -l:libblas.so.3 -l:liblapack.so.3'
+    LIBS='-L/usr/lib64 -L/nird/home/csp001/sw/virtualenv/dynpie3/lib64 -l:libblas.so.3 -l:liblapack.so.3'
     RPATH=""
 elif [ "$uname" == 'Linux' ]; then
     # Default Linux configuration
