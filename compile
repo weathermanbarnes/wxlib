@@ -10,7 +10,7 @@
 COMPILE_OPTS="productive"
 
 # Choose python version to compile for
-PY_VER=""
+PY_VER="3.8"
 F2PY="f2py$PY_VER"
 PYTHON="python$PY_VER"
 
@@ -50,10 +50,10 @@ elif [ "$uname" == 'Darwin' ]; then
     # For some reason libpython is no longer automatically detected/found for the linking step
     # -> Have python inject the libraries it was buildt with into $LIBS 
     # (works only for python3.x)
-    PYFIX=`python-config --prefix`
-    PYFIXVER="${PYFIX: -3}"
-    PYLIBS="-L$PYFIX/lib/python$PYFIXVER/config-${PYFIXVER}m-darwin -lpython${PYFIXVER}m"
-    LIBS="$LIBS $PYLIBS"
+    #PYFIX=`python-config --prefix`
+    #PYFIXVER="${PYFIX: -3}"
+    #PYLIBS="-L$PYFIX/lib/python$PYFIXVER/config-${PYFIXVER}m-darwin -lpython${PYFIXVER}m"
+    #LIBS="$LIBS $PYLIBS"
     RPATH=""
 elif [ "${host::12}" == 'nird-cyclone' ]; then
     LIBS='-L/usr/lib64 -L/nird/home/csp001/sw/virtualenv/dynpie3/lib64 -l:libblas.so.3 -l:liblapack.so.3'
@@ -148,7 +148,7 @@ mv $fortran_library.so $baselib
 
 # 4. Compiling the shared object usable from within python
 echo -e "Stage 4: Compiling the python module using $flagset options."
-LDFLAGS="$RPATH -shared" $F2PY -c $LIBS --fcompiler=gnu95 $F2PY_OPTS $pysig $files $filec $filek > /dev/null
+LDFLAGS="$RPATH" $F2PY -c $LIBS --fcompiler=gnu95 $F2PY_OPTS $pysig $files $filec $filek > /dev/null
 mv ${python_library}*.so $baselib
 
 
