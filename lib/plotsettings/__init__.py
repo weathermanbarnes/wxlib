@@ -33,8 +33,8 @@ For these reasons, this module introduces:
 import numpy as np
 from copy import copy 
 
-from . import cm, proj
-from . import settings as base
+from .. import proj
+from .. import settings as base
 
 import collections
 
@@ -252,8 +252,8 @@ PLOT_DEFAULTS = {
     'fig_dpi': 150,
     'gridcolor': 'k',
     'grid_alpha': 0.3,
-    'grid_dashes': (10, 15),
-    'grid_linestyle': None,
+    'grid_dashes': None,
+    'grid_linestyle': '-',
     'grid_latmax': 90,
     'meridians': (-180,-120,-60, 0, 60, 120),
     'parallels': (-60,-30, 0, 30, 60),
@@ -312,7 +312,7 @@ PLOTL_DEFAULTS.update({
 
     'vector_space_interval': 15,
     'vector_disable_interpolation': False,
-    'vector_space_numbers_xy' = (30,20),
+    'vector_space_numbers_xy': (30,20),
 
     'barbcolor': None,
     'flagcolor': None,

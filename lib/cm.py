@@ -223,7 +223,7 @@ dynlib_cms = [
     WCyGnRd, WCyGnYlRd, 
     WYlGn, WYlRd, 
 
-    # Linear color , starting black (dark)
+    # Linear color, starting black (dark)
     KBu, KOr,
     KPiRdYl1, KPiRdYl2,
     BuPiYl, PiBuRdYl, 
