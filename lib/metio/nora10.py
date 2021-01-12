@@ -64,7 +64,11 @@ class files_by_plevq(_files_by_plevq):
 
             tidxs = [tidx for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
             dates = [dates_all[tidx] for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
-            size = (len(tidxs), 1) + conf.gridsize
+
+            if self.plev == 'sfc':
+                size = (len(tidxs),) + conf.gridsize
+            else:
+                size = (len(tidxs), 1) + conf.gridsize
 
             self.cur = nxt
             return filename, tidxs, dates, size
