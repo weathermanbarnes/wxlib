@@ -58,13 +58,13 @@ class files_by_plevq(_files_by_plevq):
             nxt = dt(self.cur.year + (self.cur.month // 12), self.cur.month % 12 + 1, 1, 0)
             monlen = int((
                 nxt - dt(self.cur.year, self.cur.month, 1, 0)
-            ).total_seconds() / timestep.total_seconds())
+            ).total_seconds() / conf.timestep.total_seconds())
             tidxs_all = range(monlen)
-            dates_all = [dt(self.cur.year, self.cur.month, 1, 0) + timestep*i for i in tidxs_all]
+            dates_all = [dt(self.cur.year, self.cur.month, 1, 0) + conf.timestep*i for i in tidxs_all]
 
             tidxs = [tidx for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
             dates = [dates_all[tidx] for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
-            size = (len(tidxs), 1) + gridsize
+            size = (len(tidxs), 1) + conf.gridsize
 
             self.cur = nxt
             return filename, tidxs, dates, size
@@ -94,7 +94,7 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
         Some meta information about the data, like the grid information.
     '''
     
-    fo, oro = metopen(staticfile, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, 
+    fo, oro = metopen(conf.staticfile, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, 
             quiet=quiet, no_static=True)
     static = grid_by_static(fo)
     static.oro = oro[::]

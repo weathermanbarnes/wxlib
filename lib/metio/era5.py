@@ -190,9 +190,9 @@ class files_by_plevq(_files_by_plevq):
             filename = f'{self.cur.year}/{self.cur.month:02d}/{self.filetype}{self.cur.year}{self.cur.month:02d}{self.cur.day:02d}_{self.cur.hour:02d}'
             dates = [self.cur, ]
             tidxs = [0, ]
-            size = (1, self.nlevs, ) + gridsize
+            size = (1, self.nlevs, ) + conf.gridsize
 
-            self.cur += timestep
+            self.cur += conf.timestep
             return filename, tidxs, dates, size
 
         else:
@@ -220,7 +220,7 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
         Some meta information about the data, like the grid information.
     '''
     
-    fo, oro = metopen(staticfile, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, 
+    fo, oro = metopen(conf.staticfile, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, 
             quiet=quiet, no_static=True)
     static = grid_by_static(fo)
     static.oro = oro[::]

@@ -789,6 +789,10 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, conf):
         
         start, end = min(dates), max(dates)
 
+        # Make sure you get something when only requesting one time step
+        if start == end:
+            end += td(1)
+
         if type(plevqs) == tuple:
             plevqs = [plevqs, ]
 
@@ -800,6 +804,7 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, conf):
             # req[plevq] contains a list of 4-tuples: 
             # (filename, list of tidx, list of dates, request_size in number of values)
             req[plevq] = list(files_by_plevq(plevq, start=start, end=end))
+            print(req)
             datshape[plevq] = req[plevq][0][3]
             for entry in req[plevq][1:]:
                 shape = entry[3]
