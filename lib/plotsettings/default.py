@@ -15,6 +15,7 @@ pconf [None,None,'coastwidth'] = 0.5
 pconf [None,None,'gridcolor'] = 'k'
 pconf [None,None,'grid_alpha'] = 0.4
 pconf [None,None,'grid_linestyle'] = '-'
+pconf [None,None,'grid_dashes'] = [1000, 1]
 pconf [None,None,'grid_latmax'] = 90
 pconf [None,None,'meridians'] = np.arange(-180,180,45)
 pconf [None,None,'parallels'] = np.arange(-75,76,15)
