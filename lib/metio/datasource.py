@@ -791,7 +791,7 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, conf):
 
         # Make sure you get something when only requesting one time step
         if start == end:
-            end += td(1)
+            end += td(0,1)
 
         if type(plevqs) == tuple:
             plevqs = [plevqs, ]
