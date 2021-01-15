@@ -9,7 +9,6 @@ from datetime import datetime as dt, timedelta as td
 
 from . import dynfor
 from . import docutil
-from .metio import metopen, metsave, dts2str
 
 # Take over the contents of dynfor.detect to this module and inject documentation from the Fortran sources
 docutil.takeover(dynfor.detect, 'detect', sys.modules[__name__])

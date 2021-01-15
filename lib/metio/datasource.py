@@ -221,7 +221,7 @@ def metopen_factory(get_static, conf):
 
         if not mode == 'r' and not quiet:
             print('WARNING: Can only open npz files in read mode!')
-        f = np.load(filepath, encoding='bytes')
+        f = np.load(filepath, encoding='bytes', allow_pickle=True)
         if q:
             if q not in f.files:
                 tried.append(filepath)
