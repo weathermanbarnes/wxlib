@@ -23,8 +23,6 @@ import numpy as np
 from copy import deepcopy
 from datetime import timedelta as td
 
-from ..vardefs import LINES
-from ...settings_basic import conf
 from ... import utils
 
 
@@ -162,10 +160,10 @@ class decide_by_data(decider):
             
             dat_ = get_from_file(filename, self.plev, self.q, cut=cut, no_static=True)
             
-            # Treat lines 
-            if self.q in LINES:
-                datoff_, grid = get_from_file(filename, self.plev, LINES[self.q], cut=cut)
-                dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)[:,np.newaxis,:,:]
+            # TODO: Treat lines 
+            #if self.q in LINES:
+            #    datoff_, grid = get_from_file(filename, self.plev, LINES[self.q], cut=cut)
+            #    dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)[:,np.newaxis,:,:]
 
             # Object ID masks are kept as is
             # Binned variables are kept as they are
