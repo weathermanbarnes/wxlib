@@ -807,4 +807,55 @@ def smooth_xy_nan(dat, nsmooth):
     return dats
 
 
+
+def lanczos_weights_lowpass(cutoff, window=None, size=2):
+    ''' Calculate the weights for a 1d Lanczos lowpass filter with a given cutoff
+
+    The function is following Duchon C. E. (1979): Lanczos Filtering in One and Two 
+    Dimensions. Journal of Applied Meteorology, Vol 18, pp 1016-1022. It is adapted 
+    from code found at several places on the internet, so proper attribution is 
+    unclear. Sources were
+     - https://scitools.org.uk/iris/docs/v1.2/examples/graphics/SOI_filtering.html
+     - https://github.com/liv0505/Lanczos-Filter
+    but the code might live in and originate from further unidentified places.
+
+    The window can be either specified manually, or can be calculated to achieve
+    a filter of defined size (often called "a"). If nothing else is specified a 
+    size-2 filter is constructed (one positive central lobe with two negative lobes 
+    on either side).
+
+    Parameters
+    ----------
+    cutoff : int/float
+        The cutoff frequency in time steps.
+    window : int
+        *Optional*, by default calculated to yield a filter of given order. The length 
+        of the filter window in time steps.
+    size : int
+        *Optional*, default 2. If the window length is calculated automatically, the
+        size parameter of the requested filter can be specified here. The resulting 
+        window length is ``int(size*cutoff) + 1``.
+
+    Returns
+    -------
+    np.ndarray with dimension (window)
+        The filter weights.
+    '''
+
+    if not window:
+        window = int(size*cutoff) + 1
+    
+    order = ((window - 1) // 2 ) + 1
+    nwts = 2 * order + 1
+    w = np.zeros([nwts])
+    n = nwts // 2
+    w[n] = 2 / cutoff
+    k = np.arange(1., n)
+    sigma = np.sin(np.pi * k / n) * n / (np.pi * k)
+    firstfactor = np.sin(2. * np.pi / cutoff * k) / (np.pi * k)
+    w[n-1:0:-1] = firstfactor * sigma
+    w[n+1:-1] = firstfactor * sigma
+    
+    return w[1:-1]
+
 #
