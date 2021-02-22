@@ -19,19 +19,20 @@ conf = settings_obj({
     'q_lines': {},
     'q_obj': {},
     'datapath': ['.',
-        '/Data/gfi/share/Reanalyses/NORA10', 
+        '/Data/gfi/share/Reanalyses/ERA-20C/6HOURLY', 
         '/Data/gfi/users/local/share',
+        '/Data/gfi/users/csp001/share', 
     ], 
     'opath': '.',
     'oformat': 'nc',
     'staticfile': None,
     'epoch': dt(1900,1,1,0),
     'calendar': 'standard',
-    'timestep': td(0.125),
-    'gridsize': (400,248),
+    'timestep': td(0.25),
+    'gridsize': (181,360),
     'local_timezone': default_conf.local_timezone,
 }, [])
-# NORA10 is following our standard naming convention
+# ERA-20C is following our standard naming convention.
 conf.register_variable(standard_variables)
 
 
@@ -40,9 +41,9 @@ class files_by_plevq(_files_by_plevq):
     def __init__(self, plevq, start=None, end=None):
         plev, q = plevq
         if plev == '__all__':
-            raise ValueError('NORA10 does not support requests for all vertical levels.')
+            raise ValueError('ERA-20C does not support requests for all vertical levels.')
         if q == '__all__':
-            raise ValueError('NORA10 does not support requests for all variables.')
+            raise ValueError('ERA-20C does not support requests for all variables.')
 
         if not start:
             start = dt(1979,1,1,0)
@@ -53,14 +54,11 @@ class files_by_plevq(_files_by_plevq):
 
     def __next__(self):
         if self.cur < self.end:
-            filename = f'NORA10.{self.cur.year}{self.cur.month:02d}.{self.plev}.{self.q}'
-            
-            nxt = dt(self.cur.year + (self.cur.month // 12), self.cur.month % 12 + 1, 1, 0)
-            monlen = int((
-                nxt - dt(self.cur.year, self.cur.month, 1, 0)
-            ).total_seconds() / conf.timestep.total_seconds())
-            tidxs_all = range(monlen)
-            dates_all = [dt(self.cur.year, self.cur.month, 1, 0) + conf.timestep*i for i in tidxs_all]
+            filename = f'e2.ans.{self.cur.year}.{self.plev}.{self.q}'
+
+            yearlen = int((dt(self.cur.year+1, 1, 1, 0) - dt(self.cur.year, 1, 1, 0)).total_seconds() / conf.timestep.total_seconds())
+            tidxs_all = range(yearlen)
+            dates_all = [dt(self.cur.year, 1, 1, 0) + td(0.25)*i for i in tidxs_all]
 
             tidxs = [tidx for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
             dates = [dates_all[tidx] for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
@@ -70,7 +68,7 @@ class files_by_plevq(_files_by_plevq):
             else:
                 size = (len(tidxs), 1) + conf.gridsize
 
-            self.cur = nxt
+            self.cur = dt(self.cur.year+1, 1, 1, 0)
             return filename, tidxs, dates, size
 
         else:
@@ -78,7 +76,7 @@ class files_by_plevq(_files_by_plevq):
 
 
 def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
-    ''' Get standard meta-information for NORA10
+    ''' Get standard meta-information for ERA-20C
 
     Parameters
     ----------
