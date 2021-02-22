@@ -855,6 +855,9 @@ def lanczos_weights_lowpass(cutoff, window=None, size=2):
     firstfactor = np.sin(2. * np.pi / cutoff * k) / (np.pi * k)
     w[n-1:0:-1] = firstfactor * sigma
     w[n+1:-1] = firstfactor * sigma
+
+    # Normalize to sum of 1
+    w[1:-1] /= w[1:-1].sum()
     
     return w[1:-1]
 
