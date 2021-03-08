@@ -1947,6 +1947,70 @@ contains
     !
   end subroutine
   !
+  !@ Calculate the F-diagnostic of Parfitt, Czaja and Seao (2017)
+  !@
+  !@ F := vorticity * abs(temperature gradient) / (fcor * 0.45 K/100km)
+  !@ 
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ t : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     3D temperature field.
+  !@ u : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The u-wind velocity field.
+  !@ v : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The v-wind velocity field.
+  !@ lat : np.ndarray with shape (ny) and dtype float64
+  !@     Latitude of the grid point.
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     The Parfitt F diagnostic
+  subroutine parfitt_f(res, nx,ny,nz, t, u, v, lat, dx, dy)
+    use consts
+    !
+    real(kind=nr), intent(in) :: t(nz,ny,nx), u(nz,ny,nx), v(nz,ny,nx), lat(ny,nx), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    integer(kind=ni), intent(in) :: nx,ny,nz
+    !f2py depend(nz,ny,nx) :: u,v,res
+    !f2py depend(ny,nx) :: lat,dx,dy
+    !
+    real(kind=nr) :: zeta(nz,ny,nx), tx(nz,ny,nx), ty(nz,ny,nx), fcor
+    real(kind=nr), parameter :: t_grad_scale = 0.45e-5
+    integer(kind=ni) :: i,j,k
+    ! -----------------------------------------------------------------
+    !
+    call vor(zeta, nx,ny,nz, u, v, dx,dy)
+    call grad(tx, ty, nx,ny,nz, t, dx,dy)
+    !
+    do i = 1_ni,nx
+       do j = 1_ni,ny
+          fcor = 2.0_nr * omega_rot * sin(pi/180.0_nr * lat(j,i))
+          do k = 1_ni,nz
+             res(k,j,i) = zeta(k,j,i) * sqrt(tx(k,j,i)**2 + ty(k,j,i)**2) / (t_grad_scale * fcor)
+          end do
+       end do
+    end do
+    !
+  end subroutine
+  !
   !*****************************************************************************************
   !> author: Jacob Williams
   !  date: 7/13/2014

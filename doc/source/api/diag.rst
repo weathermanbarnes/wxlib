@@ -18,6 +18,7 @@ dynlib.diag
    .. autofunction:: def_total
    .. autofunction:: div
    .. autofunction:: frontogenesis
+   .. autofunction:: parfitt_f
    .. autofunction:: geop_from_montgp
    .. autofunction:: grad_shear_nat
    .. autofunction:: isen_geop_slope
