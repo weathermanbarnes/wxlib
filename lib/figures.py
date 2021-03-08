@@ -271,7 +271,7 @@ def setup(**kwargs):
     top = 0.99
     bottom = 0.01
 
-    figsize = kwargs.pop('fig_size')
+    figsize = kwargs.pop('fig_size', 'auto')
     dpi = kwargs.get('fig_dpi')
 
     # Default size: 32 in² at 150dpi gives about 20x20cm image at typical screen resolutions of 100 dpi
@@ -290,11 +290,11 @@ def setup(**kwargs):
     
     # Adapt figure size automatically if a color bar is added
     if not kwargs.get('cb_disable'): 
-        expand = kwargs.get('cb_expand_fig_fraction')
-        if kwargs.get('cb_orientation') == 'horizontal':
-            figsize = (figsize[0], figsize[1]/(1.0-expand))
-        else:
+        expand = kwargs.get('cb_expand_fig_fraction', 0.15)
+        if kwargs.get('cb_orientation') == 'vertical':
             figsize = (figsize[0]/(1.0-expand), figsize[1])
+        else:
+            figsize = (figsize[0], figsize[1]/(1.0-expand))
     
     # Adapt figure size and top margin automatically if a title is added
     if kwargs.get('title'):
@@ -997,8 +997,8 @@ def map_overlay_barbs(u, v, static, **kwargs):
             kwargs_['linestyles'] = 'solid'
         if type(kwargs_.get('length')) == type(None):
             kwargs_['length'] = 6
-        if type(kwargs_.get('linewidth')) == type(None):
-            kwargs_['linewidth'] = 0.5
+        if type(kwargs_.get('linewidths')) == type(None):
+            kwargs_['linewidths'] = 0.5
 
         m.barbs(xt, yt, ut, vt, zorder=3, **kwargs_)
     
