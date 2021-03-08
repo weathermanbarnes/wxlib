@@ -41,7 +41,35 @@ def n_hemisphere():
 
 n_hemisphere.aspect = 1.0
 
-# (c) Southern polar centered map
+# (c) Northern polar centered map, focussing on extratropics
+def n_extratropics():
+	''' Stereographic map, centered on the north pole, covering most of the northern hemisphere
+
+	Returns
+	-------
+	Basemap
+		map projection instance
+	'''
+
+	return Basemap(projection='npstere',boundinglat=35,lon_0=-50,resolution='c', area_thresh=10000)
+
+n_extratropics.aspect = 1.0
+
+# (d) Northern polar centered map, focussing on Nordic and Polar Seas
+def atlantic_arctic():
+	''' Stereographic map, centered on the north pole, covering most of the northern hemisphere
+
+	Returns
+	-------
+	Basemap
+		map projection instance
+	'''
+
+	return Basemap(projection='npstere',boundinglat=53,lon_0=0,resolution='l', area_thresh=10000)
+
+atlantic_arctic.aspect = 1.0
+
+# (e) Southern polar centered map
 def s_hemisphere():
 	''' Stereographic map, centered on the south pole, covering most of the southern hemisphere
 
@@ -55,7 +83,21 @@ def s_hemisphere():
 
 s_hemisphere.aspect = 1.0
 
-# (d) North-Atlantic map
+# (f) Southern polar centered map, focussing on extratropics
+def s_extratropics():
+	''' Stereographic map, centered on the north pole, covering most of the northern hemisphere
+
+	Returns
+	-------
+	Basemap
+		map projection instance
+	'''
+
+	return Basemap(projection='spstere',boundinglat=-35,lon_0=0,resolution='c', area_thresh=10000)
+
+s_extratropics.aspect = 1.0
+
+# (g) North-Atlantic map
 def N_Atlantic():
 	''' Map over the North Atlantic, using the Lambert conformal projection
 
@@ -70,7 +112,7 @@ def N_Atlantic():
 
 N_Atlantic.aspect = 1.5
 
-# (e) North-Pacific map
+# (h) North-Pacific map
 def N_Pacific():
 	''' Map over the North Pacific, using the Lambert conformal projection
 
@@ -85,9 +127,9 @@ def N_Pacific():
 
 N_Pacific.aspect = 1.5
 
-# (f) Australia map
+# (i) Australia map
 def Australia():
-	''' Map over the Australia, using the Lambert conformal projection
+	''' Map over Australia, using the Lambert conformal projection
 
 	Returns
 	-------
