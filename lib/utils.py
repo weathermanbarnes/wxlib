@@ -100,6 +100,10 @@ def unscale(var):
     """
     
     missing = -32767
+    
+    # Replace infinite by NaN, otherwise the scaling will reduce all other values to zero
+    var = var.astype('f8')
+    var[~np.isfinite(var)] = np.nan 
 
     maxv  = np.nanmax(var)
     minv  = np.nanmin(var)
@@ -487,7 +491,7 @@ def sect_gen_points(coords, m, dxy):
 
     return retlon, retlat, retxy
 
-def aggregate(dates, dat, agg):
+def aggregate(dates, dat, agg, epoch=None):
     ''' General temporal aggregation of data
 
     The function assumes that the data is be equally spaced in time. This
@@ -519,6 +523,9 @@ def aggregate(dates, dat, agg):
         * ``three_daily``: 3-day intervals starting from the first given date
         * ``two_daily``: 2-day intervals starting from the first given date
         * ``daily``: 1-day intervals starting from the first given date
+    epoch : datetime
+        *Optional*: Reference date used for some aggregation intervals. Defaults to the 
+        first date in dates.
     
     Returns
     -------
@@ -530,7 +537,7 @@ def aggregate(dates, dat, agg):
 
     dtd = dates[1] - dates[0]
 
-    t_iter = getattr(tagg, agg)(dates[0], dtd)
+    t_iter = getattr(tagg, agg)(dates[0], dtd, epoch=epoch)
     
     # 1. Find length of output array and generate time slices for each aggregation interval
     #    Aggegate by output of functions t_iter.start and t_iter.end; 
@@ -634,7 +641,7 @@ def dist_sphere(lon1, lat1, lon2, lat2, r=6.37e6):
     ''' Shortest distance on a sphere
 
     Calculate the great circle distance between two points on the surface of a sphere, 
-    using spherical trigonometry. By default, the radius of the sphere is assuemed     to 
+    using spherical trigonometry. By default, the radius of the sphere is assumed to 
     be the Earth radius, R = 6370 km, but that can be changed via the optional 
     parameter r.
 
@@ -664,7 +671,8 @@ def dist_sphere(lon1, lat1, lon2, lat2, r=6.37e6):
     dlon = np.pi/180 * (lon2 - lon1)
     lat1r = np.pi/180 * lat1
     lat2r = np.pi/180 * lat2
-    dist = r * np.arccos(np.sin(lat1r)*np.sin(lat2r) + np.cos(lat1r)*np.cos(lat2r)*np.cos(dlon))
+    acos = np.sin(lat1r)*np.sin(lat2r) + np.cos(lat1r)*np.cos(lat2r)*np.cos(dlon)
+    dist = r * np.arccos(np.maximum(np.minimum(acos,1.0),-1.0))
 
     return dist
 
@@ -707,7 +715,7 @@ def dist_green_latlon(lon, lat):
 
 
 
-def dist_from_mask_latlon(featmask, green_dists, izero):
+def dist_from_mask_latlon(featmask, green_dists, izero, quiet=True):
     ''' Calculate the minimum distance to any feature, as given by a mask field
 
     Parameters
@@ -719,6 +727,8 @@ def dist_from_mask_latlon(featmask, green_dists, izero):
         ``dist_green_latlon`` to prepare this array.
     izero : int
         Longitude-index of the zero meridian
+    quiet : bool
+        *Optional*, default ``True``. If not quiet, progress is printed.
     
     Returns
     -------
@@ -728,7 +738,12 @@ def dist_from_mask_latlon(featmask, green_dists, izero):
 
     ny = featmask.shape[-2]
     mindists = np.ones(featmask.shape) * 50.0e6 # Larger than the circumpherence of the Earth
-    for pos in np.argwhere(featmask):
+    poss = np.argwhere(featmask)
+    updateevery = len(poss) // 1000
+    for idx, pos in enumerate(poss):
+        if idx % updateevery == 0 and not quiet:
+            print(f'{idx/10/updateevery:3.1f}%', end=chr(13))
+
         overwrite = tuple(pos[:-2]) + (slice(None), slice(None))
         j, i = pos[-2:]
         shift = i - izero
@@ -739,6 +754,9 @@ def dist_from_mask_latlon(featmask, green_dists, izero):
             curdists = np.roll(green_dists[j,::-1,:], shift, axis=1)
 
         mindists[overwrite] = np.minimum(mindists[overwrite], curdists)
+
+    if not quiet:
+        print('')
     
     return mindists
 
