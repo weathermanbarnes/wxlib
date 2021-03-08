@@ -184,7 +184,7 @@ class cal_pentad(tagg):
         if calendar.isleap(dti.year) and dti.timetuple().tm_yday >= 60:
             startleap = 1
 
-        pentad = ((dti - dt(dti.year, 1, 1)).days - startleap)/ 5 
+        pentad = ((dti - dt(dti.year, 1, 1)).days - startleap)// 5 
         if calendar.isleap(dti.year) and pentad == 11:
             longpentad = 1
 
