@@ -1,12 +1,15 @@
 #!/usr/bin/env python 
 # -*- encoding: utf-8
 
+raise NotImplementedError('This code is obsolete; '
+        'if to be kept within dynlib mid- and long-term, it should '
+        'be included as a get_eof function in metio.datasource')
+
 from __future__ import absolute_import, unicode_literals, print_function
 
 from . import utils
 from . import tagg
 from .shorthands import np, dt, get_instantaneous, get_aggregate, metsave_timeless
-from . import settings_basic as s
 
 import pca_module as pca
 

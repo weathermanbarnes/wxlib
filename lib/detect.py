@@ -9,8 +9,6 @@ from datetime import datetime as dt, timedelta as td
 
 from . import dynfor
 from . import docutil
-from . import settings_basic as s
-from .metio import metopen, metsave, dts2str
 
 # Take over the contents of dynfor.detect to this module and inject documentation from the Fortran sources
 docutil.takeover(dynfor.detect, 'detect', sys.modules[__name__])
@@ -153,8 +151,7 @@ def block_by_grad_rev(dat, grid, lat_band=(30,70),
 
 
     print('Stage 1+2: Finding gradient reversals and conenct them in time')
-    ny, nx = s.conf.gridsize
-    dtd = s.conf.timestep
+    ny, nx = grid.x.shape
     tlen = dat.shape[0]
 
     # Stage 1: Calculate blocking indicator
@@ -323,7 +320,7 @@ def frontalvolume_largescale(tfp, dx, dy):
     return labels
 
 
-def frontalvolume_smallscale(tfp, dx, dy):
+def frontalvolume_smallscale(tfp, dx, dy, quiet=True):
     ''' Detect frontal zones as coherent areas with strong TFP gradients
     
     The small-scale version of this function (applicable for example to NORA10 data)
@@ -347,6 +344,8 @@ def frontalvolume_smallscale(tfp, dx, dy):
     dy : np.ndarray with shape (ny,nx) and dtype float64
         The double grid spacing in y-direction to be directly for centered differences.
         ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+    quiet : bool
+        *Optional*, default ``True''. If ``False'' display progress by current time step.
     
     Returns
     -------
@@ -366,6 +365,8 @@ def frontalvolume_smallscale(tfp, dx, dy):
 
     labels = np.empty(tfp.shape, dtype='i4')
     for tidx in range(tfp.shape[0]):
+        if not quiet:
+            print(f'{tidx}/{tfp.shape[0]}', end=chr(13))
         ddx, ddy = dynfor.derivatives.grad(tfp[tidx,:,:,:], dx, dy)
         tfp_grad = np.sqrt(ddx**2 + ddy**2)
     
@@ -384,6 +385,9 @@ def frontalvolume_smallscale(tfp, dx, dy):
                 labels_[labels_ == n] = 0
 
         labels[tidx,:,:,:] = labels_
+
+    if not quiet:
+        print('Finished.')
 
     return labels
 

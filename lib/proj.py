@@ -142,4 +142,42 @@ def Australia():
 
 Australia.aspect = 1.5
 
+# (g) Maps from iveret
+# -> Immediate surroundings of Bergen
+def Bergen():
+	return Basemap(projection='lcc', lat_0=60, lat_ts=60, lon_0=15, resolution='h', 
+			llcrnrlon=4.75, llcrnrlat=60.1, urcrnrlon=5.8, urcrnrlat=60.8)
+Bergen.aspect = 1.0
+
+# -> Approximately Vestland fylke
+def Vestland():
+	return Basemap(projection='lcc', lat_0=60, lat_ts=60, lon_0=15, resolution='h', 
+			llcrnrlon=2.0, llcrnrlat=58.5, urcrnrlon=7.97, urcrnrlat=62.5)
+Vestland.aspect = 1.0
+
+# -> Southern Norway
+def S_Norway():
+	return Basemap(projection='lcc', lat_0=60, lat_ts=60, lon_0=15, resolution='i', 
+			llcrnrlon=-1.5, llcrnrlat=55.4, urcrnrlon=13, urcrnrlat=65.0)
+S_Norway = 1.0
+
+# -> Scandinavia, covering about the entire AROME MetCoop domain
+def Scandinavia():
+	return Basemap(projection='lcc', lat_0=63.3, lat_ts=63.3, lon_0=15, resolution='i', 
+			llcrnrlon=0.3, llcrnrlat=50.3, urcrnrlon=54.2, urcrnrlat=71.5)
+Scandinavia.aspect = 1.125
+
+# -> North Atlantic
+def N_Atlantic_forecast():
+	return Basemap(projection='lcc', lat_0=58, lat_ts=58, lon_0=-30, resolution='l', 
+			width=10800000, height=7200000)
+N_Atlantic_forecast.aspect = 1.5
+
+# -> Barents Sea, covering about the entire AROME Arctic domain
+def Barents_Sea():
+	return Basemap(projection='lcc', lat_0=77.5, lat_ts=77.5, lon_0=-25, resolution='i', 
+			llcrnrlon=-16.0, llcrnrlat=69.5, urcrnrlon=67.5, urcrnrlat=71.5)
+Barents_Sea.aspect = 1.25
+
+
 # the end

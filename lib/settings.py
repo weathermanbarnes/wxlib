@@ -2,7 +2,7 @@
 # -*- encoding: utf-8
 
 
-''' Defines additional data structures for plot settings storage and convenient access
+''' Defines basic data structures for settings storage and convenient access
 
 Dynlib settings are in essence a (rather large) set of key-value pairs, which 
 could be well represented by the python built-in ``dict`` object. However, the 
@@ -20,343 +20,249 @@ pure ``dict`` object has some drawbacks in this context:
 
 For these reasons, this module introduces:
 
- #. ``nd_default_dict`` objects: Derived from ``default_dict``, it adds an abitrary
-    number of dimensions, accessible by ``dat[key1,key2,...,keyN]``. Valid keys for
-    each dimension are prescribed, and default values must be provided for each key
-    in the last dimesion. Default values are identical for all ``dat[::,keyN]``, 
-    and hence independent from anything but the last dimension.
- #. ``plot_settings_dict``: A variant of the ``nd_default_dict`` used for storing
-    plot configuration. The number of dimensions is fixed to three. They are, in order: 
-    vertical level, variable and plot configuration key. 
+ #. ``default_dict`` objects: A variant of ``dict`` with a pre-defined set of keys 
+    and default values for each.
+ #. ``settings_obj``: A variant of the ``default_dict`` where access is also possible
+    through the attribute syntax dat.key. This class is the basis for the conf 
+    object, the configuration root. Within, ``conf.plot`` and ``conf.plotf`` are 
+    ``plot_settings_dict`` objects.
+ #. ``in_context``, ``def_context`` and ``get_context`` functions, to define new 
+    contexts (i.e. named modular sets of settings), to check whether a specific 
+    context is active, and to access the settings associated with a context, 
+    respectively.
 '''
-
-from __future__ import absolute_import, unicode_literals
 
 import numpy as np
 from copy import copy 
-
-from . import cm, proj
-from . import settings_basic as base
-
-from .settings_basic import in_context, def_context, get_context, is_active_context, set_active_context
+from .metio.standard_variables import standard_variables
 
 import collections
 
 
-class nd_default_dict(base.default_dict):
-	''' n-dimensional dictionary with default values for valid keys in the last dimension
+class default_dict(collections.MutableMapping):
+    ''' Dictionary with a predefined set of valid keys and default values for each 
 
-	The default value is independent from any dimension but the last. All dimensions 
-	before the last are subsequently called "first dimensions".
+    Non-default values are stored in ``self._``, the defaults in ``self._defaults``.
+    
+    Parameters
+    ----------
+    defaults : dict
+        Definition of valid keys and their default values.
+    mutexes : list of sets
+        Sets of mutually exclusive configuration keys. As soon as one is not None, all others 
+        are automaticall set to None.
+    '''
 
-	Valid combinations of keys for the first dimensions are specified using "tables". Each
-	table is a list of sets containing valid keys for each of the first dimensions. Every 
-	combination between these valid keys is assumed to be meaningful. As an example, a 
-	table could contain a set of all available pressure levels and a set of all variables 
-	available on pressure levels. If a variable is only available on one of the pressure
-	levels, it would require an additional table, if one wants to avoid the configuration
-	for that variable to be available on all pressure levels.
-	
-	The set of allowed keys for each dimension is limited. Valid keys can be introduced 
-	through the ``add_default()`` and ``add_table()`` functions.
+    def __init__(self, defaults, mutexes):
+        self._ = {}
+        self._defaults = defaults
 
-	Parameters
-	----------
-	first_table : list of sets
-	    Sets of valid keys for each of the first dimensions.
-	defaults : dict
-	    Definition of valid keys and their default values.
-	mutexes : list of sets
-	    Sets of mutually exclusive configuration keys. As soon as one is not None, all others 
-	    are automaticall set to None.
-	'''
+        self._mutexes = {}
+        for mutex in mutexes:
+            for key in mutex:
+                self._mutexes[key] = copy(mutex)
+                self._mutexes[key].remove(key)
 
-	def __init__(self, first_table, defaults, mutexes):
-		for default in defaults.values():
-			if not isinstance(default, collections.Hashable):
-				raise ValueError('Defaults for plotconf must be immutable, but got variable of type %s, value: %s' % (type(default), str(default)))
-		self._fdims = [first_table, ]
-		self._ndims = len(first_table) + 1
-		base.default_dict.__init__(self, defaults, mutexes) 	# dictionary of valid keys in the last dimension and their default values
-	
-	def __check_key(self, key, allow_blank=False):
-		''' Check if a given query key is valid '''
+        # Mutable (approximated by "non-hashable") types can be changed in place. 
+        # Hence, they must be copied over to the overrides dict to avoid overriding defaults
+        for key, value in defaults.items():
+            if not isinstance(value, collections.Hashable):
+                self._[key] = copy(value)
 
-		if len(key) < self._ndims - 1:
-			raise KeyError('Key must contain at least %d dimensions' % self._ndims-1)
-		elif len(key) > self._ndims:
-			raise KeyError('Key can at most contain %d dimensions' % self._ndims)
-		
-		found = False
-		for table in self._fdims:
-			for i, valid_skeys in zip(range(self._ndims-1), table):
-				if key[i] == slice(None):
-					if allow_blank:
-						if i == self._ndims - 2:
-							found = True
-					else:
-						raise KeyError('Only multiple assignment supported.')
-				elif not key[i] in valid_skeys:
-					break
-				elif i == self._ndims - 2:
-					found = True
-			if found == True:
-				break
-		if not found:
-			raise KeyError(key)
-		
-		return
+        collections.MutableMapping.__init__(self)
+        
+    def __getitem__(self, key):
+        ''' Implements the access syntax ``dat[key]`` '''
 
+        if key in self._:
+            return self._[key]
+        elif key in self._defaults:
+            return self._defaults[key]
+        else:
+            raise KeyError(key)
 
-	def __default_walk(self, key, recur=None):
-		''' Return a list of keys to be checked for generic overrides'''
+    def __setitem__(self, key, value):
+        ''' Implements the assignment syntax ``dat[key] = value`` '''
+        
+        # Respect that some combination configuration are not meaningful
+        if not type(value) == type(None):
+            for mutex in self._mutexes.get(key, []):
+                self._[mutex] = None
 
-		if recur == None:
-			recur = self._ndims-2
+        if key in self._defaults:
+            self._[key] = value
+        else:
+            raise KeyError(key)
 
-		if recur > 0:
-			keys = []
-			keys.extend(self.__default_walk(key, recur-1))
-			if not key[recur] == None:
-				nkey = key[:recur] + (None, ) + key[recur+1:]
-				keys.extend(self.__default_walk(nkey, recur-1)) 
-		else:
-			if key[0] == None:
-				keys = [key, ]
-			else:
-				nkey = (None, ) + key[1:]
-				keys = [key, nkey]
+    def __delitem__(self, key):
+        ''' Implements the reset syntax ``del dat[key]`` '''
 
-		return keys
+        if key in self._:
+            # Mutable (approximated by "non-hashable") types can be changed in place. 
+            # Hence, they must be copied over to the overrides dict to avoid overriding defaults
+            if not isinstance(self._defaults[key], collections.Hashable):
+                self._[key] = copy(self._defaults[key])
+            else:
+                del self._[key]
+        elif key in self._defaults:
+            pass
+        else:
+            raise KeyError(key)
 
-	
-	def __getitem__(self, key):
-		''' Implement access via the ``dat[key1,key2,...,keyN]`` syntax '''
+    def __iter__(self):
+        ''' Implement interation over the dictionary, e.g. the syntax ``for key in dat:`` '''
 
-		self.__check_key(key)
-		
-		if len(key) == self._ndims:
-			for key in self.__default_walk(key):
-				if key in self._:
-					return self._[key]
-			
-			if key[-1] in self._defaults:
-				return self._defaults[key[-1]]
-			else:
-				raise KeyError(key)
-		else: 
-			ret = {}
-			for skey in self._defaults:
-				fkey = key + (skey, )
-				ret[skey] = self[fkey]
+        return self._defaults.__iter__()
 
-			return ret
-	
-	def __setitem__(self, key, value):
-		''' Implement assignment via the ``dat[key1,key2,...,keyN] = value`` syntax '''
+    def __len__(self):
+        ''' Implements the length query, allowing among others to use ``len(dat)`` '''
 
-		self.__check_key(key, allow_blank=True)
-
-		# Replace slice(None) by None for multiple assignment
-		for n, skey in zip(range(len(key)), copy(key)):
-			if skey == slice(None):
-				key = key[:n] + (None,) + key[n+1:]
-		
-		# Got one specific key to override
-		if len(key) == self._ndims:
-			# Respect that some combination configuration are not meaningful
-			if type(value) == type(None):
-				for mutex in self._mutexes.get(key[-1], []):
-					mkey = key[:-1] + (mutex,)
-					self._[mkey] = None
-			self._[key] = value
-		
-		# Last dimension missing, expecting dict to override several keys at once
-		else: 
-			if not type(value) == dict:
-				raise TypeError('Dict required for multiple assignment, got `%s` instead.' % type(value))
-
-			for lkey, lvalue in value.items():
-				fullkey = key + (lkey,)
-				if not lkey in self._defaults:
-					raise KeyError(fullkey)
-				# Respect that some combination configuration are not meaningful
-				if type(lvalue) == type(None):
-					for mutex in self._mutexes.get(lkey, []):
-						mkey = key + (mutex,)
-						self._[mkey] = None
-				self._[fullkey] = lvalue
-				
-
-	def __delitem__(self, key):
-		''' Implement reset via the ``del dat[key1,key2,...,keyN]`` syntax '''
-
-		self.__check_key(key, allow_blank=True)
-
-		for n, skey in zip(range(len(key)), copy(key)):
-			if skey == slice(None):
-				key = key[:n] + (None,) + key[n+1:]
-		
-		if len(key) == self._ndims:
-			if key in self._:
-				del self._[key]
-		else:
-			for lkey in self._defaults:
-				fullkey = key + (lkey,)
-				if fullkey in self._:
-					del self._[fullkey]
-
-	def add_table(self, table):
-		''' Add new combinations for the first dimensions '''
-
-		if not len(table) == self._ndims - 1:
-			raise ValueError('Table needs to have %d dimensions, got %d instead.' % (
-					self._ndims - 1, len(table)) )
-		for dim in table:
-			if None in dim:
-				raise ValueError('None is reserved for internal use and cannot be used in tables')
-			dim.add(None)
-		self._fdims.append(table)
-
-	def add_default(self, key, value):
-		''' Add a new key and its default value for the last dimension '''
-
-		if key in self._defaults:
-			raise KeyError('Default value for %s exists already' % str(key))
-
-		self._defaults[key] = value
+        return len(self._defaults)
 
 
-class plot_settings_dict(nd_default_dict):
-	''' A version of the nd_default_dict, where the number of dimensions is fixed to 3
+class settings_obj(default_dict):
+    ''' Another interface to a dict using the attribute syntax for access 
 
-	The dimensions are, in order: vertical level, variable and plot configuration key.
+    The object provides the primary access to dynlib configuration via its 
+    attributes, e.g. ``conf.datapath``. As the configuration keys must be 
+    valid attribute names, keys are restricted to strings containing valid
+    python variable names. They can for example not begin with a number.
 
-	In contrast to the nd_default_dict, plot_settings_dict does not take an initial table as
-	an argument, as the dimensions are prescribed and no (plev,q)-table is more equal than
-	the others.
+    Even though access through attributes is the prefered way of accessing
+    configuration, the dictionary syntax ``conf['datapath']`` is not 
+    disabled and provides identical functionality.
 
-	Parameters
-	----------
-	defaults : dict
-	    Definition of valid keys and their default values.
-	mutexes : list of sets
-	    Sets of mutually exclusive configuration keys. As soon as one is not None, all others 
-	    are automaticall set to None.
-	'''
+    It also provides a mechanism to define new variables/vertical levels 
+    through the ``register_variable`` method.
 
-	def __init__(self, defaults, mutexes):
-		nd_default_dict.__init__(self, [], defaults, mutexes)
-		self._ndims = 3
-		self._fdims = []
-	
-	def merge(self, plev, q, **kwargs):
-		''' Merge given plot settings with the stored plot settings for (plev,q)
+    Parameters
+    ----------
+    defaults : dict
+        Definition of valid keys and their default values.
+    '''
+    
+    # Configuration keys that have a special meaning for the functionality of this class:
+    # They are required for registering variables
+    _Q = 'q'
+    _Q_FILE = 'qf'
+    _Q_LONG = 'q_long'
+    _Q_UNITS = 'q_units'
+    _Q_BINS = 'q_bins'
+    _Q_LINES = 'q_lines'
+    _Q_OBJ = 'q_obj'
+    _Q_STD = 'q_std'
+    _Q_AVG = 'q_avg'
+    
+    def _get(self, *keys):
+        ''' A third way to get a configuration item, using the syntax ``conf._get('datapath')`` '''
 
-		Parameters
-		----------
-		plev : str
-		    Vertical level name.
-		q : str
-		    Variable name.
+        if len(keys) > 1:
+            return self[keys[0]]._get(keys[1:])
+        elif len(keys) == 1:
+            return self[keys[0]]
+        else:
+            raise TypeError('_get() requires at least one key')
+    
+    def _add_default(self, key, value):
+        ''' Add a new configuration item and its default value '''
 
-		Keyword arguments
-		-----------------
-		plot arguments : all
-			For a list of valid arguments refer to :ref:`plot configuration`. Keyword 
-			arguments are applied both to the inset map and the main cross section.
+        if key in self._defaults:
+            raise KeyError(str(key) + ' already set')
+        self._defaults[key] = value
+    
+    def __getattribute__(self, key):
+        ''' Implement the attribute access syntax ``conf.datapath`` '''
 
-		Returns
-		-------
-		dict
-		    Merged plotconf parameters.
-		'''
+        if key[0] == '_' or key == 'register_variable':
+            return default_dict.__getattribute__(self, key)
 
-		merged = self[plev,q]
-		merged.update(kwargs)
-		
-		return merged
+        return self[key]
 
+    def __setattr__(self, key, value):
+        ''' Implement the attribute assignment syntax ``conf.datapath = value`` '''
 
-# Make sure that the plot defaults are immutable, 
-# such that they cannot be changed in place
-PLOT_DEFAULTS = {
-	'alpha': 1.0, 
-	'cb_disable': False, 
-	'cb_expand_fig_fraction': 0.10,
-	'cb_orientation': 'horizontal',
-	'cb_tickspacing': 'proportional',
-	'cb_shrink': 0.8,
-	'coastcolor': 'k', 
-	'fig_size': 'auto',
-	'fig_dpi': 150,
-	'gridcolor': 'k',
-	'grid_alpha': 0.3,
-	'grid_dashes': (10, 15),
-	'grid_latmax': 90,
-	'meridians': (-180,-120,-60, 0, 60, 120),
-	'parallels': (-60,-30, 0, 30, 60),
-	'hook': None,
-	'm': proj.world, 
-	'maskcolor': '0.25',
-	'mark': None, 
-	'name': '',
-	'name_prefix': '',
-	'oroalpha': 0.4, 
-	'orocolor': 'k', 
-	'oroscale': (9810., 19620., 29430., 39240., 49050., 58860., 68670., 78480.),
-	'overlays': (), 
-	'save': '', 
-	'section_hor_resolution': 25000.0,
-	'scale': 'auto', 
-	'scale_exceed_percentiles': (0.01, 0.99),
-	'scale_intervals': (1,2,3,5,10,),
-	'scale_intervals_periodic': True,
-	'scale_target_steps': 7,
-	'scale_symmetric_zero': False,
-	'show': True, 
-	'ticks': None, 
-	'ticklabels': (), 
-	'title': 'auto', 
-	'Zdata': None,
+        if key[0] == '_' or key == 'register_variable':
+            return default_dict.__setattr__(self, key, value)
+        
+        self[key] = value
+    
+    def __delattr__(self, key):
+        ''' Implement attribute reset using the syntax ``del conf.datapath`` '''
 
-	'lon': None, 
-	'lat': None, 
-	'norm': None, 
-	'vmin': None,
-	'vmax': None, 
-	'levels': None, 
-	'origin': None, 
-	'extent': None, 
-}
-PLOTF_DEFAULTS = copy(PLOT_DEFAULTS) 
+        if key[0] == '_' or key == 'register_variable':
+            return default_dict.__delattr__(self, key)
+        
+        del self[key]
+    
+    def __register_single_variable(self, var):
+        ''' Add a single variable to the configurarion '''
+        
+        q = var.q
 
-PLOT_DEFAULTS.update({
-	'cmap': None, 
-	'colors': 'k', 
-	'contour_labels': False,
-	'contour_labels_fontsize': 12,
-	'contour_labels_inline': True,
-	'contour_labels_inline_spacing': 2,
-	'contour_labels_format': '%1.1f',
-	'extend': 'neither', 
-	'linestyles': None, 
-	'linewidths': 2.0, 
-})
-PLOTF_DEFAULTS.update({
-	'cmap': cm.defabs, #cm.gist_ncar, needs to be immutable!
-	'colors': None, 
-	'extend': 'both', 
+        # Long name and units must be set
+        self[self._Q_LONG][q] = var.long_name
+        self[self._Q_UNITS][q] = var.units
 
-	'hatches': None,
-})
+        # Optional: file segment
+        if not type(var.qf) == type(None) and not var.qf == q:
+            self[self._Q_FILE][q] = var.qf
+            self[self._Q][var.qf] = q
 
-MUTEX_GROUPS = [set(['colors', 'cmap']), ]
+        # Optional: mapping to a standard shorthand 
+        if not type(var.q_std) == type(None) and not var.q_std == q:
+            self[self._Q_STD][q] = var.q_std
+
+        # Optional: mapping to a time-averge name
+        if not type(var.q_avg) == type(None) and not var.q_avg == q:
+            self[self._Q_AVG][q] = var.q_avg
+
+        # Optional: Register as special variable
+        if not type(var.bins) == type(None):
+            self[self._Q_BINS][q] = var.bins
+        if not type(var.lines) == type(None):
+            self[self._Q_LINES][q] = var.lines
+        if not type(var.objmask) == type(None):
+            self[self._Q_OBJ][q] = var.objmask
 
 
-# Inject plot settings into the default context
-base.conf.plot = plot_settings_dict(PLOT_DEFAULTS, MUTEX_GROUPS) 
-base.conf.plotf = plot_settings_dict(PLOTF_DEFAULTS, MUTEX_GROUPS)
+    def register_variable(self, variables):
+        ''' Register (a) new variable(s) 
+        
+        Parameters
+        ----------
+        variables : (list of) variable object(s)
+            A single or list of variable definitions, using the variable object defined in the generic data source.
+        '''
+
+        if type(variables) == list:
+            for var in variables:
+                self.__register_single_variable(var)
+        else:
+            self.__register_single_variable(variables)
+        
+
+# Not every key is applicable and used for all data sources -- but no additional keys than 
+# those listed here should be defined per data source.
+default_conf = settings_obj({
+    'q': {},        # Given a file name segment, which variable to we expect to find there?
+    'qf': {},       # Given a variable name, in which file do we find it?
+    'q_std': {},     # Given a data source-specific variable name, which standard variable name does it correspond to? (used primarily for plotting currently)
+    'q_avg': {},    # Given a variable name, what is the name of a time-averge (if different)
+    'q_units': {},
+    'q_long': {},
+    'q_bins': {},
+    'q_lines': {},
+    'q_obj': {},
+    'datapath': ['.', '/Data/gfi/users/local/share'], 
+    'staticfile': '',
+    'opath': '.',
+    'oformat': 'nc',
+    'epoch': None,
+    'timestep': None,
+    'gridsize': None,
+    'local_timezone': 'Europe/Oslo',
+}, [])
+default_conf.register_variable(standard_variables)
 
 
 # C'est la fin.

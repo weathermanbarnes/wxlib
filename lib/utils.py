@@ -21,7 +21,6 @@ import scipy.interpolate as intp
 from scipy.special import erfinv
 
 from . import tagg
-from . import settings_basic as s
 
 from datetime import datetime as dt, timedelta as td
 import calendar
@@ -271,7 +270,7 @@ def unflatten_lines(lines, loff, static, convert_grididx=True):
 
 #
 # return a 3d boolean array where frontal points are True, elsewere False
-def mask_fronts(fronts, froff, shape=s.conf.gridsize):
+def mask_fronts(fronts, froff, shape):
     ''' To be made obsolete by saving cold/warm/stat fronts separately as lines in the standard-dynlib way 
     
     See also
@@ -293,7 +292,7 @@ def mask_fronts(fronts, froff, shape=s.conf.gridsize):
     return masks
 
 
-def mask_lines_with_data(lines, loff, dat=None, shape=None):
+def mask_lines_with_data(lines, loff, shape, dat=None):
     ''' Mask lines in a gridded map
 
     Instead of returning the value ``1`` for grid points containing a line, 
@@ -312,20 +311,17 @@ def mask_lines_with_data(lines, loff, dat=None, shape=None):
         Lines to be marked on the map
     loff : np.array with dimensions (lineindex)
         List of point indexes for the first points of each line
+    shape : 2-tuple of int
+        Grid dimensions (ny,nx)
     dat : np.ndarray with dimensions (y,x)
         Optional: Data to be used for marking on the map
-    shape : 2-tuple of int
-        Optional: Grid dimensions
     
     Returns
     -------
     np.ndarray
         Gridded map of lines
     '''
-
-    if type(shape) == type(None):
-        shape = s.conf.gridsize
-
+    
     mask = np.zeros((lines.shape[0], shape[0], shape[1]))
 
     for t in range(lines.shape[0]):
@@ -491,7 +487,7 @@ def sect_gen_points(coords, m, dxy):
 
     return retlon, retlat, retxy
 
-def aggregate(dates, dat, agg, epoch=None):
+def aggregate(dates, dat, agg, epoch=None, bins=None):
     ''' General temporal aggregation of data
 
     The function assumes that the data is be equally spaced in time. This
@@ -526,13 +522,22 @@ def aggregate(dates, dat, agg, epoch=None):
     epoch : datetime
         *Optional*: Reference date used for some aggregation intervals. Defaults to the 
         first date in dates.
+    bins : list of float
+        *Optional*. If provided, the data will not be averaged in time. Instead histograms and 
+        relatively most frequent value will be determined for each time interval.
     
     Returns
     -------
     list of datetime
         Dates at with the aggregation periods start
+    list of datetime
+        Dates at with the aggregation periods end
     np.ndarray
-        Aggregated data
+        Aggregated data averages, or most frequent values for binned data
+    np.ndarray
+        Number of valid data, or data histograms for binned data
+    np.nparray
+        List of number of timesteps included in each aggregation period
     '''
 
     dtd = dates[1] - dates[0]
@@ -543,7 +548,9 @@ def aggregate(dates, dat, agg, epoch=None):
     #    Aggegate by output of functions t_iter.start and t_iter.end; 
     #    These functions give the first and the last time step for the interval `date` belongs to
     previ = -1
-    dates_out = []
+    start_dates = []
+    end_dates = []
+    cnt_out = []
     tslc = []
     for i, date in zip(range(len(dates)), dates):
         # Previous interval unfinished, yet we are in a new one.
@@ -554,7 +561,12 @@ def aggregate(dates, dat, agg, epoch=None):
         # End of an interval -> save
         if previ >= 0 and date == t_iter.end(date):
             tslc.append(slice(previ,i+1))
-            dates_out.append(dates[previ])
+            cnt_out.append(i+1 - previ)
+            start_dates.append(dates[previ])
+            if i+1 >= len(dates):
+                end_dates.append(dates[-1] + dtd)
+            else:
+                end_dates.append(dates[i+1])
             previ = -1
         
         # Start of an interval -> remember 
@@ -569,12 +581,28 @@ def aggregate(dates, dat, agg, epoch=None):
     shape = tuple(shape)
 
     dat_out = np.empty(shape)
+    if not type(bins) == type(None):
+        valid_out = np.empty(shape[0:1] + (len(bins),) + shape[1:], dtype='i4')
+    else:
+        valid_out = np.empty(shape, dtype='i4')
     
     # 3. Doing the actual calculations
     for i in range(outlen):
-        dat_out[i] = dat[tslc[i]].mean(axis=0)
+        dat_ = dat[tslc[i]]
+        if not type(bins) == type(None):
+            for bi in range(len(bins)-1):
+                upper, lower = bins[bi+1], bins[bi]
+                if upper > lower:
+                    valid_out[i,bi,:,:] += np.logical_and(dat_ >= lower, dat_ <  upper).sum(axis=0)
+                else:
+                    valid_out[i,bi,:,:] += np.logical_or(dat_ <  upper, dat_ >= lower).sum(axis=0)
+            dat_out[i] = cal_mfv(valid_out[i,:,:,:], bins)
 
-    return dates_out, dat_out
+        else:
+            dat_out[i] = np.nanmean(dat_, axis=0)
+            valid_out[i] = cnt_out[i] - np.isnan(dat_).sum(axis=0)
+
+    return start_dates, end_dates, dat_out, valid_out, np.array(cnt_out)
 
 
 
@@ -795,5 +823,59 @@ def smooth_xy_nan(dat, nsmooth):
 
     return dats
 
+
+
+def lanczos_weights_lowpass(cutoff, window=None, size=2):
+    ''' Calculate the weights for a 1d Lanczos lowpass filter with a given cutoff
+
+    The function is following Duchon C. E. (1979): Lanczos Filtering in One and Two 
+    Dimensions. Journal of Applied Meteorology, Vol 18, pp 1016-1022. It is adapted 
+    from code found at several places on the internet, so proper attribution is 
+    unclear. Sources were
+     - https://scitools.org.uk/iris/docs/v1.2/examples/graphics/SOI_filtering.html
+     - https://github.com/liv0505/Lanczos-Filter
+    but the code might live in and originate from further unidentified places.
+
+    The window can be either specified manually, or can be calculated to achieve
+    a filter of defined size (often called "a"). If nothing else is specified a 
+    size-2 filter is constructed (one positive central lobe with two negative lobes 
+    on either side).
+
+    Parameters
+    ----------
+    cutoff : int/float
+        The cutoff frequency in time steps.
+    window : int
+        *Optional*, by default calculated to yield a filter of given order. The length 
+        of the filter window in time steps.
+    size : int
+        *Optional*, default 2. If the window length is calculated automatically, the
+        size parameter of the requested filter can be specified here. The resulting 
+        window length is ``int(size*cutoff) + 1``.
+
+    Returns
+    -------
+    np.ndarray with dimension (window)
+        The filter weights.
+    '''
+
+    if not window:
+        window = int(size*cutoff) + 1
+    
+    order = ((window - 1) // 2 ) + 1
+    nwts = 2 * order + 1
+    w = np.zeros([nwts])
+    n = nwts // 2
+    w[n] = 2 / cutoff
+    k = np.arange(1., n)
+    sigma = np.sin(np.pi * k / n) * n / (np.pi * k)
+    firstfactor = np.sin(2. * np.pi / cutoff * k) / (np.pi * k)
+    w[n-1:0:-1] = firstfactor * sigma
+    w[n+1:-1] = firstfactor * sigma
+
+    # Normalize to sum of 1
+    w[1:-1] /= w[1:-1].sum()
+    
+    return w[1:-1]
 
 #
