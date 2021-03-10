@@ -1,6 +1,76 @@
 Extending dynlib
 ================
 
+.. _sec_f_vs_py:
+
+python versus Fortran
+---------------------
+
+The main goal behind the combination of python and Fortran is to minimise the total time required
+to finish a specific task, including the time for development, the time for debugging, and the
+time for actually running the code. python scripts are much quicker to develop and to debug than 
+Fortran programs, but calculations tend to be much faster in Fortran. For that reason, anything
+that requires serious computation is implemented in Fortran, and anything else in python. The
+tool ``f2py`` compiles the Fortran functions such that they are usable from python.
+
+Here, it is important to note that Fortran only provides the functions to be called from python. 
+Hence, there is no Fortran program to be executed, but the execution always happens through python.
+
+As an overview, what is written in Fortran?
+"""""""""""""""""""""""""""""""""""""""""""
+
+ * All slightly complex calculations, anything going beyond simple arithmetic functions on fields.
+
+And what is written in python?
+""""""""""""""""""""""""""""""
+
+ * Simple arithmetic field operations::
+   
+     y = a*x + b
+
+   Such simple arithmetic expressions are about equally fast in Fortran an python, even if a 
+   any or all of the variables are arrays. Hence, there is no need to write a Fortran function
+   encapsulating this kind of operation.
+ * Anything that requires more complex data structures. A list or a key-value storage are very hard to 
+   implement in Fortran, but included in the python language core. Many algorithms can be implemented
+   much more straightforwardly if these data structures are available. 
+ * File input/output. There are already functions available for python that can read pretty much any
+   data format, including netCDF, mat, and GRIB files. There's no need to reinvent those, or even to
+   implement your own functions in Fortran.
+ * Plot functions.
+
+A note on NCL
+"""""""""""""
+
+There are alternative high-level languages, which provide the same advantages over Fortran as python,
+and that are similarly easily coupled with Fortran. The most notable alternative is NCL. In principle, 
+it would be possible (and desirable) to provide all Fortran functions in dynlib also in NCL, but 
+unfortunately NCL does not support the Fortran90 concept of modules. Until this problem is solved, 
+dynlib cannot be used with NCL.
+
+Which language to choose for your development?
+""""""""""""""""""""""""""""""""""""""""""""""
+
+The discussion above will in most cases give a clear indication on which 
+language you should choose for your extension of dynlib. If still in doubt, a good strategy
+might be to start implementing in python. When you notice some bottleneck that slows down
+the python code too much for your liking, add a specialised Fortran function for that specific
+problem.
+
+If you have found the appropriate language, follow the recipies in the following sections to
+
+ * :ref:`sec_add_f_fun`
+ * :ref:`sec_add_py_fun`
+ * :ref:`sec_add_f_mod`
+ * :ref:`sec_add_py_mod`
+ * :ref:`sec_add_datasource`
+
+While developing, please make sure to follow the :ref:`sec_f_fmt` and the :ref:`sec_py_fmt`. 
+The recipies also explain how to include documentation for your addtions. In case that does not
+help your problem, a few further remarks about its general workings are in :ref:`sec_devel_docs`.
+
+
+
 Version control system
 ----------------------
 
@@ -16,14 +86,7 @@ start developing for dynlib. It is not a substitute for the git book!
 First you will need to create a clone of the repository, which will be come your personal 
 working copy of the source code.::
 
-  $ SHARED=/Data/gfi/users/local
-  $ git clone $SHARED/src/dynlib.git
-
-If you are not within the UiB network, you might want to use::
-
-  $ git clone <username>@login.uib.no:$SHARED/src/dynlib.git
-
-to clone the repository over ssh. 
+  $ git clone https://git.app.uib.no/Clemens.Spensberger/dynlib.git
 
 When you have a local copy, make sure everything works as expected by compiling dynlib.::
   
@@ -65,81 +128,22 @@ you can use::
 
 
 Using version control to collaborate
-------------------------------------
+""""""""""""""""""""""""""""""""""""
 
 At some point you will want to make some of your additions available to other users, or take over
-some of their changes to dynlib. This section briefly outlines a recommended procedure for doing so.
-
-First you will need to setup another copy of your repository. Make sure this repository is readable
-by others, as this is where you can make your changes available. From within your working copy, do::
-
-  $ git init --bare /path/to/your/personal/public/repository.git
-  $ git remote add <name> /path/to/your/personal/public/repository.git
-
-With these commands, you first setup a "bare" repository at the given location. A bare repository contains
-all the versioning information, but it cannot be used as a working copy, because no files are checked out.
-Bare repositories are only intended for sharing. Second, you setup a "remote" repository in your working 
-copy, which is essentially a name for the bare repository that you just created.
-
-Then, if you want to share the current version of your working copy, use ::
-
-  $ git pull <name> <branch>
-
-If you don't now what branch you're working on, it will most likely be ``master``.
-
-The procedures to take someone else's changes is relatively similar. First you will again want to
-setup a remote reposity with a name::
-  
-  $ git remote add <someothername> /path/to/someone/elses/public/repository.git
-
-Then you can get their most recent published version by::
-
-  $ git pull <someothername>
-
-git will then try to combine your current version with the one you pulled. In some easy cases (for 
-example of you edited different files / sections of files than your collaborator) git can do the merge
-automatically, but more often there will be *conflicts*. A good way to *resolve* your conflicts is to 
-use :: 
-
-  $ git mergetool -t <diff3-tool-of-your-choice>
-
-Again, ``meld`` ia good choice for the diff3-tool. For every file in which there is a conflict, this
-command will open a 3-way merge window. The resulting, merged file is in the middle, the to opposing
-versions left and right. Go through all the difference between the files to come up with a combined 
-version. Once you're finished, make sure to commit the merged version::
-
-  $ git commit 
-
-and to potentially share it with your collaborator.
+some of their changes to dynlib. The recommended way to do so is to fork the `dynlib repository on
+the UiB gitlab <https://git.app.uib.no/Clemens.Spensberger/dynlib>`_, commit your changes to your fork of the project and 
+then to send a pull request from there.
 
 
-Which language to choose?
--------------------------
 
-The discussion in :ref:`sec_f_vs_py` will in most cases give a clear indication on which 
-language you should choose for your extension of dynlib. If still in doubt, a good strategy
-might be to start implementing in python. When you notice some bottleneck that slows down
-the python code too much for your liking, add a specialised Fortran function for that specific
-problem.
-
-If you have found the appropriate language, follow the recipies in the following sections to
-
- * :ref:`sec_add_f_fun`
- * :ref:`sec_add_py_fun`
- * :ref:`sec_add_f_mod`
- * :ref:`sec_add_py_mod`
- * :ref:`sec_add_context`
-
-While developing, please make sure to follow the :ref:`sec_f_fmt` and the :ref:`sec_py_fmt`. 
-The recipies also explain how to include documentation for your addtions. In case that does not
-help your problem, a few further remarks about its general working are in :ref:`sec_devel_docs`.
-
-
+Adding functions to dynlib
+--------------------------
 
 .. _sec_add_f_fun:
 
 Adding a Fortran subroutine
----------------------------
+"""""""""""""""""""""""""""
 
 Here's a brief recipe of how to add a fortran function or subroutine to an existing module.
 
@@ -157,7 +161,7 @@ with dyncal will be included here.
 .. _sec_add_py_fun:
 
 Adding a python function
-------------------------
+""""""""""""""""""""""""
 
 Here's a brief recipe of how to add a python function to an existing module.
 
@@ -173,7 +177,7 @@ with dyncal will be included here.
 .. _sec_add_f_mod:
 
 Adding a Fortran module
------------------------
+"""""""""""""""""""""""
 
 If your new subroutine does not fit into any of the existing Fortran modules, you can create a new
 one. The procecures for this are a bit more involved, but still not difficult.
@@ -199,7 +203,7 @@ one. The procecures for this are a bit more involved, but still not difficult.
 .. _sec_add_py_mod:
 
 Adding a python module
-----------------------
+""""""""""""""""""""""
 
 If your new function does not fit into any of the existing python modules, you can create a new
 one. The procecures for this are a bit more involved, but still not difficult.
@@ -213,15 +217,15 @@ one. The procecures for this are a bit more involved, but still not difficult.
     documentation.
 
 
-.. _sec_add_context:
+.. _sec_add_datasource:
 
-Adding a context
-----------------
+Adding a data source
+--------------------
 
-Any settings file can define a new context by calling :func:`dynlib.settings.def_context`. If you
-created a new context describing for example a new data set, you can put it in ``lib/context`` 
-to make it available to other people. In this case, make sure to update the list of available 
-contexts :ref:`sec_context_list`.
+Data sources are defined as python submodules of ``dynlib.metio``. Most of the functionality is solved
+in general in ``dynlib.metio.datasource``, and only some dataset-specific functions are required, for 
+example a function mapping requested data to a list of filenames. Have a look at the existing data sources
+and adapt from the source that most closely matches the one you want to add.
 
 
 .. _sec_f_fmt:
@@ -257,8 +261,8 @@ python code conventions
 Again, these conventions aim to create a homogeneous source code base, which is easily 
 accessible for people new to dynlib.
 
- * Indent by tabs (make sure your editor does not sliently convert them to spaces). As
-   indention is part of the python syntax it's important not to mix indention patters!
+ * Indent by four spaces (make sure your editor does not sliently convert them to tabs). As
+   indention is part of the python syntax it's important not to mix indention patterns!
  * Use lower-case names.
  * Separate composite names by underscore.
  * Comments should be indented as the surrounding source code.
@@ -278,4 +282,12 @@ documentation is written in reStructuredText and resides in the folder ``doc/sou
 The API documentation makes use of python docstrings. For the Fortran routines, these docstrings
 are injected during import using :func:`dynlib.docutils.takeover`.
 
+
+Documentation helper API
+""""""""""""""""""""""""
+
+.. toctree::
+   :maxdepth: 2
+
+   api/docutil
 

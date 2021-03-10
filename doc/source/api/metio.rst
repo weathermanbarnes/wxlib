@@ -1,7 +1,7 @@
-dynlib.metio
-============
+dynlib.metio.datasource
+=======================
 
-.. automodule:: dynlib.metio
+.. automodule:: dynlib.metio.datasource
    :members:
    :undoc-members:
 

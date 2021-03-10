@@ -1,11 +1,5 @@
-Using dynlib
-============
-
-Using the dyncal command
-------------------------
-
-The dyncal command is still work-in-progress, and will be documented here once in a usable state.
-
+Calculating diagnostics
+=======================
 
 Using with python
 -----------------
@@ -15,18 +9,35 @@ impression of how to use Fortran routines from python.
 
 A comprehensive list of available functions is in the :ref:`sec_api`.
 
+Handling missing data
+---------------------
 
-Using with NCL
---------------
+Internally in dynlib, missing data is represented by ``NaN``, short for Not-a-Number. There are
+many advantages of using ``NaN`` over an custom, numerical value like ``-9999.99``:
 
-Unfortunately, the NCL mechanism of making Fortran routines usable from within NCL does not work
-with the Fortran90 construct of modules. Until this problem is solved, there is unfortunately no
-way to use the Fortran routines of dynlib directly from within NCL. 
+ #. Arithmetic operations with a numeric missing value will not return the missing value. As a
+    consequence one would need to put a where/if-statement around any arithmeric operations to check
+    if any of the operands contains a missing value. This procedure is tedious and error-prone.
+    In contrast, any arithmetic operation involving a ``NaN`` will yield ``NaN``, without requiring
+    any extra code.
+ #. It will *just work* with any application. In contrast, any numerical value could be a valid, 
+    meaningful value for some specific application, such that the missing value must be kept application 
+    dependent.
 
-If you prefer NCL for plotting, but still want to use dynlib for diagnostics or feature detections, 
-you will in a first step  need to save them to a netCDF file and can then in a second step load them
-into NCL.
+There are two downsides, however.
 
+ #. At least in Fortran and python there is no integer-``NaN``. Hence, when compressing data to 16-bit
+    integer for efficient storage, one must assign a custom missing value. 
+ #. Explicitly assigning/creating a ``NaN`` in Fortran, without creating a floating point exception signal 
+    (SIGFPE) during run time is comparatively hard. SIGFPEs are generally considered an error, such that
+    debugging is made much harder if they are created on purpose.
+
+Dynlib takes care of these downsides. First, the conversion to integer missing values is done 
+transparently in the :func:`dynlib.utils.scale` and :func:`dynlib.utils.unscale` functions when
+reading/writing compressed data from/to netCDF files. Second, the Fortran library contains a constant 
+``dynfor.consts.nan``, where the ``NaN`` value is created during compile time, such that it does not 
+create a SIGFPE during run time. Use this value if you want to explicitly assign a missing value in 
+Fortran.
 
 Integrate with own Fortran programs
 -----------------------------------
@@ -66,34 +77,40 @@ Assuming the above file is called ``example.f90``, you can compile it by
    :linenos:
 
 
-Handling missing data
----------------------
+.. _sec_api:
 
-Internally in dynlib, missing data is represented by ``NaN``, short for Not-a-Number. There are
-many advantages of using ``NaN`` over an custom, numerical value like ``-9999.99``:
+All diagnostics and utilities
+-----------------------------
 
- #. Arithmetic operations with a numeric missing value will not return the missing value. As a
-    consequence one would need to put a where/if-statement around any arithmeric operations to check
-    if any of the operands contains a missing value. This procedure is tedious and error-prone.
-    In contrast, any arithmetic operation involving a ``NaN`` will yield ``NaN``, without requiring
-    any extra code.
- #. It will *just work* with any application. In contrast, any numerical value could be a valid, 
-    meaningful value for some specific application, such that the missing value must be kept application 
-    dependent.
+.. toctree::
+   :maxdepth: 2   
+   
+   api/derivatives
+   api/detect
+   api/diag
+   api/ellipse
+   api/interpol
+   api/sphere
+   api/stats
+   api/tend
+   api/thermodyn
+   api/utils
 
-There are two downsides, however.
+Function configuration and constants
+""""""""""""""""""""""""""""""""""""
 
- #. At least in Fortran and python there is no integer-``NaN``. Hence, when compressing data to 16-bit
-    integer for efficient storage, one must assign a custom missing value. 
- #. Explicitly assigning/creating a ``NaN`` in Fortran, without creating a floating point exception signal 
-    (SIGFPE) during run time is comparatively hard. SIGFPEs are generally considered an error, such that
-    debugging is made much harder if they are created on purpose.
+.. toctree::
+   :maxdepth: 2
 
-Dynlib takes care of these downsides. First, the conversion to integer missing values is done 
-transparently in the :func:`dynlib.utils.scale` and :func:`dynlib.utils.unscale` functions when
-reading/writing compressed data from/to netCDF files. Second, the Fortran library contains a constant 
-``dynfor.consts.nan``, where the ``NaN`` value is created during compile time, such that it does not 
-create a SIGFPE during run time. Use this value if you want to explicitly assign a missing value in 
-Fortran.
+   api/config
+   api/const
+
+Import shorthands
+"""""""""""""""""
+
+.. toctree::
+   :maxdepth: 3
+
+   api/shorthands
 
 

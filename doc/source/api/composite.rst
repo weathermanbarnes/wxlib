@@ -1,7 +1,7 @@
 dynlib.composite
 ================
 
-.. automodule:: dynlib.composite
+.. automodule:: dynlib.metio.composite
    :members:
    :undoc-members:
 

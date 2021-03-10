@@ -1,5 +1,5 @@
-Using dynlib's plotting facilities
-==================================
+Plotting
+========
 
 Motivation and scope
 --------------------
@@ -40,6 +40,16 @@ amount of code to make it applicable to meteorological data. A good candidate fo
 inclusion would for example be a tephigram.
 
 
+.. note:: A note on Basemap
+
+   The Basemap library is no longer maintained and will become obsolete soon. Currently, the
+   designated successor cartopy still has a few too many sharp edges, hickups and performance 
+   issues for Basemap to be replaced by cartopy in dynlib. 
+
+   At some point cartopy will replace Basemap, but the convenience functions for plotting
+   maps documented here are envisioned to remain unchanged from a user perspective.
+
+
 Using the plot facilities
 -------------------------
 
@@ -47,7 +57,7 @@ The basic plot commands :func:`dynlib.figures.map` and :func:`dynlib.figures.sec
 produce a filled-contours plot of the given data. Additional data can be displayed using 
 *overlays*. Both the basic plot commands and the overlays take a extensive list of optional
 arguments that can be used to customise the plot. These plot configuration arguments are 
-listed in :ref:`plot_configuration`.
+listed in :ref:`plot configuration`.
 
 The following overlays are available for maps:
 
@@ -81,7 +91,37 @@ And the following overlays are available for sections:
 Plot configuration
 ------------------
 
-Dynlib plots can be customised by a large number of keyword arguments. Here is a comprehensive list of accepted arguments:
+Dynlib plots can be customised by a large number of keyword arguments. To keep the plot settings 
+systems as flexible as possible, there are several layers of where settings can be set. Each of 
+these layers can overwrite settings defined before.
+
+ #. dynlib defaults
+ #. dynlib predefined sets of configuration (currently only one, also called ``default``)
+ #. Potential settings imported from a user-defined settings script
+ #. Overrides within a script using dynlib
+ #. Overrides for a specific plot within a script
+
+For both user-defined settings scripts and script-global settings the mechanism is as follows:
+
+>>> from dynlib.plotsettings import pconf, pconfl
+>>> pconf['500','z','scale'] = [5000,5500]
+
+The first two parts of the key ``'500'`` and ``'z'`` designate the vertical level and the variable
+name, respectively. They can both be ``None`` to set the configuration key for all variables and/ or
+all vertical levels, respectively.
+
+The two plot settings objects ``pconf`` and ``pconfl`` define the defaults for filled contours and
+contour/line plots, respectively.
+
+Finally, to override the the plot configuration for a specific plot, add the configuration key to
+the argument list, for example like:
+
+>>> from dynlib.figures import map
+>>> map(dat, grid, scale=[5000, 5500])
+
+
+Comprehensive list of accepted configuration keys
+"""""""""""""""""""""""""""""""""""""""""""""""""
 
 =============================== ======= ======= ======================= ======================= =======================
 Name                            Line    Fill    Type                    Default                 Description
@@ -147,5 +187,41 @@ Name                            Line    Fill    Type                    Descript
 plev			        ✓ 	✓ 	string/int 	        Vertical level of the plot. Used also to auto-mask intersections with orography using the ERA-Interim average height of the level. 
 q				✓ 	✓ 	string			Variable identifier.
 =============================== ======= ======= ======================= =======================
+
+
+All available plot_related functions
+------------------------------------
+
+.. toctree::
+   :maxdepth: 2   
+   
+   api/autoscale
+   api/figures
+   api/windrose
+
+Predefined color maps and map projections
+"""""""""""""""""""""""""""""""""""""""""
+
+.. toctree::
+   :maxdepth: 2
+
+   api/cm
+   api/proj
+
+Plot settings API
+"""""""""""""""""
+
+.. toctree::
+   :maxdepth: 2
+
+   api/settings
+
+Import shorthands
+"""""""""""""""""
+
+.. toctree::
+   :maxdepth: 3
+
+   api/shorthands
 
 

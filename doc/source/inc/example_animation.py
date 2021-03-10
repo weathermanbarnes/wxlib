@@ -1,1 +1,0 @@
-../../../examples/example_animation.py

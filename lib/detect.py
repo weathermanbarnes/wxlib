@@ -345,7 +345,7 @@ def frontalvolume_smallscale(tfp, dx, dy, quiet=True):
         The double grid spacing in y-direction to be directly for centered differences.
         ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
     quiet : bool
-        *Optional*, default ``True''. If ``False'' display progress by current time step.
+        *Optional*, default ``True``. If ``False`` display progress by current time step.
     
     Returns
     -------

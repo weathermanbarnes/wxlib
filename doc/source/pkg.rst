@@ -78,9 +78,9 @@ please give feedback and your instructions will be included here.
 Updating the centrally installed dynlib
 ---------------------------------------
 
-If you have the appropriate access rights, you can just do::
+If you have the appropriate access rights, make sure you are in the correct virtual environment and then just do::
 
-   python setup.py install --prefix=/Data/gfi/users/local
+   $ python setup.py install
 
 in your working copy of the dynlib repository to install your version. 
 

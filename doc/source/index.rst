@@ -13,13 +13,11 @@ Contents:
 
    intro
    examples
-   basic
+   metio
    use
-   filefmt
    plot
    devel
    pkg
-   apidoc
 
 
 
