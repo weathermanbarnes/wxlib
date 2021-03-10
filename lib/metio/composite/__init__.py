@@ -92,7 +92,23 @@ class decider(object):
         ''' Implements the ``deciderA & deciderB`` syntax '''
 
         ret = decider(self.name+'@'+b.name)
-        ret.get_time_series = lambda dates: np.logical_and(self.get_time_series(dates), b.get_time_series(dates))
+        if type(self.requires) == type(None):
+            if type(b.requires) == type(None):
+                ret.get_time_series = lambda dates: np.logical_and(self.get_time_series(dates), b.get_time_series(dates))
+                ret.requires = None
+            else:
+                ret.get_time_series = lambda dates, *stuff: np.logical_and(self.get_time_series(dates), 
+                        b.get_time_series(dates, *stuff))
+                ret.requires = b.requires
+        else:
+            if type(b.requires) == type(None):
+                ret.get_time_series = lambda dates, *stuff: np.logical_and(self.get_time_series(dates, *stuff), 
+                        b.get_time_series(dates))
+                ret.requires = self.requires
+            else:
+                ret.get_time_series = lambda dates, *stuff: np.logical_and(self.get_time_series(dates, *stuff), 
+                        b.get_time_series(dates, *stuff))
+                ret.requires = self.requires + b.requires
 
         return ret
     

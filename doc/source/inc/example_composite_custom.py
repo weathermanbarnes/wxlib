@@ -1,1 +1,0 @@
-../../../examples/example_composite_custom.py

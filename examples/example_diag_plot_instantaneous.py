@@ -1,32 +1,35 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8
 
-from dynlib.shorthands import dt, get_instantaneous, metsave, fig, np
-from dynlib.settings import proj
+import numpy as np
 
-from dynlib.context.erainterim import conf
-import dynlib.context.derived
+from dynlib.metio.erainterim import conf, dt, get_instantaneous, metsave
+from dynlib.plotsettings import pconf, pconfl
 
 import dynlib.diag
-
+import dynlib.proj as proj
+import dynlib.figures as fig
 
 timeinterval = [dt(2011,12,25,0), dt(2011,12,26,12)]
 plev = '850'
 
 # Get wind velocity components on 850 hPa for Ekstremværet Dagmar
-u, grid = get_instantaneous('u', timeinterval, plevs=plev)
-v, grid = get_instantaneous('v', timeinterval, plevs=plev)
+dat, grid = get_instantaneous([(plev, 'u'), (plev,'v'), ], timeinterval)
 
 # Calculate total deformation
-defabs = dynlib.diag.def_total(u[:,0,:,:], v[:,0,:,:], grid.dx, grid.dy)
+defabs = dynlib.diag.def_total(dat[plev,'u'][:,0,:,:], dat[plev,'v'][:,0,:,:], grid.dx, grid.dy)
 
 # Save results as netCDF file
-metsave(defabs[:,np.newaxis,:,:], grid, q='defabs', plev=plev)
+tosave = {
+    'defabs': defabs[:,np.newaxis,:,:],      # Pressure-level data is expected to be 4-dimensional
+}
+metsave(tosave, grid, f'ei.ans.Dagmar.{plev}.defabs')
 
 # Plot results
-conf.register_variable([dynlib.context.derived.defabs, ], [plev, ])
 for tidx in range(len(grid.t)):
-	fig.map(defabs[tidx,::], grid, q='defabs', plev=plev, 
-			name=grid.t_parsed[tidx], m=proj.N_Atlantic)
+    fig.map(defabs[tidx,::], grid, q='defabs', plev=plev, 
+            name=grid.t_parsed[tidx], m=proj.N_Atlantic, show=False,
+            save=f'Dagmar_defabs_{grid.t_parsed[tidx].strftime("%Y%m%d_%H")}.pdf')
+    fig.plt.close()
 
 # the end

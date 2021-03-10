@@ -708,6 +708,13 @@ def metsave_factory(metopen, conf):
             if not q in tosave[plev]:
                 if not q in conf.q_bins:
                     s = dat_['mean'].shape
+
+                    # Remove vertical dimension if necessary
+                    if len(s) == (3+len(add_dims)):
+                        if s[-3] > 1:
+                            raise NotImplementedError('Cannot yet save data with multiple vertical levels in one array')
+                        s = s[:-3]+s[-2:]
+
                     tosave[plev][q] = np.empty((len(names),)+s) * np.nan
                     tosave[plev][f'{q}_stddev'] = np.empty((len(names),)+s) * np.nan
                     tosave[plev][f'{q}_valid'] = np.empty((len(names),)+s, dtype='i4') * np.nan
@@ -1242,8 +1249,6 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static, conf):
         -------
         dict of np.ndarray
             Composite data for the requested variable(s), vertical level(s), and composites.
-        grid.gridlib
-            If ``no_static=False`` meta-information about the requested data, otherwise ``None``.
         '''
 
         # TODO: Generalise both this function and the composite decider infrastructure to allow returning

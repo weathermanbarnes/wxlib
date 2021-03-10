@@ -252,7 +252,7 @@ PLOT_DEFAULTS = {
     'fig_dpi': 150,
     'gridcolor': 'k',
     'grid_alpha': 0.3,
-    'grid_dashes': None,
+    'grid_dashes': (None, None),
     'grid_linestyle': '-',
     'grid_latmax': 90,
     'meridians': (-180,-120,-60, 0, 60, 120),
