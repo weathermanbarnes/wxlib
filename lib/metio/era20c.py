@@ -35,6 +35,8 @@ conf = settings_obj({
 # ERA-20C is following our standard naming convention.
 conf.register_variable(standard_variables)
 
+# Some variables are only available through short-term forecasts; the corresponding files are named differently to mark this.
+FCq = ['cape', 'cp', 'csf', 'e', 'lsf', 'lsp', 'slhf', 'sshf', 'ssr', 'str', 'tsr', 'ttr', ]
 
 _files_by_plevq = files_by_plevq
 class files_by_plevq(_files_by_plevq):
@@ -54,7 +56,10 @@ class files_by_plevq(_files_by_plevq):
 
     def __next__(self):
         if self.cur < self.end:
-            filename = f'e2.ans.{self.cur.year}.{self.plev}.{self.q}'
+            if not self.q in FCq:
+                filename = f'e2.ans.{self.cur.year}.{self.plev}.{self.q}'
+            else:
+                filename = f'e2.for.{self.cur.year}.{self.plev}.{self.q}'
 
             yearlen = int((dt(self.cur.year+1, 1, 1, 0) - dt(self.cur.year, 1, 1, 0)).total_seconds() / conf.timestep.total_seconds())
             tidxs_all = range(yearlen)
