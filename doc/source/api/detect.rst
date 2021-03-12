@@ -9,6 +9,7 @@ dynlib.detect
    -------------------
 
    .. autofunction:: block_indicator_grad_rev
+   .. autofunction:: cyclone_by_contour_fortran
    .. autofunction:: convline
    .. autofunction:: defline
    .. autofunction:: frontline_at_maxcurv

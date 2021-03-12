@@ -18,6 +18,7 @@ dynlib.tend
    .. autofunction:: slope_adv
    .. autofunction:: slope_diab
    .. autofunction:: slope_prepare
+   .. autofunction:: slope_prepare_pres
    .. autofunction:: uv_prescor
 
    Python functions

@@ -832,8 +832,10 @@ def lanczos_weights_lowpass(cutoff, window=None, size=2):
     Dimensions. Journal of Applied Meteorology, Vol 18, pp 1016-1022. It is adapted 
     from code found at several places on the internet, so proper attribution is 
     unclear. Sources were
+
      - https://scitools.org.uk/iris/docs/v1.2/examples/graphics/SOI_filtering.html
      - https://github.com/liv0505/Lanczos-Filter
+
     but the code might live in and originate from further unidentified places.
 
     The window can be either specified manually, or can be calculated to achieve
