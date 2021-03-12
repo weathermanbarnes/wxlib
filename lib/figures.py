@@ -428,7 +428,7 @@ def __map_setup(mask, static, kwargs):
         x, y = lon, lat
     
     orocolor = kwargs.pop('orocolor')
-    if orocolor:
+    if orocolor and static.oro.max() > static.oro.min():
         m.contour(x, y, concat(static.oro), kwargs.pop('oroscale'), latlon=True, colors=orocolor, 
                 alpha=kwargs.pop('oroalpha'), zorder=2)
         if isinstance(m, mpl_toolkits.basemap.Basemap):
@@ -453,6 +453,12 @@ def __contourf_dat(m, x, y, dat, q, kwargs):
 
     zorder = kwargs.pop('zorder', 1)
     
+    # Last update 12 March 2021 for matplotlub 3.3.4
+    allowed_kwargs = ['corner_mask', 'colors', 'alpha', 'cmap', 'norm', 'vmin', 'vmax', 
+            'origin', 'extent', 'locator', 'extend', 'xunits', 'yunits', 'antialiased', 
+            'nchunk', 'linewidths', 'linestyles', 'hatches', ]
+    clean_kwargs = { key: kwargs[key] for key in allowed_kwargs if key in kwargs }
+
     if kwargs.get('tile'):
         if not 'edgecolors' in kwargs:
             kwargs['edgecolors'] = 'none'
@@ -474,9 +480,9 @@ def __contourf_dat(m, x, y, dat, q, kwargs):
         datm = np.ma.masked_where(np.isnan(dat), dat)
         cs = m.pcolormesh(x, y, datm, latlon=True, zorder=zorder, **pkwargs)
     elif kwargs.get('tri'):
-        cs = m.contourf(x.flatten(), y.flatten(), dat.flatten(), scale, latlon=True, zorder=zorder, **kwargs)
+        cs = m.contourf(x.flatten(), y.flatten(), dat.flatten(), scale, latlon=True, zorder=zorder, **clean_kwargs)
     else:
-        cs = m.contourf(x, y, dat, scale, latlon=True, zorder=zorder, **kwargs)
+        cs = m.contourf(x, y, dat, scale, latlon=True, zorder=zorder, **clean_kwargs)
     
     if isinstance(m, mpl_toolkits.basemap.Basemap):
         plt.gca().set_aspect('equal')
@@ -704,7 +710,13 @@ def map_overlay_contour(dat, static, **kwargs):
     
     kwargs = __line_prepare_config(kwargs)
     owngrid = kwargs.pop('owngrid', False)
-    
+
+    # Last update 12 March 2021 for matplotlub 3.3.4
+    allowed_kwargs = ['corner_mask', 'colors', 'alpha', 'cmap', 'norm', 'vmin', 'vmax', 
+            'origin', 'extent', 'locator', 'extend', 'xunits', 'yunits', 'antialiased', 
+            'nchunk', 'linewidths', 'linestyles', ]
+    clean_kwargs = { key: kwargs[key] for key in allowed_kwargs if key in kwargs }
+ 
     def overlay(m, x, y, lon, lat, zorder, mask=None):
         if owngrid:
             mask = __map_create_mask(static, kwargs)
@@ -718,7 +730,7 @@ def map_overlay_contour(dat, static, **kwargs):
         scale = kwargs.pop('scale')
         if isinstance(scale, string_types) and scale == 'auto':
             scale = autoscale(dat_, **kwargs)
-        cs =  m.contour(x_, y_, dat_, scale, latlon=True, **kwargs)
+        cs =  m.contour(x_, y_, dat_, scale, latlon=True, **clean_kwargs)
         if isinstance(m, mpl_toolkits.basemap.Basemap):
             plt.gca().set_aspect('equal')
 

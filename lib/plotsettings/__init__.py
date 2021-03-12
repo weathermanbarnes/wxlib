@@ -257,7 +257,7 @@ PLOT_DEFAULTS = {
     'grid_latmax': 90,
     'meridians': (-180,-120,-60, 0, 60, 120),
     'parallels': (-60,-30, 0, 30, 60),
-    'hatches': None,
+    'hatches': (),
     'hook': None,
     'm': proj.world, 
     'maskcolor': '0.25',
@@ -330,7 +330,6 @@ PLOT_DEFAULTS.update({
     'tri': False,
     'edgecolors': 'none',
     
-    'hatches': None,
     'name_prefix': '',
     'plotformat': 'pdf',
     'plotpath': '.',
