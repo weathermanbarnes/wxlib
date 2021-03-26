@@ -7,9 +7,10 @@ from __future__ import absolute_import
 
 from . import dynfor
 
+from .metio.generic import metopen, conf
 from . import figures as fig
-from . import gridlib
-from . import utils
+from . import cm
+from . import proj
 
 import numpy as np
 import scipy as sp
