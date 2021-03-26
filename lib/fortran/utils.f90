@@ -72,6 +72,8 @@ contains
   !@ The smoothing coefficient ``smooth_coeff`` can be configured using the 
   !@ ``config`` module. Following NCL, the default is ``0.25``.
   !@
+  !@ Licensed as-is, details at http://www.ncl.ucar.edu/Download/NCL_source_license.shtml .
+  !@
   !@ Parameters
   !@ ----------
   !@
