@@ -25,7 +25,7 @@ conf = settings_obj({
     ], 
     'opath': '.',
     'oformat': 'nc',
-    'staticfile': 'e2.ans.1970.sfc.msl',
+    'staticfile': 'e2.ans.static',
     'epoch': dt(1900,1,1,0),
     'calendar': 'standard',
     'timestep': td(0.25),
@@ -101,8 +101,8 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
         Some meta information about the data, like the grid information.
     '''
     
-    fo, static = metopen(conf.staticfile, verbose=verbose, no_dtype_conversion=no_dtype_conversion, quiet=quiet)
-    static.oro = np.zeros(conf.gridsize)
+    fo, oro, static = metopen(conf.staticfile, q='z', verbose=verbose, no_dtype_conversion=no_dtype_conversion, quiet=quiet)
+    static.oro = oro.squeeze()/9.81
 
     static = static.new_time([])
     fo.close()
