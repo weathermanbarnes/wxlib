@@ -159,6 +159,9 @@ class files_by_plevq(_files_by_plevq):
                     self.nlevs = 1
                 else:
                     self.nlevs = len(Zplev)
+            elif q in Bq:                       # Temporary fix for N files being incomplete.
+                self.filetype = 'B'
+                self.nlevs = 1
             elif q in Nq:
                 self.filetype = 'N'
                 self.nlevs = 1
