@@ -392,7 +392,7 @@ def frontalvolume_smallscale(tfp, dx, dy, quiet=True):
 
 
 
-def cold_air_outbreak_index(t850, msl, sst, lsm, cao_thres=None):
+def cold_air_outbreak_index(t850, msl, sst, ci, lsm, cao_thres=None):
     ''' Calculate a cold air outbreak-index, optionally apply threshold
     
     The index is defined by the difference in potential temperature between the sea-surface
@@ -412,6 +412,8 @@ def cold_air_outbreak_index(t850, msl, sst, lsm, cao_thres=None):
         Sea-level pressure field.
     sst : np.ndarray with shape (nt,ny,nx) and dtype float64
         Sea-surface temperature field.
+    ci : np.ndarray with shape (nt,ny,nx) and dtype float64
+        Sea-ice concentration field.
     lsm : np.ndarray with shape (ny,nx) and dtype float64
         Land-sea mask, invariant in time, where 1 marks land.
     
@@ -427,9 +429,13 @@ def cold_air_outbreak_index(t850, msl, sst, lsm, cao_thres=None):
     # Convert to theta_850 and theta_sfc
     t850 *= (1000/850)**kappa
     tsfc = thermodyn.theta_from_temp(sst, msl)
-
     caoidx = tsfc - t850 
+
+    # Mask land and sea-ice
     caoidx[:,landmask] = np.nan
+    caoidx[ci > 0.5] = np.nan
+    
+    # Apply threshold or mask only negative CAO index values
     if not type(cao_thres) == type(None):
         caoidx = caoidx > cao_thres
     else:
