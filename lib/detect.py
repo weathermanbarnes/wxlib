@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import, unicode_literals, division, print_function
-
 import sys
 import pickle
 import numpy as np
@@ -9,6 +7,7 @@ from datetime import datetime as dt, timedelta as td
 
 from . import dynfor
 from . import docutil
+from . import thermodyn
 
 # Take over the contents of dynfor.detect to this module and inject documentation from the Fortran sources
 docutil.takeover(dynfor.detect, 'detect', sys.modules[__name__])
@@ -390,6 +389,53 @@ def frontalvolume_smallscale(tfp, dx, dy, quiet=True):
         print('Finished.')
 
     return labels
+
+
+
+def cold_air_outbreak_index(t850, msl, sst, lsm, cao_thres=None):
+    ''' Calculate a cold air outbreak-index, optionally apply threshold
+    
+    The index is defined by the difference in potential temperature between the sea-surface
+    and 850 hPa. The function returns this difference field where larger than zero if no
+    threshold is given (default), otherwise the function returns a mask field marking regions
+    where the threshold is exceeded.
+
+    Land-regions are masked by NaN. Grid points are regarded as land if the land-sea mask 
+    exceeds 0.5.
+    
+    Parameters
+    ----------
+
+    t850 : np.ndarray with shape (nt,ny,nx) and dtype float64
+        Temperature field at 850 hPa.
+    msl : np.ndarray with shape (nt,ny,nx) and dtype float64
+        Sea-level pressure field.
+    sst : np.ndarray with shape (nt,ny,nx) and dtype float64
+        Sea-surface temperature field.
+    lsm : np.ndarray with shape (ny,nx) and dtype float64
+        Land-sea mask, invariant in time, where 1 marks land.
+    
+    Returns
+    -------
+    np.ndarray with shape (nz,ny,nx) and dtype float64 or bool
+        Cold air outbreak index or detected cold air outbreak events.
+    '''
+
+    kappa = dynfor.consts.rl / dynfor.consts.cp
+    landmask = lsm > 0.5
+
+    # Convert to theta_850 and theta_sfc
+    t850 *= (1000/850)**kappa
+    tsfc = thermodyn.theta_from_temp(sst, msl)
+
+    caoidx = tsfc - t850 
+    caoidx[:,landmask] = np.nan
+    if not type(cao_thres) == type(None):
+        caoidx = caoidx > cao_thres
+    else:
+        caoidx[caoidx < 0] = 0.0
+    
+    return caoidx
 
 
 
