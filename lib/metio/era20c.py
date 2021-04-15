@@ -5,6 +5,7 @@
 from .datasource import *
 from .standard_variables import standard_variables
 from ..settings import settings_obj, default_conf
+from .. import utils
 
 
 dt = cftime.DatetimeGregorian
@@ -101,8 +102,8 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
         Some meta information about the data, like the grid information.
     '''
     
-    fo, oro, static = metopen(conf.staticfile, q='z', verbose=verbose, no_dtype_conversion=no_dtype_conversion, quiet=quiet)
-    static.oro = oro.squeeze()/9.81
+    fo, static = metopen(conf.staticfile, verbose=verbose, no_dtype_conversion=no_dtype_conversion, quiet=quiet)
+    static.oro = utils.scale(fo['z'])/9.81
 
     static = static.new_time([])
     fo.close()
