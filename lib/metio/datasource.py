@@ -465,7 +465,14 @@ def metsave_factory(metopen, conf):
                 varattrs['scale_factor'] = scale
 
             else:
-                ovar = f.createVariable(q, values.dtype, dims)
+                if 'missing_value' in varattrs:
+                    fill = varattrs.pop('missing_value')
+                    ovar = f.createVariable(q, values.dtype, dims, fill_value=fill)
+                    ovar.set_auto_scale(False)
+
+                    ovar.missing_value = fill
+                else:
+                    ovar = f.createVariable(q, values.dtype, dims)
             
             # Fill in some dynlib default meta information if required
             if 'long_name' not in varattrs and key in conf.q_long:
