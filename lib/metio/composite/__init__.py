@@ -275,7 +275,7 @@ def __timelag_one(decider, tdiff):
         sgn = '+'
     else: 
         sgn = '-'
-    tl_decider.name += f'{sgn}{int(abs(tdiff.total_seconds())/3600):03d}h'
+    tl_decider.name += f'_lag{sgn}{int(abs(tdiff.total_seconds())/3600):03d}h'
 
     return tl_decider
 
@@ -299,6 +299,64 @@ def timelag(decider, tdiffs):
     '''
 
     tl_deciders = [__timelag_one(decider, tdiff) for tdiff in tdiffs]
+
+    return tl_deciders
+
+
+
+def __timelag_one_relativedelta(decider, factor, unit_interval):
+    ''' Helper function to create a variant of a decider with time lag specified through relativedeltas '''
+    
+    tdiff = factor * unit_interval
+    tl_decider = deepcopy(decider)
+    tl_decider.__get_time_series = tl_decider.get_time_series
+    
+    def new_get_time_series(dates):
+        # cftime objects need to be converted to datetime for dateutils to work
+        if hasattr(dates[0], '_to_real_datetime'):
+            dates = [d._to_real_datetime() for d in dates]
+        return tl_decider.__get_time_series([date-tdiff for date in dates])
+
+    tl_decider.get_time_series = new_get_time_series
+
+    if factor >= 0:
+        sgn = '+'
+    else: 
+        sgn = '-'
+
+    if unit_interval.months > 0:
+        unit = 'm'
+    elif unit_interval.years > 0:
+        unit = 'y'
+    else:
+        raise ValueError('Unit must be a positive number of years or months.')
+
+    tl_decider.name += f'_lag{sgn}{abs(factor):03d}{unit}'
+
+    return tl_decider
+
+
+
+def timelag_relativedelta(decider, factors, unit_interval):
+    ''' Create a series of time-lagged versions of one decider based on relativedelta objects
+
+    Parameters
+    ----------
+    decider : decider
+        Decider to be time-lagged.
+    factors : list of int
+        Factors by which the unit_interval is to be multiplied to arrive at the time lag.
+    unit_interval : dateutil.relativedelta
+        Unit time interval (e.g. 1 month) defining the lags.
+
+    Returns
+    -------
+    dict of list of decider
+        List of time-lagged versions of the decider, wrapped in a named group
+        such that they will by default be saved together.
+    '''
+
+    tl_deciders = [__timelag_one_relativedelta(decider, factor, unit_interval) for factor in factors]
 
     return tl_deciders
 
