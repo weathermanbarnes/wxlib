@@ -31,6 +31,7 @@ conf = settings_obj({
 
 # Derive data source-specific version of metopen
 metopen = metopen_factory(lambda: None, conf)
+metsave, metsave_composite = metsave_factory(metopen, conf)
 
 
 

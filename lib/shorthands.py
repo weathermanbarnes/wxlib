@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 from . import dynfor
 
-from .metio.generic import metopen, conf
+from .metio.generic import metopen, metsave, conf
 from . import figures as fig
 from . import cm
 from . import proj
