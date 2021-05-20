@@ -135,10 +135,35 @@ class grid(object):
         if not hasattr(self, 't_epoch') or not hasattr(self, 't_interval_unit'):
             raise TypeError('Need a reference date and time interval!')
 
+        if type(self.t_name) == type(None):
+            self.t_name = 'time'
+
         cpy = copy.copy(self)
         cpy.t_parsed = dates
         cpy.t = np.array([ (date - cpy.t_epoch).total_seconds()/float(cpy.t_interval_unit) 
             for date in dates ])
+
+        return cpy
+
+    def new_plev(self, plev):
+        cpy = copy.copy(self)
+
+        if plev == 'sfc':
+            cpy.z_name = None
+            cpy.z = None
+            cpy.z_unit = None
+        elif plev[:2] == 'pv':
+            cpy.z_name = 'lev'
+            cpy.z_unit = 'PVU'
+            cpy.z = [int(plev[2:])/1000, ]
+        elif plev[:2] == 'pt':
+            cpy.z_name = 'lev'
+            cpy.z_unit = 'K'
+            cpy.z = [int(plev[2:]), ]
+        else:
+            cpy.z_name = 'lev'
+            cpy.z_unit = 'Pa'
+            cpy.z = [int(plev)*100, ]
 
         return cpy
 
