@@ -191,6 +191,68 @@ def get_from_file(filename, plev, q, **kwargs):
     raise NotImplementedError('Needs to be implemented per data source')
 
 
+def get_normalized_from_file_factory(get_from_file, conf):
+
+    def get_normalized_from_file(filename, plev, q, **kwargs):
+        ''' A variant of get_from_file which in addition normalises feature detections
+        
+        Feature detections are normalized such that they appear on a regular grid and can
+        directly be averaged. Thus, line features are normalized by ``dynlib.utils.normalize_lines``,
+        areal detections are converted to a boolean mask field.
+
+        Parameters
+        ----------
+        filename : str
+            The name of the file, excluding the file ending.
+        plev : str
+            The requested vertical level for the variable. Might be ``'__all__'`` for all
+            vertical levels in the file if the data source supports that.
+        q : str
+            The requested variable within the file. Might be ``'__all__'`` for all
+            variables in the file if the data source supports that.
+
+        Keyword arguments
+        -----------------
+        metopen arguments : all optional
+            Optional arguments passed on to calls of metopen within this function.
+
+        Returns
+        -------
+        (dict of) np.ndarray
+            Data of the requested variable for the requested vertical level. If several 
+            variables are requested, a dictionary is returned with the variable shorthand q 
+            as keys.
+        grid.gridlib
+            If ``no_static=False`` meta-information about the requested data.
+        '''
+
+        ret = get_from_file(filename, plev, q, **kwargs)
+
+        if type(ret) == tuple:
+            dat = ret[0]
+            stuff = ret[1:]
+        else:
+            dat = ret
+
+        # Treat lines
+        if q in conf.q_lines:
+            datoff, grid = get_from_file(filename, plev, conf.q_lines[q])
+            dat = utils.normalize_lines(dat, datoff, grid.dx, grid.dy)
+
+        # Treat objmasks
+        if q in conf.q_obj:
+            dat = dat > 0.5
+
+        # Binned variables kept as they are
+        
+        if type(ret) == tuple:
+            return (dat, *stuff)
+        else:
+            return dat
+
+    return get_normalized_from_file
+    
+
 # TODO: Return xarray by default, reflect other docu changes (if any?)
 def metopen_factory(get_static, conf):
     ''' Create the metopen function based on data source specific helpers '''
@@ -563,7 +625,8 @@ def metsave_factory(metopen, conf):
                 f.close()
             except:
                 pass
-
+            
+            # TODO: Check whether exists and if so adapt filename to avoid overwriting data
             f = nc.Dataset(conf.opath+'/'+filename+'.nc', 'w', format='NETCDF4')
             print('Saving to %s/%s.nc' % (conf.opath, filename))
 
@@ -757,10 +820,10 @@ def metsave_factory(metopen, conf):
     return metsave, metsave_composite
 
 
-def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, conf):
+def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static, conf):
     ''' Create the get_instantaneous function based on data source-specific helpers '''
 
-    def get_instantaneous(plevqs, dates, force=False, **kwargs):
+    def get_instantaneous(plevqs, dates, q_special={}, force=False, **kwargs):
         ''' Get instantaneous fields
 
         Allows general data requests in the configured data base, e.g. ERA-Interim. The request
@@ -775,13 +838,17 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, conf):
         plevqs : 2-tuple or list of 2-tuples
             Each 2-tuple consists of (1) a string representations of the requested vertical level(s), 
             e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface, and (2) a variable name 
-            identifier, following the ECMWF conventions as far as appicable, e.g. ``'u'`` or ``'msl'``.
+            identifier, following the ECMWF conventions as far as applicable, e.g. ``'u'`` or ``'msl'``.
             Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
             and/or the variable name, to request all vertical levels/variables available.
         dates : list of datetime
             The minimum and maxmimum dates in this list define the requested time interval. The i
             final date will not be included in the result, i.e. for all time steps in 2016 request
             dates from 2016-01-01 00:00 to 2017-01-01 00:00.
+        q_special : dict of callable
+            *Optional*, default ``{}``. If given for a specific variable q, this function is used instead 
+            of get_from_file to load the data. This allows, for example, to run simple transformations 
+            before aggregating the data.
         force : bool
             *Optional*, default ``False``. Turn off the error, if large amounts of data are
             requested at once. **Be sure you know what you are doing, when setting this to 
@@ -840,8 +907,10 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, conf):
         if not force and request_size > WARN_REQUEST_SIZE:
             print(f'Warning: you requested {request_size / 1024**3:.2f}G of data.')
         
-        # Remove no_static if present, this should only effect the output of this function rather than the metopen calls herein
+        # Remove no_static if present, this should only effect the output of this function rather than the 
+        # metopen calls herein; also static info is sometimes required internally herein.
         no_static = kwargs.pop('no_static', False)
+        grid = get_static()
 
         dat = {}
         dates = {}
@@ -855,7 +924,19 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, conf):
                 cut = slice(tidxs[0], tidxs[-1]+1)
                 tlen = len(tidxs)
                 
-                dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
+                if q in q_special:
+                    dat_ = q_special[q](get_from_file, filename, plev, q, cut=cut, no_static=True, **kwargs)
+                else:
+                    dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
+
+                    # Treat special data
+                    #
+                    #  1. Lines
+                    if q in conf.q_lines:
+                        ql = conf.q_lines[q]
+                        datoff_ = get_from_file(filename, plev, ql, cut=cut, no_static=True, **kwargs)
+                        dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)[:,np.newaxis,:,:]
+
                 dat[plev,q][toff:toff+tlen,...] = dat_[...]
                 dates[plev,q].extend(dates_)
                 
@@ -872,7 +953,6 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, conf):
         if no_static:
             grid = None
         else:
-            f, _, grid = metopen(req[plevqs[0]][0][0], 'time')
             grid = grid.new_time(dates[plev,q])
             
         return dat, grid
@@ -880,10 +960,100 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, conf):
     return get_instantaneous
 
 
-def get_time_average_factory(files_by_plevq, get_from_file, get_static, conf):
+
+def get_at_position_factory(files_by_plevq, get_normalized_from_file):
+    ''' Create the get_at_position funciton based on data source-specific helpers '''
+
+    def get_at_position(dates, plevs, ys, xs, q):
+        ''' Get values of the variable q at given dates, interpolated to given plevs, ys, xs
+
+        The given plevs, ys and xs must all have the same 4-dimensional shape. Dates must be
+        one-dimensional, corresponding in length to the first dimension of plevs, ys and xs.
+        The returned array will have the same shape as plevs, ys and xs.
+        
+        Parameters
+        ----------
+        dates : list/np.ndarray of datetime with dimensions (t,)
+            The dates for which data is to be interpolated.
+        plevs : np.ndarray with dimensions (z,)
+            Pressure levels to be interpolated to.
+        ys : np.ndarray with dimensions (t,y,x)
+            Meridional distances/latitudes to be interpolated to.
+        xs : np.ndarray with dimensions (t,y,x)
+            Zonal distances or longitudes to be interpolated to.
+        q : str
+            A variable name identifier, following the ECMWF conventions as far as applicable,
+            e.g. ``'u'`` or ``'msl'``.
+
+        Returns
+        -------
+        np.ndarray with dimensions (t,z,y,x)
+            Interpolated values of variable q at the givens dates/positions.
+        '''
+
+        # Consistency checks
+        if not xs.shape == ys.shape:
+            raise ValueError('xs and ys must have the same shape.')
+            
+        if not xs.shape[0] == len(dates):
+            raise ValueError('Number of dates must be equal length of first dimension of xs and ys.')
+        
+        # Assuming the chunking of data into files is consistent across plevs, this is a natural 
+        # rhythm to iterate through both test and composite data
+        #
+        # (the below code does not require data to be chunked consistently, 
+        #  but the code will much more efficient if it is)
+        if type(dates) == list:
+            dates = np.array(dates)
+
+        start, end = dates.min(), dates.max()
+        req = list(files_by_plevq((plevs[0], q), start=start, end=end))
+        
+        # Allocate array to hold the results
+        dat = np.empty(xs.shape[:1] + (len(plevs),) + (xs.shape[1:]))
+
+        # Iterate through the data set in chunks natural to the data source
+        for filename, tidxs, dates_, shape in req:
+            # Skip chunks from which no time step is required
+            load_chunk = False
+            for date in dates_:
+                if date in dates:
+                    load_chunk = True
+
+            if not load_chunk:
+                continue
+            
+            for pidx,plev in enumerate(plevs):
+                dat_, grid = get_normalized_from_file(filename, (plev, q))
+            
+                for tidx_in, date in enumerate(dates_):
+                    tidxs_out = np.argwhere(dates == date)
+                    if tidxs_out.size == 0:
+                        continue
+
+                    dat__ = dat_[tidx_in,:,:].squeeze()
+                    if np.isnan(dat__).sum() > 0:
+                        zonalavg = np.nanmean(dat__, axis=1)
+                        dat__ -= zonalavg[:,np.newaxis]
+                        dat__, conv = utils.fill_nan(dat__[np.newaxis,:,:])
+                        dat__ = dat__[0,:,:]
+                        dat__ += zonalavg[:,np.newaxis]
+
+                    ifunc = interp.RectBivariateSpline(grid.y[::-1,0], grid.x[0,:], dat__, kx=1, ky=1)
+                    for tidx_out in tidxs_out:
+                        tidx_out = tidx_out[0]
+                        dat[tidx_out,pidx,...] = ifunc(ys[tidx_out,...], xs[tidx_out,...], grid=False)
+
+
+        return dat
+    
+    return get_at_position
+
+
+def get_time_average_factory(files_by_plevq, get_normalized_from_file, get_static, conf):
     ''' Create the get_time_average function based on data source-specific helpers '''
 
-    def get_time_average(plevqs, dates, **kwargs):
+    def get_time_average(plevqs, dates, q_special={}, **kwargs):
         ''' Get time-average fields
 
         Allows general data requests in the configured data base, e.g. ERA-Interim. The request
@@ -898,13 +1068,17 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static, conf):
         plevqs : 2-tuple or list of 2-tuples
             Each 2-tuple consists of (1) a string representations of the requested vertical level(s), 
             e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface, and (2) a variable name 
-            identifier, following the ECMWF conventions as far as appicable, e.g. ``'u'`` or ``'msl'``.
+            identifier, following the ECMWF conventions as far as applicable, e.g. ``'u'`` or ``'msl'``.
             Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
             and/or the variable name, to request all vertical levels/variables available.
         dates : list of datetime
             The minimum and maxmimum dates in this list define the requested time interval. The i
             final date will not be included in the result, i.e. for an average of 2016 request
             dates from 2016-01-01 00:00 to 2017-01-01 00:00.
+        q_special : dict of callable
+            *Optional*, default ``{}``. If given for a specific variable q, this function is used instead 
+            of get_normalized_from_file to load the data. This allows, for example, to run simple transformations 
+            before aggregating the data.
         
         Keyword arguments
         -----------------
@@ -961,32 +1135,30 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static, conf):
                 cut = slice(tidxs[0], tidxs[-1]+1)
                 tlen = len(tidxs)
                 
-                dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
+                # Allow special function to retrieve data
+                if q in q_special:
+                    dat_ = q_special[q](get_normalized_from_file, filename, plev, q, cut=cut, no_static=True, **kwargs)
 
-                # Treat special data
-                #
-                #  1. Lines
-                if q in conf.q_lines:
-                    ql = conf.q_lines[q]
-                    datoff_ = get_from_file(filename, plev, ql, cut=cut, no_static=True, **kwargs)
-                    dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)
-                #  2. Object ID masks
-                if q in conf.q_obj:
-                    dat_ = dat_ > 0.5
-                #  3. Binned data
-                if q in conf.q_bins:
-                    for bi in range(len(conf.q_bins[q])-1):
-                        upper, lower = conf.q_bins[q][bi+1], conf.q_bins[q][bi]
-                        if upper > lower:
-                            dat[plev,qout,'hist'][bi,:,:] += np.logical_and(dat_ >= lower, dat_ <  upper).sum(axis=0)
-                        else:
-                            dat[plev,qout,'hist'][bi,:,:] += np.logical_or(dat_ <  upper, dat_ >= lower).sum(axis=0)
-                
-                # Summing up non-binned data, taking care of NaNs
+                # Else read data in one of the standard ways
                 else:
-                    mask = np.isnan(dat_)
-                    dat[plev,qout] += dat_.sum(axis=0, where=~mask)
-                    dat[plev,qout,'valid'] += tlen - mask.sum(axis=0)
+                    dat_ = get_normalized_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
+
+                    # Treat special data (lines and object masks are already taken care of)
+                    #
+                    #  Binned data
+                    if q in conf.q_bins:
+                        for bi in range(len(conf.q_bins[q])-1):
+                            upper, lower = conf.q_bins[q][bi+1], conf.q_bins[q][bi]
+                            if upper > lower:
+                                dat[plev,qout,'hist'][bi,:,:] += np.logical_and(dat_ >= lower, dat_ <  upper).sum(axis=0)
+                            else:
+                                dat[plev,qout,'hist'][bi,:,:] += np.logical_or(dat_ <  upper, dat_ >= lower).sum(axis=0)
+                
+                    # Summing up non-binned data, taking care of NaNs
+                    else:
+                        mask = np.isnan(dat_)
+                        dat[plev,qout] += dat_.sum(axis=0, where=~mask)
+                        dat[plev,qout,'valid'] += tlen - mask.sum(axis=0)
                 
                 toff += tlen
 
@@ -1009,10 +1181,10 @@ def get_time_average_factory(files_by_plevq, get_from_file, get_static, conf):
     return get_time_average
 
 
-def get_aggregate_factory(files_by_plevq, get_from_file, get_static, conf):
+def get_aggregate_factory(files_by_plevq, get_normalized_from_file, get_static, conf):
     ''' Create the get_time_average function based on data source-specific helpers '''
 
-    def get_aggregate(plevqs, dates, agg, **kwargs):
+    def get_aggregate(plevqs, dates, agg, q_special={}, **kwargs):
         ''' Get time-aggregates, such as monthly means
 
         Allows general data requests in the configured data base, e.g. ERA-Interim. The request
@@ -1027,7 +1199,7 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static, conf):
         plevqs : 2-tuple or list of 2-tuples
             Each 2-tuple consists of (1) a string representations of the requested vertical level(s), 
             e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface, and (2) a variable name 
-            identifier, following the ECMWF conventions as far as appicable, e.g. ``'u'`` or ``'msl'``.
+            identifier, following the ECMWF conventions as far as applicable, e.g. ``'u'`` or ``'msl'``.
             Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
             and/or the variable name, to request all vertical levels/variables available.
         dates : list of datetime
@@ -1037,6 +1209,10 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static, conf):
         agg : str or dynlib.tagg.agg object
             String representation (e.g. ``'cal_month'``, ``'pentad'``, or ``'met_season'``), or 
             time aggregator object representation the aggregation interval.
+        q_special : dict of callable
+            *Optional*, default ``{}``. If given for a specific variable q, this function is used instead 
+            of get_normalized_from_file to load the data. This allows, for example, to run simple transformations 
+            before aggregating the data.
         
         Keyword arguments
         -----------------
@@ -1098,15 +1274,13 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static, conf):
                 cut = slice(tidxs[0], tidxs[-1]+1)
                 tlen = len(tidxs)
                 
-                dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
-                
-                # Treat lines
-                if q in conf.q_lines:
-                    datoff_ = get_from_file(filename, plev, conf.q_lines[q], cut=cut, no_static=True, **kwargs)
-                    dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)
-                # Treat object masks
-                elif q in conf.q_obj:
-                    dat_ = dat_ > 0.5
+                # Allow special function to retrieve data
+                if q in q_special:
+                    dat_ = q_special[q](get_normalized_from_file, filename, plev, q, cut=cut, no_static=True, **kwargs)
+
+                # Else read data in one of the standard ways
+                else:
+                    dat_ = get_normalized_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
 
                 # Prepend leftover data from the previous file period, if available
                 if leftover:
@@ -1159,28 +1333,9 @@ def get_aggregate_factory(files_by_plevq, get_from_file, get_static, conf):
     return get_aggregate
 
 
-def get_composite_factory(files_by_plevq, get_from_file, get_static, conf):
+def get_composite_factory(files_by_plevq, get_normalized_from_file, get_static, conf):
     ''' Create the get_time_average function based on data source-specific helpers '''
 
-    def _get_chunk(filename, plevq):
-        ''' Internal helper function, loading data for a specific chunk of time, and prepare for compositing '''
-
-        plev, q = plevq
-        dat = get_from_file(filename, plev, q, no_static=True)
-        
-        # Treat lines
-        if q in conf.q_lines:
-            datoff, grid = get_from_file(filename, plev, conf.q_lines[q])
-            dat = utils.normalize_lines(dat, datoff, grid.dx, grid.dy)
-
-        # Treat objmasks
-        if q in conf.q_obj:
-            dat = dat > 0.5
-
-        # Binned variables kept as they are
-
-        return dat
-    
     def _add_chunk(plevq, dat, comp_ts, dat_to_add):
         ''' Internal helper function, adding data for a chunk of time to the relevant composites 
         
@@ -1237,7 +1392,7 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static, conf):
         plevqs : 2-tuple or list of 2-tuples
             Each 2-tuple consists of (1) a string representations of the requested vertical level(s), 
             e.g. ``'700'`` for 700 hPa or ``'pv2000'`` for the PV2-surface, and (2) a variable name 
-            identifier, following the ECMWF conventions as far as appicable, e.g. ``'u'`` or ``'msl'``.
+            identifier, following the ECMWF conventions as far as applicable, e.g. ``'u'`` or ``'msl'``.
             Some data sets might allow to supply ``'__all__'`` instead of either the vertical level
             and/or the variable name, to request all vertical levels/variables available.
         dates : list of datetime
@@ -1292,7 +1447,7 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static, conf):
             for composite in composites:
                 if type(composite.requires) == tuple:
                     # Inject relevant functions to get test data from this data source
-                    ts = composite.get_time_series(dates_, files_by_plevq, get_from_file)
+                    ts = composite.get_time_series(dates_, files_by_plevq, get_normalized_from_file)
                 else:
                     ts = composite.get_time_series(dates_)
 
@@ -1308,14 +1463,14 @@ def get_composite_factory(files_by_plevq, get_from_file, get_static, conf):
 
             # 2. If yes, request data from the current chunk for all variables, and
             # 3. Add relevant time steps to each composite
-            dat_ = _get_chunk(filename, plevqs[0])
+            dat_ = get_normalized_from_file(filename, *plevqs[0], no_static=True)
             _add_chunk(plevqs[0], dat, to_include, dat_)
             
             # ... and the same for all the other variables/levels
             for plevq in plevqs[1:]:
                 req_ = list(files_by_plevq(plevq, start=min(dates_), end=max(dates_)+td(0,1) )) # the end date should here be included in the requests for this chunk
                 for filename_, tidxs, dates_, shape in req_:
-                    dat_ = _get_chunk(filename_, plevq)
+                    dat_ = get_normalized_from_file(filename_, *plevq, no_static=True)
                     _add_chunk(plevq, dat, to_include, dat_)
         
         # A bit of post-processing, caculating mean+standard deviation / most-frequent-value

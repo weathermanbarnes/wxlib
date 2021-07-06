@@ -6,6 +6,8 @@ from .datasource import *
 from ..interpol import vert_by_coord
 from ..settings import settings_obj, default_conf
 
+import scipy.interpolate as interp
+
 
 dt = cftime.DatetimeGregorian
 conf = settings_obj({
@@ -147,13 +149,13 @@ class files_by_plevq(_files_by_plevq):
                         'If you want to request all variables in a given file type, '
                         'supply the filetype argument instead of plevq.')
             
-            if q in Hq and (plev in Hplev or plev == '__all_plev__' or plev == '__all__'):
+            if q in Hq and (plev in Hplev or plev == '__all_plevs__' or plev == '__all__'):
                 self.filetype = 'H'
                 if plev in Hplev:
                     self.nlevs = 1
                 else:
                     self.nlevs = len(Hplev)
-            elif q in Zq and (plev in Zplev or plev == '__sel_plev__' or plev == '__all__'):
+            elif q in Zq and (plev in Zplev or plev == '__sel_plevs__'):
                 self.filetype = 'Z'
                 if plev in Zplev:
                     self.nlevs = 1
@@ -167,11 +169,11 @@ class files_by_plevq(_files_by_plevq):
                 self.nlevs = 1
             elif q in Pq:
                 self.filetype = 'P'
-                if plev == '__all__' or plev == '__all_mlev__':
+                if plev == '__all__' or plev == '__all_mlevs__':
                     self.nlevs = n_mlevs         # All available model levels
-                elif plev == '__all_plev__': 
+                elif plev == '__all_plevs__': 
                     self.nlevs = len(Hplev)
-                elif plev == '__sel_plev__':
+                elif plev == '__sel_plevs__':
                     self.nlevs = len(Zplev)
                 else:                       # Everything else will be intepreted as a single level specification
                     self.nlevs = 1
@@ -258,6 +260,8 @@ def get_from_file(filename, plev, q, **kwargs):
         a = f['hyam'][-n_mlevs:]
         b = f['hybm'][-n_mlevs:]
         p = a[np.newaxis,:,np.newaxis,np.newaxis] + b[np.newaxis,:,np.newaxis,np.newaxis] * ps[:,np.newaxis,:,:]*100
+        if len(stuff) == 3:
+            stuff[2].hybrid_p = p 
 
         if q == '__all__':
             dat = {}
@@ -274,7 +278,7 @@ def get_from_file(filename, plev, q, **kwargs):
             datr = f[q][::]
             if len(datr.shape) == 3:
                 dat = datr
-            elif plev in ['__all__', '__all__mlevs__']:
+            elif plev in ['__all__', '__all_mlevs__']:
                 dat = datr
             else:
                 dat = vert_by_coord(datr, p, np.array([int(plev)*100, ]) ) 
@@ -316,12 +320,205 @@ def get_from_file(filename, plev, q, **kwargs):
     else:
         return dat
 
+get_normalized_from_file = get_normalized_from_file_factory(get_from_file, conf)
 
 # Derive data source-specific versions of the remaining data getter functions
-get_instantaneous = get_instantaneous_factory(files_by_plevq, metopen, get_from_file, conf)
-get_time_average = get_time_average_factory(files_by_plevq, get_from_file, get_static, conf)
-get_aggregate = get_aggregate_factory(files_by_plevq, get_from_file, get_static, conf)
-get_composite = get_composite_factory(files_by_plevq, get_from_file, get_static, conf)
+get_instantaneous = get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static, conf)
+get_time_average = get_time_average_factory(files_by_plevq, get_normalized_from_file, get_static, conf)
+get_aggregate = get_aggregate_factory(files_by_plevq, get_normalized_from_file, get_static, conf)
+get_composite = get_composite_factory(files_by_plevq, get_normalized_from_file, get_static, conf)
+
+
+def get_hor_interpolation_functions(dates, plevs, q):
+    ''' Get values of the variable q at given dates, interpolated to given plevs, ys, xs
+
+    The given plevs, ys and xs must all have the same 4-dimensional shape. Dates must be
+    one-dimensional, corresponding in length to the first dimension of plevs, ys and xs.
+    The returned array will have the same shape as plevs, ys and xs.
+    
+    Parameters
+    ----------
+    dates : list/np.ndarray of datetime with dimensions (N,)
+        The dates for which data is to be interpolated.
+    plevs : np.ndarray with dimensions (z,)
+        Pressure levels to be interpolated to.
+    q : str
+        A variable name identifier, following the ECMWF conventions as far as applicable,
+        e.g. ``'u'`` or ``'msl'``.
+
+    Returns
+    -------
+    dict (date => dict (plev => callable))
+        A nested dictionary of interpolation functions, with the requested dates and plevs as keys.
+    '''
+
+    # Assuming the chunking of data into files is consistent across plevs, this is a natural 
+    # rhythm to iterate through both test and composite data
+    #
+    # (the below code does not require data to be chunked consistently, 
+    #  but the code will much more efficient if it is)
+    if type(dates) == list:
+        dates = np.array(dates)
+    if type(plevs) == list:
+        plevs = np.array(plevs)
+
+    start, end = dates.min(), dates.max() + td(0,1) # the last requested date should be included here.
+    if len(plevs) > 1:
+        req_plevq = ('__all_mlevs__', q) 
+    else:
+        req_plevq = (plevs[0], q)
+
+    req = list(files_by_plevq(req_plevq, start=start, end=end))
+    
+    # Initialise dictionary to hold the results
+    ifuncs = {}
+
+    # Iterate through the data set in chunks natural to the data source
+    for filename, tidxs, dates_, shape in req:
+        # Skip chunks from which no time step is required
+        load_chunk = False
+        for date in dates_:
+            if date in dates:
+                load_chunk = True
+
+        if not load_chunk:
+            continue
+        
+        dat_, grid = get_normalized_from_file(filename, *req_plevq)
+        if len(plevs) > 1:
+            dat__ = dat_
+            dat_ = np.empty(dat_.shape[:1] + (len(plevs),) + dat_.shape[2:])
+            for tidx in range(dat_.shape[0]):
+                dat_[tidx,...] = vert_by_coord(dat__[tidx,...], grid.hybrid_p, plevs*100)
+        
+        for tidx_in, date in enumerate(dates_):
+            tidxs_out = np.argwhere(dates == date)
+            if tidxs_out.size == 0:
+                continue
+            
+            for pidx, plev in enumerate(plevs):
+                if len(dat_.shape) == 3:
+                    if pidx > 0:
+                        raise ValueError('Expected several levels in dat_ array, but only got 3D-array')
+                    dat__ = dat_[tidx_in,:,:]
+                else:
+                    dat__ = dat_[tidx_in,pidx,:,:]
+                    
+                if np.isnan(dat__).sum() > 0:
+                    zonalavg = np.nanmean(dat__, axis=1)
+                    dat__ -= zonalavg[:,np.newaxis]
+                    dat__, conv = utils.fill_nan(dat__[np.newaxis,:,:])
+                    dat__ = dat__[0,:,:]
+                    dat__ += zonalavg[:,np.newaxis]
+
+                if not date in ifuncs:
+                    ifuncs[date] = {}
+                ifuncs[date][plev] = interp.RectBivariateSpline(grid.y[:,0], grid.x[0,:], dat__, kx=1, ky=1)
+
+    return ifuncs
+
+
+
+def get_at_position(dates, plevs, ys, xs, q):
+    ''' Get values of the variable q at given dates, interpolated to given plevs, ys, xs
+
+    The given plevs, ys and xs must all have the same 4-dimensional shape. Dates must be
+    one-dimensional, corresponding in length to the first dimension of plevs, ys and xs.
+    The returned array will have the same shape as plevs, ys and xs.
+    
+    Parameters
+    ----------
+    dates : list/np.ndarray of datetime with dimensions (N,)
+        The dates for which data is to be interpolated.
+    plevs : np.ndarray with dimensions (z,)
+        Pressure levels to be interpolated to.
+    ys : np.ndarray with dimensions (N,*grid)
+        Meridional distances/latitudes to be interpolated to.
+    xs : np.ndarray with dimensions (N,*grid)
+        Zonal distances or longitudes to be interpolated to.
+    q : str
+        A variable name identifier, following the ECMWF conventions as far as applicable,
+        e.g. ``'u'`` or ``'msl'``.
+
+    Returns
+    -------
+    np.ndarray with dimensions (N,z,*grid)
+        Interpolated values of variable q at the givens dates/positions.
+    '''
+
+    # TODO: This is an awful amount of duplicated code with the above
+    # TODO: ... and actually also with the generic variant in dynlib.metio.datasource
+
+    # Consistency checks
+    if not xs.shape == ys.shape:
+        raise ValueError('xs and ys must have the same shape.')
+        
+    if not xs.shape[0] == len(dates):
+        raise ValueError('Number of dates must be equal length of first dimension of xs and ys.')
+    
+    # Assuming the chunking of data into files is consistent across plevs, this is a natural 
+    # rhythm to iterate through both test and composite data
+    #
+    # (the below code does not require data to be chunked consistently, 
+    #  but the code will much more efficient if it is)
+    if type(dates) == list:
+        dates = np.array(dates)
+
+    start, end = dates.min(), dates.max() + td(0,1) # the last requested date should be included here.
+    if len(plevs) > 1:
+        req_plevq = ('__all_mlevs__', q) 
+    else:
+        req_plevq = (plevs[0], q)
+
+    req = list(files_by_plevq(req_plevq, start=start, end=end))
+    
+    # Allocate array to hold the results
+    dat = np.empty(xs.shape[:1] + (len(plevs),) + (xs.shape[1:]))
+
+    # Iterate through the data set in chunks natural to the data source
+    for filename, tidxs, dates_, shape in req:
+        # Skip chunks from which no time step is required
+        load_chunk = False
+        for date in dates_:
+            if date in dates:
+                load_chunk = True
+
+        if not load_chunk:
+            continue
+        
+        dat_, grid = get_normalized_from_file(filename, *req_plevq)
+        if len(plevs) > 1:
+            dat__ = dat_
+            dat_ = np.empty(dat_.shape[:1] + (len(plevs),) + dat_.shape[2:])
+            for tidx in range(dat_.shape[0]):
+                dat_[tidx,...] = vert_by_coord(dat__[tidx,...], grid.hybrid_p, plevs*100)
+        
+        for tidx_in, date in enumerate(dates_):
+            tidxs_out = np.argwhere(dates == date)
+            if tidxs_out.size == 0:
+                continue
+            
+            for pidx in range(dat_.shape[1]):
+                if len(dat_.shape) == 3:
+                    if pidx > 0:
+                        raise ValueError('Expected several levels in dat_ array, but only got 3D-array')
+                    dat__ = dat_[tidx_in,:,:]
+                else:
+                    dat__ = dat_[tidx_in,pidx,:,:]
+                    
+                if np.isnan(dat__).sum() > 0:
+                    zonalavg = np.nanmean(dat__, axis=1)
+                    dat__ -= zonalavg[:,np.newaxis]
+                    dat__, conv = utils.fill_nan(dat__[np.newaxis,:,:])
+                    dat__ = dat__[0,:,:]
+                    dat__ += zonalavg[:,np.newaxis]
+
+                ifunc = interp.RectBivariateSpline(grid.y[:,0], grid.x[0,:], dat__, kx=1, ky=1)
+                for tidx_out in tidxs_out:
+                    tidx_out = tidx_out[0]
+                    dat[tidx_out,pidx,...] = ifunc(ys[tidx_out,...], xs[tidx_out,...], grid=False)
+
+    return dat
 
 
 # C'est le fin
