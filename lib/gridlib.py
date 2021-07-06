@@ -12,6 +12,7 @@ a "static.npz" file that contains the pertinent information for a given data set
 '''
 
 
+import warnings
 import copy
 import numpy as np
 import netCDF4 as nc
@@ -101,7 +102,7 @@ class grid(object):
         if len(tusplit) > 3 and tusplit[1] == 'since':
             facs = {'seconds': 1, 'minutes': 60, 'hours': 3600, 'days': 86400}
             if tusplit[0] in facs:
-                formats = ['%Y-%m-%d %H:%M:0.0', '%Y-%m-%d %H:%M:00', '%Y-%m-%d %H:%M', ]
+                formats = ['%Y-%m-%d %H:%M:00.0', '%Y-%m-%d %H:%M:0.0', '%Y-%m-%d %H:%M:00', '%Y-%m-%d %H:%M', ]
                 self.t_interval_unit = facs[tusplit[0]]
                 for fmt in formats:
                     try:
@@ -298,6 +299,9 @@ class grid_by_nc(grid):
             self.z_name = None
             self.t_name = None
 
+            give_up_z = False
+            give_up_t = False
+
             for d in self.f.dimensions:
                 if matches(d, self.X_NAMES, self.X_NAME_BEGINSWITH):
                     if self.x_name:
@@ -307,13 +311,17 @@ class grid_by_nc(grid):
                     if self.y:
                         raise ValueError('Found several possible y-axes: %s, %s (using file)' % (self.y_name, d))
                     self.y_name = d
-                if matches(d, self.Z_NAMES, self.Z_NAME_BEGINSWITH):
+                if matches(d, self.Z_NAMES, self.Z_NAME_BEGINSWITH) and not give_up_z:
                     if self.z_name:
-                        raise ValueError('Found several possible z-axes: %s, %s (using file)' % (self.z_name, d))
+                        warnings.warn('Found several possible z-axes: %s, %s (using file)' % (self.z_name, d))
+                        self.z_name = None
+                        give_up_z = True
                     self.z_name = d
-                if d in self.T_NAMES:
+                if d in self.T_NAMES and not give_up_t:
                     if self.t_name:
-                        raise ValueError('Found several possible t-axes: %s, %s (using file)' % (self.t_name, d))
+                        warnings.warn('Found several possible t-axes: %s, %s (using file)' % (self.t_name, d))
+                        self.t_name = None
+                        give_up_t = True
                     self.t_name = d
         
         if not self.x_name:
