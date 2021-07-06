@@ -325,13 +325,15 @@ def __timelag_one_relativedelta(decider, factor, unit_interval):
         sgn = '-'
 
     if unit_interval.months > 0:
+        number = abs(factor)*unit_interval.months
         unit = 'm'
     elif unit_interval.years > 0:
+        number = abs(factor)*unit_interval.years
         unit = 'y'
     else:
         raise ValueError('Unit must be a positive number of years or months.')
 
-    tl_decider.name += f'_lag{sgn}{abs(factor):03d}{unit}'
+    tl_decider.name += f'_lag{sgn}{number:03d}{unit}'
 
     return tl_decider
 
