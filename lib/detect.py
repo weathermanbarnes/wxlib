@@ -79,7 +79,11 @@ def cyclone_by_contour(msl, grid):
     '''
     
     # Preprocessing
-    msl = msl.squeeze()
+    if len(msl.shape) == 4:
+        if msl.shape[1] > 1:
+            raise ValueError('Only one vertical level can be used for the the cyclone detection.')
+        msl = [:,0,:,:]
+
     nt, ny, nx = msl.shape
     
     # Creating array holding only the grid index for the respective locations for the following sort
