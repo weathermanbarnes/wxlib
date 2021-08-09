@@ -82,7 +82,7 @@ def cyclone_by_contour(msl, grid):
     if len(msl.shape) == 4:
         if msl.shape[1] > 1:
             raise ValueError('Only one vertical level can be used for the the cyclone detection.')
-        msl = [:,0,:,:]
+        msl = msl[:,0,:,:]
 
     nt, ny, nx = msl.shape
     
