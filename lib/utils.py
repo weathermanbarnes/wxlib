@@ -98,7 +98,7 @@ def unscale(var):
         Missing value.
     """
     
-    missing = -32767
+    missing = -32768
     
     # Replace infinite by NaN, otherwise the scaling will reduce all other values to zero
     var = var.astype('f8')
@@ -107,9 +107,14 @@ def unscale(var):
     maxv  = np.nanmax(var)
     minv  = np.nanmin(var)
 
-    # divide in 2^16-2 intervals, values from -32766 -> 32767 ; reserve -32767 as missing value
+    # divide in 2^16-2 intervals, values from -32767 -> 32767 ; reserve -32768 as missing value
     scale = (maxv-minv)/65534.0
-    off   = +32766.5*scale + minv
+
+    # Avoid division by zero in case of a constant input field
+    if scale == 0.0:
+        scale = 1.0
+
+    off   = +32767*scale + minv
 
     res = np.round((var[::] - off)/scale)
     # Avoid integer overflow due to roundoff error
