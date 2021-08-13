@@ -149,7 +149,11 @@ class grid(object):
     def new_plev(self, plev):
         cpy = copy.copy(self)
 
-        if plev == 'sfc':
+        if type(plev) == type(None):
+            cpy.z_name = ''
+            cpy.z_unit = ''
+            cpy.z = []
+        elif plev == 'sfc':
             cpy.z_name = None
             cpy.z = None
             cpy.z_unit = None
