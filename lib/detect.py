@@ -264,7 +264,7 @@ def block_by_grad_rev(dat, grid, lat_band=(30,70),
     return blockmask
 
 
-def frontalvolume_largescale(tfp, dx, dy):
+def frontalvolume_largescale(tfp, dx, dy, mountain_mask=None):
     ''' Detect frontal zones as coherent areas with strong TFP gradients
     
     The large-scale version of this function (applicable for example to ERA-Interim data)
@@ -285,6 +285,8 @@ def frontalvolume_largescale(tfp, dx, dy):
     dy : np.ndarray with shape (ny,nx) and dtype float64
         The double grid spacing in y-direction to be directly for centered differences.
         ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+    mountain_mask : np.ndarray with shape (nt,nz,ny,nx) and dtype bool
+        *Optional*, default ``None``. The gradient of tfp will be set to 0 at masked grid points 
     
     Returns
     -------
@@ -306,6 +308,9 @@ def frontalvolume_largescale(tfp, dx, dy):
         sys.stdout.flush()
         ddx, ddy = dynfor.derivatives.grad(tfp[tidx,:,:,:], dx, dy)
         tfp_grad = np.sqrt(ddx**2 + ddy**2)
+        if not type(mountain_mask) == type(None):
+            tfp_grad[mountain_mask[tidx,:,:,:]] = 0.
+            
         mask = tfp_grad > thres
 
         labels_, sizes = dynfor.utils.label_connected_3d(mask, cellsize, 2500)
@@ -323,7 +328,7 @@ def frontalvolume_largescale(tfp, dx, dy):
     return labels
 
 
-def frontalvolume_smallscale(tfp, dx, dy, quiet=True):
+def frontalvolume_smallscale(tfp, dx, dy, mountain_mask=None, tfps=None, quiet=True):
     ''' Detect frontal zones as coherent areas with strong TFP gradients
     
     The small-scale version of this function (applicable for example to NORA10 data)
@@ -347,6 +352,12 @@ def frontalvolume_smallscale(tfp, dx, dy, quiet=True):
     dy : np.ndarray with shape (ny,nx) and dtype float64
         The double grid spacing in y-direction to be directly for centered differences.
         ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+    mountain_mask : np.ndarray with shape (nt,nz,ny,nx) and dtype bool
+        *Optional*, default ``None``. The gradient of tfp will be set to 0 at masked grid points 
+    tfps: np.ndarray with shape (nt,nz,ny,nx) and dtype float64
+        Smoothed thermal front parameter (TFP) field. Must be created out of the same tfp field
+        as is passed as first argument
+        *optional*, default ``None``. If ``None``, tfps is created by dynfor.utils.smooth_xy
     quiet : bool
         *Optional*, default ``True``. If ``False`` display progress by current time step.
     
@@ -372,10 +383,16 @@ def frontalvolume_smallscale(tfp, dx, dy, quiet=True):
             print(f'{tidx}/{tfp.shape[0]}', end=chr(13))
         ddx, ddy = dynfor.derivatives.grad(tfp[tidx,:,:,:], dx, dy)
         tfp_grad = np.sqrt(ddx**2 + ddy**2)
-    
-        tfps = dynfor.utils.smooth_xy(tfp[tidx,:,:,:], nsmooth)
+        if not type(mountain_mask) == type(None):
+            tfp_grad[mountain_mask[tidx,:,:,:]] = 0.
+            
+        if type(tfps) == type(None):
+            tfps = dynfor.utils.smooth_xy(tfp[tidx,:,:,:], nsmooth)
+            
         ddx, ddy = dynfor.derivatives.grad(tfps, dx, dy)
         tfps_grad = np.sqrt(ddx**2 + ddy**2)
+        if not type(mountain_mask) == type(None):
+            tfps_grad[mountain_mask[tidx,:,:,:]] = 0.
 
         mask = (tfp_grad > thres_ss) & (tfps_grad > thres_ls)
 
