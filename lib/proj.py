@@ -112,7 +112,22 @@ def N_Atlantic():
 
 N_Atlantic.aspect = 1.5
 
-# (h) North-Pacific map
+# (h) Polar North Atlantic: Fram-strait to Greenland-Iceland-Scotland ridge
+def Polar_N_Atlantic():
+	''' Map over the North Atlantic, using the Lambert conformal projection
+
+	Returns
+	-------
+	Basemap
+		map projection instance
+	'''
+
+	return Basemap(projection='lcc', lat_0=67, lat_ts=67, lon_0=-30, resolution='l', 
+			width=5000000, height=5000000)
+
+Polar_N_Atlantic.aspect = 1.0
+
+# (i) North-Pacific map
 def N_Pacific():
 	''' Map over the North Pacific, using the Lambert conformal projection
 
@@ -127,7 +142,7 @@ def N_Pacific():
 
 N_Pacific.aspect = 1.5
 
-# (i) Australia map
+# (j) Australia map
 def Australia():
 	''' Map over Australia, using the Lambert conformal projection
 
