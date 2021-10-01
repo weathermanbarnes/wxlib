@@ -603,14 +603,17 @@ def metsave_factory(metopen, conf):
             f = metopen(filename, no_static=True, mode='a')
             
             # If dimensions do not exist, they can and will be created; but if they exist, they should match!
-            dims = [(static.t_name, static.t), ]
+            dims = []
+            if static.t_name:
+                dims.append((static.t_name, static.t) )
             for dim in add_dims:
                 dims.append((dim['name'], dim['data']) )
-            dims.extend([
-                (static.z_name, static.z),
-                (static.y_name, static.y[:,0]), 
-                (static.x_name, static.x[0,:]), 
-            ])
+            if static.z_name:
+                dims.append((static.z_name, static.z) )
+            if static.y_name:
+                dims.append((static.y_name, static.y[:,0]) )
+            if static.x_name:
+                dims.append((static.x_name, static.x[0,:]) )
 
             for dim, dimvals in dims:
                 if dim and dim in f.dimensions:
