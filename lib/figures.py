@@ -478,7 +478,7 @@ def __contourf_dat(m, x, y, dat, q, kwargs):
         pkwargs = ['cmap', 'norm', 'vmin', 'vmax', 'edgecolors', 'alpha', 'clim', ]
         pkwargs = { key: kwargs.get(key, None) for key in pkwargs }
         datm = np.ma.masked_where(np.isnan(dat), dat)
-        cs = m.pcolormesh(x, y, datm, latlon=True, zorder=zorder, **pkwargs)
+        cs = m.pcolor(x, y, datm, latlon=True, zorder=zorder, **pkwargs)
     elif kwargs.get('tri'):
         cs = m.contourf(x.flatten(), y.flatten(), dat.flatten(), scale, latlon=True, zorder=zorder, **clean_kwargs)
     else:
