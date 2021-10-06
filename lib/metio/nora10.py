@@ -134,5 +134,8 @@ get_time_average = get_time_average_factory(files_by_plevq, get_normalized_from_
 get_aggregate = get_aggregate_factory(files_by_plevq, get_normalized_from_file, get_static, conf)
 get_composite = get_composite_factory(files_by_plevq, get_normalized_from_file, get_static, conf)
 
+# Does not work for NORA10 as lat/lon are not monotonously increasing in the NORA10 grid directions
+#get_at_position, get_hor_interpolation_functions = get_at_position_factory(files_by_plevq, get_normalized_from_file)
+
 
 # C'est le fin

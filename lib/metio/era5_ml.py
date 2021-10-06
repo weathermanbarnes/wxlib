@@ -482,7 +482,7 @@ def get_at_position(dates, plevs, ys, xs, q):
             if tidxs_out.size == 0:
                 continue
             
-            for pidx in range(dat_.shape[1]):
+            for pidx, plev in enumerate(plevs):
                 if len(dat_.shape) == 3:
                     if pidx > 0:
                         raise ValueError('Expected several levels in dat_ array, but only got 3D-array')
