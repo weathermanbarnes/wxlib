@@ -106,9 +106,9 @@ standard_variables = [
     v('sst_front_freq', 'SST front lines detection frequency', 'm of line m**-2'),
     v('frovo_freq', 'Frontal volume detection frequency', '(time step)**-1'),
 
-    v('cycmask', 'Cyclone detection ID', '(object index)', objmask='cyc'),
+    v('cycmask', 'Cyclone detection mask', '(0-1)', objmask='cyc'),
     v('cyc_freq', 'Cyclone detection frequency', '(time step)**-1'),
-    v('acycmask', 'Anticyclone detection ID', '(object index)', objmask='cyc'),
+    v('acycmask', 'Anticyclone detection mask', '(0-1)', objmask='acyc'),
     v('acyc_freq', 'Anticyclone detection frequency', '(time step)**-1'),
     v('cyc_dens', 'Cyclone detection density', '(1000 km)**-2'),
     v('cycgen_dens', 'Cyclogeneis detection density', '(1000 km)**-2'),
