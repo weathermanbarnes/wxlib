@@ -658,9 +658,22 @@ contains
                       minidx = m
                    end if
                 end do
+
                 ! Minimum belongs to existing cyclone
                 if ( minidx > 0 ) then
-                   mask(k,j,i) = minidx
+                   ! ... but existing cyclone already complete
+                   if ( done(minidx) ) then
+                      mask(k,j,i) = -1_ni
+                   ! ... but existing cyclone would become too large
+                   else if ( meta(k,minidx,5_ni) + cellsize(j,i) > cyc_maxsize ) then
+                      mask(k,j,i) = -1_ni
+                      done(minidx) = .true.
+                  ! Point really belongs to existing cyclone
+                   else
+                      mask(k,j,i) = minidx
+                      meta(k,minidx,5_ni) = meta(k,minidx,5_ni) + cellsize(j,i)
+                      meta(k,minidx,4_ni) = val
+                   endif
 
                 ! Actually new cyclone
                 else
