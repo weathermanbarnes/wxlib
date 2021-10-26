@@ -7,9 +7,10 @@ Available data sets
 Dynlib comes with convenience functions for a couple of widely used datasets. Currently the following 
 datasets are defined:
 
- * ERA5
+ * ERA5 (both the model and the pressure-level data set)
  * ERA-Interim
  * ERA20-C
+ * CERA-SAT
  * NORA10
 
 For each of these datasets a set of input/output functions are available. These are 
@@ -207,6 +208,7 @@ All available IO functions
    api/metio_era5_ml
    api/metio_erai
    api/metio_era20c
+   api/metio_cera_sat
    api/metio_nora10
 
 
