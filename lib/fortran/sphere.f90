@@ -477,6 +477,74 @@ contains
     !
   end subroutine
   !
+  !@ Spherical harmonics-based Laplace inversion of a scalar field
+  !@
+  !@ This routine is a wrapper around the SpherePack routines ``islapes`` and ``shsesi``.
+  !@ The output of ``islapes`` is passed unchanged as the results of this routine.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@ 
+  !@ nx : int
+  !@     Number of grid points in zonal direction of the output arrays
+  !@ a,b : np.ndarrays with shape (nz,ny,ny) and dtype float64
+  !@     Spherical harmonics coefficients as returned by ``sh_analysis``
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Reconstructed field
+  subroutine sh_synthesis_ilaplace(res, nx,ny,nz, a,b)
+    real(kind=nr), intent(in) :: a(nz,ny,ny), b(nz,ny,ny)
+    integer(kind=ni), intent(in) :: nx,ny,nz
+    real(kind=nr), intent(out) :: res(nz,ny,nx)
+    !
+    !real(kind=nr) :: br(nz,ny,ny), bi(nz,ny,ny), cr(nz,ny,ny), ci(nz,ny,ny)
+    integer(kind=ni) :: ierror, k
+    !
+    integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
+    real(kind=nr) :: pertrb(1_ni)
+    real(kind=nr), allocatable :: work(:)
+    real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
+    !
+    !f2py depend(nz,ny) bi, cr, ci, u, v
+    ! -----------------------------------------------------------------
+    !
+    if ( nx /= last_nx .or. ny /= last_ny ) then
+       call reset()
+       last_nx = nx
+       last_ny = ny
+    end if
+    !
+    lwork = max( 4_ni*(ny+1_ni)**2_ni , (nz+1_ni)*ny*nx )
+    ldwork = ny + 1_ni
+    allocate(work(lwork), dwork(ldwork))
+    !
+    ! No precalculated wshses available
+    if ( lshses == 0_ni ) then
+       lshses = ((ny+1_ni)**3_ni)/4_ni + nx + 15_ni
+       allocate(wshses(lshses))
+       call shsesi(ny,nx,wshses,lshses,work,lwork,dwork,ldwork,ierror)
+       if ( ierror /= 0_ni ) then
+          write(*,*) 'Error in shsesi, code', ierror
+          stop 1
+       end if
+    end if
+    !
+    res(:,:,:) = 0.0_nr
+    do k = 1_ni,nz
+       call islapes(ny,nx,0_ni,1_ni,0.0_nr, res(k,:,:), ny,nx, &
+               & a(k,:,:),b(k,:,:), ny,ny, wshses,lshses,work,lwork, pertrb,ierror)
+    end do
+    if ( ierror /= 0_ni ) then
+       write(*,*) 'Error in islapes, code', ierror
+       stop 1
+    end if
+    !
+    deallocate(work, dwork)
+    !
+  end subroutine
+  !
   !@ Reset the internal precalculated work arrays
   !@
   !@ This routine is called automatically as soon as the one of the
