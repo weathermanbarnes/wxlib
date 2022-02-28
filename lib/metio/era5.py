@@ -19,8 +19,9 @@ conf = settings_obj({
     'q_lines': {},
     'q_obj': {},
     'datapath': ['.',
-        '/Data/gfi/share/era5/pl', 
-        '/Data/gfi/share/era5/pv2', 
+        '/Data/gfi/share/era5/pl',
+        '/Data/gfi/share/era5/sfc',
+        '/Data/gfi/share/era5/pv2',
         '/Data/gfi/users/local/share',
     ], 
     'opath': '.',
@@ -35,11 +36,24 @@ conf = settings_obj({
 # ERA5 is following our standard naming convention
 conf.register_variable(standard_variables)
 
+# Some variables are only available through short-term forecasts; the corresponding files are named differently to mark this.
+FCq = [
+    'cape', 
+    'cp', 'csf', 'e', 'lsf', 'lsp', 'tp', 'sf', 
+    'slhf', 'sshf', 
+    'ssr', 'ssrc', 'ssrd', 'str', 'strc', 'strd', 
+    'tsr', 'tsrc', 'ttr', 'ttrc'
+]
 
 _files_by_plevq = files_by_plevq
 class files_by_plevq(_files_by_plevq):
     def __init__(self, plevq, start=None, end=None):
         plev, q = plevq
+        if q in FCq:
+            self.prefix = 'ea.for'
+        else:
+            self.prefix = 'ea.ans'
+
         if plev == '__all__':
             raise ValueError('ERA5 does not support requests for all vertical levels.')
         if q == '__all__':
@@ -54,7 +68,7 @@ class files_by_plevq(_files_by_plevq):
 
     def __next__(self):
         if self.cur < self.end:
-            filename = f'ea.ans.{self.cur.year}{self.cur.month:02d}.{self.plev}.{self.q}'
+            filename = f'{self.prefix}.{self.cur.year}{self.cur.month:02d}.{self.plev}.{self.q}'
             
             nxt = dt(self.cur.year + (self.cur.month // 12), self.cur.month % 12 + 1, 1, 0)
             monlen = int((

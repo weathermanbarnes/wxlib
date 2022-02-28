@@ -36,7 +36,13 @@ conf = settings_obj({
 conf.register_variable(standard_variables)
 
 # Some variables are only available through short-term forecasts; the corresponding files are named differently to mark this.
-FCq = ['cape', 'cp', 'csf', 'e', 'lsf', 'lsp', 'slhf', 'sshf', 'ssr', 'str', 'tsr', 'ttr', ]
+FCq = [
+    'cape', 
+    'cp', 'csf', 'e', 'lsf', 'lsp', 'tp', 'sf', 
+    'slhf', 'sshf', 
+    'ssr', 'ssrc', 'ssrd', 'str', 'strc', 'strd', 
+    'tsr', 'tsrc', 'ttr', 'ttrc'
+]
 
 _files_by_plevq = files_by_plevq
 class files_by_plevq(_files_by_plevq):
