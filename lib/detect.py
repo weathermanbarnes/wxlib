@@ -576,7 +576,7 @@ def cold_air_outbreak_index(t850, msl, sst, ci, lsm, cao_thres=None):
     caoidx = tsfc - t850 
 
     # Mask land and sea-ice
-    caoidx[:,landmask] = np.nan
+    caoidx[...,landmask] = np.nan
     caoidx[ci > 0.5] = np.nan
     
     # Apply threshold or mask only negative CAO index values
