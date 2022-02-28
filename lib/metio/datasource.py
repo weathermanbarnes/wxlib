@@ -903,13 +903,13 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static
         # Checking max length
         if request_size > MAX_REQUEST_SIZE:
             if force:
-                print(f'Warning: you requested {request_size / 1024**3:.2f}G of data.')
+                print(f'Warning: you requested {request_size*8 / 1024**3:.2f}G of data.')
             else:
-                raise ValueError('''Cowardly refusing to fetch {request_size} values at once.
+                raise ValueError(f'''Cowardly refusing to fetch {request_size*8 / 1024**3:.2f}G of data at once.
                     If you are absolutely certain what you're doing, you can use force=True to override.''')
 
         if not force and request_size > WARN_REQUEST_SIZE:
-            print(f'Warning: you requested {request_size / 1024**3:.2f}G of data.')
+            print(f'Warning: you requested {request_size*8 / 1024**3:.2f}G of data.')
         
         # Remove no_static if present, this should only effect the output of this function rather than the 
         # metopen calls herein; also static info is sometimes required internally herein.
