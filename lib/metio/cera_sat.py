@@ -20,11 +20,11 @@ conf = settings_obj({
     'q_obj': {},
     'datapath': ['.',
         '/Data/gfi/share/Reanalyses/CERA-SAT/3HOURLY', 
-        '/Data/gfi/users/local/share',
+        '/Data/gfi/share/Reanalyses/CERA-SAT/STATIC', 
     ], 
     'opath': '.',
     'oformat': 'nc',
-    'staticfile': 'ei.ans.static',
+    'staticfile': 'et.ans.static.nc',
     'epoch': dt(1900,1,1,0),
     'calendar': 'standard',
     'timestep': td(0.125),
@@ -95,10 +95,10 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
         Some meta information about the data, like the grid information.
     '''
     
-    fo, oro = metopen(conf.staticfile, 'oro', verbose=verbose, no_dtype_conversion=no_dtype_conversion, 
+    fo, oro = metopen(conf.staticfile, 'z', verbose=verbose, no_dtype_conversion=no_dtype_conversion, 
             quiet=quiet, no_static=True)
     static = grid_by_static(fo)
-    static.oro = oro[::]
+    static.oro = oro[::] / 9.81 # From surface geopotential to surface height
     static.t_epoch = dt(1900,1,1,0)
     static.t_unit = 'hours since 1900-01-01 00:00:00'
     static.t_interval_unit = 3600
