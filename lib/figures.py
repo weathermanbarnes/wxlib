@@ -13,7 +13,6 @@ These functions have two main aims:
     for example temperatures are by default plotted in a consistent an meaningful way.
 '''
 
-from __future__ import absolute_import, unicode_literals, division, print_function
 from six import string_types
 
 import copy
@@ -546,10 +545,15 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
     
     if kwargs.get('mark'):
         lons, lats = kwargs.pop('mark')
-        mark_kwargs = kwargs.pop('mark_conf', dict(marker='o', facecolors=(1,1,1,0), 
-                edgecolors='k', linewidths=3, size=484))
-        size = mark_kwargs.pop('size')
-        m.scatter(lons, lats, size, latlon=True, zorder=3, **mark_kwargs)
+
+        mark_kwargs = dict(marker='o', markerfacecolor=(1,1,1,0), fillstyle='none',
+            markeredgecolor='k', markeredgewidth=3, markersize=484)
+        if 'mark_kwargs' in kwargs:
+            mark_kwargs.update(kwargs['mark_kwargs'])
+        if 'markercolor' in kwargs:
+            mark_kwargs['markeredgecolor'] = kwargs['markercolor']
+
+        m.plot(lons, lats, latlon=True, zorder=3, linestyle='', **mark_kwargs)
     
     if kwargs.get('title'):
         title = kwargs.pop('title')
@@ -957,7 +961,6 @@ def map_overlay_barbs(u, v, static, **kwargs):
         u_ = __map_prepare_dat(u, mask, static, kwargs)
         v_ = __map_prepare_dat(v, mask, static, kwargs)
             
-        
         # Respect rotated coordinate systems (otherweise returned unchanged)
         u_, v_ = static.unrotate_vector(u_, v_)
 
@@ -985,14 +988,6 @@ def map_overlay_barbs(u, v, static, **kwargs):
 
         else:
             ut,vt, xt,yt = rotate_vector(u_, v_, lon, lat, kwargs)
-            #ut,vt, xt,yt = m.rotate_vector(u_, v_, lon, lat, returnxy=True)
-        
-        #fio = plt.gcf()
-        #plt.figure()
-        #dd = np.arctan2(vt,ut)
-        #plt.hist(dd[~np.isnan(dd)], np.arange(-16,17)*np.pi/16)
-        #plt.savefig('03.pdf')
-        #plt.figure(fio.number)
         
         # barbs does not set some default values of None specified, and cannot handle extra kwargs
         ALLOWED_KWARGS = ['barbcolor', 'flagcolor', 'length', 'sizes', 'fill_empty', 'alpha', 

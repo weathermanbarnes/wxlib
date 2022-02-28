@@ -263,7 +263,6 @@ PLOT_DEFAULTS = {
     'maskcolor': '0.25',
     'mark': None, 
     'markersize': 25, # only for overlay_dots, TODO: homogeneize with mark keyword
-    'mark_conf': None,
     'name': '',
     'name_prefix': '',
     'oroalpha': 0.4, 
