@@ -285,8 +285,8 @@ def frontalvolume_largescale(tfp, dx, dy, mountain_mask=None):
     dy : np.ndarray with shape (ny,nx) and dtype float64
         The double grid spacing in y-direction to be directly for centered differences.
         ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
-    mountain_mask : np.ndarray with shape (nt,nz,ny,nx) and dtype bool
-        *Optional*, default ``None``. The gradient of tfp will be set to 0 at masked grid points 
+    mountain_mask : np.ndarray with dtype bool and shape (nt,nz,ny,nx) or (ny,nx)
+        *Optional*, default ``None``. The gradient of tfp will be set to 0 at masked grid points.
     
     Returns
     -------
@@ -309,7 +309,12 @@ def frontalvolume_largescale(tfp, dx, dy, mountain_mask=None):
         ddx, ddy = dynfor.derivatives.grad(tfp[tidx,:,:,:], dx, dy)
         tfp_grad = np.sqrt(ddx**2 + ddy**2)
         if not type(mountain_mask) == type(None):
-            tfp_grad[mountain_mask[tidx,:,:,:]] = 0.
+            if len(mountain_mask.shape) == 4:
+                tfp_grad[mountain_mask[tidx,:,:,:]] = 0.
+            elif len(mountain_mask.shape) == 2:
+                tfp_grad[:,mountain_mask] = 0.
+            else:
+                raise ValueError('Mountain mask must be either 2-dimensional (y,x) or 4-dimensional (t,z,y,x).')
             
         mask = tfp_grad > thres
 
