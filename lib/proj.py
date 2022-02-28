@@ -174,7 +174,7 @@ Vestland.aspect = 1.0
 def S_Norway():
 	return Basemap(projection='lcc', lat_0=60, lat_ts=60, lon_0=15, resolution='i', 
 			llcrnrlon=-1.5, llcrnrlat=55.4, urcrnrlon=13, urcrnrlat=65.0)
-S_Norway = 1.0
+S_Norway.aspect = 1.0
 
 # -> Scandinavia, covering about the entire AROME MetCoop domain
 def Scandinavia():
@@ -187,6 +187,24 @@ def N_Atlantic_forecast():
 	return Basemap(projection='lcc', lat_0=58, lat_ts=58, lon_0=-30, resolution='l', 
 			width=10800000, height=7200000)
 N_Atlantic_forecast.aspect = 1.5
+
+# -> Northern extratropics with smaller coastal features
+def n_hemisphere_forecast():
+	return Basemap(projection='npstere',boundinglat=20,lon_0=-50,resolution='c', area_thresh=10000)
+
+n_hemisphere_forecast.aspect = 1.0
+
+# -> Southern extratropics with smaller coastal features
+def s_hemisphere_forecast():
+	return Basemap(projection='spstere',boundinglat=-20,lon_0=0,resolution='c', area_thresh=10000)
+
+s_hemisphere_forecast.aspect = 1.0
+
+# -> Tropical Indo-Pacific
+def Tropical_IndoPacific():
+	return Basemap(projection='cea', llcrnrlat=-52,urcrnrlat=52,
+            llcrnrlon=40,urcrnrlon=290,lat_ts=18,resolution='l')
+Tropical_IndoPacific.aspect = 2.5
 
 # -> Barents Sea, covering about the entire AROME Arctic domain
 def Barents_Sea():
