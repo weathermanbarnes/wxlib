@@ -785,9 +785,12 @@ def map_overlay_lines(lines, loff, static, **kwargs):
     lns = unflatten_lines(lines, loff, static)
 
     def overlay(m, x, y, lon, lat, zorder, mask=None):
-        # TODO: Convert to latlon=True system
         for ln in lns:
             xfr, yfr = m(ln[:,0], ln[:,1])
+            # Hack to mask out lines crossing the periodic boundary for cylindrical projections
+            if m.projection in ['cea', 'cyl', 'merc']:
+                yfr[xfr < -1.0e4] = np.nan
+                xfr[xfr < -1.0e4] = np.nan
             m.plot(xfr, yfr, kwargs['linecolor'], linewidth=kwargs.get('linewidth', 2), 
                     alpha=kwargs.get('alpha', 1))
 
