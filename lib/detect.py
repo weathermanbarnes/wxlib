@@ -333,7 +333,7 @@ def frontalvolume_largescale(tfp, dx, dy, mountain_mask=None):
     return labels
 
 
-def frontalvolume_smallscale(tfp, dx, dy, mountain_mask=None, tfps=None, quiet=True):
+def frontalvolume_smallscale(tfp, dx, dy, mountain_mask=None, tfps=None, maxobj=3000, quiet=True):
     ''' Detect frontal zones as coherent areas with strong TFP gradients
     
     The small-scale version of this function (applicable for example to NORA10 data)
@@ -363,6 +363,8 @@ def frontalvolume_smallscale(tfp, dx, dy, mountain_mask=None, tfps=None, quiet=T
         Smoothed thermal front parameter (TFP) field. Must be created out of the same tfp field
         as is passed as first argument
         *optional*, default ``None``. If ``None``, tfps is created by dynfor.utils.smooth_xy
+    maxobj : int
+        *Option*, default 3000. Maximum number of objects to be found.
     quiet : bool
         *Optional*, default ``True``. If ``False`` display progress by current time step.
     
@@ -401,7 +403,7 @@ def frontalvolume_smallscale(tfp, dx, dy, mountain_mask=None, tfps=None, quiet=T
 
         mask = (tfp_grad > thres_ss) & (tfps_grad > thres_ls)
 
-        labels_, sizes = dynfor.utils.label_connected_3d(mask, cellsize, 3000)
+        labels_, sizes = dynfor.utils.label_connected_3d(mask, cellsize, maxobj)
         for n, size in zip(range(1,len(sizes)+1), sizes):
             if size == 0:
                 break
