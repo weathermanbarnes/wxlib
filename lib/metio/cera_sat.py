@@ -96,9 +96,8 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
         Some meta information about the data, like the grid information.
     '''
     
-    fo, oro = metopen(conf.staticfile, 'z', verbose=verbose, no_dtype_conversion=no_dtype_conversion, 
-            quiet=quiet, no_static=True)
-    static = grid_by_static(fo)
+    fo, oro, static = metopen(conf.staticfile, 'z', verbose=verbose, no_dtype_conversion=no_dtype_conversion, 
+            quiet=quiet)
     static.oro = oro[::] / 9.81 # From surface geopotential to surface height
     static.t_epoch = dt(1900,1,1,0)
     static.t_unit = 'hours since 1900-01-01 00:00:00'
