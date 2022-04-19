@@ -239,6 +239,10 @@ def get_normalized_from_file_factory(get_from_file, conf):
         if q in conf.q_lines:
             datoff, grid = get_from_file(filename, plev, conf.q_lines[q])
             dat = utils.normalize_lines(dat, datoff, grid.dx, grid.dy)
+        
+        # Treat feature distance fields
+        if q in conf.q_feature_dists:
+            dat = (ret <= conf.q_feature_dists[q])
 
         # Treat objmasks
         if q in conf.q_obj:

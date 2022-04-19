@@ -17,6 +17,7 @@ conf = settings_obj({
     'q_long': {},
     'q_bins': {},
     'q_lines': {},
+    'q_feature_dists': {},
     'q_obj': {},
     'datapath': ['.',
         '/Data/gfi/share/Reanalyses/ERA_INTERIM/6HOURLY', 
