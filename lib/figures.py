@@ -847,7 +847,7 @@ def map_overlay_clines(lines, cdat, loff, static, **kwargs):
 
             lc = LineCollection(segments, array=cdat[loff[lidx]:loff[lidx+1]],
                     cmap=kwargs.get('cmap'), norm=norm,
-                    linewidth=kwargs.get('linewidth'), alpha=kwargs.get('alpha'),
+                    linewidth=kwargs.get('linewidth'), alpha=kwargs.get('alpha'), zorder=10,
             )
             plt.gca().add_collection(lc)
 
@@ -963,10 +963,14 @@ def map_overlay_barbs(u, v, static, **kwargs):
 
         u_ = __map_prepare_dat(u, mask, static, kwargs)
         v_ = __map_prepare_dat(v, mask, static, kwargs)
-            
+
         # Respect rotated coordinate systems (otherweise returned unchanged)
         u_, v_ = static.unrotate_vector(u_, v_)
 
+        if m.projection == 'spstere':
+            u_ = -u_
+            v_ = -v_
+            
         # TODO: Check for homogeneous lat and lon before attempting the interpolation!
         if not kwargs.get('vector_disable_interpolation', False):
             Nvecx, Nvecy = kwargs.pop('vector_space_numbers_xy', (30,20))
@@ -992,7 +996,7 @@ def map_overlay_barbs(u, v, static, **kwargs):
         else:
             ut,vt, xt,yt = rotate_vector(u_, v_, lon, lat, kwargs)
         
-        # barbs does not set some default values of None specified, and cannot handle extra kwargs
+        # barbs does not set some default values if None specified, and cannot handle extra kwargs
         ALLOWED_KWARGS = ['barbcolor', 'flagcolor', 'length', 'sizes', 'fill_empty', 'alpha', 
                 'linestyles', 'linewidths']
         kwargs_ = {}
@@ -1048,6 +1052,10 @@ def map_overlay_quiver(u, v, static, **kwargs):
         # Respect rotated coordinate systems (otherweise returned unchanged)
         u_, v_ = static.unrotate_vector(u_, v_)
 
+        if m.projection == 'spstere':
+            u_ = -u_
+            v_ = -v_
+            
         # Shift (global) grids to start from -180.0 if necessary
         if not lon[0,0] == -180.0 and (lon[0,-1]-lon[0,0]) > 355:
             u_, lon_ = mpl_toolkits.basemap.shiftgrid(180.0, u_, lon[0,:])
