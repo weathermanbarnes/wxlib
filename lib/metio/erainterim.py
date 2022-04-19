@@ -64,9 +64,9 @@ class files_by_plevq(_files_by_plevq):
     def __next__(self):
         if self.cur < self.end:
             if not self.q in FCq:
-                filename = f'ei.ans.{self.cur.year}.{self.plev}.{self.q}'
+                filename = f'ei.ans.{self.cur.year}.{self.plev}.{conf.qf.get(self.q, self.q)}'
             else:
-                filename = f'ei.for.{self.cur.year}.{self.plev}.{self.q}'
+                filename = f'ei.for.{self.cur.year}.{self.plev}.{conf.qf.get(self.q, self.q)}'
 
             yearlen = int((dt(self.cur.year+1, 1, 1, 0) - dt(self.cur.year, 1, 1, 0)).total_seconds() / conf.timestep.total_seconds())
             tidxs_all = range(yearlen)

@@ -54,7 +54,7 @@ class files_by_plevq(_files_by_plevq):
 
     def __next__(self):
         if self.cur < self.end:
-            filename = f'NORA10.{self.cur.year}{self.cur.month:02d}.{self.plev}.{self.q}'
+            filename = f'NORA10.{self.cur.year}{self.cur.month:02d}.{self.plev}.{conf.qf.get(self.q, self.q)}'
             
             nxt = dt(self.cur.year + (self.cur.month // 12), self.cur.month % 12 + 1, 1, 0)
             monlen = int((
