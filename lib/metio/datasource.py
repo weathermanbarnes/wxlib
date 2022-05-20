@@ -918,7 +918,8 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static
         # Remove no_static if present, this should only effect the output of this function rather than the 
         # metopen calls herein; also static info is sometimes required internally herein.
         no_static = kwargs.pop('no_static', False)
-        grid = get_static()
+        static_kwargs = {key: value for key, value in kwargs.items() if key in ['quiet',]}
+        grid = get_static(**static_kwargs)
 
         dat = {}
         dates = {}
@@ -1203,7 +1204,8 @@ def get_time_average_factory(files_by_plevq, get_normalized_from_file, get_stati
 
         dat = {}
         dates = {}
-        grid = get_static()
+        static_kwargs = {key: value for key, value in kwargs.items() if key in ['quiet',]}
+        grid = get_static(**static_kwargs)
         for plev, q in plevqs:
             qout = conf.q_avg.get(q, q)
 
@@ -1334,7 +1336,8 @@ def get_aggregate_factory(files_by_plevq, get_normalized_from_file, get_static, 
 
         # Remove no_static if present, this should only effect the output of this function rather than the metopen calls herein
         no_static = kwargs.pop('no_static', False)
-        grid = get_static() # For conf.q_lines and potentially for output
+        static_kwargs = {key: value for key, value in kwargs.items() if key in ['quiet',]}
+        grid = get_static(**static_kwargs) # For conf.q_lines and potentially for output
 
         dat = {}
         start_dates = {}
