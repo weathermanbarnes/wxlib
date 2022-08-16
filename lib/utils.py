@@ -772,7 +772,7 @@ def dist_from_mask_latlon(featmask, green_dists, izero, quiet=True):
     ny = featmask.shape[-2]
     mindists = np.ones(featmask.shape) * 50.0e6 # Larger than the circumpherence of the Earth
     poss = np.argwhere(featmask)
-    updateevery = len(poss) // 1000
+    updateevery = max(len(poss) // 1000, 1)
     for idx, pos in enumerate(poss):
         if idx % updateevery == 0 and not quiet:
             print(f'{idx/10/updateevery:3.1f}%', end=chr(13))
