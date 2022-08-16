@@ -33,7 +33,7 @@ North Atlantic (line 30-32).
 
 .. literalinclude:: inc/example_diag_yearly.py
    :linenos:
-   :emphasize-lines: 11-12,25
+   :emphasize-lines: 11-12,29
 
 The script changes hardly at all if you want to calculate and save deformation for longer period.
 Typically, for ERA-Interim, we would use yearly chunks as shown in the script. Differences to the first

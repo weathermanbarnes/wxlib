@@ -19,11 +19,14 @@ dat, grid = get_instantaneous([(plev, 'u'), (plev,'v'), ], timeinterval)
 # Calculate total deformation
 defabs = dynlib.diag.def_total(dat[plev,'u'][:,0,:,:], dat[plev,'v'][:,0,:,:], grid.dx, grid.dy)
 
+# grid does not contain vertical level information (as data from different levels could have been requested)
+# -> Inject vertical level information required for saving
+ogrid = grid.new_plev(plev)
 # Save results as netCDF file
 tosave = {
     'defabs': defabs[:,np.newaxis,:,:],      # Pressure-level data is expected to be 4-dimensional
 }
-metsave(tosave, grid, f'ei.ans.Dagmar.{plev}.defabs')
+metsave(tosave, ogrid, f'ei.ans.Dagmar.{plev}.defabs')
 
 # Plot results
 for tidx in range(len(grid.t)):
