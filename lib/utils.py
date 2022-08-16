@@ -711,6 +711,60 @@ def dist_sphere(lon1, lat1, lon2, lat2, r=6.37e6):
 
 
 
+def go_on_sphere(lon0, lat0, x, y, R=6366.2e3):
+    ''' Go from lon0/lat0 following the vector (x,y), where do you end up?
+
+    The vector (x,y) gives distances in meters, lon0 and lat0 give the initial position 
+    in degrees. The vector can for example be construced by a wind vector (u,v) multiplied
+    by a time step.
+
+    Approach: Using spherical geometry, go for the length of the vector along the great 
+    circle defined by the initial position and orientation of the vector.
+
+    Numpy broadcasting rules apply. lon0 and lat0, as well as x and y should have the 
+    same shape, respectively. The combination of shapes for the initial positions and 
+    vectors, respectively, determines if the result contains values for all combinations 
+    of initial positions and vectors or only for pairs in sequence.
+
+    Parameters
+    ----------
+    lon0 : float or np.ndarray
+        Longitude(s) of the initial position(s) in degrees.
+    lat0 : float or np.ndarray
+        Latitude(s) of the initial position(s) in degrees.
+    x : float or np.ndarray
+        Eastward component of the vector.
+    y : float or np.ndarray
+        Northward component of the vector.
+    R : float
+        Optional, default: 6366.2 km. Earth radius, or radius of the sphere on which to move around.
+
+    Returns
+    -------
+    float or np.ndarray
+        Longitude(s) of the final position(s) in degrees.
+    float or np.ndarray
+        Latitude(s) of the final position(s) in degrees.
+    '''
+
+    r = np.sqrt(x*x + y*y)
+    phi = np.arctan2(x,y)
+
+    sinr = np.sin(r/R)
+    cosr = np.cos(r/R)
+    sinlat0 = np.sin(lat0*np.pi/180.0)
+    coslat0 = np.cos(lat0*np.pi/180.0)
+    sinphi = np.sin(phi)
+    cosphi = np.cos(phi)
+
+    lat1 = np.arcsin(cosr*sinlat0 + sinr*coslat0*cosphi) * 180/np.pi
+    lon1 = np.arcsin(np.minimum(np.maximum(sinr*sinphi/coslat0,-1.0),1.0)) * 180/np.pi + lon0
+    lon1[lon1 >= 180] -= 360.0
+    lon1[lon1 < -180] += 360.0
+
+    return lon1, lat1
+
+
 def dist_green_latlon(lon, lat):
     ''' Calculate distances from points along zero meridian and 0°-90°N
 
