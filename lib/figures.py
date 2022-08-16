@@ -397,6 +397,10 @@ def __map_setup(mask, static, kwargs):
             if alpha:
                 lines.set_alpha(alpha)
 
+        landcolor = kwargs.pop('landcolor')
+        if landcolor:
+            m.fillcontinents(color=landcolor, alpha=kwargs.pop('land_alpha', 1.0))
+
         gridcolor = kwargs.pop('gridcolor')
         if gridcolor:
             meridians = kwargs.pop('meridians', range(0,360,30))

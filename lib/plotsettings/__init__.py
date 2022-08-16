@@ -255,6 +255,8 @@ PLOT_DEFAULTS = {
     'grid_dashes': (None, None),
     'grid_linestyle': '-',
     'grid_latmax': 90,
+    'landcolor': None,
+    'land_alpha': 1.0,
     'meridians': (-180,-120,-60, 0, 60, 120),
     'parallels': (-60,-30, 0, 30, 60),
     'hatches': (),
