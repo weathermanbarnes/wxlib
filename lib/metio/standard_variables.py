@@ -114,6 +114,8 @@ standard_variables = [
     v('cycgen_dens', 'Cyclogeneis detection density', '(1000 km)**-2'),
     v('cyclys_dens', 'Cyclolysis detection density', '(1000 km)**-2'),
 
+    v('wvfaxis', 'Moisture pathways', '(mixed)', lines='wvfaoff'),
+
     v('jetaxis', 'Jet axis lines', '(mixed)', lines='jaoff'),
     v('jetaxis_freq', 'Jet axis lines', 'm of line m**-2'),
     v('rwb_a', 'Anticyclonic wave breaking frequency', '(time step)**-1'),

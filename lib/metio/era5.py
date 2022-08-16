@@ -46,6 +46,13 @@ FCq = [
     'tsr', 'tsrc', 'ttr', 'ttrc'
 ]
 
+SPECIAL_SHAPES = {
+    ('pv2000', 'jetaxis'): (5000, 3),
+    ('pv2000', 'jaoff'): (200,),
+    ('sfc', 'wvfaxis'): (5000, 3),
+    ('sfc', 'wvfaoff'): (200,),
+}
+
 _files_by_plevq = files_by_plevq
 class files_by_plevq(_files_by_plevq):
     def __init__(self, plevq, start=None, end=None):
@@ -63,7 +70,7 @@ class files_by_plevq(_files_by_plevq):
         if not start:
             start = dt(1979,1,1,0)
         if not end:
-            end = dt(2019,1,1,0)
+            end = dt(2021,1,1,0)
         
         return super().__init__(plevq, start, end)
 
@@ -81,7 +88,9 @@ class files_by_plevq(_files_by_plevq):
             tidxs = [tidx for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
             dates = [dates_all[tidx] for tidx in tidxs_all if dates_all[tidx] >= self.start and dates_all[tidx] < self.end]
 
-            if self.plev == 'sfc':
+            if (self.plev, self.q) in SPECIAL_SHAPES:
+                size = (len(tidxs), ) + SPECIAL_SHAPES[self.plev,self.q]
+            elif self.plev == 'sfc':
                 size = (len(tidxs),) + conf.gridsize
             else:
                 size = (len(tidxs), 1) + conf.gridsize

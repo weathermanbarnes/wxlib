@@ -749,7 +749,7 @@ def metsave_factory(metopen, conf):
 
         Parameters
         ----------
-        dat : dict, mapping (composite_name, plev, q) => np.ndarray
+        dat : dict, mapping (composite_name, plev, q) => dict("mean", "std", "valid_cnt") => np.ndarray
             Composite data as returned from get_composite. 
         composites : list of decider
             Composites, in order, that should be saved.
@@ -937,14 +937,6 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static
                     dat_ = q_special[q](get_from_file, filename, plev, q, cut=cut, no_static=True, **kwargs)
                 else:
                     dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
-
-                    # Treat special data
-                    #
-                    #  1. Lines
-                    if q in conf.q_lines:
-                        ql = conf.q_lines[q]
-                        datoff_ = get_from_file(filename, plev, ql, cut=cut, no_static=True, **kwargs)
-                        dat_ = utils.normalize_lines(dat_, datoff_, grid.dx, grid.dy)[:,np.newaxis,:,:]
 
                 dat[plev,q][toff:toff+tlen,...] = dat_[...]
                 dates[plev,q].extend(dates_)

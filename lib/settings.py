@@ -221,6 +221,7 @@ class settings_obj(default_dict):
             self[self._Q_BINS][q] = var.bins
         if not type(var.lines) == type(None):
             self[self._Q_LINES][q] = var.lines
+            self[self._Q_FILE][var.lines] = q
         if not type(var.objmask) == type(None):
             self[self._Q_OBJ][q] = var.objmask
 
