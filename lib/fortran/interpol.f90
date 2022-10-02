@@ -82,12 +82,14 @@ contains
     !
     real(kind=nr) :: idxs(nn)
     integer(kind=ni) :: i,j,ki,ko
-    logical :: inverted = .false.
+    logical :: inverted
     ! -----------------------------------------------------------------
     !
     ! Check if the new vertical coordinate is inverted with respect to the current one
     if ( datv(2_ni,1_ni,1_ni) < datv(1_ni,1_ni,1_ni) ) then
        inverted = .true.
+    else
+       inverted = .false.
     end if
     !
     if ( .not. inverted ) then
