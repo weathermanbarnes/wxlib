@@ -21,6 +21,7 @@ conf = settings_obj({
     'q_obj': {},
     'datapath': ['.',
         '/Data/gfi/share/era5/pl',
+        '/Data/gfi/share/era5/pl_tendendies',
         '/Data/gfi/share/era5/sfc',
         '/Data/gfi/share/era5/pv2',
         '/Data/gfi/users/local/share',
@@ -44,6 +45,7 @@ FCq = [
     'slhf', 'sshf', 
     'ssr', 'ssrc', 'ssrd', 'str', 'strc', 'strd', 
     'tsr', 'tsrc', 'ttr', 'ttrc'
+    'mttpm', 'mttlwr', 'mttlwrcs', 'mttswr', 'mttswrcs',
 ]
 
 SPECIAL_SHAPES = {
