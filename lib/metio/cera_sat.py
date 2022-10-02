@@ -121,6 +121,12 @@ def get_from_file(filename, plev, q, **kwargs):
     
     # Pass everything on, but the file object itself.
     stuff = metopen(filename, q, **kwargs)
+
+    # If the data is 5-dimensional, squeeze the vertical level information 
+    # Necessary,  because EC-data does not have the vertical level while stuff saved with metsave does.
+    if len(stuff[1].shape) == 5:
+        stuff = stuff[:1] + (stuff[1].squeeze(axis=2), ) + stuff[2:]
+
     if len(stuff) == 2:
         return stuff[1]
     else:
