@@ -394,9 +394,11 @@ def frontalvolume_smallscale(tfp, dx, dy, mountain_mask=None, tfps=None, maxobj=
             tfp_grad[mountain_mask[tidx,:,:,:]] = 0.
             
         if type(tfps) == type(None):
-            tfps = dynfor.utils.smooth_xy(tfp[tidx,:,:,:], nsmooth)
+            tfps_ = dynfor.utils.smooth_xy(tfp[tidx,:,:,:], nsmooth)
+        else:
+            tfps_ = tfps[tidx,:,:,:]
             
-        ddx, ddy = dynfor.derivatives.grad(tfps, dx, dy)
+        ddx, ddy = dynfor.derivatives.grad(tfps_, dx, dy)
         tfps_grad = np.sqrt(ddx**2 + ddy**2)
         if not type(mountain_mask) == type(None):
             tfps_grad[mountain_mask[tidx,:,:,:]] = 0.
