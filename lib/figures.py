@@ -763,6 +763,10 @@ def map_overlay_contour(dat, static, **kwargs):
 
 def map_overlay_lines(lines, loff, static, **kwargs):  
     ''' Overlay lines onto a map
+
+    Lines are given in the compressed format in which they are stored for, for example, jet axes or 
+    moisture transport axes. Coordinates are given as Fortran-indexed grid point indexes (i.e. starting 
+    with 1).
     
     Parameters
     ----------
@@ -790,6 +794,47 @@ def map_overlay_lines(lines, loff, static, **kwargs):
 
     def overlay(m, x, y, lon, lat, zorder, mask=None):
         for ln in lns:
+            xfr, yfr = m(ln[:,0], ln[:,1])
+            # Hack to mask out lines crossing the periodic boundary for cylindrical projections
+            if m.projection in ['cea', 'cyl', 'merc']:
+                yfr[xfr < -1.0e4] = np.nan
+                xfr[xfr < -1.0e4] = np.nan
+            m.plot(xfr, yfr, kwargs['linecolor'], linewidth=kwargs.get('linewidth', 2), 
+                    alpha=kwargs.get('alpha', 1))
+
+        return
+
+    return overlay
+
+
+def map_overlay_unflattened_lines(lines, static, **kwargs):  
+    ''' Overlay lines onto a map
+
+    Lines are given as a list of lists of coordinates. Each inner list represents one line. Line
+    coordinates are given as longitude and latitude (note the order!).
+    
+    Parameters
+    ----------
+    lines : list of list of coordinates, or list of ndarrays with dimensions (pointidx, 2)
+        Line position array
+    static : gridlib.grid
+        Meta information about the data array, like the grid definition
+    
+    Keyword arguments
+    -----------------
+    plot arguments : all contour
+        For a list of valid arguments refer to :ref:`plot configuration`.
+    
+    Returns
+    -------
+    function
+        Overlay as a callable function
+    '''
+
+    kwargs = __line_prepare_config(kwargs)
+
+    def overlay(m, x, y, lon, lat, zorder, mask=None):
+        for ln in lines:
             xfr, yfr = m(ln[:,0], ln[:,1])
             # Hack to mask out lines crossing the periodic boundary for cylindrical projections
             if m.projection in ['cea', 'cyl', 'merc']:
