@@ -937,7 +937,9 @@ def map_overlay_dots(lons, lats, static, **kwargs):
     def overlay(m, x, y, lon, lat, zorder, mask=None):
         # TODO: Convert to latlon=True system
         xfr, yfr = m(lons, lats)
-        m.scatter(xfr, yfr, s=kwargs.get('markersize',25), marker='.', edgecolors=kwargs['linecolor'])
+        m.scatter(xfr, yfr, s=kwargs.get('markersize',25), marker='.', edgecolors=kwargs['linecolor'], 
+                facecolor=kwargs.get('facecolor',kwargs['linecolor']), zorder=kwargs.get('zorder', zorder) 
+        )
 
         return
 
