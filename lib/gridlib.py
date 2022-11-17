@@ -505,7 +505,15 @@ class grid_by_nc(grid):
                 if hasattr(t, 'units'):
                     self.t_unit = t.units
                     self._parse_time_unit() # set self.t_epoch and self.t_interval_unit
-                    self.t_parsed = nc.num2date(t[:], units=t.units, calendar=getattr(t, 'calendar', 'standard'))
+                    
+                    # A unit unknown by cftime as of cftime 1.5.1.1, encountered in OpenIFS output
+                    if t.units == 'day as %Y%m%d.%f':
+                        tvals = t[:]
+                        self.t_parsed = [dt(int(tval/10000), int((tval / 100) % 100), int(tval % 100)) + td(tval % 1) 
+                                for tval in tvals]
+
+                    else:
+                        self.t_parsed = nc.num2date(t[:], units=t.units, calendar=getattr(t, 'calendar', 'standard'))
             else:
                 self.t = np.arange(self.nt)
                 self.t_parsed = None
