@@ -132,12 +132,17 @@ echo "Stage 2: Creating python signature file"
 
 cd $precc
 
+# F2py does not like Fortran kind specifications, so removing these here before deriving the signature file.
+mkdir f2py_precc
+for file in $filec $filek $files; do
+	sed "s/kind=nc/kind=16/g" $file | sed "s/_nc//g" |
+	sed "s/kind=nr/kind=8/g" | sed "s/_nr//g" |
+	sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" | grep -v "nan =" > f2py_precc/$file
+done
+
+cd f2py_precc
 $F2PY -m $python_library -h $pysig $filec $files > f2py.log
-sed "s/kind=nc/kind=16/g" $pysig | sed "s/_nc//g" |
-sed "s/kind=nr/kind=8/g" | sed "s/_nr//g" |
-sed "s/kind=ni/kind=4/g" | sed "s/_ni//g" |
-grep -v "nan=" > ${pysig}_tmp
-mv ${pysig}_tmp $pysig
+cd ..
 
 # 3. Compiling the fortran modules 
 echo -e "Stage 3: Compiling Fortran shared object using $flagset options."
