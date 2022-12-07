@@ -90,6 +90,19 @@ class grid(object):
         self.dy[-1,:] *= 2.0*(self.y[-1,slc]-self.y[-2,slc])
 
         return
+    
+    def _calc_dx_dy_cartesian(self):
+        self.dx = np.empty(self.x.shape)
+        self.dx[:,1:-1] = self.x[:,2:] - self.x[:,:-2]
+        self.dx[:,0] = (self.x[:,1] - self.x[:,0])*2
+        self.dx[:,-1] = (self.x[:,-2] - self.x[:,-1])*2
+
+        self.dy = np.empty(self.y.shape)
+        self.dy[1:-1,:] = self.y[2:,:] - self.y[:-2,:]
+        self.dy[0,:] = (self.y[1,:] - self.y[0,:])*2
+        self.dy[-1,:] = (self.y[-1,:] - self.y[-2,:])*2
+
+        return
 
     # Building the grid on top of the established axes
     def __build_grid(self):
@@ -444,10 +457,7 @@ class grid_by_nc(grid):
         elif self.gridtype == 'cartesian':
             self.x = np.tile(self.x, (self.ny,1))
             self.y = np.tile(self.y, (self.nx,1)).T
-            self.dx = np.empty(self.x.shape)
-            self.dy = np.empty(self.y.shape)
-            self.dx[:,1:-1] = self.x[:,2:] - self.x[:,:-2]
-            self.dy[1:-1,:] = self.y[2:,:] - self.y[:-2,:]
+            self._calc_dx_dy_cartesian()
 
         else:
             raise NotImplementedError('(Yet) Unknown grid type "%s"' % self.gridtype)
@@ -556,6 +566,52 @@ class grid_by_latlon(grid):
             self.x = np.tile(self.x, (self.ny,1))
             self.y = np.tile(self.y, (self.nx,1)).T
 
+        self.rotated = False
+
+        return
+
+
+# Construct the grid based on given x / y arrays
+class grid_by_xy(grid):
+    ''' Build the relevant information from given lats and lons '''
+
+    def __init__(self, x, y, dx=None, dy=None, lats=None, lons=None, oro=None):
+        self.__init_args = x, y, dx, dy, lats, lons
+        grid.__init__(self)
+
+        if not type(oro) == type(None):
+            self.oro = oro
+
+        return
+
+    # Skims through the netcdf file looking for the type of the x and y axis
+    def _init_grid(self):
+        self.gridtype = 'cartesian'
+        self.cyclic_ew = False
+        self.cyclic_ns = False
+        
+        x, y, dx, dy, lats, lons = self.__init_args
+
+        self.x = x
+        self.y = y
+
+        if not type(dx) == type(None):
+            self.dx = dx
+            self.dy = dy
+        else:
+            self._calc_dx_dy_cartesian()
+
+        if not type(lats) == type(None):
+            self.lon = lons
+            self.lat = lats
+        
+        self.x_name = 'x'
+        self.y_name = 'y'
+        self.x_unit = 'm'
+        self.y_unit = 'm'
+
+        self.ny, self.nx = self.x.shape
+        
         self.rotated = False
 
         return
