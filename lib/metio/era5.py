@@ -21,7 +21,7 @@ conf = settings_obj({
     'q_obj': {},
     'datapath': ['.',
         '/Data/gfi/share/era5/pl',
-        '/Data/gfi/share/era5/pl_tendendies',
+        '/Data/gfi/share/era5/pl_tendencies',
         '/Data/gfi/share/era5/sfc',
         '/Data/gfi/share/era5/pv2',
         '/Data/gfi/users/local/share',
