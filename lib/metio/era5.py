@@ -44,7 +44,7 @@ FCq = [
     'cp', 'csf', 'e', 'lsf', 'lsp', 'tp', 'sf', 
     'slhf', 'sshf', 
     'ssr', 'ssrc', 'ssrd', 'str', 'strc', 'strd', 
-    'tsr', 'tsrc', 'ttr', 'ttrc'
+    'tsr', 'tsrc', 'ttr', 'ttrc',
     'mttpm', 'mttlwr', 'mttlwrcs', 'mttswr', 'mttswrcs',
 ]
 
