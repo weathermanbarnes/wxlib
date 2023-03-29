@@ -214,6 +214,7 @@ class decide_by_timeseries(decider):
         super().__init__(name)
         self.dates  = ts['dates']
         self.decisions = criterion(ts['values'])
+        self.tidx = 0
 
         return
 
@@ -221,7 +222,6 @@ class decide_by_timeseries(decider):
         __doc__ = super().get_time_series.__doc__
         
         comp_ts = []
-        tidx = 0
         for date in dates:
             # Out of bounds -> always return False
             if date < self.dates[0] or date >= self.dates[-1]:
@@ -229,11 +229,11 @@ class decide_by_timeseries(decider):
 
             else:
                 # Match date with the largest one in self.dates that is smaller than date
-                while self.dates[tidx+1] <= date:
-                    tidx += 1
+                while self.dates[self.tidx+1] <= date:
+                    self.tidx += 1
 
                 # Evaluate the corresponding value
-                comp_ts.append(self.decisions[tidx])
+                comp_ts.append(self.decisions[self.tidx])
 
         return np.array(comp_ts)
 
