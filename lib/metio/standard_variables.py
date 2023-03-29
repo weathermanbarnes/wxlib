@@ -95,6 +95,12 @@ standard_variables = [
     v('ttr', 'Top net thermal radiation', 'J m**-2 (6h)**-1'),
     v('ttrc', 'Top net thermal radiation, clear sky', 'J m**-2 (6h)**-1'),
 
+    v('mttpm', 'Mean temperature tendency due to parametrisations', 'K s**-1'),
+    v('mttlwr', 'Mean temperature tendency due to long-wave radiation', 'K s**-1'),
+    v('mttlwrcs', 'Mean temperature tendency due to long-wave radiation, clear sky', 'K s**-1'),
+    v('mttswr', 'Mean temperature tendency due to short-wave radiation', 'K s**-1'),
+    v('mttswrcs', 'Mean temperature tendency due to short-wave radiation, clear sky', 'K s**-1'),
+
     v('cold_front', 'Cold front lines', '(mixed)', lines='cold_froff'),
     v('warm_front', 'Warm front lines', '(mixed)', lines='warm_froff'),
     v('stat_front', 'Stationary front lines', '(mixed)', lines='stat_froff'),
