@@ -1483,7 +1483,7 @@ def get_composite_factory(files_by_plevq, get_normalized_from_file, get_static, 
         
         Keyword arguments
         -----------------
-        metopen arguments : all optional
+        metopen arguments : all optional except no_static (which is being ignored)
             Optional arguments passed on to calls of metopen within this function.
 
         Returns
@@ -1519,6 +1519,7 @@ def get_composite_factory(files_by_plevq, get_normalized_from_file, get_static, 
                 dat[composite.name,plev,qs] = {}
                     
 
+        ___ = kwargs.pop('no_static', False) # Ignore no_static
         for filename, tidxs, dates_, shape in req:
             # 1a. For each composite construct time series
             to_include = {}
@@ -1526,7 +1527,7 @@ def get_composite_factory(files_by_plevq, get_normalized_from_file, get_static, 
             for composite in composites:
                 if type(composite.requires) == tuple:
                     # Inject relevant functions to get test data from this data source
-                    ts = composite.get_time_series(dates_, files_by_plevq, get_normalized_from_file)
+                    ts = composite.get_time_series(dates_, files_by_plevq, get_normalized_from_file, kwargs)
                 else:
                     ts = composite.get_time_series(dates_)
 
@@ -1542,14 +1543,14 @@ def get_composite_factory(files_by_plevq, get_normalized_from_file, get_static, 
 
             # 2. If yes, request data from the current chunk for all variables, and
             # 3. Add relevant time steps to each composite
-            dat_ = get_normalized_from_file(filename, *plevqs[0], no_static=True)
+            dat_ = get_normalized_from_file(filename, *plevqs[0], no_static=True, **kwargs)
             _add_chunk(plevqs[0], dat, to_include, dat_)
             
             # ... and the same for all the other variables/levels
             for plevq in plevqs[1:]:
                 req_ = list(files_by_plevq(plevq, start=min(dates_), end=max(dates_)+td(0,1) )) # the end date should here be included in the requests for this chunk
                 for filename_, tidxs, dates_, shape in req_:
-                    dat_ = get_normalized_from_file(filename_, *plevq, no_static=True)
+                    dat_ = get_normalized_from_file(filename_, *plevq, no_static=True, **kwargs)
                     _add_chunk(plevq, dat, to_include, dat_)
         
         # A bit of post-processing, caculating mean+standard deviation / most-frequent-value

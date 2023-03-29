@@ -155,7 +155,7 @@ class decide_by_data(decider):
 
         return
 
-    def get_time_series(self, dates, files_by_plevq, get_from_file):
+    def get_time_series(self, dates, files_by_plevq, get_from_file, kwargs):
         __doc__ = super().get_time_series.__doc__
         
         start, end = min(dates), max(dates)+td(0,1) # Final date should be included in the request below
@@ -174,7 +174,7 @@ class decide_by_data(decider):
             cut = slice(tidxs[0], tidxs[-1]+1)
             tlen = len(tidxs)
             
-            dat_ = get_from_file(filename, self.plev, self.q, cut=cut, no_static=True)
+            dat_ = get_from_file(filename, self.plev, self.q, cut=cut, no_static=True, **kwargs)
             
             # TODO: Treat lines 
             #if self.q in LINES:
