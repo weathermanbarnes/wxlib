@@ -194,7 +194,7 @@ def get_from_file(filename, plev, q, **kwargs):
 
 def get_normalized_from_file_factory(get_from_file, conf):
 
-    def get_normalized_from_file(filename, plev, q, **kwargs):
+    def get_normalized_from_file(filename, plev, q, q_special={}, **kwargs):
         ''' A variant of get_from_file which in addition normalises feature detections
         
         Feature detections are normalized such that they appear on a regular grid and can
@@ -214,6 +214,11 @@ def get_normalized_from_file_factory(get_from_file, conf):
 
         Keyword arguments
         -----------------
+        q_special : dict of callable
+            *Optional*, default ``{}``. If given for a specific variable q, this function is used instead 
+            of get_normalized_from_file to load the data. This allows, for example, to run simple 
+            transformations before processing the data further. Analogous to get_normalized_from_file, all
+            callables are expected to return a (t,y,x) array with standard dimensions.
         metopen arguments : all optional
             Optional arguments passed on to calls of metopen within this function.
 
@@ -227,7 +232,10 @@ def get_normalized_from_file_factory(get_from_file, conf):
             If ``no_static=False`` meta-information about the requested data.
         '''
 
-        ret = get_from_file(filename, plev, q, **kwargs)
+        if q in q_special:
+            ret = q_special[q](get_from_file, filename, plev, q, **kwargs)
+        else:
+            ret = get_from_file(filename, plev, q, **kwargs)
 
         if type(ret) == tuple:
             dat = ret[0]
@@ -855,8 +863,9 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static
             dates from 2016-01-01 00:00 to 2017-01-01 00:00.
         q_special : dict of callable
             *Optional*, default ``{}``. If given for a specific variable q, this function is used instead 
-            of get_from_file to load the data. This allows, for example, to run simple transformations 
-            before aggregating the data.
+            of get_normalized_from_file to load the data. This allows, for example, to run simple 
+            transformations before processing the data further. Analogous to get_normalized_from_file, all
+            callables are expected to return a (t,y,x) array with standard dimensions.
         force : bool
             *Optional*, default ``False``. Turn off the error, if large amounts of data are
             requested at once. **Be sure you know what you are doing, when setting this to 
@@ -933,10 +942,7 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static
                 cut = slice(tidxs[0], tidxs[-1]+1)
                 tlen = len(tidxs)
                 
-                if q in q_special:
-                    dat_ = q_special[q](get_from_file, filename, plev, q, cut=cut, no_static=True, **kwargs)
-                else:
-                    dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
+                dat_ = get_from_file(filename, plev, q, q_special=q_special, cut=cut, no_static=True, **kwargs)
 
                 dat[plev,q][toff:toff+tlen,...] = dat_[...]
                 dates[plev,q].extend(dates_)
@@ -1154,8 +1160,9 @@ def get_time_average_factory(files_by_plevq, get_normalized_from_file, get_stati
             dates from 2016-01-01 00:00 to 2017-01-01 00:00.
         q_special : dict of callable
             *Optional*, default ``{}``. If given for a specific variable q, this function is used instead 
-            of get_normalized_from_file to load the data. This allows, for example, to run simple transformations 
-            before aggregating the data.
+            of get_normalized_from_file to load the data. This allows, for example, to run simple 
+            transformations before processing the data further. Analogous to get_normalized_from_file, all
+            callables are expected to return a (t,y,x) array with standard dimensions.
         
         Keyword arguments
         -----------------
@@ -1213,30 +1220,24 @@ def get_time_average_factory(files_by_plevq, get_normalized_from_file, get_stati
                 cut = slice(tidxs[0], tidxs[-1]+1)
                 tlen = len(tidxs)
                 
-                # Allow special function to retrieve data
-                if q in q_special:
-                    dat_ = q_special[q](get_normalized_from_file, filename, plev, q, cut=cut, no_static=True, **kwargs)
+                dat_ = get_normalized_from_file(filename, plev, q, q_special=q_special, cut=cut, no_static=True, **kwargs)
 
-                # Else read data in one of the standard ways
-                else:
-                    dat_ = get_normalized_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
-
-                    # Treat special data (lines and object masks are already taken care of)
-                    #
-                    #  Binned data
-                    if q in conf.q_bins:
-                        for bi in range(len(conf.q_bins[q])-1):
-                            upper, lower = conf.q_bins[q][bi+1], conf.q_bins[q][bi]
-                            if upper > lower:
-                                dat[plev,qout,'hist'][bi,:,:] += np.logical_and(dat_ >= lower, dat_ <  upper).sum(axis=0)
-                            else:
-                                dat[plev,qout,'hist'][bi,:,:] += np.logical_or(dat_ <  upper, dat_ >= lower).sum(axis=0)
+                # Treat special data (lines and object masks are already taken care of)
+                #
+                #  Binned data
+                if q in conf.q_bins:
+                    for bi in range(len(conf.q_bins[q])-1):
+                        upper, lower = conf.q_bins[q][bi+1], conf.q_bins[q][bi]
+                        if upper > lower:
+                            dat[plev,qout,'hist'][bi,:,:] += np.logical_and(dat_ >= lower, dat_ <  upper).sum(axis=0)
+                        else:
+                            dat[plev,qout,'hist'][bi,:,:] += np.logical_or(dat_ <  upper, dat_ >= lower).sum(axis=0)
                 
-                    # Summing up non-binned data, taking care of NaNs
-                    else:
-                        mask = np.isnan(dat_)
-                        dat[plev,qout] += dat_.sum(axis=0, where=~mask)
-                        dat[plev,qout,'valid'] += tlen - mask.sum(axis=0)
+                # Summing up non-binned data, taking care of NaNs
+                else:
+                    mask = np.isnan(dat_)
+                    dat[plev,qout] += dat_.sum(axis=0, where=~mask)
+                    dat[plev,qout,'valid'] += tlen - mask.sum(axis=0)
                 
                 toff += tlen
 
@@ -1289,8 +1290,9 @@ def get_aggregate_factory(files_by_plevq, get_normalized_from_file, get_static, 
             time aggregator object representation the aggregation interval.
         q_special : dict of callable
             *Optional*, default ``{}``. If given for a specific variable q, this function is used instead 
-            of get_normalized_from_file to load the data. This allows, for example, to run simple transformations 
-            before aggregating the data.
+            of get_normalized_from_file to load the data. This allows, for example, to run simple 
+            transformations before processing the data further. Analogous to get_normalized_from_file, all
+            callables are expected to return a (t,y,x) array with standard dimensions.
         
         Keyword arguments
         -----------------
@@ -1353,13 +1355,7 @@ def get_aggregate_factory(files_by_plevq, get_normalized_from_file, get_static, 
                 cut = slice(tidxs[0], tidxs[-1]+1)
                 tlen = len(tidxs)
                 
-                # Allow special function to retrieve data
-                if q in q_special:
-                    dat_ = q_special[q](get_normalized_from_file, filename, plev, q, cut=cut, no_static=True, **kwargs)
-
-                # Else read data in one of the standard ways
-                else:
-                    dat_ = get_normalized_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
+                dat_ = get_normalized_from_file(filename, plev, q, q_special=q_special, cut=cut, no_static=True, **kwargs)
 
                 # Prepend leftover data from the previous file period, if available
                 if leftover:
