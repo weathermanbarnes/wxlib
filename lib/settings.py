@@ -37,9 +37,14 @@ from copy import copy
 from .metio.standard_variables import standard_variables
 
 import collections
+import sys
+if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+    from collections.abc import MutableMapping, Hashable
+else:
+    from collections import MutableMapping, Hashable
 
 
-class default_dict(collections.MutableMapping):
+class default_dict(MutableMapping):
     ''' Dictionary with a predefined set of valid keys and default values for each 
 
     Non-default values are stored in ``self._``, the defaults in ``self._defaults``.
@@ -66,10 +71,10 @@ class default_dict(collections.MutableMapping):
         # Mutable (approximated by "non-hashable") types can be changed in place. 
         # Hence, they must be copied over to the overrides dict to avoid overriding defaults
         for key, value in defaults.items():
-            if not isinstance(value, collections.Hashable):
+            if not isinstance(value, Hashable):
                 self._[key] = copy(value)
 
-        collections.MutableMapping.__init__(self)
+        MutableMapping.__init__(self)
         
     def __getitem__(self, key):
         ''' Implements the access syntax ``dat[key]`` '''
@@ -100,7 +105,7 @@ class default_dict(collections.MutableMapping):
         if key in self._:
             # Mutable (approximated by "non-hashable") types can be changed in place. 
             # Hence, they must be copied over to the overrides dict to avoid overriding defaults
-            if not isinstance(self._defaults[key], collections.Hashable):
+            if not isinstance(self._defaults[key], Hashable):
                 self._[key] = copy(self._defaults[key])
             else:
                 del self._[key]
