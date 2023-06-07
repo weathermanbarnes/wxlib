@@ -36,7 +36,6 @@ import numpy as np
 from copy import copy 
 from .metio.standard_variables import standard_variables
 
-import collections
 import sys
 if sys.version_info.major == 3 and sys.version_info.minor >= 10:
     from collections.abc import MutableMapping, Hashable

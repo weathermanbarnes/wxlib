@@ -36,7 +36,11 @@ from copy import copy
 from .. import proj
 from .. import settings as base
 
-import collections
+import sys
+if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+    from collections.abc import MutableMapping, Hashable
+else:
+    from collections import MutableMapping, Hashable
 
 
 class nd_default_dict(base.default_dict):
@@ -62,7 +66,7 @@ class nd_default_dict(base.default_dict):
 
     def __init__(self, ndims, defaults, mutexes):
         for default in defaults.values():
-            if not isinstance(default, collections.Hashable):
+            if not isinstance(default, Hashable):
                 raise ValueError('Defaults for plotconf must be immutable, but got variable of type %s, value: %s' % (type(default), str(default)))
         self._ndims = ndims
         base.default_dict.__init__(self, defaults, mutexes)     # dictionary of valid keys in the last dimension and their default values
