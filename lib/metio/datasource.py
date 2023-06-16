@@ -942,7 +942,10 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static
                 cut = slice(tidxs[0], tidxs[-1]+1)
                 tlen = len(tidxs)
                 
-                dat_ = get_from_file(filename, plev, q, q_special=q_special, cut=cut, no_static=True, **kwargs)
+                if q in q_special:
+                    dat_ = q_special[q](get_from_file, filename, plev, q, cut=cut, no_static=True, **kwargs)
+                else:
+                    dat_ = get_from_file(filename, plev, q, cut=cut, no_static=True, **kwargs)
 
                 dat[plev,q][toff:toff+tlen,...] = dat_[...]
                 dates[plev,q].extend(dates_)
