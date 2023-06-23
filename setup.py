@@ -14,6 +14,13 @@ from distutils.command.build_py import build_py as _build_py
 # Determining dynlib version from git
 version = subprocess.check_output("git describe --tags", shell=True)
 version = version.strip().decode('utf8')
+if "-" in version:
+    idx = version.index('-')
+    idx2 = version.index('-', idx+1)
+    release = version[:idx]
+    ncommits = version[idx+1:idx2]
+    gitrev = version[idx2+1:]
+    version = f'{release}.dev{ncommits}+{gitrev}'
 
 # Are there local uncommitted changes?
 changes = subprocess.check_output("git diff", shell=True)
