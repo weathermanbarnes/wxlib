@@ -711,6 +711,54 @@ def dist_sphere(lon1, lat1, lon2, lat2, r=6.37e6):
 
 
 
+def direction_on_sphere(lon1, lat1, lon2, lat2, r=6.37e6):
+    ''' Direction from point 1 to point 2 on a sphere
+
+    Calculate the direction from point to point 2 along a great circle on the surface 
+    of a sphere, using spherical trigonometry. 
+
+    Both the first and second points can be an array of points. If both points are
+    actually arrays of points, these arrays must have compatible shapes in the sense of 
+    the numpy broadcasting rules.
+
+    Parameters
+    ----------
+    lon1 : float or np.ndarray
+        Longitude(s) of the first point(s) in degrees.
+    lat1 : float or np.ndarray
+        Latitude(s) of the first point(s) in degrees.
+    lon2 : float or np.ndarray
+        Longitude(s) of the second point(s) in degrees.
+    lat2 : float or np.ndarray
+        Latitude(s) of the second point(s) in degrees.
+    r : float or np.ndarray
+        *Optional*. Radius of the sphere(s). Defaults to the Earth radius.
+    
+    Returns
+    -------
+    float or np.ndarray
+        Direction(s) pointing from the first towards the second points
+    '''
+        
+    dlon = np.pi/180 * (lon2 - lon1)
+    lat1r = np.pi/180 * lat1
+    lat2r = np.pi/180 * lat2
+
+    acos = np.sin(lat1r)*np.sin(lat2r) + np.cos(lat1r)*np.cos(lat2r)*np.cos(dlon)
+    dist_angle = np.arccos(np.maximum(np.minimum(acos,1.0),-1.0))
+
+    acos = (np.sin(lat2r) - np.sin(lat1r)*np.cos(dist_angle)) / (np.cos(lat1r)*np.sin(dist_angle))
+    bearing = np.arccos(np.maximum(np.minimum(acos,1.0),-1.0))
+
+    if type(dlon) == np.ndarray:
+        bearing[dlon < 0] = 2*np.pi - bearing[dlon < 0]
+    elif dlon < 0:
+        bearing = 2*np.pi - bearing
+
+    return bearing
+
+
+
 def go_on_sphere(lon0, lat0, x, y, R=6366.2e3):
     ''' Go from lon0/lat0 following the vector (x,y), where do you end up?
 
