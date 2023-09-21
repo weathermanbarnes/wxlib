@@ -711,7 +711,7 @@ def dist_sphere(lon1, lat1, lon2, lat2, r=6.37e6):
 
 
 
-def direction_on_sphere(lon1, lat1, lon2, lat2, r=6.37e6):
+def direction_on_sphere(lon1, lat1, lon2, lat2):
     ''' Direction from point 1 to point 2 on a sphere
 
     Calculate the direction from point to point 2 along a great circle on the surface 
@@ -731,8 +731,6 @@ def direction_on_sphere(lon1, lat1, lon2, lat2, r=6.37e6):
         Longitude(s) of the second point(s) in degrees.
     lat2 : float or np.ndarray
         Latitude(s) of the second point(s) in degrees.
-    r : float or np.ndarray
-        *Optional*. Radius of the sphere(s). Defaults to the Earth radius.
     
     Returns
     -------
