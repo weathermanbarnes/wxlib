@@ -739,6 +739,14 @@ def direction_on_sphere(lon1, lat1, lon2, lat2):
     '''
         
     dlon = np.pi/180 * (lon2 - lon1)
+    if type(dlon) == np.ndarray:
+        dlon[dlon > np.pi] -= 2*np.pi
+        dlon[dlon < -np.pi] += 2*np.pi
+    elif dlon > np.pi:
+        dlon -= 2*np.pi
+    elif dlon < -np.pi:
+        dlon += 2*np.pi
+
     lat1r = np.pi/180 * lat1
     lat2r = np.pi/180 * lat2
 
