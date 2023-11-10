@@ -245,7 +245,9 @@ def get_normalized_from_file_factory(get_from_file, conf):
 
         # Treat lines
         if q in conf.q_lines:
-            datoff, grid = get_from_file(filename, plev, conf.q_lines[q])
+            kwargs_copy = copy.copy(kwargs)
+            kwargs_copy['no_static'] = False
+            datoff, grid = get_from_file(filename, plev, conf.q_lines[q], **kwargs_copy)
             dat = utils.normalize_lines(dat, datoff, grid.dx, grid.dy)
         
         # Treat feature distance fields
@@ -837,7 +839,7 @@ def metsave_factory(metopen, conf):
     return metsave, metsave_composite
 
 
-def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static, conf):
+def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static, conf, normalize_output=False):
     ''' Create the get_instantaneous function based on data source-specific helpers '''
 
     def get_instantaneous(plevqs, dates, q_special={}, force=False, **kwargs):
@@ -904,15 +906,20 @@ def get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static
             # (filename, list of tidx, list of dates, request_size in number of values)
             req[plevq] = list(files_by_plevq(plevq, start=start, end=end))
             datshape[plevq] = req[plevq][0][3]
-            for entry in req[plevq][1:]:
-                shape = entry[3]
-                if not shape[1:] == datshape[plevq][1:]:
-                    raise ValueError(f'''Discovered inconsistent data shape across time:
-                            plevq: {plevq}
-                            file {entry[0]} with shape {shape[1:]}, 
-                            preceeding files with shape {datshape[plevq][1:]}.''')
-                datshape[plevq] = (datshape[plevq][0] + shape[0],) + shape[1:]
-            request_size += sum([np.prod(reqinfo[3]) for reqinfo in req[plevq]])
+            if normalize_output:
+                datshape[plevq] = datshape[plevq][:-2] + conf.gridsize
+                for entry in req[plevq][1:]:
+                    datshape[plevq] = (datshape[plevq][0] + entry[3][0],) + datshape[plevq][1:]
+            else:
+                for entry in req[plevq][1:]:
+                    shape = entry[3]
+                    if not shape[1:] == datshape[plevq][1:]:
+                        raise ValueError(f'''Discovered inconsistent data shape across time:
+                                plevq: {plevq}
+                                file {entry[0]} with shape {shape[1:]}, 
+                                preceeding files with shape {datshape[plevq][1:]}.''')
+                    datshape[plevq] = (datshape[plevq][0] + shape[0],) + shape[1:]
+            request_size += np.prod(datshape[plevq])
 
         # Checking max length
         if request_size > MAX_REQUEST_SIZE:

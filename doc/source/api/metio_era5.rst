@@ -9,6 +9,7 @@ dynlib.metio.era5
    ----------------
 
    .. autofunction:: get_instantaneous
+   .. autofunction:: get_instantaneous_normalized
    .. autofunction:: get_time_average
    .. autofunction:: get_aggregate
    .. autofunction:: get_composite

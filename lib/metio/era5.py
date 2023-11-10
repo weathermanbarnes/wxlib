@@ -160,6 +160,7 @@ get_normalized_from_file = get_normalized_from_file_factory(get_from_file, conf)
 
 # Derive data source-specific versions of the remaining data getter functions
 get_instantaneous = get_instantaneous_factory(files_by_plevq, metopen, get_from_file, get_static, conf)
+get_instantaneous_normalized = get_instantaneous_factory(files_by_plevq, metopen, get_normalized_from_file, get_static, conf, normalize_output=True)
 get_time_average = get_time_average_factory(files_by_plevq, get_normalized_from_file, get_static, conf)
 get_aggregate = get_aggregate_factory(files_by_plevq, get_normalized_from_file, get_static, conf)
 get_composite = get_composite_factory(files_by_plevq, get_normalized_from_file, get_static, conf)

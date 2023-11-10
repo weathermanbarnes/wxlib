@@ -16,7 +16,12 @@ For each of these datasets a set of input/output functions are available. These 
  
  * ``metopen``: Open a netCDF, numpy or Matlab file, optionally request a specific variable and grid 
    information.
- * ``get_instantaneous``: Request instantaneous data for a time period.
+ * ``get_instantaneous``: Request instantaneous data for a time period. In case of feature detections, 
+   the raw detections are returned, i.e. a list of point coordinates for lines.
+ * ``get_instantaneous_normalized``: Request instantaneous data for a time period, and normalize to 
+   always return data on the standard horizontal grid. The type of normalization depends on the type
+   of feature. For example, line detections are normalised by the length of lines overlapping with each 
+   grid cell.
  * ``get_time_average``: Request time-average data for a time period.
  * ``get_aggregate``: Request a sequence of time averages (e.g. pentad or monthly averages) for a time 
    period.
