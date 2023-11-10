@@ -753,7 +753,7 @@ def direction_on_sphere(lon1, lat1, lon2, lat2):
     acos = np.sin(lat1r)*np.sin(lat2r) + np.cos(lat1r)*np.cos(lat2r)*np.cos(dlon)
     dist_angle = np.arccos(np.maximum(np.minimum(acos,1.0),-1.0))
 
-    acos = (np.sin(lat2r) - np.sin(lat1r)*np.cos(dist_angle)) / (np.cos(lat1r)*np.sin(dist_angle))
+    acos = (np.sin(lat2r) - np.sin(lat1r)*np.cos(dist_angle)) / (np.cos(lat1r)*np.sin(dist_angle) + 1.0e-50)
     bearing = np.arccos(np.maximum(np.minimum(acos,1.0),-1.0))
 
     if type(dlon) == np.ndarray:
