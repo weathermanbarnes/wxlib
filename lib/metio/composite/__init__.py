@@ -163,11 +163,11 @@ class decide_by_data(decider):
         datshape = req[0][3][1:]      # Shape of the resulting data arrays
         for entry in req[1:]:
             shape = entry[3]
-            if not shape[1:] == datshape[plevq]:
+            if not shape[1:] == datshape:
                 raise ValueError(f'''Discovered inconsistent data shape across time:
                         plevq: {plevq}
                         file {entry[0]} with shape {shape[1:]}, 
-                        preceeding files with shape {datshape[plevq]}.''')
+                        preceeding files with shape {datshape}.''')
 
         comp_ts = []
         for filename, tidxs, dates_, shape in req:
