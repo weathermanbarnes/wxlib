@@ -1,12 +1,12 @@
 dynlib.metio.era5
-=======================
+=================
 
 .. automodule:: dynlib.metio.era5
    :members:
    :undoc-members:
 
    Public functions
-   ---------
+   ----------------
 
    .. autofunction:: get_instantaneous
    .. autofunction:: get_time_average

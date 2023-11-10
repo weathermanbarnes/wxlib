@@ -6,7 +6,7 @@ dynlib.metio.generic
    :undoc-members:
 
    Public functions
-   ---------
+   ----------------
 
    .. autofunction:: metopen
    .. autofunction:: metsave

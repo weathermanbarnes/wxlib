@@ -6,7 +6,7 @@ dynlib.metio.era20c
    :undoc-members:
 
    Public functions
-   ---------
+   ----------------
 
    .. autofunction:: get_instantaneous
    .. autofunction:: get_time_average

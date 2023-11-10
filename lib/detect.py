@@ -117,17 +117,17 @@ def cyclone_by_contour(msl, grid):
 def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
     ''' Detect and track cyclone centers following the Melbourne algorithm
 
-   The original detection algorithm is defined in Murray and Simmonds (1991a,b; MS91). This is a simplified
-   reimplementation of the detection algorithm complemented by a more fancy tracking. 
+    The original detection algorithm is defined in Murray and Simmonds (1991a,b; MS91). This is a simplified
+    reimplementation of the detection algorithm complemented by a more fancy tracking. 
 
-   Simplifications compared to MS91:
-    - As in MS91, msl is interpolated to polar stereographic grids before the cyclone detection and tracking.
-      However, the grid resolution is chosen fine enough that cyclone centeres are simply determined at the
-      grid-point resolution.
-    - No attempt is made in determining cyclone sizes
-    - Prediction of cyclone movement is determined from Kalman-filtered previous cyclone movement rather
-      than from the background flow. This requires much fewer assumptions and configuration and reduces the 
-      required input data to only sea-level pressure (or equivalent).
+    Simplifications compared to MS91:
+     - As in MS91, msl is interpolated to polar stereographic grids before the cyclone detection and tracking.
+       However, the grid resolution is chosen fine enough that cyclone centeres are simply determined at the
+       grid-point resolution.
+     - No attempt is made in determining cyclone sizes
+     - Prediction of cyclone movement is determined from Kalman-filtered previous cyclone movement rather
+       than from the background flow. This requires much fewer assumptions and configuration and reduces the 
+       required input data to only sea-level pressure (or equivalent).
 
     This is the (so-far) first function in dynlib to depend on the pandas library. pandas is imported only 
     within this function such that the remainder of dynlib remains usable even when pandas is not available.
@@ -151,7 +151,7 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
         in this call to the function are meant to continue tracks from a previous call.
     quiet : bool
         *Optional*, default ``False``. If ``True``, progress information is suppressed.
-   
+
     Returns
     -------
     pd.DataFrame
@@ -163,8 +163,8 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
         function, cf. optional parameter ``prev_cyc``.
     pd.DataFrame
         Table of detected cyclone positions including all temporary internal columns belonging to tracks that
-        potentially extend beyond the end of the time interval for this call. To be pass on to the next call of
-        this function, cf. optional parameter ``prev_tracks``.
+        potentially extend beyond the end of the time interval for this call. To be passed on to the next call 
+        of this function, cf. optional parameter ``prev_tracks``.
     '''
     
     from .cyclone_by_lapmsl_helpers import pd, make_polar_grid, locate_cyclones, track_cyclones, \

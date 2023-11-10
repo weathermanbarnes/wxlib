@@ -6,7 +6,7 @@ dynlib.metio.cera_sat
    :undoc-members:
 
    Public functions
-   ---------
+   ----------------
 
    .. autofunction:: get_instantaneous
    .. autofunction:: get_time_average

@@ -391,15 +391,16 @@ def metopen_factory(get_static, conf):
         no_static : bool
             *Optional*, default ``False``. By default, ``metopen`` does its best to 
             provide meta-information about the requested file, using 
-            :module:`grid.gridlib`, and returns the meta-information as a third value. 
+            :py:mod:`dynlib.grid.gridlib`, and returns the meta-information as a third value. 
             This behaviour can be suppressed by setting this parameter to ``True``.
         mode : str
             *Optional*, default ``'r'``. Only effective for netCDF files. The read/write mode
-            with which to open the file. Valid values are ``'r'`` for read-only access, `'a'``
-            or ``'r+'` for read-write access and and ``'w'``for replacing the given file. 
+            with which to open the file. Valid values are ``'r'`` for read-only access, ``'a'``
+            or ``'r+'`` for read-write access and and ``'w'`` for replacing the given file. 
         no_xarray : bool
-            *Optional*, default ``False``. If mode='r', netCDF files are by default returned 
-            as xarray data sets. If ``True`` metopen instead returns an netCDF4 file object.
+            *Optional*, default ``False``. Reserved for future use, so far not implemented. If 
+            mode='r', netCDF files are by default returned as xarray data sets. If ``True`` 
+            metopen instead returns an netCDF4 file object.
 
         Returns
         -------
