@@ -551,7 +551,7 @@ def __decorate(m, x, y, lon, lat, mask, plev, q, kwargs):
         lons, lats = kwargs.pop('mark')
 
         mark_kwargs = dict(marker='o', markerfacecolor=(1,1,1,0), fillstyle='none',
-            markeredgecolor='k', markeredgewidth=3, markersize=484)
+            markeredgecolor='k', markeredgewidth=3, markersize=64)
         if 'mark_kwargs' in kwargs:
             mark_kwargs.update(kwargs['mark_kwargs'])
         if 'markercolor' in kwargs:
