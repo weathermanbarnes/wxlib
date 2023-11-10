@@ -63,7 +63,7 @@ The following overlays are available for maps:
 
 :func:`dynlib.figures.map_overlay_barbs`
    Overlay wind barbs.
-:func:`dynlib.figures.map_overlay_contours`
+:func:`dynlib.figures.map_overlay_contour`
    Overlay contours.
 :func:`dynlib.figures.map_overlay_dilatation`
    Overlay axes of dilatation, double arrows for orientation and strength.

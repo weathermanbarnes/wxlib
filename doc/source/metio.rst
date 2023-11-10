@@ -11,10 +11,11 @@ datasets are defined:
  * ERA-Interim
  * ERA20-C
  * CERA-SAT
- * NORA10
 
 For each of these datasets a set of input/output functions are available. These are 
  
+ * ``metopen``: Open a netCDF, numpy or Matlab file, optionally request a specific variable and grid 
+   information.
  * ``get_instantaneous``: Request instantaneous data for a time period.
  * ``get_time_average``: Request time-average data for a time period.
  * ``get_aggregate``: Request a sequence of time averages (e.g. pentad or monthly averages) for a time 
@@ -27,6 +28,11 @@ For each of these datasets a set of input/output functions are available. These 
 
 These convenience functions make all datasets available under with the same functions, thus making it
 straightforward to apply the same analyses to several of these datasets.
+
+In addition, there is a generic metio submodule ``dynlib.metio.generic`` for opening any other netCDF
+file with dynlib. As dynlib cannot make any assumptions about what data is being openend, the 
+``get_*``-convenience functions to request specific data are not available. Thus, the generic module does
+only provide ``metopen`` and ``metsave``. 
 
 For most cases it will be relatively easy to define new datasets and make the same set of functions 
 available for them, because all the tedious tasks are solved generically. Thus, for a new dataset, 
@@ -209,7 +215,7 @@ All available IO functions
    api/metio_erai
    api/metio_era20c
    api/metio_cera_sat
-   api/metio_nora10
+   api/metio_generic
 
 
 Internal IO API
