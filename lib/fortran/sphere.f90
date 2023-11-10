@@ -39,7 +39,7 @@ contains
     !real(kind=nr) :: br(nz,ny,ny), bi(nz,ny,ny), cr(nz,ny,ny), ci(nz,ny,ny)
     integer(kind=ni) :: ierror, k
     !
-    integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
+    integer(kind=ni) :: lwork, ldwork
     real(kind=nr), allocatable :: work(:)
     real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
@@ -54,7 +54,7 @@ contains
        last_ny = ny
     end if
     !
-    lwork = max( 4_ni*(ny+1_ni)**2_ni , (nz+1_ni)*ny*nx )
+    lwork = 4_ni*ny*nx
     ldwork = ny + 1_ni
     allocate(work(lwork), dwork(ldwork))
     !
@@ -111,7 +111,7 @@ contains
     !real(kind=nr) :: br(nz,ny,ny), bi(nz,ny,ny), cr(nz,ny,ny), ci(nz,ny,ny)
     integer(kind=ni) :: ierror, k
     !
-    integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
+    integer(kind=ni) :: lwork, ldwork
     real(kind=nr), allocatable :: work(:)
     real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
@@ -124,7 +124,7 @@ contains
        last_ny = ny
     end if
     !
-    lwork = max( 4_ni*(ny+1_ni)**2_ni , (nz+1_ni)*ny*nx )
+    lwork = 4_ni*ny*nx
     ldwork = ny + 1_ni
     allocate(work(lwork), dwork(ldwork))
     !
@@ -176,7 +176,7 @@ contains
     real(kind=nr) :: div(ny,nx), pertrb(ny,nx), a(ny,ny),b(ny,ny), br(ny,ny),bi(ny,ny),cr(ny,ny),ci(ny,ny)
     integer(kind=ni) :: ierror, k
     !
-    integer(kind=ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
+    integer(kind=ni) :: lwork, ldwork
     real(kind=nr), allocatable :: work(:)
     real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
@@ -189,7 +189,7 @@ contains
        last_ny = ny
     end if
     !
-    lwork = max( 4_ni*(ny+1_ni)**2_ni , 2_ni*(nz+1_ni)*ny*nx )
+    lwork = 4_ni*ny*nx
     ldwork = (ny + 1_ni)*2_ni
     allocate(work(lwork), dwork(ldwork))
     !
@@ -322,7 +322,7 @@ contains
     !real(kind=nr) :: br(nz,ny,ny), bi(nz,ny,ny), cr(nz,ny,ny), ci(nz,ny,ny)
     integer(kind=ni) :: ierror, k
     !
-    integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
+    integer(kind=ni) :: lwork, ldwork
     real(kind=nr), allocatable :: work(:)
     real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
@@ -336,7 +336,7 @@ contains
        last_ny = ny
     end if
     !
-    lwork = max( 4_ni*(ny+1_ni)**2_ni , 3000_ni*ny*nx )
+    lwork = 4_ni*ny*nx
     ldwork = (ny + 1_ni)*2_ni
     allocate(work(lwork), dwork(ldwork))
     !
@@ -396,7 +396,7 @@ contains
     !real(kind=nr) :: br(nz,ny,ny), bi(nz,ny,ny), cr(nz,ny,ny), ci(nz,ny,ny)
     integer(kind=ni) :: ierror, k
     !
-    integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
+    integer(kind=ni) :: lwork, ldwork
     real(kind=nr), allocatable :: work(:)
     real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
     !
@@ -409,7 +409,7 @@ contains
        last_ny = ny
     end if
     !
-    lwork = max( 4_ni*(ny+1_ni)**2_ni , 3000_ni*ny*nx )
+    lwork = 4_ni*ny*nx
     ldwork = (ny + 1_ni)*2_ni
     allocate(work(lwork), dwork(ldwork))
     !
@@ -502,7 +502,7 @@ contains
     !real(kind=nr) :: br(nz,ny,ny), bi(nz,ny,ny), cr(nz,ny,ny), ci(nz,ny,ny)
     integer(kind=ni) :: ierror, k
     !
-    integer(kind=8_ni) :: lwork, ldwork    ! lwork might be larger than 32bit!
+    integer(kind=8_ni) :: lwork, ldwork
     real(kind=nr) :: pertrb(1_ni)
     real(kind=nr), allocatable :: work(:)
     real(kind=nc), allocatable :: dwork(:) ! d is for "double precision", which means kind=16 as spherepack is compiled with -fdefault-real-8
@@ -516,7 +516,7 @@ contains
        last_ny = ny
     end if
     !
-    lwork = max( 4_ni*(ny+1_ni)**2_ni , (nz+1_ni)*ny*nx )
+    lwork = 4_ni*ny*nx
     ldwork = ny + 1_ni
     allocate(work(lwork), dwork(ldwork))
     !
