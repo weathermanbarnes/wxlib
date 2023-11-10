@@ -215,12 +215,13 @@ All available IO functions
 .. toctree::
    :maxdepth: 2   
    
+   api/metio_generic
    api/metio_era5
    api/metio_era5_ml
    api/metio_erai
    api/metio_era20c
    api/metio_cera_sat
-   api/metio_generic
+   api/metio_nextsim
 
 
 Internal IO API
