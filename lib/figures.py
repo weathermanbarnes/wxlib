@@ -695,7 +695,7 @@ def map_overlay_contour(dat, static, **kwargs):
     
     Parameters
     ----------
-    dat : np.ndarray with dimensions (z,y,x)
+    dat : np.ndarray with dimensions (y,x)
         Data to be plotted
     static : gridlib.grid
         Meta information about the data array, like the grid definition
