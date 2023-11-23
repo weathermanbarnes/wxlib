@@ -14,7 +14,7 @@ lmsl_thres_closed = 0.2 * 1.0e-7/8.1 # conversion from hPa / deg-lat^2 to Pa/m^2
 lmsl_thres_open = 0.6 * 1.0e-7/8.1 
 msl_min_prominence_closed = 150         # Local prominence in Pa compared to environment, as defined by filter_size and thus maxdist_lmsl_center
 msl_min_prominence_open = 25
-mindist_centers = 500.0e3
+mindist_centers = 750.0e3
 maxdist_lmsl_center = 500.0e3   # maximmum distance between max-Laplace and either minval (closed system) or mingrad (open system)
 maxoro = 1000
 
@@ -89,18 +89,18 @@ def sort_cycpos(x1, y1, x2, y2, p1=None, p2=None, dist_thres=250.0e3, dp_per_dis
     mindists1 = dists.min(axis=0)
     mindists2 = dists.min(axis=1)
     
-    match1 = np.zeros(x1.shape, dtype='bool')
-    match2 = np.zeros(x2.shape, dtype='bool')
+    match1 = []
+    match2 = []
     associations = {}
     
-    for n in range(len(match1)):
-        for m in range(len(match2)):
-            if match2[m]:
+    for n in range(len(x1)):
+        for m in range(len(x2)):
+            if m in match2:
                 continue
 
             if dists[m,n] <= dist_thres**2 and dists[m,n] == mindists1[n] and dists[m,n] == mindists2[m]:
-                match1[n] = True
-                match2[m] = True
+                match1.append(n)
+                match2.append(m)
                 associations[n] = m
                 break
 
@@ -113,7 +113,7 @@ def _filter_locs_by_mask(locs, mask):
     return tuple(locs[i][~outmask] for i in range(len(locs)))
 
 
-def _filter_cyclones_by_mindist(cycs, mindist_thres_closed, mindist_thres):
+def _filter_cyclones_by_mindist(cycs, mindist_thres):
     lens = len(cycs)
     mask = np.ones((lens,), dtype='bool')
     for n in range(lens):
@@ -121,8 +121,7 @@ def _filter_cyclones_by_mindist(cycs, mindist_thres_closed, mindist_thres):
         for m in range(n+1,lens):
             cyc2 = cycs.iloc[m]
             dist = np.sqrt((cyc1.x - cyc2.x)**2 + (cyc1.y - cyc2.y)**2)
-            closed = cyc1.closed and cyc2.closed
-            if (closed and dist < mindist_thres_closed) or dist < mindist_thres:
+            if dist < mindist_thres:
                 if cyc1.msl_maxlap >= cyc2.msl_maxlap:
                     mask[m] = False
                 else:
@@ -177,7 +176,7 @@ def locate_cyclones(date, msl, grid, hemis):
     match_minval, match_maxlap, ___ = sort_cycpos(x_minval, y_minval, x_maxlap, y_maxlap, dist_thres=maxdist_lmsl_center)
     
     # Properties of closed systems
-    shape = (match_minval.sum(), )
+    shape = (len(match_minval), )
     msl_center = msl[minval[0],minval[1]][match_minval]
     cyclones_closed = pd.DataFrame({
         'track_id': -np.ones(shape, dtype='i4'),                                    # Cyclone Track ID (to be assigned later)
@@ -210,10 +209,11 @@ def locate_cyclones(date, msl, grid, hemis):
 
 
     # Match remaining Max-Laplace locations with minimum-gradients -> open systems
-    x_remain, y_remain = x_maxlap[~match_maxlap], y_maxlap[~match_maxlap]
+    remain_maxlap = np.array([i not in match_maxlap for i in range(len(x_maxlap))])
+    x_remain, y_remain = x_maxlap[remain_maxlap], y_maxlap[remain_maxlap]
     match_mingrad, match_maxlap2, ___ = sort_cycpos(x_mingrad, y_mingrad, x_remain, y_remain, dist_thres=maxdist_lmsl_center)
 
-    shape = (match_mingrad.sum(), )
+    shape = (len(match_mingrad), )
     msl_center = msl[mingrad[0],mingrad[1]][match_mingrad]
     cyclones_open = pd.DataFrame({
         'track_id': -np.ones(shape, dtype='i4'),
@@ -236,12 +236,12 @@ def locate_cyclones(date, msl, grid, hemis):
         'Py_filter': [np.empty((2,2)) * np.nan for i in range(shape[0])],           # Kalman uncertainty covaiance matrix
         'lon': np.empty(shape)*np.nan, 'lat': np.empty(shape)*np.nan,               # Location of the MSL minimum
         'lon_raw': lon_mingrad[match_mingrad], 'lat_raw': lat_mingrad[match_mingrad], # Location of the MSL minimum
-        'lon_maxlap': lon_maxlap[~match_maxlap][match_maxlap2], 'lat_maxlap': lat_maxlap[~match_maxlap][match_maxlap2],
+        'lon_maxlap': lon_maxlap[remain_maxlap][match_maxlap2], 'lat_maxlap': lat_maxlap[remain_maxlap][match_maxlap2],
         'closed': np.zeros(shape, dtype='bool'),
         'msl': msl_center,                                                          # MSL the location of the min gradient
         'msl_prominence': msl_prominence[mingrad[0],mingrad[1]][match_mingrad],     # Local prominence of the minimum MSL
         'msl_mingrad': gmsl[mingrad[0],mingrad[1]][match_mingrad],                  # Min gradient at the location of the min-gradient
-        'msl_maxlap': lmsl[maxlap[0],maxlap[1]][~match_maxlap][match_maxlap2],
+        'msl_maxlap': lmsl[maxlap[0],maxlap[1]][remain_maxlap][match_maxlap2],
     })
     
     # Filter closed and open systems by additional Lap(MSL) and other thresholds
@@ -264,7 +264,7 @@ def locate_cyclones(date, msl, grid, hemis):
     
     # Remove minor systems by minimum distance threshold
     cyclones = pd.concat([cyclones_closed, closed2open, cyclones_open], ignore_index=True)
-    cyclones = _filter_cyclones_by_mindist(cyclones, mindist_centers, maxdist_lmsl_center)
+    cyclones = _filter_cyclones_by_mindist(cyclones, mindist_centers)
     cyclones = cyclones.reset_index(drop=True)
     
     return cyclones
