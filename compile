@@ -25,7 +25,7 @@ work="$base/examples"
 doc="$base/doc"
 doc_extract=".compile_fortran_doc.py"
 
-files="config.f90 derivatives.f90 interpol.f90 ellipse.f90 utils.f90 thermodyn.f90 diag.f90 detect_rwb_contour.f90 detect_lines.f90 detect.f90 stat.f90 tend.f90 diag_tend.f90"
+files="config.f90 derivatives.f90 interpol.f90 ellipse.f90 utils.f90 thermodyn.f90 diag.f90 detect_rwb_contour.f90 detect_lines.f90 detect.f90 stat.f90 tend.f90 diag_tend.f90 sphere.f90"
 filec="const.f90"
 filek="kind.f90"
 
@@ -36,7 +36,7 @@ pysig="${precc}/$python_library.pyf"
 host=`hostname -f`
 uname=`uname -s`
 if [ "${host: -10}" == 'hpc.uib.no' ]; then
-    LIBS="-L/Data/gfi/users/local/lib -lopenblas -lscalapack"
+    LIBS="-L/Data/gfi/users/local/lib -Lext/spherepack3.2/lib -lopenblas -lscalapack -lspherepack"
     RPATH="" #-Wl,-rpath,/Data/gfi/users/local/lib"
 elif [ "${host: -14}" == 'fram.sigma2.no' ]; then
     LIBS="-lopenblas -lscalapack"
@@ -45,7 +45,7 @@ elif [ "${host: -14}" == 'fram.sigma2.no' ]; then
     RPATH=""
 elif [ "$uname" == 'Darwin' ]; then
     # Default Mac OS configuration, based on Homebrew
-    LIBS='-L/usr/lib -L/usr/local/lib -lblas -llapack'
+    LIBS='-L/usr/lib -L/usr/local/lib -Lext/spherepack3.2/lib -lblas -llapack -lspherepack'
 
     # For some reason libpython is no longer automatically detected/found for the linking step
     # -> Have python inject the libraries it was buildt with into $LIBS 
@@ -55,25 +55,13 @@ elif [ "$uname" == 'Darwin' ]; then
     #PYLIBS="-L$PYFIX/lib/python$PYFIXVER/config-${PYFIXVER}m-darwin -lpython${PYFIXVER}m"
     #LIBS="$LIBS $PYLIBS"
     RPATH=""
-elif [ "${host::12}" == 'nird-cyclone' ]; then
-    LIBS='-L/usr/lib64 -L/nird/home/csp001/sw/virtualenv/dynpie3/lib64 -l:libblas.so.3 -l:liblapack.so.3'
-    RPATH=""
 elif [ "$uname" == 'Linux' ]; then
     # Default Linux configuration
-    LIBS='-L/usr/lib -L/usr/local/lib -lblas -llapack'
+    LIBS='-L/usr/lib -L/usr/local/lib -Lext/spherepack3.2/lib -lblas -llapack -lspherepack'
     RPATH=""
 else
     echo "Error: Unknown host/ operating system."
     exit 1
-fi
-
-# Optionally disable spherepack to simplify compilation
-if [ ! "$NO_SPHEREPACK" ]; then
-	if [ "$SPHEREPATH" ]; then
-		LIBS="-L$SPHEREPATH $LIBS"
-	fi
-	LIBS="$LIBS -lspherepack"
-	files="$files sphere.f90"
 fi
 
 # TODO: Make code ready for -pedantic
@@ -107,6 +95,14 @@ done
 fileco="${filec%.*}.o"
 fileko="${filek%.*}.o"
 
+
+# 0. Build dependencies if necessary
+if [ ! -f ext/spherepack3.2/lib/libspherepack.a ];then
+	echo "Stage 0: Building dependency spherepack"
+	cd ext/spherepack3.2
+	make &> lib/spherepack_build.log
+	cd ../..
+fi
 
 # 1. Simple sed precompiler
 echo "Stage 1: Precompiling the Fortran code"

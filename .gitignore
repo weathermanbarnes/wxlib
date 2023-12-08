@@ -3,6 +3,8 @@
 *.o
 *.so
 *.x
+*.exe
+*.a
 *.mod
 *.pickle
 .precc
@@ -25,3 +27,5 @@ study
 *.npz
 *.mat
 *.nc
+# Spherepack lib folder
+ext/spherepack3.2/lib
