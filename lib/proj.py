@@ -182,6 +182,11 @@ def Scandinavia():
 			llcrnrlon=0.3, llcrnrlat=50.3, urcrnrlon=54.2, urcrnrlat=71.5)
 Scandinavia.aspect = 1.125
 
+# -> Following the DMI NAE Arome model domain closely
+def DMI_Arome():
+    return Basemap(projection='lcc', lat_1=64, lat_2=54, lat_0=59, lon_0=24, resolution='l', 
+            llcrnrx=-2350000, llcrnry=-1100000, urcrnrx=500000, urcrnry=1550000) 
+
 # -> North Atlantic
 def N_Atlantic_forecast():
 	return Basemap(projection='lcc', lat_0=58, lat_ts=58, lon_0=-30, resolution='l', 
