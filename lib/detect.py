@@ -746,6 +746,67 @@ def cold_air_outbreak_index(t850, msl, sst, ci, lsm, cao_thres=None):
     
     return caoidx
 
+def precip_blobs(precip, grid, blob_mindist): 
+    ''' 
+    
+    Organize the precipitation field into different blobs - based on the local 
+    maxima in the precipitation field 
+    
+    Calls precipitationblobs_fortran. 
+
+    Parameters 
+    ----------
+    precip : np.ndarray with shape (nt, ny, nx) or (ny, nx) and dtype float64
+        Precipitation field
+    grid   : (gridlib) 
+        static file from dynlib
+    blob_mindist : float64
+        The minimum separation distance between two precipitation maxima. 
+        
+    Returns
+    -------
+    mask : nask of the precipitation blobs, with each having their own unique values
+    meta : metainformation on the precipitation blobs, similar to that of cyclone by contour detection . 
+    '''
+    
+    
+    #Preprocessing
+    if len(precip.shape)==2:
+        precip = np.expand_dims(precip,0)
+
+    nt, ny, nx = precip.shape
+    
+    # Creating array holding only the grid index for the respective locations for the following sort
+    xidx = np.empty(precip.shape[1:], dtype='i4')
+    yidx = np.empty(precip.shape[1:], dtype='i4')
+    xidx[:,:] = np.arange(nx)[np.newaxis,:]
+    yidx[:,:] = np.arange(ny)[:,np.newaxis]
+    
+    # Allocating the sorted arrays
+    sortshape = (precip.shape[0], precip.shape[1]*precip.shape[2])
+    xidx_sort = np.empty(sortshape, dtype='i4')
+    yidx_sort = np.empty(sortshape, dtype='i4')
+    
+    # Sorting the input
+    precip_sort = np.empty(sortshape, dtype = 'f4')
+    for k in range(nt):
+        sortidx = np.unravel_index(np.argsort(precip[k,:,:],axis=None),precip[k,:,:].shape)
+        precip_sort[k,:] = precip[k,:,:][sortidx]#[::-1]
+        xidx_sort[k,:]   = xidx[sortidx]#[::-1]
+        yidx_sort[k,:]   = yidx[sortidx]#[::-1] 
+
+        
+    # The actual precipitation blob detections
+    mask, meta = blobs_fortran(1000, precip, precip_sort, xidx_sort, yidx_sort,
+            grid.x[0,:], grid.y[:,0], grid.dx, grid.dy, blob_mindist)
+
+    
+    mask = mask.astype(float)
+    #Clean up netgative masks
+    mask[mask<=0] = np.nan
+    
+    return mask, meta
+
 
 
 #

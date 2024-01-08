@@ -616,16 +616,7 @@ contains
           j = jjs(k,n) + 1_ni
           val = msls(k,n)
           !
-          ip1 = modulo(i,nx) + 1_ni
-          im1 = modulo(i-2_ni,nx) + 1_ni
-          jp1 = min(j+1_ni,ny)
-          jm1 = max(j-1_ni,1_ni)
-          !
-          min_around = min(msl(k,j,ip1), msl(k,jp1,ip1), msl(k,jp1,i), msl(k,jp1,im1), &
-             &             msl(k,j,im1), msl(k,jm1,im1), msl(k,jm1,i), msl(k,jm1,ip1) )
-          loc_mask(:) = (/ mask(k,j,ip1), mask(k,jp1,ip1), mask(k,jp1,i), mask(k,jp1,im1), &
-             &             mask(k,j,im1), mask(k,jm1,im1), mask(k,jm1,i), mask(k,jm1,ip1) /)
-          !
+          call find_min_around(val, k, j, i, nx, ny, msl, mask, min_around, loc_mask)
           ! How many different mask values in the vicinity?  0, 1, 2-or-more?
           ndiffloc = 0_ni
           nmaxloc = maxval(loc_mask)
@@ -1489,5 +1480,206 @@ contains
     !
     return
   end subroutine
-  !
+   !@ ---------------------------------------------------------------------------
+   !@ Subroutine: find_min_around
+   !@ Description: This subroutine determines the minimum value in
+   !@              the vicinity of a grid cell and updates the corresponding
+   !@              mask and local mask arrays.
+   !@
+   !@ Arguments:
+   !@   val       - Input, the value of the current grid cell.
+   !@   k         - Input, the current time index.
+   !@   j         - Input, the row index of the current grid cell.
+   !@   i         - Input, the column index of the current grid cell.
+   !@   nx        - Input, the total number of columns in the grid.
+   !@   ny        - Input, the total number of rows in the grid.
+   !@   msl       - Input, the precipitation or pressure field array.
+   !@   mask      - Input/output, the mask array indicating connected components.
+   !@   loc_mask  - Output, an array indicating the presence of masks in the vicinity.
+   !@   extremum  - Output, the determined maximum or minimum value in the vicinity.
+   !@---------------------------------------------------------------------------
+  subroutine find_min_around(val, k, j, i, nx, ny, msl, mask, extremum, loc_mask)
+   real(kind=nr), intent(in) :: val, msl(:,:,:)  ! Assuming msl is a 3D array
+   integer(kind=ni), intent(in) :: k, j, i, nx, ny
+   integer(kind=ni), intent(inout) :: mask(:,:,:), loc_mask(8_ni)
+   real(kind=nr), intent(out) :: extremum
+   integer(kind=ni) :: ip1, im1, jp1, jm1
+
+   ip1 = modulo(i, nx) + 1_ni
+   im1 = modulo(i - 2_ni, nx) + 1_ni
+   jp1 = min(j + 1_ni, ny)
+   jm1 = max(j - 1_ni, 1_ni)
+
+   extremum = min(msl(k,j,ip1), msl(k,jp1,ip1), msl(k,jp1,i), msl(k,jp1,im1), &
+                  msl(k,j,im1), msl(k,jm1,im1), msl(k,jm1,i), msl(k,jm1,ip1) )
+
+   loc_mask(:) = (/ mask(k,j,ip1), mask(k,jp1,ip1), mask(k,jp1,i), mask(k,jp1,im1), &
+                    mask(k,j,im1), mask(k,jm1,im1), mask(k,jm1,i), mask(k,jm1,ip1) /)
+  end subroutine
+  !@ Precipitation blob masks by finding the outermost contour
+  !@
+  !@ ADAPTED FROM THE CYCLONE CONTOUR DETECTION
+  !@ 
+  !@ 
+  !@ To avoid the technically difficult contour tracing, we base the detection on 
+  !@ sorted precipitation values. 
+  !@
+  !@ For more info refer to the python function. This routine is not intended to
+  !@ be called directly.
+  !@
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ nn : int
+  !@     Maximum number of precipitation blobs (objects) to be detected
+  !@ precip : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Precipitation field.
+  !@ precips : np.ndarray with shape (nz,ny*nx) and dtype float64
+  !@     Sorted precipitation values for each time step.
+  !@ iis : np.ndarray with shape (nz,ny*nx) and dtype float64
+  !@     Longitudinal grid index of the respective precipitation  value.
+  !@ jjs : np.ndarray with shape (nz,ny,nx) and dtype float64
+  !@     Latitudinal grid index of the respective precipitation value.
+  !@ lon : np.ndarray with shape(nx)
+  !@     Longitudes in degrees
+  !@ lat : np.ndarray with shape(ny)
+  !@     Latitudes in degrees
+  !@ dx : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in x-direction to be directly for centered differences.
+  !@     ``dx(j,i)`` is expected to contain the x-distance between ``(j,i+1)`` and ``(j,i-1)``.
+  !@ dy : np.ndarray with shape (ny,nx) and dtype float64
+  !@     The double grid spacing in y-direction to be directly for centered differences.
+  !@     ``dy(j,i)`` is expected to contain the y-distance between ``(j+1,i)`` and ``(j-1,i)``.
+  !@ blob_mindist : float 
+  !@     Minimum number of the distance between two maxima. 
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nx : int
+  !@     Grid size in x-direction.
+  !@ ny : int
+  !@     Grid size in y-direction.
+  !@ nz : int
+  !@     Grid size in z- or t-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (nz,ny,nx) and dtype int32
+  !@     Precipitation object mask with different integers designating different blobs (objects)
+  !@ np.ndarray with shape (nz,nn,5)
+  !@     Meta data about each blob: (1) latitutde and (2) longitude of its centre,
+  !@     (3) maximum P, (4) P at the outermost contour, and (5) blob size.
+  subroutine blobs_fortran(mask,meta, nx,ny,nz, nn, precip, precips,iis,jjs,  lon,lat, dx,dy, blob_mindist)
+    use consts
+    !
+    real(kind=8), intent(in)  :: precip(nz,ny,nx), precips(nz,ny*nx),  &
+       &                          lon(nx), lat(ny), dx(ny,nx), dy(ny,nx)
+    real(kind=nr), intent(out) :: meta(nz,nn,5_ni)
+    integer(kind=ni), intent(in) :: iis(nz,ny*nx), jjs(nz,ny*nx), nn,nx,ny,nz
+    integer(kind=ni), intent(out) :: mask(nz,ny,nx)
+    !f2py depend(nx,ny,nz) mask, msls, iis, jjs
+    !f2py depend(nn,nz) meta
+    !f2py depend(nx,ny) oro, dx, dy
+    !f2py depend(nx) lon
+    !f2py depend(ny) lat
+    !
+    real(kind=nr) :: cellsize(ny,nx), max_around, dist, mindist, dlon, lat1r, lat2r, val, blob_mindist
+    integer(kind=ni) :: loc_mask(8_ni), blobidx, oblobidx, maxidx, ndiffloc, nmaxloc
+    integer(kind=ni) :: i,j,k,n,m, ip1,im1,jp1,jm1
+    ! -----------------------------------------------------------------
+    !
+    ! Initialize stuff
+    meta(:,:,:) = 0_ni
+    !
+    do i = 1_ni,nx
+       do j = 1_ni,ny
+          cellsize(j,i) = abs(dx(j,i) * dy(j,i)) / 4.0e6 ! double grid spacing in dx/dy and conversion from m^2 to km^2
+          if ( isnan(cellsize(j,i)) ) then
+             cellsize(j,i) = 0.0_nr
+          end if
+       end do
+    end do
+    !
+    ! Loops over time and sorted arrays
+    do k = 1,nz
+       blobidx = 0_ni
+       !
+       do n = 1,ny*nx
+          i = iis(k,n) + 1_ni ! conversion to Fortran indexes
+          j = jjs(k,n) + 1_ni
+          val = precips(k,n)
+          !
+          ! We only want to sort through precip with a little bit of magnitude 
+          if ( val < 0) then  ! But set to negative because we pass a negative field. 
+              call find_min_around(val, k, j, i, nx, ny, precip, mask, max_around, loc_mask)
+              
+              ndiffloc = 0_ni
+              nmaxloc = maxval(loc_mask)
+              do m = 0_ni,8_ni
+                 if ( loc_mask(m) == 0_ni ) then
+                    cycle
+                 end if
+
+                 if ( loc_mask(m) == nmaxloc ) then
+                    ndiffloc = max(ndiffloc,1_ni)
+                 else
+                    ndiffloc = max(ndiffloc,2_ni)
+                 end if
+              end do
+
+              ! Nothing around -> potential new blob center
+              if ( minval(loc_mask) == 0_ni .and. maxval(loc_mask) == 0_ni ) then
+               if ( val < max_around ) then
+                  ! Check proximity to previously detected blob centres
+                  mindist = blob_mindist
+                  maxidx = -1_ni
+                  do m = 1_ni,blobidx
+                     dlon = pi/180.0_nr * ( lon(i) - meta(k,m,2_ni) )
+                     lat1r = pi/180.0_nr * lat(j)
+                     lat2r = pi/180.0_nr * meta(k,m,1_ni)
+                     dist = 6370.0_nr * acos(sin(lat1r)*sin(lat2r) + cos(lat1r)*cos(lat2r)*cos(dlon))
+                     if ( dist < mindist ) then
+                        mindist = dist
+                        maxidx = m
+                     end if
+                  end do
+
+                  ! Minimum belongs to existing blob
+                  if ( maxidx > 0 ) then
+                    ! Point really belongs to existing blob
+                        mask(k,j,i) = maxidx
+                        meta(k,maxidx,5_ni) = meta(k,maxidx,5_ni) + cellsize(j,i)
+                        meta(k,maxidx,4_ni) = val
+
+                  ! Actually new blob
+                  else
+                     blobidx = blobidx + 1_ni
+                     mask(k,j,i) = blobidx
+                     meta(k,blobidx,1_ni) = lat(j)
+                     meta(k,blobidx,2_ni) = lon(i)
+                     meta(k,blobidx,3_ni) = val
+                     meta(k,blobidx,4_ni) = val
+                     meta(k,blobidx,5_ni) = cellsize(j,i)
+                  end if
+
+               else
+                  mask(k,j,i) = -1_ni
+               end if
+            !
+            ! One blob around -> extension of existing blob
+            else 
+               oblobidx = nmaxloc
+               ! Point extends to other blob
+               mask(k,j,i) = oblobidx
+               meta(k,oblobidx,5_ni) = meta(k,oblobidx,5_ni) + cellsize(j,i)
+               meta(k,oblobidx,4_ni) = val
+            end if
+        end if 
+     end do ! Loop over sorted grid cells
+  end do ! Loop over time
+
+  end subroutine
+
 end module

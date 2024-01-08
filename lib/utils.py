@@ -9,6 +9,7 @@ import sys
 
 from . import dynfor
 from . import docutil
+from . import detect
 
 # Take over the contents of dynfor.diag to this module and inject documentation from the Fortran sources
 docutil.takeover(dynfor.utils, 'utils', sys.modules[__name__])
@@ -992,5 +993,89 @@ def lanczos_weights_lowpass(cutoff, window=None, size=2):
     w[1:-1] /= w[1:-1].sum()
     
     return w[1:-1]
+
+def attribute_to_features(da, masks_conditions, var, factor = 1): 
+    '''
+    Attribute precipitation to different features based on specified conditions.
+
+    Parameters:
+    - da: xarray.Dataset
+        Input dataset containing precipitation and relevant attributes.
+    - masks_conditions: list of tuples
+        List of tuples specifying mask names and conditions for precipitation attribution.
+    - var: str 
+        Variable being attributed and used for watershedding
+    - factor: int/float. Default = 1
+        for looking for maxima in the field instead of minima (i.e. for precipitation attribution)
+        pass (-1). 
+    Returns:
+    - precip_attribution: xarray.Dataset
+        Dataset containing attributed var for various features.
+    '''
+    import xarray as xr
+    from itertools import product
+    from . import gridlib
+
+    # Make grid
+    lat,lon = np.meshgrid(da.latitude.values, da.longitude.values)
+    grid = gridlib.grid_by_latlon(lat.T,lon.T)
+
+    
+    # Initialize dictionaries to store masks
+    masks = {mask_name: np.zeros(da[var].shape).astype(np.float32) for mask_name, _ in masks_conditions}
+
+    # Loop through time steps
+    for i in range(da.dims['time']):
+        da_i = da.isel(time=i)
+
+        # Detect precipitation blobs
+        precip_blobs, __ = detect.precip_blobs(da_i[var]*factor, grid, blob_mindist=750)
+        precip_blobs[precip_blobs == 0] = np.nan
+
+        # Extract dimensions and coordinates from the dataset
+        dims = list(da_i.dims)
+        coords = {dim: da_i[dim].values for dim in dims}
+
+        # Create a DataArray with the same dimensions and coordinates
+        da_i['blob'] = xr.DataArray(data=precip_blobs.squeeze(), dims=dims, coords=coords, name = 'blob')
+
+        # Loop through mask conditions
+        for mask_name in masks:
+            blob_nr = np.unique(da_i.where(da_i[mask_name] > 0).blob.values)
+            blob_nr = blob_nr[~np.isnan(blob_nr)]
+
+            blob_f = np.zeros(da_i.blob.shape)
+            for n in blob_nr:
+                blob_f += da_i.blob == n
+            masks[mask_name][i, :, :] = blob_f
+
+    # Create dataset for precipitation attribution
+    precip_attribution = xr.Dataset(None, coords=da.coords).astype(np.float32)
+    _precip_ = precip_attribution.copy()
+
+    dims = list(da.dims)
+    coords = {dim: da[dim].values for dim in dims}
+    # Create data variables for masks
+    for mask in masks:
+        _precip_[mask] = xr.DataArray(data=masks[mask], dims=dims, coords=coords, name = mask)
+
+    # Generate all permutations of exclusive mask conditions
+    for combination in product([0, 1], repeat=len(masks_conditions)):
+        mask_combination = {mask_name: value for mask_name, value in zip(masks.keys(), combination)}
+
+        # Create a boolean array for each condition in the combination
+        conditions = [(_precip_[m] == v) for m, v in mask_combination.items()]
+
+        # Combine boolean arrays using logical AND
+        combined_condition = np.all(conditions, axis=0)
+
+        # Apply the combined condition to the original precipitation data
+        precip_attribution[''.join([f'{k}' for k, v in mask_combination.items() if v == 1])] = \
+            da.where(combined_condition, 0)[var]
+
+    # Rename variable with no attributed precipitation as 'U'
+    precip_attribution = precip_attribution.rename_vars({'': 'U'})
+    
+    return precip_attribution
 
 #
