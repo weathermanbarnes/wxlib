@@ -21,6 +21,7 @@ study
 *.old
 *.orig
 .DS_Store
+.ipynb_checkpoints
 # Results (pictures, numpy, matlab, etc.)
 *.png
 *.npy
