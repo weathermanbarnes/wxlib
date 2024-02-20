@@ -114,20 +114,20 @@ def cyclone_by_contour(msl, grid):
     return mask, meta
 
 
-def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
+def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False, lmsl_thres_closed=2.0e-09, lmsl_thres_open=7.0e-09, maxdist_lmsl_center=500.0e3, msl_min_prominence_closed=150, msl_min_prominence_open=25, mindist_centers=750.0e3,maxdist_track=750.0e3,tstep=10800,min_lifetime=24,min_dist_travelled=500.0e3):
     ''' Detect and track cyclone centers following the Melbourne algorithm
 
-    The original detection algorithm is defined in Murray and Simmonds (1991a,b; MS91). This is a simplified
-    reimplementation of the detection algorithm complemented by a more fancy tracking. 
+   The original detection algorithm is defined in Murray and Simmonds (1991a,b; MS91). This is a simplified
+   reimplementation of the detection algorithm complemented by a more fancy tracking. 
 
-    Simplifications compared to MS91:
-     - As in MS91, msl is interpolated to polar stereographic grids before the cyclone detection and tracking.
-       However, the grid resolution is chosen fine enough that cyclone centeres are simply determined at the
-       grid-point resolution.
-     - No attempt is made in determining cyclone sizes
-     - Prediction of cyclone movement is determined from Kalman-filtered previous cyclone movement rather
-       than from the background flow. This requires much fewer assumptions and configuration and reduces the 
-       required input data to only sea-level pressure (or equivalent).
+   Simplifications compared to MS91:
+    - As in MS91, msl is interpolated to polar stereographic grids before the cyclone detection and tracking.
+      However, the grid resolution is chosen fine enough that cyclone centeres are simply determined at the
+      grid-point resolution.
+    - No attempt is made in determining cyclone sizes
+    - Prediction of cyclone movement is determined from Kalman-filtered previous cyclone movement rather
+      than from the background flow. This requires much fewer assumptions and configuration and reduces the 
+      required input data to only sea-level pressure (or equivalent).
 
     This is the (so-far) first function in dynlib to depend on the pandas library. pandas is imported only 
     within this function such that the remainder of dynlib remains usable even when pandas is not available.
@@ -151,11 +151,39 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
         in this call to the function are meant to continue tracks from a previous call.
     quiet : bool
         *Optional*, default ``False``. If ``True``, progress information is suppressed.
-
+    lmsl_thres_closed : float64
+        *Optional*, default ``2.469e-09``. Lower threshold in Pa m**-2 on MSLP laplacian for closed systems.
+    lmsl_thres_open : float64
+        *Optional*, default ``7.407e-09``. Lower threshold in Pa m**-2 on MSLP laplacian for open systems
+    maxdist_lmsl_center : float64
+        *Optional*, default ``500.0e3``. Maximum distance in km between maximum in MSLP laplacian and either 
+        MSLP minimum (closed system) or grad(MSLP)**2 minimum (open system).
+    msl_min_prominence_closed : float64
+        *Optional*, default ``150``. Lower threshold in Pa on local prominence compared to environment for a 
+        closed system.
+    msl_min_prominence_open : float64
+        *Optional*, default ``25``. Lower threshold in Pa on local prominence compared to environment for an 
+        open system.
+    mindist_centers : float64
+        *Optional*, default ``500.0e3``. Lower threshold in km on distance between individual identified 
+        cyclone centres.
+    maxdist_track : float64
+        *Optional*, default ``500.0e3``. Upper threshold in km on distance travelled by a cyclone over one 
+        time step.
+    tstep : float64
+        *Optional*, default ``10800``. Time interval in s between two consecutive time steps.
+    min_lifetime : float64
+        *Optional*, default ``24``. Lower threshold in hours on duration of a tracked cyclone.
+    min_dist_travelled : float64
+        *Optional*, default ``500.0e3``. Lower threshold in km on total travelled distance during the 
+        lifetime of a tracked cyclone.
+   
     Returns
     -------
     pd.DataFrame
-        Table of detected cyclone cyclone positions for every point along every track and associated metadata
+        Table of all detected cyclone positions regardless of track criteria and associated metadata
+    pd.DataFrame
+        Table of detected cyclone positions for every point along every track and associated metadata
     pd.DataFrame
         Table of cyclone tracks, including a set of metadata for each track for conventient track filtering
     dict of pd.DataFrame
@@ -163,7 +191,7 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
         function, cf. optional parameter ``prev_cyc``.
     pd.DataFrame
         Table of detected cyclone positions including all temporary internal columns belonging to tracks that
-        potentially extend beyond the end of the time interval for this call. To be passed on to the next call 
+        potentially extend beyond the end of the time interval for this call. To be passed on to the next call
         of this function, cf. optional parameter ``prev_tracks``.
     '''
     
@@ -204,11 +232,14 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
         for hemis in ['nh', 'sh']:
             hemis_msl = ifunc(grids[hemis].lat, grids[hemis].lon, grid=False)
 
-            new_cyclones = locate_cyclones(grid.t_parsed[tidx], hemis_msl, grids[hemis], hemis)
+            new_cyclones = locate_cyclones(grid.t_parsed[tidx], hemis_msl, grids[hemis], hemis,\
+                                           lmsl_thres_closed, lmsl_thres_open, maxdist_lmsl_center, \
+                                            msl_min_prominence_closed, msl_min_prominence_open, \
+                                                mindist_centers,)
             cyclones.append(new_cyclones)
 
             if hemis in prev_cyc:
-                ntracks = track_cyclones(ntracks, prev_cyc[hemis], new_cyclones)
+                ntracks = track_cyclones(ntracks, prev_cyc[hemis], new_cyclones, maxdist_track=maxdist_track,tstep=tstep)
 
             prev_cyc[hemis] = new_cyclones
        
@@ -229,7 +260,7 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
             continue
         track = cyclones[cyclones.track_id == trkid]
         if len(track) > 1:
-            smooth_cyclone_track(maps, cyclones, track)
+            smooth_cyclone_track(maps, cyclones, track, tstep)
         track = cyclones[cyclones.track_id == trkid]
         tracks.append(aggregate_trackinfo(track))
 
@@ -241,7 +272,7 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
     # Filter tracks for minimum length, minimum movement, etc.
     if not quiet:
         print('Filtering tracks.              ', end=chr(13))
-    tracks, unfinished_tracks = filter_tracks(tracks, lastdate=grid.t_parsed[-1])
+    tracks, unfinished_tracks = filter_tracks(tracks, lastdate=grid.t_parsed[-1],min_lifetime=min_lifetime, min_dist_travelled=min_dist_travelled)
 
     sel_track_ids = set(unfinished_tracks.track_id)
     sel_cyclones = np.array([cyc.track_id in sel_track_ids for cycid, cyc in cyclones.iterrows()])
@@ -249,7 +280,7 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
 
     sel_track_ids = set(tracks.track_id)
     sel_cyclones = np.array([cyc.track_id in sel_track_ids for cycid, cyc in cyclones.iterrows()])
-    cyclones = cyclones.iloc[sel_cyclones].reset_index(drop=True)
+    tracked_cyclones = cyclones.iloc[sel_cyclones].reset_index(drop=True)
     
     # Clean-up temporary columns for all cyclones belonging to certainly finished tracks
     cyclones = cyclones.drop([
@@ -257,10 +288,15 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
             'x', 'y', 'x_pred', 'y_pred', 'x_filter', 'y_filter', 'x_smooth', 'y_smooth',
             'u', 'v', 'hemis',
         ], axis=1)
+    tracked_cyclones = tracked_cyclones.drop([
+            'Px_pred', 'Py_pred', 'Px_filter', 'Py_filter',
+            'x', 'y', 'x_pred', 'y_pred', 'x_filter', 'y_filter', 'x_smooth', 'y_smooth',
+            'u', 'v', 'hemis',
+        ], axis=1)
     if not quiet:
         print(f'Filtering & cleanup: {(dt.now()-timer).total_seconds():6.1f} seconds.')
     
-    return cyclones, tracks, prev_cyc, unfinished_tracks
+    return cyclones, tracked_cyclones, tracks, prev_cyc, unfinished_tracks
 
 
 def block_by_grad_rev(dat, grid, lat_band=(30,70),

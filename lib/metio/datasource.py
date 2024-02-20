@@ -1140,8 +1140,90 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
                             dat__[::-1,:], kx=1, ky=1)
 
         return ifuncs
+
+    def get_hif_nans(dates, plevs, q):
+        ''' Get interpolation functions of for all given plevs of given q which can contains NaNs
+
+        The given plevs, ys and xs must all have the same 4-dimensional shape. Dates must be
+        one-dimensional, corresponding in length to the first dimension of plevs, ys and xs.
+        The returned array(s) will have the same shape as plevs, ys and xs. It returns two 
+        arrays if there is at least one NaNs in the data for q. The second array corresponds 
+        to the location (boolean) of NaNs.
+        
+        Parameters
+        ----------
+        dates : list/np.ndarray of datetime with dimensions (t,)
+            The dates for which data is to be interpolated.
+        plevs : np.ndarray with dimensions (z,)
+            Pressure levels to be interpolated to.
+        q : str
+            A variable name identifier, following the ECMWF conventions as far as applicable,
+            e.g. ``'u'`` or ``'msl'``.
+
+        Returns
+        -------
+        dict (date, plev) => interpolation function
+            The requested interpolation accessible by date and plev.
+        '''
+
+        if type(dates) == list:
+            dates = np.array(dates)
+
+        # Allocate structure to hold the results
+        ifuncs = {}
+        ifuncs_nans = {}
+
+        start, end = dates.min(), dates.max() + td(0,1)
+        
+        # nans marker
+        nans_present = False
+        
+        for pidx,plev in enumerate(plevs):
+            req = list(files_by_plevq((plev, q), start=start, end=end))
+            
+            # Iterate through the data set in chunks natural to the data source
+            for filename, tidxs, dates_, shape in req:
+                # Skip chunks from which no time step is required
+                load_chunk = False
+                for date in dates_:
+                    if date in dates:
+                        load_chunk = True
+
+                if not load_chunk:
+                    continue
+                
+                dat_, grid = get_normalized_from_file(filename, plev, q)
+            
+                for tidx_in, date in enumerate(dates_):
+                    tidxs_out = np.argwhere(dates == date)
+                    if tidxs_out.size == 0:
+                        continue
+                        
+                    dat__ = dat_[tidx_in,:,:].squeeze()
+                    nans_loc = np.isnan(dat__)
+                    if nans_loc.sum() > 0:
+                        nans_present = True
+                        zonalavg = np.nanmean(dat__, axis=1)
+                        dat__ -= zonalavg[:,np.newaxis]
+                        dat__, conv = utils.fill_nan(dat__[np.newaxis,:,:])
+                        dat__ = dat__[0,:,:]
+                        dat__ += zonalavg[:,np.newaxis]
+                    
+                    if not date in ifuncs:
+                        ifuncs[date] = {}
+                    if not date in ifuncs_nans:
+                        ifuncs_nans[date] = {}
+                    
+                    ifuncs[date][plev] = interp.RectBivariateSpline(grid.y[::-1,0], grid.x[0,:],
+                                                                    dat__[::-1,:], kx=1, ky=1)
+                    ifuncs_nans[date][plev] = interp.RectBivariateSpline(grid.y[::-1,0], grid.x[0,:],
+                                                                    nans_loc[::-1,:], kx=1, ky=1)
+        if nans_present:
+            return ifuncs, ifuncs_nans
+        else:
+            return ifuncs
     
-    return get_at_position, get_hor_interpolation_functions
+    return get_at_position, get_hor_interpolation_functions, get_hif_nans
 
 
 def get_time_average_factory(files_by_plevq, get_normalized_from_file, get_static, conf):
