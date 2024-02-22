@@ -152,9 +152,9 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False, l
     quiet : bool
         *Optional*, default ``False``. If ``True``, progress information is suppressed.
     lmsl_thres_closed : float64
-        *Optional*, default ``2.469e-09``. Lower threshold in Pa m**-2 on MSLP laplacian for closed systems.
+        *Optional*, default ``2.0e-09``. Lower threshold in Pa m**-2 on MSLP laplacian for closed systems.
     lmsl_thres_open : float64
-        *Optional*, default ``7.407e-09``. Lower threshold in Pa m**-2 on MSLP laplacian for open systems
+        *Optional*, default ``7.0e-09``. Lower threshold in Pa m**-2 on MSLP laplacian for open systems
     maxdist_lmsl_center : float64
         *Optional*, default ``500.0e3``. Maximum distance in km between maximum in MSLP laplacian and either 
         MSLP minimum (closed system) or grad(MSLP)**2 minimum (open system).
