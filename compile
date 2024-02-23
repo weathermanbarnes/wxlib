@@ -25,7 +25,7 @@ work="$base/examples"
 doc="$base/doc"
 doc_extract=".compile_fortran_doc.py"
 
-files="config.f90 derivatives.f90 interpol.f90 ellipse.f90 utils.f90 thermodyn.f90 diag.f90 detect_rwb_contour.f90 detect_lines.f90 detect.f90 stat.f90 tend.f90 diag_tend.f90 sphere.f90"
+files="config.f90 derivatives.f90 interpol.f90 ellipse.f90 utils.f90 thermodyn.f90 diag.f90 detect_rwb_contour.f90 detect_lines.f90 detect.f90 stat.f90 tend.f90 diag_tend.f90" #sphere.f90"
 filec="const.f90"
 filek="kind.f90"
 
@@ -36,7 +36,7 @@ pysig="${precc}/$python_library.pyf"
 host=`hostname -f`
 uname=`uname -s`
 if [ "${host: -10}" == 'hpc.uib.no' ]; then
-    LIBS="-L/Data/gfi/users/local/lib -Lext/spherepack3.2/lib -lopenblas -lscalapack -lspherepack"
+    LIBS="-L/Data/gfi/users/local/lib -Lext/spherepack3.2/lib -lopenblas -lscalapack" # -lspherepack"
     RPATH="" #-Wl,-rpath,/Data/gfi/users/local/lib"
 elif [ "${host: -14}" == 'fram.sigma2.no' ]; then
     LIBS="-lopenblas -lscalapack"
@@ -57,7 +57,9 @@ elif [ "$uname" == 'Darwin' ]; then
     RPATH=""
 elif [ "$uname" == 'Linux' ]; then
     # Default Linux configuration
-    LIBS='-L/usr/lib -L/usr/local/lib -Lext/spherepack3.2/lib -lblas -llapack -lspherepack'
+    #LIBS='-L/usr/lib -L/usr/local/lib -Lext/spherepack3.2/lib -lblas -llapack' #-lspherepack'
+    #LIBS='-L/usr/lib -L/usr/local/lib -L//cm/shared/apps/lapack/gcc/64/3.8.0/ -lopenblas -llapack' #-lscalapack
+    LIBS='-L/usr/lib -L/usr/local/lib -L/home/WUR/weije043//miniconda3/envs/dynlib_2024/lib/ -lblas -llapack'
     RPATH=""
 else
     echo "Error: Unknown host/ operating system."

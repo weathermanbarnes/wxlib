@@ -14,23 +14,23 @@ from distutils.command.build_py import build_py as _build_py
 # Determining dynlib version from git
 version = subprocess.check_output("git describe --tags", shell=True)
 version = version.strip().decode('utf8')
-if "-" in version:
-    idx = version.index('-')
-    idx2 = version.index('-', idx+1)
-    release = version[:idx]
-    ncommits = version[idx+1:idx2]
-    gitrev = version[idx2+1:]
-    version = f'{release}.dev{ncommits}+{gitrev}'
+#if "-" in version:
+#    idx = version.index('-')
+#    idx2 = version.index('-', idx+1)
+#    release = version[:idx]
+#    ncommits = version[idx+1:idx2]
+#    gitrev = version[idx2+1:]
+#    version = f'{release}.dev{ncommits}+{gitrev}'
 
 # Are there local uncommitted changes?
 changes = subprocess.check_output("git diff", shell=True)
 if len(changes) > 0:
 	warnings.warn('Packaging/Installing a non-committed version! Be sure you know what you are doing!')
-	version += '+'
+	#version += '+'
 
 precc = 'lib/fortran/.precc'
 fortran_modules = ['kind', 'config', 'consts', 'derivatives', 'detect', 'detect_lines', 'detect_rwb_contour',
-		   'diag', 'ellipse', 'thermodyn', 'sphere', 'stat', 'utils']
+		   'diag', 'ellipse', 'thermodyn', 'stat', 'utils'] #'sphere'
 fortran_modules = ['%s/%s.mod' % (precc, mod) for mod in fortran_modules]
 
 # Override the build_py class to 
