@@ -100,7 +100,7 @@ fileko="${filek%.*}.o"
 if [ ! -f ext/spherepack3.2/lib/libspherepack.a ];then
 	echo "Stage 0: Building dependency spherepack"
 	cd ext/spherepack3.2
-	make &> lib/spherepack_build.log
+	make &> spherepack_build.log
 	cd ../..
 fi
 
