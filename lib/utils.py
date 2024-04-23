@@ -1078,4 +1078,64 @@ def attribute_to_features(da, masks_conditions, var, factor = 1):
     
     return precip_attribution
 
+
+def kernel_average_2d(xi,yi,zi, xo,yo, Lx=None,Ly=None, maskbelow=1.0e-3):
+    ''' Kernel density estimator in 2d for histograms and averages
+    
+    For a given set of input data points, this codes estimates densities and
+    averages using a Gaussian kernel as smoothing.
+
+    The function is closely based on code provided by Andrea Marcheggiani.
+   
+    Parameters
+    ----------
+    xi : np.ndarray with shape (nn) and dtype float
+        The x-coordinate of the input
+    yi : np.ndarray with shape (nn) and dtype float
+        The y-coordinate of the input
+    zi : np.ndarray with shape (nq,nn) and dtype float
+        Data values to be kernel-averaged. The nq-axis is to accomodate several
+        indepdendent variables.
+    xo : np.ndarray with shape (ny,nx) and dtype float
+        The x-coordinate of the output grid
+    yo : np.ndarray with shape (ny,nx) and dtype float
+        The y-coordinate of the output grid
+    Lx : float
+        Averaging length scale in x in physical units. Defaults to 0.5 of the standard deviation of xi.
+    Ly : float
+        Averaging length scale in y in physical units. Defaults to 0.5 of the standard deviation of yi.
+    maskbelow : float
+        Mask results where the kernel density average is below this fraction of the maximum. Defaults 
+        to 0.1% of the max density.
+
+    Returns
+    -------
+    np.ndarray with shape (ny,nx) and dtype float
+        Kernel density estimate (corresponds to histogram)
+    np.ndarray with shape (nq,ny,nx)
+        Kernel-averaged input values
+    '''
+
+    density = np.zeros(xo.shape)
+    average = np.zeros(zi.shape[:1]+xo.shape)
+    
+    if Lx is None:
+        Lx = xi.std() * 0.5
+    if Ly is None:
+        Ly = yi.std() * 0.5
+
+    for n, xd, yd in zip(range(xi.shape[0]), xi, yi):
+        wgt = np.exp(-0.5*(((xd - xo)/Lx)**2 + ((yd - yo)/Ly)**2))
+        density += wgt
+
+        zd = zi[:,n]
+        average += wgt[np.newaxis,:,:] * zd[:,np.newaxis,np.newaxis]
+
+    # masking out where density is very low, thus where the kernel estimate is not reliable
+    thres = density.max() * maskbelow
+    density[np.where(density<thres)] = np.nan
+    average = average/density
+
+    return density, average
+
 #
