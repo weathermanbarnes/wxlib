@@ -273,8 +273,8 @@ contains
     integer(kind=ni), intent(in) :: cnt, nx,ny, nstruct_max
     integer(kind=ni), intent(out) :: lineptcnt(cnt)
     !
-    real   (kind=nr) :: dists(cnt,cnt), longestdist
-    integer(kind=ni) :: n,m,l, nn, inter(cnt,cnt), oidx(cnt), structcnt(nstruct_max), &
+    real   (kind=nr) :: dists(cnt,cnt), longestdist, di, dj, dist, distji
+    integer(kind=ni) :: i,j, n,m,l, nn, inter(cnt,cnt), oidx(cnt), structcnt(nstruct_max), &
             &           donecnt,prevcnt, nstruct, startidx,endidx, &
             &           longestpath(2_ni), linecnt, pos,startpos,endpos
     logical :: used(cnt)
@@ -308,7 +308,37 @@ contains
     do nn = 1_ni,nstruct
        endidx = startidx - 1_ni + structcnt(nn)
        !
-       ! 2. Step: Find shortest paths between all pairs of points in the structures 
+       ! 2. Step: Find all pairs of close grid points in the structures
+       do n = startidx,endidx
+          do m = startidx,n-1_ni
+             i = iidx(oidx(n)) ! Cast to integer
+             j = jidx(oidx(n)) ! Cast to integer
+             !
+             di = iidx(oidx(m)) - iidx(oidx(n))
+             dj = jidx(oidx(m)) - jidx(oidx(n))
+             !
+             ! Take into account periodicity in x
+             if ( grid_cyclic_ew ) then
+                if ( di > nx/2.0_nr ) then
+                   di = di - nx
+                elseif ( di < -nx/2.0_nr ) then
+                   di = di + nx
+                end if
+             end if
+             !
+             dist = sqrt( (dx(j,i)*di/2.0_nr)**2.0_nr + &
+                        & (dy(j,i)*dj/2.0_nr)**2.0_nr   )
+             distji = sqrt(di**2_ni + dj**2_ni)
+             !
+             ! if we found a pair of close points
+             if ( distji <= searchrad ) then
+                dists(n,m) = dist
+                dists(m,n) = dist
+             end if
+          end do
+       end do
+       !
+       ! 3. Step: Find shortest paths between all pairs of points in the structures
        !          using the Floyd-Warshall algorithm 
        do n = startidx,endidx
           do m = startidx,endidx
@@ -326,7 +356,7 @@ contains
           end do
        end do
        !
-       ! 3. Step: Reconstruct path for the longest shortest paths within each structure 
+       ! 4. Step: Reconstruct path for the longest shortest paths within each structure
        !          using the "inter(mediate)" information from step 2
        longestpath = maxloc(dists(startidx:endidx,startidx:endidx))
        longestdist = maxval(dists(startidx:endidx,startidx:endidx))
