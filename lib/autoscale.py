@@ -73,11 +73,11 @@ def _find_thres(dat, mask, extend, exceed_percentiles, symmetric_zero):
 	The Result is based on the extend keyword and given exceedence percentiles. 
 	'''
 
-	nanmask = np.logical_not(np.isnan(dat[mask]))
+	nanmask = np.isfinite(dat[mask])
 	dat = sorted(dat[mask][nanmask].flatten())
 	ldat = len(dat)
 
-	if len(dat) == 0:
+	if ldat == 0:
 		return -0.5, 0.5
 	if min(dat) == max(dat):
 		return min(dat)-0.5, max(dat)+0.5
@@ -92,6 +92,10 @@ def _find_thres(dat, mask, extend, exceed_percentiles, symmetric_zero):
 		uthres = dat[int(np.floor(upper*ldat))]
 	else:
 		uthres = dat[-1]
+	
+	# Upper percentile == lower precentile; use full range in this case
+	if lthres == uthres:
+		lthres, uthres = dat[0], dat[-1]
 	
 	if symmetric_zero:
 		lthres = -1*max(abs(lthres), abs(uthres))
