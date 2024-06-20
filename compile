@@ -3,6 +3,8 @@
 #
 # 0. User-editable configuration 
 
+# NOTE: On python 3.12, numpy>=2.0 is required, otherwise the f2py is broken.
+
 # Define compile mode:
 #   Possible values: "productive" or "debug". 
 #   The debug mode includes array boundary checks, warnings for floating point exceptions
@@ -13,6 +15,7 @@ COMPILE_OPTS="productive"
 PY_VER=""
 F2PY="f2py$PY_VER"
 PYTHON="python$PY_VER"
+FC="gfortran"
 
 #######################################################################
 # Obs: The order of the files in $files has to reflect the interdepencies!
@@ -37,12 +40,10 @@ host=`hostname -f`
 uname=`uname -s`
 if [ "${host: -10}" == 'hpc.uib.no' ]; then
     LIBS="-L$(pwd)/ext/spherepack3.2/lib -lopenblas -lscalapack -lspherepack"
-    RPATH=""
 elif [ "${host: -14}" == 'fram.sigma2.no' ]; then
     LIBS="-L$(pwd)/ext/spherepack3.2/lib -lopenblas -lscalapack"
     module load ScaLAPACK/2.0.2-gompi-2018a-OpenBLAS-0.2.20
     module load Python/3.6.4-intel-2018a
-    RPATH=""
 elif [ "$uname" == 'Darwin' ]; then
     # Default Mac OS configuration, based on Homebrew
     LIBS="-L/usr/lib -L/usr/local/lib -L$(pwd)/ext/spherepack3.2/lib -lblas -llapack -lspherepack"
@@ -54,11 +55,9 @@ elif [ "$uname" == 'Darwin' ]; then
     #PYFIXVER="${PYFIX: -3}"
     #PYLIBS="-L$PYFIX/lib/python$PYFIXVER/config-${PYFIXVER}m-darwin -lpython${PYFIXVER}m"
     #LIBS="$LIBS $PYLIBS"
-    RPATH=""
 elif [ "$uname" == 'Linux' ]; then
     # Default Linux configuration
     LIBS="-L/usr/lib -L/usr/local/lib -L$(pwd)/ext/spherepack3.2/lib -lblas -llapack -lspherepack"
-    RPATH=""
 else
     echo "Error: Unknown host/ operating system."
     exit 1
@@ -78,10 +77,7 @@ else
     exit 1
 fi
 
-# Add general OPTS to F2PY_OPTS
-for opt in $OPTS; do
-    F2PY_OPTS="$F2PY_OPTS --opt=\"$opt\""
-done
+F2PY_OPTS="-Wno-unused-variable -Wno-unused-parameter -Wno-compare-reals $OPTS"
 
 # Empty precompiler directory
 mkdir -p $precc
@@ -95,9 +91,10 @@ done
 fileco="${filec%.*}.o"
 fileko="${filek%.*}.o"
 
+spherepack="$(pwd)/ext/spherepack3.2/lib/libspherepack.a"
 
 # 0. Build dependencies if necessary
-if [ ! -f ext/spherepack3.2/lib/libspherepack.a ];then
+if [ ! -f $spherepack ];then
 	echo "Stage 0: Building dependency spherepack"
 	cd ext/spherepack3.2
 	make &> spherepack_build.log
@@ -137,19 +134,19 @@ for file in $filec $filek $files; do
 done
 
 cd f2py_precc
-$F2PY -m $python_library -h $pysig $filec $files > f2py.log
+FC=$FC FFLAGS="$F2PY_OPTS" $F2PY -m $python_library -h $pysig $filec $files > f2py.log
 cd ..
 
 # 3. Compiling the fortran modules 
 echo -e "Stage 3: Compiling Fortran shared object using $flagset options."
-gfortran $OPTS $LIBS -c $filek $filec $files 
-gfortran -shared $RPATH $fileko $fileco $fileso $OPTS $LIBS -o $fortran_library.so 
+$FC $OPTS $LIBS -c $filek $filec $files
+$FC -shared $fileko $fileco $fileso $OPTS $LIBS -o $fortran_library.so
 mv $fortran_library.so $baselib
 
 
 # 4. Compiling the shared object usable from within python
 echo -e "Stage 4: Compiling the python module using $flagset options."
-LDFLAGS="$RPATH" $F2PY -c $LIBS --fcompiler=gnu95 $F2PY_OPTS $pysig $files $filec $filek > /dev/null
+FC=$FC FFLAGS="$F2PY_OPTS" $F2PY -c $pysig $files $filec $filek $LIBS > f2py.log
 mv ${python_library}*.so $baselib
 
 
