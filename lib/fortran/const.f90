@@ -31,4 +31,15 @@ module consts
   character, parameter :: cr = char(13_1)        ! Carriage Retirm is ASCI code 13
   real(kind=nr), parameter :: nan = 0.0_nr/0.0_nr ! Not-a-Number, used for missing values. Requires the gfortran compiler option -fno-range-check
   !
+contains
+  !
+  !@ Dummy subroutine for f2py to keep this module in the dynfor python library, parameter/variable-only modules
+  !@ are skipped for numpy>=1.26.2. The routine does nothing but return a zero.
+  subroutine keep_me(res)
+    real(kind=nr), intent(out) :: res
+    ! -----------------------------------------------------------------
+    !
+    res = 0.0_nr
+  end subroutine
+  !
 end module
