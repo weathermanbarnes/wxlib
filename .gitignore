@@ -9,6 +9,7 @@
 *.pickle
 .precc
 *.log
+dynlib.egg-info
 # Python packaging and building
 build
 dist
