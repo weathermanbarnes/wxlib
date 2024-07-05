@@ -36,16 +36,16 @@ pysig="${precc}/$python_library.pyf"
 host=`hostname -f`
 uname=`uname -s`
 if [ "${host: -10}" == 'hpc.uib.no' ]; then
-    LIBS="-L/Data/gfi/users/local/lib -Lext/spherepack3.2/lib -lopenblas -lscalapack" # -lspherepack"
-    RPATH="" #-Wl,-rpath,/Data/gfi/users/local/lib"
+    LIBS="-L$(pwd)/ext/spherepack3.2/lib -lopenblas -lscalapack -lspherepack"
+    RPATH=""
 elif [ "${host: -14}" == 'fram.sigma2.no' ]; then
-    LIBS="-lopenblas -lscalapack"
+    LIBS="-L$(pwd)/ext/spherepack3.2/lib -lopenblas -lscalapack"
     module load ScaLAPACK/2.0.2-gompi-2018a-OpenBLAS-0.2.20
     module load Python/3.6.4-intel-2018a
     RPATH=""
 elif [ "$uname" == 'Darwin' ]; then
     # Default Mac OS configuration, based on Homebrew
-    LIBS='-L/usr/lib -L/usr/local/lib -Lext/spherepack3.2/lib -lblas -llapack -lspherepack'
+    LIBS="-L/usr/lib -L/usr/local/lib -L$(pwd)/ext/spherepack3.2/lib -lblas -llapack -lspherepack"
 
     # For some reason libpython is no longer automatically detected/found for the linking step
     # -> Have python inject the libraries it was buildt with into $LIBS 
@@ -57,9 +57,7 @@ elif [ "$uname" == 'Darwin' ]; then
     RPATH=""
 elif [ "$uname" == 'Linux' ]; then
     # Default Linux configuration
-    #LIBS='-L/usr/lib -L/usr/local/lib -Lext/spherepack3.2/lib -lblas -llapack' #-lspherepack'
-    #LIBS='-L/usr/lib -L/usr/local/lib -L//cm/shared/apps/lapack/gcc/64/3.8.0/ -lopenblas -llapack' #-lscalapack
-    LIBS='-L/usr/lib -L/usr/local/lib -L/home/WUR/weije043//miniconda3/envs/dynlib_2024/lib/ -lblas -llapack'
+    LIBS="-L/usr/lib -L/usr/local/lib -L$(pwd)/ext/spherepack3.2/lib -lblas -llapack -lspherepack"
     RPATH=""
 else
     echo "Error: Unknown host/ operating system."
@@ -102,7 +100,7 @@ fileko="${filek%.*}.o"
 if [ ! -f ext/spherepack3.2/lib/libspherepack.a ];then
 	echo "Stage 0: Building dependency spherepack"
 	cd ext/spherepack3.2
-	make &> lib/spherepack_build.log
+	make &> spherepack_build.log
 	cd ../..
 fi
 

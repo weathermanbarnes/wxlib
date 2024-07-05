@@ -34,4 +34,15 @@ module config
     &                 block_dj = 30, &  ! 15 deg latitude at ERAI resolution
     &                 block_di = 15     ! 7.5 deg longitude at ERAI resolution
   !
+contains
+  !
+  !@ Dummy subroutine for f2py to keep this module in the dynfor python library, parameter/variable-only modules
+  !@ are skipped for numpy>=1.26.2. The routine does nothing but return a zero.
+  subroutine keep_me(res)
+    real(kind=nr), intent(out) :: res
+    ! -----------------------------------------------------------------
+    !
+    res = 0.0_nr
+  end subroutine
+  !
 end module

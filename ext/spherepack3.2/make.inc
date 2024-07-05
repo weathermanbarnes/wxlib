@@ -5,7 +5,7 @@ UNAMES := $(shell uname -s)
 
 ifeq ($(UNAMES),Linux)
 
-  F90 := gfortran -fdefault-real-8 -fPIC -I../lib
+  F90 := gfortran -fdefault-real-8 -fPIC -fallow-argument-mismatch -I../lib
 #  F90 := gfortran -fdefault-real-8 -ffpe-trap=invalid,zero,overflow -fbacktrace -g -fPIC -I../lib
   CPP := gfortran -cpp
   MAKE := make
