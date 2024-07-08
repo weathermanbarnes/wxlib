@@ -262,24 +262,42 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
     
     return cyclones, tracks, prev_cyc, unfinished_tracks
 
-def cyclone_clusters()
+def cyclone_clusters(str_id, str_lat, str_lon, str_dt)
     '''
-    
+    The basis idea of the clustering algorithm is that it checks if multiple cyclone tracks follow a 
+    similar path, based on the 'cyclone families' described in Bjerknes and Solberg (1922). For details
+    see Weijenborg and Spengler (2024). The algorith further divides cyclone clusters into two different
+    types, a 'Bjerknes type' close to the cyclone families of Bjerkens and Solberg (1922) and a stagnant
+    type. The former type detects cyclones that follow each other over a certain minimum distance, whereas
+    the stagnant type includes cyclones which do not move much in space, but still have a proximity over time.
+
+
     Parameters
     ----------
-   
+    
+    str_id: np.array of length N, with cyclone id number for every point along every track
+    str_lat: np.array of length N, with corresponding latitude positions for every point along every track
+    str_lon: np.array of length N,  with corresponding longitude positions for every point along every track
+    str_dt: np.array of length N, with corresponding time (as .. array) for every point along every track
     
     Returns
     -------
     list
-        A list of cyclones which are uniquely clustered together, all cyclones are listed (even 'clusters' of length 1)
+        A list of cyclones which are uniquely clustered together, all cyclones are listed (even 'clusters' 
+        of length 1)
     list
         A list of cyclones which are uniquely clustered together according to the Bjerknes type definition
-   list
+    list
         A list of cyclones which are uniquely clustered together according to the stagnant type definition
+    np.array
+        np.array of length N, with a 1 if particular point is connected to any other point, for every point 
+        along every track
     '''
 
     from .cluster_helpers import *
+    
+    #Results array for 
+    str_connected   = np.zeros(str_dt.shape)
     
     #########################
     # Get indices of storms 
@@ -444,7 +462,7 @@ def cyclone_clusters()
     sorted_clusters_stagnant = sorted(unnest(sorted_subclusters_stagnant))
 
     # return results
-    return sorted_clusters, sorted_clusters_bjerknes, sorted_clusters_stagnant
+    return sorted_clusters, sorted_clusters_bjerknes, sorted_clusters_stagnant, str_connected
 
 def block_by_grad_rev(dat, grid, lat_band=(30,70),
         local_move=(27,36), total_move=(40,54), min_duration=21):
