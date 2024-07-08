@@ -262,6 +262,189 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
     
     return cyclones, tracks, prev_cyc, unfinished_tracks
 
+def cyclone_clusters()
+    '''
+    
+    Parameters
+    ----------
+   
+    
+    Returns
+    -------
+    list
+        A list of cyclones which are uniquely clustered together, all cyclones are listed (even 'clusters' of length 1)
+    list
+        A list of cyclones which are uniquely clustered together according to the Bjerknes type definition
+   list
+        A list of cyclones which are uniquely clustered together according to the stagnant type definition
+    '''
+
+    from .cluster_helpers import *
+    
+    #########################
+    # Get indices of storms 
+    # so that ids_storms[id] gives the ids in the arrays
+    # str_id, str_lon,.. belonging to that specific storm
+    #########################
+    uniq_ids = np.unique(str_id)
+    ids_storms = get_indices_sparse(str_id)
+    nrstorms = len(uniq_ids)
+
+    #########################
+    # Define result arrays
+    #########################
+    connTracks = dok_matrix((nrstorms,nrstorms))
+    angleTracks = dok_matrix((nrstorms,nrstorms))
+    connectTracks = csr_matrix((nrstorms,nrstorms))
+    drTracks  = dok_matrix((nrstorms,nrstorms))
+    dtTracks = dok_matrix((nrstorms,nrstorms))
+
+    #########################
+    # Preprocess storm tracks
+    #########################
+    #Check which hemisphere belongs storms to
+    hemstorms = np.full(nrstorms,"Undefined")
+    firstdt = []
+    lastdt = []
+
+    for strid in range(nrstorms):    
+        dt_temp = str_dt[ids_storms[uniq_ids[strid]]]
+        lat_temp = str_lat[ids_storms[uniq_ids[strid]]]
+
+        #Save the first and last dt
+        firstdt.append(dt_temp[0])
+        lastdt.append(dt_temp[-1])
+
+        #Check if the storm is in the NH or SH
+        if(np.nanmean(lat_temp) > 0):
+            hemstorms[strid] = "NH"
+        elif(np.nanmean(lat_temp) < 0):
+            hemstorms[strid] = "SH"
+
+    firstdt = np.array(firstdt)
+    lastdt = np.array(lastdt)
+
+    # START CALCULATION OF CLUSTERS
+    print("---------------------------------------------")
+    print("Start checking for:                          ")
+    print("Distance threshold = " + str(Options["distthresh"]))
+    print("Time threshold = " + str(Options["timthresh"]))
+    print("Length threshold = " + str(Options["lngthresh"]))
+    print("---------------------------------------------")
+
+    #Convert timthresh to td object 
+    timthresh_dt = td(hours=Options["timthresh"])
+
+    ######################################################
+    # Step 1 Find connected and clustered storms
+    #######################################################
+    starttime = timer()
+    for strm1 in range(nrstorms): 
+        if(strm1%100 == 0):
+            print(strm1) 
+        print("Strm1 :" + str(uniq_ids[strm1]))
+        selidxs1 = ids_storms[uniq_ids[strm1]] 
+
+        lats1 = str_lat[selidxs1]	
+        lons1 = str_lon[selidxs1]
+        times1 = str_dt[selidxs1]
+
+        #Only compare with storms which are close enought im time compared to strm1 
+        diffdt1  = firstdt - np.array(lastdt[strm1])
+        diffdt2  = np.array(firstdt[strm1]) - lastdt
+
+        #To do: Check if this can be speed up
+        strm2idxs = np.where((np.arange(nrstorms) > strm1) & ((diffdt1 <= timthresh_dt) & (diffdt2 <= timthresh_dt)) & (hemstorms == hemstorms[strm1]))[0]
+
+        for strm2 in strm2idxs: 
+
+            selidxs2 = ids_storms[uniq_ids[strm2]] 
+            lats2 = str_lat[selidxs2]
+            lons2 = str_lon[selidxs2] 
+            times2 = str_dt[selidxs2]
+
+            #Check if storm 1 and 2 are connected
+            conn, angle, dt, dr, strConn1, strConn2  =\
+                connect_cyclones(lons1,lats1,times1,lons2,lats2,times2,Options)
+
+            #Save Results in arrays
+            connTracks[strm2,strm1] = conn
+            connTracks[strm1,strm2] = conn
+            angleTracks[strm1,strm2] = angle
+            dtTracks[strm1,strm2] = dt
+            drTracks[strm1,strm2] = dr
+
+            str_connected[selidxs1] += strConn1
+            str_connected[selidxs2] += strConn2
+
+    #Reformat sparse matrix for efficient row slicing
+    connTracks = connTracks.tocsr()
+
+    ########################
+    # Step 2 Find clusters
+    ########################
+    clusters = []
+    maxlength = 1
+
+    for stridx in range(nrstorms):
+        #print(stridx)
+        clusttemp = find_cluster_type_dokm([stridx],connTracks)        
+
+        if(len(clusttemp) > maxlength):
+            maxlength = len(clusttemp)
+
+        clusttemp = [uniq_ids[x] for x in clusttemp] #Convert indices to storm id
+        clusters.append(clusttemp)
+
+    #Delete duplicates and sort on the first number in clusters:
+    unique_clusters = [list(x) for x in set(tuple(x) for x in clusters)]
+
+    #from operator import itemgetter
+    sorted_clusters =  sorted(unique_clusters)
+    print(timer() - starttime) # Time in seconds
+
+    ############################
+    # Step 3 Suborder clusters
+    ############################
+    sorted_subclusters_bjerknes = []
+    sorted_subclusters_stagnant = []
+
+    for cluster in sorted_clusters:
+        #print(stridx)
+        subclusters_bjerknes = []
+        subclusters_stagnant = []
+
+        for strid in cluster:
+
+            #Convert strid to index
+            stridx = [i for i in range(len(uniq_ids)) if uniq_ids[i] == strid]
+            #np.where(uniq_ids == strid)[0]
+
+            #Length clusters
+            clusttemp = find_cluster_type_dokm(stridx,connTracks,contype="Bjerknes")
+
+            clusttemp = [uniq_ids[x] for x in clusttemp] #Convert indices to storm id
+            subclusters_bjerknes.append(clusttemp)
+
+            #Stationary clusters
+            clusttemp = find_cluster_type_dokm(stridx,connTracks,contype="Stagnant")
+
+            clusttemp = [uniq_ids[x] for x in clusttemp] #Convert indices to storm id
+            subclusters_stagnant.append(clusttemp)
+
+        #Delete duplicates and sort on the first number in (sub)clusters:
+        unique_subclusters = [list(x) for x in set(tuple(x) for x in subclusters_bjerknes)]
+        sorted_subclusters_bjerknes.append(sorted(unique_subclusters))
+
+        #Delete duplicates and sort on the first number in (sub)clusters:
+        unique_subclusters = [list(x) for x in set(tuple(x) for x in subclusters_stagnant)]
+        sorted_subclusters_stagnant.append(sorted(unique_subclusters))
+
+    sorted_clusters_bjerknes = sorted(unnest(sorted_subclusters_bjerknes))
+    sorted_clusters_stagnant = sorted(unnest(sorted_subclusters_stagnant))
+
+    # return results
+    return sorted_clusters, sorted_clusters_bjerknes, sorted_clusters_stagnant
 
 def block_by_grad_rev(dat, grid, lat_band=(30,70),
         local_move=(27,36), total_move=(40,54), min_duration=21):
