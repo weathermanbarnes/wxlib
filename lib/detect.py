@@ -262,8 +262,8 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
     
     return cyclones, tracks, prev_cyc, unfinished_tracks
 
-def cyclone_clusters(str_id, str_lat, str_lon, str_dt,
-     distthresh=1.0,timthresh=36.0,lngthresh=1.5,timlngthresh=48.0)
+def cyclone_clusters(str_id, str_lon, str_lat, str_dt,
+     distthresh=1.0,timthresh=36.0,lngthresh=1.5,timlngthresh=48.0):
     
     '''
     The basis idea of the clustering algorithm is that it checks if multiple cyclone tracks follow a 
@@ -301,7 +301,7 @@ def cyclone_clusters(str_id, str_lat, str_lon, str_dt,
         along every track
     '''
 
-    from .cluster_helpers import *
+    from .cluster_helpers import connect_cyclones, find_cluster_type_dokm, get_indices_sparse, unnest
     from scipy.sparse import dok_matrix
     
     #Create options dictionary (easier to pass to different functions)
@@ -324,7 +324,6 @@ def cyclone_clusters(str_id, str_lat, str_lon, str_dt,
     #########################
     connTracks = dok_matrix((nrstorms,nrstorms))
     angleTracks = dok_matrix((nrstorms,nrstorms))
-    connectTracks = csr_matrix((nrstorms,nrstorms))
     drTracks  = dok_matrix((nrstorms,nrstorms))
     dtTracks = dok_matrix((nrstorms,nrstorms))
 
