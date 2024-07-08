@@ -262,7 +262,9 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False):
     
     return cyclones, tracks, prev_cyc, unfinished_tracks
 
-def cyclone_clusters(str_id, str_lat, str_lon, str_dt)
+def cyclone_clusters(str_id, str_lat, str_lon, str_dt,
+     distthresh=1.0,timthresh=36.0,lngthresh=1.5,timlngthresh=48.0)
+    
     '''
     The basis idea of the clustering algorithm is that it checks if multiple cyclone tracks follow a 
     similar path, based on the 'cyclone families' described in Bjerknes and Solberg (1922). For details
@@ -280,6 +282,11 @@ def cyclone_clusters(str_id, str_lat, str_lon, str_dt)
     str_lon: np.array of length N,  with corresponding longitude positions for every point along every track
     str_dt: np.array of length N, with corresponding time (as .. array) for every point along every track
     
+    distthresh = 1.0 #1. Distance criterium (in Rossby Radii)
+    timthresh = 36.0 #2. Time criterium (in hours)
+    lngthresh = 1.5 #3. Length overlap criterium (in Rossby Radii) 
+    timlngthresh = 48.0 #4. Time overlap criterium (in hours)
+    
     Returns
     -------
     list
@@ -295,6 +302,10 @@ def cyclone_clusters(str_id, str_lat, str_lon, str_dt)
     '''
 
     from .cluster_helpers import *
+    from scipy.sparse import dok_matrix
+    
+    #Create options dictionary (easier to pass to different functions)
+    Options={'distthresh': distthresh,'timthresh': timthresh,'lngthresh': lngthresh,'timlngthresh': timlngthresh}
     
     #Results array for 
     str_connected   = np.zeros(str_dt.shape)
@@ -356,11 +367,9 @@ def cyclone_clusters(str_id, str_lat, str_lon, str_dt)
     ######################################################
     # Step 1 Find connected and clustered storms
     #######################################################
-    starttime = timer()
     for strm1 in range(nrstorms): 
         if(strm1%100 == 0):
             print(strm1) 
-        print("Strm1 :" + str(uniq_ids[strm1]))
         selidxs1 = ids_storms[uniq_ids[strm1]] 
 
         lats1 = str_lat[selidxs1]	
@@ -419,7 +428,6 @@ def cyclone_clusters(str_id, str_lat, str_lon, str_dt)
 
     #from operator import itemgetter
     sorted_clusters =  sorted(unique_clusters)
-    print(timer() - starttime) # Time in seconds
 
     ############################
     # Step 3 Suborder clusters
@@ -428,7 +436,6 @@ def cyclone_clusters(str_id, str_lat, str_lon, str_dt)
     sorted_subclusters_stagnant = []
 
     for cluster in sorted_clusters:
-        #print(stridx)
         subclusters_bjerknes = []
         subclusters_stagnant = []
 
