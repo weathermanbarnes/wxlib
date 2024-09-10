@@ -46,47 +46,6 @@ def get_indices_sparse(data):
 def calc_Rossby_radius(lat=45,N=1.3e-2,H=10):
 	return N*H/(2*7.29*10**-5*np.sin(lat*np.pi/180))
 
-#From https://gist.github.com/nickjevershed/6480846
-def great_circle(lat1, long1, lat2, long2,dist="kilometers"):
-    '''
-    Calculates great circle distance between lon1,lat1 and lat2,lon2
-    
-    '''
-
-    # Convert latitude and longitude to 
-    # spherical coordinates in radians.
-    degrees_to_radians = math.pi/180.0
-        
-    # phi = 90 - latitude
-    phi1 = (90.0 - lat1)*degrees_to_radians
-    phi2 = (90.0 - lat2)*degrees_to_radians
-    
-    theta1 = long1*degrees_to_radians
-    theta2 = long2*degrees_to_radians
-        
-    # Compute spherical distance from spherical coordinates.
-        
-    # For two locations in spherical coordinates 
-    # (1, theta, phi) and (1, theta, phi)
-    # cosine( arc length ) = 
-    #    sin phi sin phi' cos(theta-theta') + cos phi cos phi'
-    # distance = rho * arc length
-    
-    cos = (np.sin(phi1)*np.sin(phi2)*np.cos(theta1 - theta2) + 
-           np.cos(phi1)*np.cos(phi2))
-    cos[np.where(cos>1)] = 1
-    arc = np.arccos( cos )
-
-    # Calculate distance in kilometers or meters
-    if (dist == "kilometers"): 
-       dist = arc*6378.16
-    elif(dist == "meters"):
-       dist = arc*6378.16*1000.0
-
-    # Remember to multiply arc by the radius of the earth 
-    # in your favorite set of units to get length.
-    return dist
-
 #Compute the spatial and distance between two tracks
 def compare_trks(x_1,y_1,t_1,x_2,y_2,t_2,timthresh=None):
     len1 = len(x_1)
