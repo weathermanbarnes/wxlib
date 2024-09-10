@@ -353,8 +353,6 @@ def metopen_factory(get_static, conf):
                 static = grid_by_nc(f)
             # TODO: Where to search for topography in nc files?
             static.oro = np.zeros((static.ny, static.nx))
-            static.t = static.t[cut]
-            static.t_parsed = static.t_parsed[cut]
         else:
             static = None
 

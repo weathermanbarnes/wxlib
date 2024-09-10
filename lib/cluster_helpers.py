@@ -7,60 +7,7 @@ import math
 from scipy.sparse import csr_matrix
 from numpy import loadtxt
 from datetime import datetime as dt, timedelta as td
-
-##################################################
-# Data processing functions
-###################################################
-
-def read_file(st_file, nrskip=1):
-    str_id   = loadtxt(st_file, comments="#", unpack=False,skiprows=nrskip,usecols=[0],dtype=int)
-    str_nr   = loadtxt(st_file, comments="#", unpack=False,skiprows=nrskip,usecols=[1],dtype=int)
-    str_date = loadtxt(st_file, comments="#", unpack=False,skiprows=nrskip,usecols=[2],dtype=int)
-    str_lat  = loadtxt(st_file, comments="#", unpack=False,skiprows=nrskip,usecols=[4])
-    str_lon  = loadtxt(st_file, comments="#", unpack=False,skiprows=nrskip,usecols=[3])
-    
-    str_dt = dt_array(str_date)
-    
-    return str_id, str_nr, str_dt, str_lat, str_lon
-
-def read_file_clim(st_file, nrskip=0):
-    str_id   = loadtxt(st_file, comments="#", unpack=False,skiprows=nrskip,usecols=[0],dtype=int)
-    str_nr   = loadtxt(st_file, comments="#", unpack=False,skiprows=nrskip,usecols=[1],dtype=int)
-    str_year = loadtxt(st_file, comments="#", unpack=False,skiprows=nrskip,usecols=[2],dtype=int)
-    str_day = loadtxt(st_file, comments="#", unpack=False,skiprows=nrskip,usecols=[3],dtype=int)
-    str_lat  = loadtxt(st_file, comments="#", unpack=False,skiprows=nrskip,usecols=[5])
-    str_lon  = loadtxt(st_file, comments="#", unpack=False,skiprows=nrskip,usecols=[4])
-  
-    str_dt = []
-    for idx in range(len(str_year)):  
-
-        str_dt.append(dt(str_year[idx]-1,12,1,0) + td(days=(str_day[idx]-1)/4))
-	
-    str_dt = np.array(str_dt)
-    
-    return str_id, str_nr, str_dt, str_lat, str_lon
-    
-#Function to convert timestamp (YYYYMMDDHH) to datetime    
-def dt_array(str_date):
-    #Determine datetime array for the tracks
-    str_dt = []
-    str_hour = np.zeros(len(str_date))
-    str_day = np.zeros(len(str_date))
-    str_month = np.zeros(len(str_date))
-    str_year = np.zeros(len(str_date))
-    
-    for idx in range(len(str_date)):
-        year = int(str(str_date[idx])[:4])
-        month = int(str(str_date[idx])[4:6])
-        day   = int(str(str_date[idx])[6:8])
-        hour   = int(str(str_date[idx])[8:10])
-        str_hour[idx] = hour
-        str_day[idx] = day
-        str_month[idx] = month
-        str_year[idx] = year
-        str_dt.append(dt(year,month,day,hour))
-        
-    return str_dt
+from dynlib.utils import dist_sphere
 
 ##################################################
 # General FUNCTIONS
@@ -154,8 +101,7 @@ def compare_trks(x_1,y_1,t_1,x_2,y_2,t_2,timthresh=None):
 
     avelat = (lt1 + lt2)*0.5
     corrfac = np.abs(calc_Rossby_radius(lat=avelat)) #/calc_Rossby_radius(lat=45))
-    dist = great_circle(lt1,ln1,lt2,ln2)/corrfac
-
+    dist = dist_sphere(ln1,lt1,ln2,lt2,6370)/corrfac
 
     for idx1 in range(len1):
         for idx2 in range(len2): #range(len2): #
@@ -167,29 +113,12 @@ def compare_trks(x_1,y_1,t_1,x_2,y_2,t_2,timthresh=None):
         timspace_diff = None
     else:
         timspace_diff = (dist**2 + timdiff**2/timthresh**2)**(0.5)
-    #t1 = np.outer(t_1,np.ones(len2))
-    #t2 = np.outer(np.ones(len1),t_2)
-    #timdiff = ((t_1[idx1] - t_2[idx2]).total_seconds())/3600
+
     if( timthresh == None):
         return dist, timdiff
     else:
         return dist, timdiff, timspace_diff
     
-def dist_along_track(x,y):
-    lentrk = len(x)
-    
-    if(lentrk <= 1):
-        raise ValueError("Vector must have at least two points")
-    else:
-        avelat = (y[1:] + y[0:(lentrk-1)])*0.5
-        corrfac = np.abs(calc_Rossby_radius(lat=avelat)) 
-        dist = great_circle(y[1:],x[1:],y[0:(lentrk-1)],x[0:(lentrk-1)])/corrfac
-        
-    totaldist = np.nansum(dist)
-    
-    return dist, totaldist
-
-
 def connect_cyclones(lons1,lats1,times1,lons2,lats2,times2,
                      Options):
         '''
