@@ -98,6 +98,8 @@ def get_static(verbose=False, no_dtype_conversion=False, quiet=False):
     static.dx = scale(fo['dx']) * 2
     static.dy = scale(fo['dy']) * 2
 
+    static.landmask = lsm
+
     static.t_epoch = dt(1900,1,1,0)
     static.t_unit = 'hours since 1900-01-01 00:00:00'
     static.t_interval_unit = 3600
