@@ -988,6 +988,9 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
         The given plevs, ys and xs must all have the same 4-dimensional shape. Dates must be
         one-dimensional, corresponding in length to the first dimension of plevs, ys and xs.
         The returned array will have the same shape as plevs, ys and xs.
+
+        NB: an interpolated value will always be returned even if actual value is NaN in the
+            original field
         
         Parameters
         ----------
@@ -1073,8 +1076,8 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
         The given plevs, ys and xs must all have the same 4-dimensional shape. Dates must be
         one-dimensional, corresponding in length to the first dimension of plevs, ys and xs.
         The returned array(s) will have the same shape as plevs, ys and xs. It returns two 
-        arrays if there is at least one NaNs in the data for q. The second array corresponds 
-        to the location (boolean) of NaNs.
+        arrays where the second corresponds to the location (boolean) of NaNs, if there is at 
+        least one NaNs in the data for q; otherwise, the second array is returned as None.
         
         Parameters
         ----------
@@ -1090,8 +1093,9 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
         -------
         dict (date, plev) => interpolation function
             The requested interpolation accessible by date and plev.
-        optional: dict (date, plev) => interpolation function
-            The requested interpolation of the NaNs mask accessible by date and plev.
+        dict (date, plev) => interpolation function
+            The requested interpolation of the NaNs mask accessible by date and plev. None if no
+            NaNs are present.
         '''
 
         # TODO: Reduce code duplicaiton with get_at_position!
@@ -1101,8 +1105,6 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
         #
         # (the below code does not require data to be chunked consistently, 
         #  but the code will much more efficient if it is)
-
-
         if type(dates) == list:
             dates = np.array(dates)
 
@@ -1114,7 +1116,6 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
         
         # nans marker
         nans_present = False
-        
         for pidx,plev in enumerate(plevs):
             req = list(files_by_plevq((plev, q), start=start, end=end))
             
@@ -1128,7 +1129,6 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
 
                 if not load_chunk:
                     continue
-                
                 dat_, grid = get_normalized_from_file(filename, plev, q)
             
                 for tidx_in, date in enumerate(dates_):
@@ -1158,7 +1158,7 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
         if nans_present:
             return ifuncs, ifuncs_nans
         else:
-            return ifuncs
+            return ifuncs, None
     
     return get_at_position, get_hor_interpolation_functions
 
