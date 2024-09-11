@@ -879,11 +879,15 @@ contains
   !@     Connected areas labeled with a unique integer.
   !@ np.ndarray with shape (nn) and dtype int
   !@     The size of the given area, measured in grid points.
-  subroutine label_connected_3d(label,sizes, nx,ny,nz, mask, gsize, nn)
+  !@ np.ndarray with shape (nn,6) and dtype int
+  !@     Minimum and maximum grid point indices for the connected area, in
+  !@     order: kmin, kmax, jmin, jmax, imin, imax 
+  subroutine label_connected_3d(label,sizes,extent, nx,ny,nz, mask, gsize, nn)
     logical, intent(in) :: mask(nz,ny,nx)
     real(kind=nr), intent(in) :: gsize(ny,nx)
     integer(kind=ni), intent(in) :: nx,ny,nz,nn
     integer(kind=ni), intent(out) :: label(nz,ny,nx)
+    integer(kind=ni), intent(out) :: extent(nn,6)
     real(kind=nr), intent(out) :: sizes(nn)
     !f2py depend(nx,ny,nz) label
     !f2py depend(nx,ny) gsize
@@ -893,6 +897,7 @@ contains
     !
     cnt = 0_ni
     sizes(:) = 0_ni
+    extent(:,:) = 0_ni
     label(:,:,:) = 0_ni
     !
     do i = 1_ni,nx
@@ -905,7 +910,7 @@ contains
                    write(*,*) 'Found more features than allowed by input array:', nn
                    stop 1
                 end if
-                call label_connected_3d_single(label,sizes(cnt), nx,ny,nz, mask, gsize, cnt, i,j,k)
+                call label_connected_3d_single(label,sizes(cnt),extent(cnt,:), nx,ny,nz, mask, gsize, cnt, i,j,k)
              end if
           end do
        end do
@@ -918,11 +923,12 @@ contains
   !@
   !@ This routine is used internally by :meth:`label_connected_2d` and is not
   !@ intended to be called directly.
-  subroutine label_connected_3d_single(clabel,csize, nx,ny,nz, mask, gsize, cnt, i,j,k)
+  subroutine label_connected_3d_single(clabel,csize,extent, nx,ny,nz, mask, gsize, cnt, i,j,k)
     logical, intent(in) :: mask(nz,ny,nx)
     real(kind=nr), intent(in) :: gsize(ny,nx)
     integer(kind=ni), intent(in) :: nx,ny,nz, cnt, i,j,k
     integer(kind=ni), intent(inout) :: clabel(nz,ny,nx)
+    integer(kind=ni), intent(inout) :: extent(6)
     real(kind=nr), intent(inout) :: csize
     !f2py depend(nx,ny,nz) clabel
     !f2py depend(nx,ny) gsize
@@ -939,7 +945,13 @@ contains
     !
     ! Record starting point
     clabel(k,j,i) = cnt
-    csize = csize + 1_ni
+    csize = csize + gsize(j,i)
+    extent(1_ni) = k
+    extent(2_ni) = k
+    extent(3_ni) = j
+    extent(4_ni) = j
+    extent(5_ni) = i
+    extent(6_ni) = i
     !
     do while ( nstack > 0_ni )
        ! Remove current point from stack
@@ -974,9 +986,27 @@ contains
                    si(nstack) = ci
                    sj(nstack) = cj
                    sk(nstack) = ck
-                   csize = csize + gsize(j,i)
+                   csize = csize + gsize(cj,ci)
                    clabel(ck,cj,ci) = cnt
-                end if
+                   if ( ck .lt. extent(1_ni) ) then
+                      extent(1_ni) = ck
+                   end if
+                   if ( ck .gt. extent(2_ni) ) then
+                      extent(2_ni) = ck
+                   end if
+                   if ( cj .lt. extent(3_ni) ) then
+                      extent(3_ni) = cj
+                   end if
+                   if ( cj .gt. extent(4_ni) ) then
+                      extent(4_ni) = cj
+                   end if
+                   if ( ci .lt. extent(5_ni) ) then
+                      extent(5_ni) = ci
+                   end if
+                   if ( ci .gt. extent(6_ni) ) then
+                      extent(6_ni) = ci
+                   end if
+               end if
              end do
           end do
        end do
@@ -989,8 +1019,26 @@ contains
                    si(nstack) = px
                    sj(nstack) = cj
                    sk(nstack) = ck
-                   csize = csize + gsize(j,i)
+                   csize = csize + gsize(cj,px)
                    clabel(ck,cj,px) = cnt
+                   if ( ck .lt. extent(1_ni) ) then
+                      extent(1_ni) = ck
+                   end if
+                   if ( ck .gt. extent(2_ni) ) then
+                      extent(2_ni) = ck
+                   end if
+                   if ( cj .lt. extent(3_ni) ) then
+                      extent(3_ni) = cj
+                   end if
+                   if ( cj .gt. extent(4_ni) ) then
+                      extent(4_ni) = cj
+                   end if
+                   if ( px .lt. extent(5_ni) ) then
+                      extent(5_ni) = px
+                   end if
+                   if ( px .gt. extent(6_ni) ) then
+                      extent(6_ni) = px
+                   end if
                 end if
              end do
           end do
