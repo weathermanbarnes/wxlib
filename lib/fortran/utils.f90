@@ -1321,4 +1321,97 @@ contains
     enddo
     !
   end subroutine
+  !
+  !@ Kernel density estimator in 2d for histograms and averages
+  !@ 
+  !@ For a given set of input data points, this codes estimates densities and
+  !@ averages using a Gaussian kernel as smoothing.
+  !@
+  !@ This code is an adaptation of python code provided by Andrea Marcheggiani.
+  !@
+  !@ Parameters
+  !@ ----------
+  !@
+  !@ xi : np.ndarray with shape (nn) and dtype float
+  !@     The x-coordinate of the input
+  !@ yi : np.ndarray with shape (nn) and dtype float
+  !@     The y-coordinate of the input
+  !@ zi : np.ndarray with shape (nq,nn) and dtype float
+  !@     Data values to be kernel-averaged. The nq-axis is to accomodate several
+  !@     indepdendent variables.
+  !@ xo : np.ndarray with shape (nx) and dtype float
+  !@     The x-coordinate of the output grid
+  !@ yo : np.ndarray with shape (ny) and dtype float
+  !@     The y-coordinate of the output grid
+  !@ Lx : float
+  !@     Averaging length scale in x. If unsure use 0.5 standard deviations of xi for a start.
+  !@ Ly : float
+  !@     Averaging length scale in y. If unsure use 0.5 standard deviations of yi for a start.
+  !@ maskbelow : float
+  !@     Mask results where the kernel density average is below this value. If unsure start with 1.0e-6.
+  !@
+  !@ Other parameters
+  !@ ----------------
+  !@
+  !@ nn : int
+  !@     Number of data points in the dataset
+  !@ nq : int
+  !@     Number of independent values for which the kernel average is estimated.
+  !@ nx : int
+  !@     Grid size of the output grid in x-direction.
+  !@ ny : int
+  !@     Grid size of the output grid in y-direction.
+  !@
+  !@ Returns
+  !@ -------
+  !@ np.ndarray with shape (ny,nx) and dtype float
+  !@     Kernel density estimate (corresponds to histogram)
+  !@ np.ndarray with shape (nq,ny,nx)
+  !@     Kernel-averaged input values
+  subroutine kernel_average_2d_fortran(kdens, kavg, nx,ny,nn,nq, xi,yi,zi, xo,yo, Lx, Ly, maskbelow)
+    real(kind=nr), intent(in) :: xi(nn), yi(nn), zi(nq,nn), xo(nx), yo(ny), Lx, Ly, maskbelow
+    real(kind=nr), intent(out) :: kdens(ny,nx), kavg(nq,ny,nx)
+    integer(kind=ni), intent(in) :: nq,nn,ny,nx
+    !f2py depend(nq,ny,nz) kavg
+    !f2py depend(ny,nz) kdens
+    !
+    real(kind=nr) :: wgt, total_wgt, xc, yc
+    integer(kind=ni) :: m, n, j, i
+    ! -----------------------------------------------------------------
+    !
+    kdens(:,:) = 0.0_nr
+    kavg(:,:,:) = 0.0_nr
+    !
+    ! For all points in the output grid
+    do i = 1_ni,nx
+       xc = xo(i)
+       do j = 1_ni,ny
+          yc = yo(j)
+          total_wgt = 0.0_nr
+          !
+          ! For all records in the input
+          do n = 1_ni,nn
+             wgt = exp( -0.5_nr * ( ((xi(n)-xc)/Lx)**2.0_nr + ((yi(n)-yc)/Ly)**2.0_nr) )
+             kdens(j,i) = kdens(j,i) + wgt
+             total_wgt = total_wgt + wgt
+             do m = 1_ni,nq
+                kavg(m,j,i) = kavg(m,j,i) + wgt * zi(m,n)
+             end do
+          end do
+          !
+          if ( total_wgt .ge. maskbelow ) then
+             do m = 1_ni,nq
+                kavg(m,j,i) = kavg(m,j,i) / total_wgt
+             end do
+          else
+             kdens(j,i) = nan
+             do m = 1_ni,nq
+                kavg(m,j,i) = nan
+             end do
+          end if
+       end do
+    end do
+    !
+  end subroutine
+  !
 end module

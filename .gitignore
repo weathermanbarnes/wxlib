@@ -1,4 +1,4 @@
-# (Pre-)Compiled stuff
+# (Pre-)Compiled stuff and build logs
 *.pyc
 *.o
 *.so
@@ -8,6 +8,7 @@
 *.mod
 *.pickle
 .precc
+*.log
 # Python packaging and building
 build
 dist
