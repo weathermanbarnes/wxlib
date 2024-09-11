@@ -1070,14 +1070,18 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
         return dat
 
     
-    def get_hor_interpolation_functions(dates, plevs, q):
-        ''' Get interpolation functions of for all given plevs of given q which can contains NaNs
+    def get_hor_interpolation_functions(dates, plevs, q, replace_nan_by=None):
+        ''' Get interpolation functions of for all given plevs of given q
 
         The given plevs, ys and xs must all have the same 4-dimensional shape. Dates must be
         one-dimensional, corresponding in length to the first dimension of plevs, ys and xs.
-        The returned array(s) will have the same shape as plevs, ys and xs. It returns two 
-        arrays where the second corresponds to the location (boolean) of NaNs, if there is at 
-        least one NaNs in the data for q; otherwise, the second array is returned as None.
+        The returned dictionaries will contain an interpolation function per date and plevs.
+        
+        In case the requested data contains NaNs, these can either be replaced by the value
+        specified in the keyword argument, or filled using `dynlib.utils.fill_nan()`. If NaNs
+        were present, the second return value is a dictionary of interpolation functions for 
+        the NaN mask for all combinations of (date, plev) where NaNs occurred, otherwise the 
+        second return value is an empty dictionary.
         
         Parameters
         ----------
@@ -1088,12 +1092,16 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
         q : str
             A variable name identifier, following the ECMWF conventions as far as applicable,
             e.g. ``'u'`` or ``'msl'``.
+        replace_nan_by : float
+            Default None. If given, set NaNs to this value if encountered instead of trying to 
+            fill them using dynlib.utils.fill_nan . This function can be slow to converge for 
+            large patches of NaNs, and will not work at all for all-NaN zonal stripes.
 
         Returns
         -------
         dict (date, plev) => interpolation function
             The requested interpolation accessible by date and plev.
-        dict (date, plev) => interpolation function
+        dict (date, plev) => interpolation function or None
             The requested interpolation of the NaNs mask accessible by date and plev. None if no
             NaNs are present.
         '''
@@ -1137,14 +1145,19 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
                         continue
                         
                     dat__ = dat_[tidx_in,:,:].squeeze()
-                    nans_loc = np.isnan(dat__)
-                    if nans_loc.sum() > 0:
+
+                    # Treat NaNs if present
+                    nanmask = np.isnan(dat__)
+                    if nanmask.sum() > 0:
                         nans_present = True
-                        zonalavg = np.nanmean(dat__, axis=1)
-                        dat__ -= zonalavg[:,np.newaxis]
-                        dat__, conv = utils.fill_nan(dat__[np.newaxis,:,:])
-                        dat__ = dat__[0,:,:]
-                        dat__ += zonalavg[:,np.newaxis]
+                        if replace_nan_by is None:
+                            zonalavg = np.nanmean(dat__, axis=1)
+                            dat__ -= zonalavg[:,np.newaxis]
+                            dat__, conv = utils.fill_nan(dat__[np.newaxis,:,:])
+                            dat__ = dat__[0,:,:]
+                            dat__ += zonalavg[:,np.newaxis]
+                        else:
+                            dat__[np.isnan(dat__)] = replace_nan_by
                     
                     if not date in ifuncs:
                         ifuncs[date] = {}
@@ -1153,12 +1166,10 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
                     
                     ifuncs[date][plev] = interp.RectBivariateSpline(grid.y[::-1,0], grid.x[0,:],
                                                                     dat__[::-1,:], kx=1, ky=1)
-                    ifuncs_nans[date][plev] = interp.RectBivariateSpline(grid.y[::-1,0], grid.x[0,:],
-                                                                    nans_loc[::-1,:], kx=1, ky=1)
-        if nans_present:
-            return ifuncs, ifuncs_nans
-        else:
-            return ifuncs, None
+                    if nanmask.sum() > 0:
+                        ifuncs_nans[date][plev] = interp.RectBivariateSpline(grid.y[::-1,0], grid.x[0,:],
+                                                                    nanmask[::-1,:], kx=1, ky=1)
+        return ifuncs, ifuncs_nans
     
     return get_at_position, get_hor_interpolation_functions
 
