@@ -988,6 +988,9 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
         The given plevs, ys and xs must all have the same 4-dimensional shape. Dates must be
         one-dimensional, corresponding in length to the first dimension of plevs, ys and xs.
         The returned array will have the same shape as plevs, ys and xs.
+
+        NB: an interpolated value will always be returned even if actual value is NaN in the
+            original field
         
         Parameters
         ----------
@@ -1068,11 +1071,13 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
 
     
     def get_hor_interpolation_functions(dates, plevs, q):
-        ''' Get interpolation functions of for all given plevs of given q
+        ''' Get interpolation functions of for all given plevs of given q which can contains NaNs
 
         The given plevs, ys and xs must all have the same 4-dimensional shape. Dates must be
         one-dimensional, corresponding in length to the first dimension of plevs, ys and xs.
-        The returned array will have the same shape as plevs, ys and xs.
+        The returned array(s) will have the same shape as plevs, ys and xs. It returns two 
+        arrays where the second corresponds to the location (boolean) of NaNs, if there is at 
+        least one NaNs in the data for q; otherwise, the second array is returned as None.
         
         Parameters
         ----------
@@ -1088,6 +1093,9 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
         -------
         dict (date, plev) => interpolation function
             The requested interpolation accessible by date and plev.
+        dict (date, plev) => interpolation function
+            The requested interpolation of the NaNs mask accessible by date and plev. None if no
+            NaNs are present.
         '''
 
         # TODO: Reduce code duplicaiton with get_at_position!
@@ -1102,9 +1110,12 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
 
         # Allocate structure to hold the results
         ifuncs = {}
+        ifuncs_nans = {}
 
         start, end = dates.min(), dates.max() + td(0,1)
-
+        
+        # nans marker
+        nans_present = False
         for pidx,plev in enumerate(plevs):
             req = list(files_by_plevq((plev, q), start=start, end=end))
             
@@ -1118,16 +1129,17 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
 
                 if not load_chunk:
                     continue
-                
                 dat_, grid = get_normalized_from_file(filename, plev, q)
             
                 for tidx_in, date in enumerate(dates_):
                     tidxs_out = np.argwhere(dates == date)
                     if tidxs_out.size == 0:
                         continue
-
+                        
                     dat__ = dat_[tidx_in,:,:].squeeze()
-                    if np.isnan(dat__).sum() > 0:
+                    nans_loc = np.isnan(dat__)
+                    if nans_loc.sum() > 0:
+                        nans_present = True
                         zonalavg = np.nanmean(dat__, axis=1)
                         dat__ -= zonalavg[:,np.newaxis]
                         dat__, conv = utils.fill_nan(dat__[np.newaxis,:,:])
@@ -1136,10 +1148,17 @@ def get_at_position_factory(files_by_plevq, get_normalized_from_file):
                     
                     if not date in ifuncs:
                         ifuncs[date] = {}
-                    ifuncs[date][plev] = interp.RectBivariateSpline(grid.y[::-1,0], grid.x[0,:], 
-                            dat__[::-1,:], kx=1, ky=1)
-
-        return ifuncs
+                    if not date in ifuncs_nans:
+                        ifuncs_nans[date] = {}
+                    
+                    ifuncs[date][plev] = interp.RectBivariateSpline(grid.y[::-1,0], grid.x[0,:],
+                                                                    dat__[::-1,:], kx=1, ky=1)
+                    ifuncs_nans[date][plev] = interp.RectBivariateSpline(grid.y[::-1,0], grid.x[0,:],
+                                                                    nans_loc[::-1,:], kx=1, ky=1)
+        if nans_present:
+            return ifuncs, ifuncs_nans
+        else:
+            return ifuncs, None
     
     return get_at_position, get_hor_interpolation_functions
 
