@@ -46,18 +46,14 @@ elif [ "${host: -14}" == 'fram.sigma2.no' ]; then
 elif [ "$uname" == 'Darwin' ]; then
     # Default Mac OS configuration, based on Homebrew
     LIBS="-L/usr/lib -L/usr/local/lib -L$(pwd)/ext/spherepack3.2/lib -lblas -llapack -lspherepack"
-
-    # For some reason libpython is no longer automatically detected/found for the linking step
-    # -> Have python inject the libraries it was buildt with into $LIBS 
-    # (works only for python3.x)
-    #PYFIX=`python-config --prefix`
-    #PYFIXVER="${PYFIX: -3}"
-    #PYLIBS="-L$PYFIX/lib/python$PYFIXVER/config-${PYFIXVER}m-darwin -lpython${PYFIXVER}m"
-    #LIBS="$LIBS $PYLIBS"
+elif [ "${host: -15}" == 'gadi.nci.org.au' ]; then
+    # Configuration for GADI/NCI
+    echo "Compiling configuration settings for ${host: -15}"
+    LIBS="-L/usr/lib -L/usr/local/lib -L$(pwd)/ext/spherepack3.2/lib -lmkl_gf_lp64 -lmkl_core -lmkl_gnu_thread -lgomp -lm -lspherepack"
     RPATH=""
 elif [ "$uname" == 'Linux' ]; then
     # Default Linux configuration
-    LIBS="-L/usr/lib -L/usr/local/lib -L$(pwd)/ext/spherepack3.2/lib -lmkl_gf_lp64 -lmkl_core -lmkl_gnu_thread -lgomp -lm -lspherepack"
+    LIBS="-L/usr/lib -L/usr/local/lib -L$(pwd)/ext/spherepack3.2/lib -lblas -llapack -lspherepack"
     RPATH=""
 else
     echo "Error: Unknown host/ operating system."
