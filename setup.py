@@ -54,12 +54,12 @@ class build_py(_build_py):
 
 # The actual setup
 setup(cmdclass={'build_py': build_py},
-	name='dynlib',
+	name='wxlib',
 	version=version,
-	description='Dynamics library for gridded met data.',
-	author='Clemens Spensberger',
-	author_email='csp001@uib.no',
-	url='https://wikihost.uib.no/gfi/index.php/Dynlib',
+	description='Weather systems library for gridded met data.',
+	author='ARC Centre of Excellence for 21st Century Weather',
+	author_email='admin@21stcenturyweather.edu',
+	url='TBC',
 	packages=['dynlib', 'dynlib.metio', 'dynlib.metio.composite', 'dynlib.plotsettings', 'dynlib.cm_dat', ],
 	package_dir={'dynlib': 'lib'},
 	#py_modules=['test', ],

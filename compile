@@ -10,7 +10,7 @@
 COMPILE_OPTS="productive"
 
 # Choose python version to compile for
-PY_VER=""
+PY_VER="3"
 F2PY="f2py$PY_VER"
 PYTHON="python$PY_VER"
 
@@ -57,7 +57,7 @@ elif [ "$uname" == 'Darwin' ]; then
     RPATH=""
 elif [ "$uname" == 'Linux' ]; then
     # Default Linux configuration
-    LIBS="-L/usr/lib -L/usr/local/lib -L$(pwd)/ext/spherepack3.2/lib -lblas -llapack -lspherepack"
+    LIBS="-L/usr/lib -L/usr/local/lib -L$(pwd)/ext/spherepack3.2/lib -lmkl_gf_lp64 -lmkl_core -lmkl_gnu_thread -lgomp -lm -lspherepack"
     RPATH=""
 else
     echo "Error: Unknown host/ operating system."
