@@ -15,7 +15,6 @@ from . import utils
 docutil.takeover(dynfor.detect, 'detect', sys.modules[__name__])
 
 
-
 def cyclone_by_contour(msl, grid):
     ''' Cyclone masks by finding the outermost closed contour
    
