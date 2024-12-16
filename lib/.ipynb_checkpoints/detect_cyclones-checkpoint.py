@@ -7,7 +7,7 @@ import scipy.interpolate as interp
 from datetime import datetime as dt, timedelta as td
 
 ##### Import created packages
-import utils
+from utils import utils
 
 #####
 
@@ -16,7 +16,7 @@ def cyclone_by_lapmsl(msl, grid, prev_cyc=None, prev_tracks=None, quiet=False, l
     ''' Detect and track cyclone centers following the Melbourne algorithm
     DEVELOPED BY: Clemens Spensberger (Bergen), Adapted for wxlib by Michael Barnes (Monash)
 
-   The original detection algorithm is defined in Murray and Simmonds (1991a,b; MS91). This is a simplified
+   The original detection algorithm is defined in Murray and Simmonds (1991a,b; MS91) developed at UniMelb. This is a simplified
    reimplementation of the detection algorithm complemented by a more fancy tracking. 
 
    Simplifications compared to MS91:

@@ -8,13 +8,14 @@ import scipy.ndimage as ndimg
 import cartopy.crs as ccrs
 
 ##### Import created packages
-import utils, gridlib
+from utils import utils, gridlib
+from utils import derivatives_python as derivatives
 
 ##### Temporary until upgraded 
-import sys
-sys.path.append('/g/data/gb02/mb0427/wxlib_packages/lib/python3.10/site-packages/') 
-#from dynlib import derivatives, gridlib#, utils, proj
-import derivatives_python as derivatives
+#import sys
+#sys.path.append('/g/data/gb02/mb0427/wxlib_packages/lib/python3.10/site-packages/') 
+##from dynlib import derivatives, gridlib#, utils, proj
+#import derivatives_python as derivatives
 
 
 # Configuration options
@@ -334,7 +335,6 @@ def smooth_cyclone_track(maps, all_cyc, cyc, tstep,
     #lon, lat = maps[hemis](xs[0,0], ys[0,0], inverse=True)
     #print(xs)
     #lon, lat = transform.transform_point(xs[0,0], ys[0,0], maps[hemis])
-    print(transform, maps[hemis], xs[0,0], ys[0,0])
     lonlat = transform.transform_points(maps[hemis], xs[0,0], ys[0,0])
     lon, lat = lonlat[..., 0], lonlat[..., 1]
     
@@ -364,16 +364,17 @@ def smooth_cyclone_track(maps, all_cyc, cyc, tstep,
     
     return
 
-
 def _save_to_cyc(cyc, cycid, **kwargs):
     for key, value in kwargs.items():
         if type(value) == np.ndarray:
-            cyc.loc[cycid,key][:,:] = value
+            if np.isscalar(cyc.loc[cycid, key]):
+                cyc.loc[cycid, key] = value  # Direct assignment for scalar values
+            else:
+                cyc.loc[cycid,key][:,:] = value
         else:
             cyc.loc[cycid,key] = value
-    
+            
     return
-
 
 def track_cyclones(ntracks, cyclones_prev, cyclones_cur,**kwargs):
     # Match previous with current cyclone positions
@@ -485,7 +486,7 @@ def aggregate_trackinfo(cyc_locs):
     return trackinfo
 
 
-def filter_tracks(tracks, lastdate):
+def filter_tracks(tracks, lastdate, **kwargs):
     # Filter tracks by: 
     # - minimum lifetime of 24 hours, 
     # - minimum distance between first and last point of 500 km, and 

@@ -1,0 +1,4 @@
+git remote set-url origin git@github.com:weathermanbarnes/wxlib.git
+git add .
+git commit .
+git push

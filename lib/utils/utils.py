@@ -16,6 +16,7 @@ import sys
 import math
 import numpy as np
 import scipy as sp
+from scipy.ndimage import label
 import scipy.interpolate as intp
 from scipy.special import erfinv
 
@@ -24,6 +25,124 @@ from scipy.special import erfinv
 from datetime import datetime as dt, timedelta as td
 import calendar
 
+def find_regions_above_threshold(arr, local_minima, threshold=10e-6, **kwargs):
+    # Create a boolean mask for values above the threshold
+    above_threshold = arr > threshold
+
+    # Create an empty array to store the final regions
+    regions = np.zeros_like(arr, dtype=bool)
+
+    # Mark all areas connected to each local minimum
+    labeled_array, num_features = label(above_threshold)
+    for (i, j) in local_minima:
+        i=i-1;j=j-1
+        regions[i, j] = True
+        
+        if above_threshold[i, j]:
+            # Find the label of the connected region that includes this local minimum
+            region_label = labeled_array[i, j]
+            if region_label > 0:
+                # Include the entire region in the final regions array
+                regions |= (labeled_array == region_label)
+
+    return regions
+
+
+
+
+def minimum_connect(res, nx, ny, dat, i, j, thres=0.0, grid_cyclic_ew=True,**kwargs):
+    """
+    Recursively find points above a threshold connected to a given point.
+    
+    Parameters
+    ----------
+    res : np.ndarray
+        Mask of areas connected to any of the seeds and above the given threshold.
+    nx : int
+        Grid size in x-direction.
+    ny : int
+        Grid size in y-direction.
+    dat : np.ndarray
+        Data array with shape (ny, nx).
+    i : int
+        Current x-coordinate.
+    j : int
+        Current y-coordinate.
+    thres : float
+        Minimum threshold.
+    grid_cyclic_ew : bool
+        Whether the grid is cyclic east-west.
+    """
+    # North
+    if j > 0 and dat[j-1, i] >= thres and not res[j-1, i]:
+        res[j-1, i] = True
+        minimum_connect(res, nx, ny, dat, i, j-1, thres, grid_cyclic_ew)
+    
+    # South
+    if j < ny - 1 and dat[j+1, i] >= thres and not res[j+1, i]:
+        res[j+1, i] = True
+        minimum_connect(res, nx, ny, dat, i, j+1, thres, grid_cyclic_ew)
+    
+    # West
+    if i > 0 and dat[j, i-1] >= thres and not res[j, i-1]:
+        res[j, i-1] = True
+        minimum_connect(res, nx, ny, dat, i-1, j, thres, grid_cyclic_ew)
+    
+    # East
+    if i < nx - 1 and dat[j, i+1] >= thres and not res[j, i+1]:
+        res[j, i+1] = True
+        minimum_connect(res, nx, ny, dat, i+1, j, thres, grid_cyclic_ew)
+    
+    # Periodic boundary West
+    if grid_cyclic_ew and i == 0 and dat[j, nx-1] >= thres and not res[j, nx-1]:
+        res[j, nx-1] = True
+        minimum_connect(res, nx, ny, dat, nx-1, j, thres, grid_cyclic_ew)
+    
+    # Periodic boundary East
+    if grid_cyclic_ew and i == nx-1 and dat[j, 0] >= thres and not res[j, 0]:
+        res[j, 0] = True
+        minimum_connect(res, nx, ny, dat, 0, j, thres, grid_cyclic_ew)
+
+
+def mask_minimum_connect(dat, seeds, thres=0.0, **kwargs):
+    """
+    Masks areas above a given threshold and connected to a list of seed points.
+
+    Parameters
+    ----------
+    dat : np.ndarray of shape (ny, nx) and dtype float64
+        Data to which the threshold is applied.
+    seeds : np.ndarray of shape (ns, 2) and dtype int32
+        Array of j and i indexes of seed points.
+    thres : float
+        Minimum threshold.
+
+    Returns
+    -------
+    res : np.ndarray of shape (ny, nx) and dtype bool
+        Mask of areas connected to any of the seeds and above the given threshold.
+    """
+    
+    ny, nx = dat.shape
+    ns = seeds.shape[0]
+    
+    # Initialize the result array
+    res = np.zeros((ny, nx), dtype=bool)
+    
+    for n in range(ns):
+        j, i = seeds[n]
+        i=i-1; j=j-1
+        
+        # Check if the seed point is below the threshold
+        if dat[j, i] < thres:
+            raise ValueError(f"FATAL Error: seed {n + 1} itself below threshold.")
+        
+        # Start connecting from the seed point if not already connected
+        if not res[j, i]:
+            res[j, i] = True
+            minimum_connect(res, nx, ny, dat, i, j, thres=thres)
+
+    return res
 
 
 def scale(var, cut=slice(None)):
