@@ -26,15 +26,15 @@ from utils import derivatives_python as derivatives
 
 def detect_cyclone_by_lapmsl(msl, oro, grid, prev_cyc=None, prev_tracks=None, quiet=False, return_data=True, lmsl_thres_closed=2.0e-09, lmsl_thres_open=7.0e-09, maxdist_lmsl_center=500.0e3, msl_min_prominence_closed=150, msl_min_prominence_open=25, mindist_centers=750.0e3,maxdist_track=750.0e3,tstep=10800,min_lifetime=24,min_dist_travelled=500.0e3, outpath='',outfilename='cyclone_lapmsl_test', **kwargs):
     
-    ''' Detect and track cyclone centers following the Melbourne algorithm
+    ''' Detect and track cyclone centers following the Melbourne algorithm (MS91)
     DEVELOPED BY: Clemens Spensberger (Bergen)
     Some small adpations have been made to adapt it for wxlib (ARC Coe for 21st Century Weather, Monash University). These include,
     the way in which grid information is given to the software and inclusion of output writing etc. 
 
-   The original detection algorithm is defined in Murray and Simmonds (1991a,b; MS91) developed at UniMelb. This is a simplified
-   reimplementation of the detection algorithm complemented by a more fancy tracking. 
+    The original detection algorithm is defined in Murray and Simmonds (1991a,b; MS91) developed at UniMelb. This is a simplified
+    reimplementation of the detection algorithm complemented by a more fancy tracking. 
 
-   Simplifications compared to MS91:
+    Simplifications compared to MS91:
     - As in MS91, msl is interpolated to polar stereographic grids before the cyclone detection and tracking.
       However, the grid resolution is chosen fine enough that cyclone centeres are simply determined at the
       grid-point resolution.
@@ -42,7 +42,7 @@ def detect_cyclone_by_lapmsl(msl, oro, grid, prev_cyc=None, prev_tracks=None, qu
     - Prediction of cyclone movement is determined from Kalman-filtered previous cyclone movement rather
       than from the background flow. This requires much fewer assumptions and configuration and reduces the 
       required input data to only sea-level pressure (or equivalent).
-
+    
     This is the (so-far) first function in dynlib to depend on the pandas library. pandas is imported only 
     within this function such that the remainder of dynlib remains usable even when pandas is not available.
     
