@@ -241,5 +241,8 @@ def switch_lons_to_360(longitude,latitude,field):
 
 def remove_obj_by_ids(obj_arr,remove_objs):
     return obj_arr.where(~np.isin(obj_arr, remove_objs), 0)
+
+def keep_obj_by_ids(obj_arr,remove_objs):
+    return obj_arr.where(np.isin(obj_arr, remove_objs), 0)
     
 

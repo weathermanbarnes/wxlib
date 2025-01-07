@@ -1,6 +1,7 @@
 import sys
 import glob
 import numpy as np
+import xarray as xr
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap, BoundaryNorm
 import cartopy.crs as ccrs
@@ -10,6 +11,37 @@ import matplotlib.path as mpath
 theta = np.linspace(0, 2*np.pi, 100)
 map_circle = mpath.Path(np.vstack([np.sin(theta), np.cos(theta)]).T * 0.5 + [0.5, 0.5]) #This for the polar stereographic plots
 from PIL import Image,ImageOps
+
+def plot_clim_count(data,image_desc='',dpi=300,outpath=None,outfileprefix=None,
+                         projection=ccrs.PlateCarree()):
+
+    figsize=(11,8)
+    fig, ax = plt.subplots(1, 1, figsize=figsize, subplot_kw=dict(projection=projection)) 
+
+    if projection==ccrs.PlateCarree():
+        ax.set_extent([-180,180,-90,90],crs=ccrs.PlateCarree())
+    else:
+        ax.set_boundary(map_circle, transform=ax.transAxes)
+    
+    ax.add_feature(LAND,facecolor='lightgrey')
+    ax.coastlines(linewidths=0.4)
+
+    data_nan=np.where(data == 0, np.nan, data)
+    pcm=ax.pcolormesh(data.longitude,data.latitude,data_nan,
+                  vmin=1, vmax=np.nanmax(data),
+                  transform=ccrs.PlateCarree())
+            
+    ax.set_title(image_desc)
+
+    cbar=plt.colorbar(pcm)
+    cbar.ax.set_ylabel('Count', rotation=90)
+
+    if outfileprefix is not None:
+        outfile=outpath+outfileprefix+'_count_clim.jpg'
+        plt.savefig(outfile, dpi=dpi)
+        crop(outfile,padding=10)
+        
+    plt.show()
 
 def plot_tracks_at_time(track_df,obj_xr,dt,image_desc='',dpi=300,outpath=None,outfileprefix=None,
                          point_to_track='mass_center_coords',
